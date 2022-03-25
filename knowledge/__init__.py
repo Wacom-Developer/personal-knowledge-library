@@ -3,11 +3,6 @@
 """"Personal knowledge Library"""
 import logging
 from typing import Optional
-from knowledge import base
-from knowledge import nel
-from knowledge import public
-from knowledge import services
-from knowledge import utils
 
 __author__ = "Markus Weber"
 __copyright__ = "Copyright 2021 Wacom. All rights reserved."
@@ -32,6 +27,11 @@ if logger is None:
     # add the handlers to the logger
     logger.addHandler(ch)
 
+from knowledge import base
+from knowledge import nel
+from knowledge import public
+from knowledge import services
+from knowledge import utils
 
 __all__ = ['__copyright__', '__credits__', '__license__', '__maintainer__', '__email__', '__status__',
            'logger', 'base', 'nel', 'public', 'services', 'utils']
