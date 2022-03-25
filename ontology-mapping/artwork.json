@@ -1,0 +1,76 @@
+  {
+    "entity-list": [
+      "Q762", "Q5582", "Q5598", "Q5577", "Q5593", "Q296", "Q5597", "Q37571", "Q5599", "Q5669", "Q61064", "Q41264", "Q5432"
+    ],
+    "class-mapping": [
+      {
+        "wikidata":  ["Q5"],
+        "wacom-knowledge": "wacom:core#Person",
+        "literals": [],
+        "relations": [
+          {
+              "wikidata":  "P800",
+              "wacom-knowledge": "wacom:core#created"
+          },
+          {
+              "wikidata":  "P106",
+              "wacom-knowledge": "wacom:core#hasRole"
+          }
+        ]
+      },
+       {
+        "wikidata":  [
+          "Q3305213", "Q93184", "Q2647254", "Q30322382", "Q15727816", "Q860861", "Q42503423", "Q22669139", "Q79218",
+          "Q15711026", "Q19960510", "Q18573970"
+        ],
+        "wacom-knowledge": "wacom:creative#VisualArtwork",
+         "literals": [
+            {
+              "wikidata":  "P571",
+              "type": "date",
+              "wacom-knowledge": "wacom:education#inception"
+            }],
+        "relations": [
+           {
+              "wikidata":  "P136",
+              "wacom-knowledge": "wacom:creative#hasArtstyle"
+            },
+          {
+              "wikidata":  "P195",
+              "wacom-knowledge": "wacom:creative#hasCollection"
+            }
+        ]
+      },
+      {
+        "wikidata":  ["Q6256"],
+        "wacom-knowledge": "wacom:core#Country",
+        "literals": [],
+        "relations": []
+      },
+      {
+        "wikidata":  [
+          "Q33506", "Q207694", "Q3044768", "Q120560", "Q17431399", "Q7328910", "Q11681271", "Q43229", "Q13226383",
+          "Q875538", "Q1497384"
+        ],
+        "wacom-knowledge": "wacom:core#Building",
+        "literals": [],
+        "relations": []
+      },
+      {
+        "wikidata":  [
+          "Q12737077", "Q28640", "Q4220920", "Q15839299", "Q6958747", "Q66666607", "Q15987302", "Q66715801"
+        ],
+        "wacom-knowledge": "wacom:business#Occupation",
+        "literals": [],
+        "relations": []
+      },
+      {
+        "wikidata":  [
+          "Q1792379", "Q16743958", "Q1792644", "Q3326867", "Q1231896", "Q968159"
+        ],
+        "wacom-knowledge": "wacom:creative#ArtStyle",
+        "literals": [],
+        "relations": []
+      }
+    ]
+}

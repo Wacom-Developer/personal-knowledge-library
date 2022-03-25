@@ -1,0 +1,47 @@
+Module knowledge.utils.wikipedia
+================================
+
+Functions
+---------
+
+    
+`get_wikipedia_summary(title: str, lang: str = 'en') ‑> Dict[str, str]`
+:   Extracting summary image and abstract for wikipedia URL.
+    
+    Parameters
+    ----------
+    title: str
+        Title of the Wikipedia article
+    lang: str
+        Language code
+    
+    Returns
+    -------
+    result: Dict[str, str]
+        Summary dict with image and summary text
+
+    
+`get_wikipedia_summary_url(wiki_url: str, lang: str = 'en') ‑> Dict[str, str]`
+:   Extracting summary image and abstract for wikipedia URL.
+    Parameters
+    ----------
+    wiki_url: str
+        Wikipedia URL
+    lang: str
+        Language code
+    
+    Returns
+    -------
+    result: Dict[str, str]
+        Result dictionary.
+
+Classes
+-------
+
+`ExtractionException(*args, **kwargs)`
+:   Common base class for all non-exit exceptions.
+
+    ### Ancestors (in MRO)
+
+    * builtins.Exception
+    * builtins.BaseException

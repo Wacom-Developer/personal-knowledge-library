@@ -1,0 +1,291 @@
+{
+  "entity-list": [
+    "Q30873",
+    "Q312",
+    "Q95",
+    "Q14799",
+    "Q186394",
+    "Q41187",
+    "Q2472289",
+    "Q20716",
+    "Q478214",
+    "Q380",
+    "Q1390577",
+    "Q2283",
+    "Q946607",
+    "Q18351488",
+    "Q7414",
+    "Q21404084",
+    "Q853958",
+    "Q223127"
+  ],
+  "class-mapping": [
+    {
+      "wikidata": [
+        "Q268592",
+        "Q6881511",
+        "Q783794",
+        "Q4830453",
+        "Q131734",
+        "Q482517",
+        "Q891723",
+        "Q2154459",
+        "Q1549591",
+        "Q751708",
+        "Q4230006",
+        "Q57334497",
+        "Q210167",
+        "Q658255",
+        "Q1137109",
+        "Q1107679",
+        "Q1762059",
+        "Q43229",
+        "Q219577",
+        "Q567521",
+        "Q786820",
+        "Q47509284",
+        "Q10689397",
+        "Q375336",
+        "Q2001305",
+        "Q2085381",
+        "Q5009242",
+        "Q2442401",
+        "Q10689397",
+        "Q21980538",
+        "Q375336",
+        "Q18127",
+        "Q43400508",
+        "Q1114515",
+        "Q1941618",
+        "Q1320047",
+        "Q20679540",
+        "Q1616075",
+        "Q20679540",
+        "Q1331793",
+        "Q1331793",
+        "Q561068",
+        "Q1061197",
+        "Q1254874",
+        "Q11396960",
+        "Q1917775",
+        "Q167037",
+        "Q7397",
+        "Q1266169",
+        "Q1153767",
+        "Q60229368",
+        "Q624902",
+        "Q35127",
+        "Q2401749",
+        "Q6566978",
+        "Q1589009"
+      ],
+      "wacom-knowledge": "wacom:business#Company",
+      "icon": "P154",
+      "literals": [
+        {
+          "wikidata": "P571",
+          "type": "date",
+          "wacom-knowledge": "wacom:business#inceptionDate"
+        },
+        {
+          "wikidata": "P2002",
+          "type": "list",
+          "wacom-knowledge": "wacom:business#twitterAccount"
+        }
+      ],
+      "relations": [
+        {
+          "wikidata": "P452",
+          "type": "wacom:business#BusinessArea",
+          "wacom-knowledge": "wacom:business#hasArea"
+        },
+        {
+          "wikidata": "P856",
+          "type": "wacom:core#Website",
+          "wacom-knowledge": "wacom:core#hasWebsite"
+        },
+        {
+          "wikidata": "P112",
+          "wacom-knowledge": "wacom:business#isFoundedBy"
+        },
+        {
+          "wikidata": "P169",
+          "wacom-knowledge": "wacom:business#hasCEO"
+        },
+        {
+          "wikidata": "P17",
+          "wacom-knowledge": "wacom:core#hasLocation"
+        },
+        {
+          "wikidata": "P749",
+          "wacom-knowledge": "wacom:business#isSubsidaryOf"
+        },
+        {
+          "wikidata": "P355",
+          "wacom-knowledge": "wacom:business#hasSubsidary"
+        },
+        {
+          "wikidata": "P159",
+          "wacom-knowledge": "wacom:business#hasHeadquarter"
+        },
+        {
+          "wikidata": "P1454",
+          "wacom-knowledge": "wacom:business#hasLegalForm"
+        }
+      ]
+    },
+    {
+      "wikidata": [
+        "Q5"
+      ],
+      "wacom-knowledge": "wacom:core#Person",
+      "literals": [],
+      "relations": []
+    },
+    {
+      "wikidata": [
+        "Q31855",
+        "Q157031"
+      ],
+      "wacom-knowledge": "wacom:core#Organisation",
+      "literals": [],
+      "relations": []
+    },
+    {
+      "wikidata": [
+        "Q1093829",
+        "Q42744322",
+        "Q3957",
+        "Q65589340",
+        "Q1749269",
+        "Q188509",
+        "Q532",
+        "Q4174776",
+        "Q4249901",
+        "Q1637706",
+        "Q5119",
+        "Q7830213",
+        "Q1637706",
+        "Q5119",
+        "Q15127012",
+        "Q14770218",
+        "Q51929311"
+      ],
+      "wacom-knowledge": "wacom:core#City",
+      "literals": [],
+      "relations": []
+    },
+    {
+      "wikidata": [
+        "Q484170",
+        "Q50337",
+        "Q476440",
+        "Q15617994",
+        "Q475061",
+        "Q35657",
+        "Q13212489",
+        "Q4925355"
+      ],
+      "wacom-knowledge": "wacom:core#AdministrativeDivision",
+      "literals": [],
+      "relations": []
+    },
+    {
+      "wikidata": [
+        "Q2983893",
+        "Q5327704",
+        "Q12813115",
+        "Q79696253",
+        "Q123705",
+        "Q1017546",
+        "Q98449544",
+        "Q4286337",
+        "Q5327369",
+        "Q5283513"
+      ],
+      "wacom-knowledge": "wacom:core#District",
+      "literals": [],
+      "relations": []
+    },
+    {
+      "wikidata": [
+        "Q11303",
+        "Q41176",
+        "Q9842",
+        "Q159334",
+        "Q9369203",
+        "Q697304",
+        "Q55043",
+        "Q10861807",
+        "Q184644",
+        "Q11863339",
+        "Q126807",
+        "Q322563",
+        "Q1574810",
+        "Q9826",
+        "Q61941563",
+        "Q1497364",
+        "Q18142"
+      ],
+      "wacom-knowledge": "wacom:core#Building",
+      "literals": [],
+      "relations": []
+    },
+    {
+      "wikidata": [
+        "Q661199"
+      ],
+      "wacom-knowledge": "wacom:core#Room",
+      "literals": [],
+      "relations": []
+    },
+    {
+      "wikidata": [
+        "Q6256",
+        "Q3624078"
+      ],
+      "wacom-knowledge": "wacom:core#Country",
+      "literals": [],
+      "relations": []
+    },
+    {
+      "wikidata": [
+        "Q12047392",
+        "Q57653825",
+        "Q1269299",
+        "Q19335303",
+        "Q57655236",
+        "Q67304002",
+        "Q57655433",
+        "Q55116439",
+        "Q19656964",
+        "Q778575",
+        "Q56839608",
+        "Q57654562",
+        "Q1916382",
+        "Q51885897",
+        "Q51885897",
+        "Q19340794",
+        "Q56526016",
+        "Q29368916",
+        "Q56424413",
+        "Q59603291",
+        "Q20871353",
+        "Q56871091"
+      ],
+      "wacom-knowledge": "wacom:business#hasLegalForm",
+      "literals": [],
+      "relations": []
+    }, {
+      "wikidata": [
+        "Q11650",
+        "Q2465832",
+        "Q11862829",
+        "Q8148"
+      ],
+      "wacom-knowledge": "wacom:business#BusinessArea",
+      "literals": [],
+      "relations": []
+    }
+  ]
+}

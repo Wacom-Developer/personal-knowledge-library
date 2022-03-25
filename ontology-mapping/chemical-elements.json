@@ -1,0 +1,113 @@
+{
+  "query": {
+    "filters": [
+      {
+        "property":  "P31",
+        "target": "Q11344"
+      }
+    ],
+    "limit": 1000,
+    "language_code": "en"
+  },
+  "class-mapping": [
+    {
+      "wikidata":  ["Q11344"],
+      "wacom-knowledge": "wacom:education#ChemicalElement",
+      "literals": [
+          {
+            "wikidata":  "P2102",
+            "type": "float",
+            "wacom-knowledge": "wacom:education#boilingPoint"
+          }, {
+            "wikidata":  "P2054",
+            "type": "float",
+            "wacom-knowledge": "wacom:education#density"
+          }, {
+            "wikidata":  "P246",
+            "wacom-knowledge": "wacom:education#elementSymbol"
+          }, {
+            "wikidata":  "P2067",
+            "type": "float",
+            "wacom-knowledge": "wacom:education#mass"
+          }, {
+            "wikidata":  "P2101",
+            "type": "float",
+            "wacom-knowledge": "wacom:education#meltingPoint"
+          }, {
+             "wikidata":  "P575",
+             "type": "date",
+             "wacom-knowledge": "wacom:education#timeOfDiscovery"
+        }
+      ],
+      "relations": [
+        {
+            "wikidata":  "P61",
+            "wacom-knowledge": "wacom:business#isInventedBy"
+          },
+         {
+            "wikidata":  "P189",
+            "wacom-knowledge": "wacom:education#isDiscoveredIn"
+          }
+      ]
+    },
+    {
+      "wikidata": [
+        "Q5"
+      ],
+      "wacom-knowledge": "wacom:core#Person",
+      "literals": [],
+      "relations": []
+    }, {
+      "wikidata": [
+        "Q1093829", "Q42744322", "Q3957", "Q65589340", "Q1749269", "Q188509", "Q532", "Q4174776", "Q5119", "Q1549591",
+        "Q7930989", "Q257391"
+      ],
+      "wacom-knowledge": "wacom:core#City",
+      "literals": [],
+      "relations": []
+    }, {
+      "wikidata": [
+        "Q484170", "Q50337", "Q476440", "Q15617994", "Q475061"
+      ],
+      "wacom-knowledge": "pimo:education#AdministrativeDivision",
+      "literals": [],
+      "relations": []
+    }, {
+      "wikidata": [
+        "Q2983893", "Q5327704", "Q12813115", "Q70208"
+      ],
+      "wacom-knowledge": "wacom:core#District",
+      "literals": [],
+      "relations": []
+    }, {
+      "wikidata": [
+        "Q11303", "Q41176", "Q9842", "Q159334", "Q9369203", "Q697304", "Q55043", "Q10861807", "Q184644", "Q11863339",
+        "Q126807", "Q322563", "Q1574810", "Q9826", "Q61941563", "Q3918"
+      ],
+      "wacom-knowledge": "wacom:core#Building",
+      "literals": [],
+      "relations": []
+    }, {
+      "wikidata": [
+        "Q661199"
+      ],
+      "wacom-knowledge": "wacom:core#Room",
+      "literals": [],
+      "relations": []
+    }, {
+      "wikidata": [
+        "Q6256", "Q3624078"
+      ],
+      "wacom-knowledge": "wacom:core#Country",
+      "literals": [],
+      "relations": []
+    }, {
+      "wikidata": [
+        "Q31855", "Q245065", "Q62078547", "Q2624320", "Q38723"
+      ],
+      "wacom-knowledge": "wacom:core#Organization",
+      "literals": [],
+      "relations": []
+    }
+  ]
+}
