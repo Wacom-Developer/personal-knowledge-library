@@ -1,3 +1,7 @@
+2022/03/31- RELEASE 0.3.1
+==========================
+- Fix in ontology API.
+
 2022/03/25- RELEASE 0.3.0
 ==========================
 - Include API changes
