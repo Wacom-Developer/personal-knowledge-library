@@ -393,13 +393,13 @@ class OntologyContext(OntologyObject):
 
     def __init__(self, cid: str, tenant_id: str, name: str, icon: str, labels: List[Label],
                  comments: List[Comment], date_added: datetime, date_modified: datetime, context: str, base_uri: str,
-                 version: int, settings: OntologyContextSettings):
+                 version: int, orphaned: bool):
         self.__id = cid
         self.__base_uri: str = base_uri
         self.__version: int = version
         self.__date_added: datetime = date_added
         self.__date_modified: datetime = date_modified
-        self.__settings: OntologyContextSettings = settings
+        self.__orphaned: bool = orphaned
         super().__init__(tenant_id, name, icon, labels, comments, context)
 
     @property
@@ -410,26 +410,23 @@ class OntologyContext(OntologyObject):
     def base_uri(self) -> str:
         return self.__base_uri
 
+    @property
+    def orphaned(self) -> bool:
+        return self.__orphaned
+
     @classmethod
     def from_dict(cls, context_dict: Dict[str, Any]):
         context_data: Dict[str, Any] = context_dict['data']
-        context_settings: Dict[str, Any] = context_data['settings']
         labels: List[Label] = [] if context_data['labels'] is None else \
             [Label(content=la[VALUE_TAG], language_code=la[LOCALE_TAG]) for la in context_data['labels']]
         comments: List[Comment] = [] if context_data['comments'] is None else \
             [Comment(text=la[VALUE_TAG], language_code=la[LOCALE_TAG]) for la in context_data['comments']]
-        settings: OntologyContextSettings = OntologyContextSettings(
-            context_settings['rdfPrefix'], context_settings['rdfsPrefix'], context_settings['owlPrefix'],
-            context_settings['baseLiteralUri'], context_settings['baseClassUri'],
-            context_settings['descriptionLiteralName'], context_settings['depth']
-        )
         added: datetime = dateutil.parser.isoparse(context_data['dateAdded'])
         modified: datetime = dateutil.parser.isoparse(context_data['dateModified'])
         return OntologyContext(context_data['id'], context_data['tenantId'], context_data['name'],
                                context_data['icon'], labels, comments, added, modified,
                                context_data['context'], context_data['baseURI'],
-                               context_dict['version'],
-                               settings)
+                               context_dict['version'], context_data['orphaned'])
 
     def __repr__(self):
         return f'<OntologyContext> - [id:={self.id}, iri:={self.iri}]'
