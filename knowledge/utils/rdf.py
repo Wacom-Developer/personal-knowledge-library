@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021 Wacom Authors. All Rights Reserved.
-from typing import Optional
+from typing import Optional, List
 
 from rdflib import Graph, RDF, RDFS, OWL
 
@@ -38,13 +38,13 @@ def ontology_import(rdf_content: str, tenant_id: str = '', context: str = '') ->
     # Parse data properties
     for data_property_iri in [s for s, p, o in rdf_graph.triples((None, RDF.type, OWL.DatatypeProperty))]:
         subproperty_of: Optional[OntologyPropertyReference] = None
-        range_prop: Optional[DataPropertyType] = None
-        domain_prop: Optional[OntologyClassReference] = None
+        range_prop: List[DataPropertyType] = []
+        domain_prop: List[OntologyClassReference] = []
         inverse_prop: Optional[OntologyPropertyReference] = None
         for _, _, obj in rdf_graph.triples((data_property_iri, RDFS.range, None)):
-            range_prop = INVERSE_DATA_PROPERTY_TYPE_MAPPING[str(obj)]
+            range_prop.append(INVERSE_DATA_PROPERTY_TYPE_MAPPING[str(obj)])
         for _, _, obj in rdf_graph.triples((data_property_iri, RDFS.domain, None)):
-            domain_prop = OntologyClassReference.parse(obj)
+            domain_prop.append(OntologyClassReference.parse(obj))
         for _, _, obj in rdf_graph.triples((data_property_iri, OWL.inverseOf, None)):
             inverse_prop = OntologyPropertyReference.parse(obj)
         for _, _, obj in rdf_graph.triples((data_property_iri, RDFS.subPropertyOf, None)):
@@ -56,13 +56,13 @@ def ontology_import(rdf_content: str, tenant_id: str = '', context: str = '') ->
     # Parse object properties
     for object_property_iri in [s for s, p, o in rdf_graph.triples((None, RDF.type, OWL.ObjectProperty))]:
         subproperty_of: Optional[OntologyPropertyReference] = None
-        obj_range_prop: Optional[OntologyClassReference] = None
-        domain_prop: Optional[OntologyPropertyReference] = None
+        obj_range_prop: List[OntologyClassReference] = []
+        domain_prop: List[OntologyPropertyReference] = []
         inverse_prop: Optional[OntologyPropertyReference] = None
         for _, _, o in rdf_graph.triples((object_property_iri, RDFS.range, None)):
-            obj_range_prop = OntologyClassReference.parse(o)
+            obj_range_prop.append(OntologyClassReference.parse(o))
         for _, _, o in rdf_graph.triples((object_property_iri, RDFS.domain, None)):
-            domain_prop = OntologyClassReference.parse(o)
+            domain_prop.append(OntologyClassReference.parse(o))
         for _, _, o in rdf_graph.triples((object_property_iri, OWL.inverseOf, None)):
             inverse_prop = OntologyPropertyReference.parse(o)
         for _, _, o in rdf_graph.triples((object_property_iri, RDFS.subPropertyOf, None)):

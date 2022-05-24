@@ -356,8 +356,8 @@ class OntologyProperty(OntologyObject):
 
     def __init__(self, kind: PropertyType, tenant_id: str, context: str, name: OntologyPropertyReference,
                  icon: str = None,
-                 property_domain: Optional[OntologyClassReference] = None,
-                 property_range: Optional[Union[OntologyClassReference, DataPropertyType]] = None,
+                 property_domain: Optional[List[OntologyClassReference]] = None,
+                 property_range: Optional[List[Union[OntologyClassReference, DataPropertyType]]] = None,
                  labels: Optional[List[Label]] = None,
                  comments: Optional[List[Comment]] = None,
                  subproperty_of: Optional[OntologyPropertyReference] = None,
@@ -365,8 +365,9 @@ class OntologyProperty(OntologyObject):
         self.__kind: PropertyType = kind
         self.__subproperty_of: OntologyPropertyReference = subproperty_of
         self.__inverse_property_of: OntologyPropertyReference = inverse_property_of
-        self.__domain: OntologyClassReference = property_domain
-        self.__range: Optional[Union[OntologyClassReference, DataPropertyType]] = property_range
+        self.__domains: List[OntologyClassReference] = property_domain if property_domain else []
+        self.__ranges: List[Optional[Union[OntologyClassReference, DataPropertyType]]] = property_range \
+            if property_range else []
         self.__reference: OntologyPropertyReference = name
         super().__init__(tenant_id, name.iri, icon, labels, comments, context)
 
@@ -395,17 +396,18 @@ class OntologyProperty(OntologyObject):
         return self.__inverse_property_of
 
     @property
-    def domain(self) -> OntologyClassReference:
+    def domains(self) -> List[OntologyClassReference]:
         """Domain of the property."""
-        return self.__domain
+        return self.__domains
 
     @property
-    def range(self) -> Optional[Union[OntologyClassReference, DataPropertyType]]:
-        return self.__range
+    def ranges(self) -> List[Union[OntologyClassReference, DataPropertyType]]:
+        """Ranges of the property."""
+        return self.__ranges
 
     def __repr__(self):
-        return f'<OntologyProperty> - [name:= {self.iri} domain:={self.domain}, range:={self.range}, ' \
-               f'subproperty_of:={self.subproperty_of}, type:={self.kind}]'
+        return f'<OntologyProperty> - [name:= {self.iri} domain:={self.domains}, range:={self.ranges}, ' \
+               f'sub-property_of:={self.subproperty_of}, type:={self.kind}]'
 
     @classmethod
     def from_dict(cls, property_dict: Dict[str, Any]):
@@ -417,10 +419,8 @@ class OntologyProperty(OntologyObject):
                                 property_dict['tenantId'], property_dict['context'],
                                 OntologyPropertyReference.parse(property_dict['name']),
                                 property_dict['icon'],
-                                OntologyClassReference.parse(property_dict['domain'])
-                                if property_dict['domain'] is not None else None,
-                                OntologyClassReference.parse(property_dict['range'])
-                                if property_dict['range'] is not None else None,
+                                [OntologyClassReference.parse(domain) for domain in property_dict['domains']],
+                                [OntologyClassReference.parse(domain) for domain in property_dict['ranges']],
                                 labels, comments,
                                 OntologyPropertyReference.parse(property_dict['subPropertyOf'])
                                 if property_dict['subPropertyOf'] is not None else None,
@@ -645,7 +645,7 @@ class Ontology(object):
         return list(self.__classes.values())
 
     def __check_hierarchy__(self, clz: OntologyClassReference, domain: OntologyClassReference) -> bool:
-        current_clz: OntologyClass = self.get_class(clz)
+        current_clz: Optional[OntologyClass] = self.get_class(clz)
         while current_clz is not None:
             if current_clz.reference == domain:
                 return True
@@ -666,7 +666,7 @@ class Ontology(object):
         instance: Optional[OntologyClass]
             Instance of ontology class.
         """
-        return self.__classes.get(class_reference.iri)
+        return self.__classes.get(class_reference.iri, None)
 
     def get_object_properties(self, property_reference: OntologyPropertyReference) -> Optional[OntologyProperty]:
         """
@@ -718,8 +718,9 @@ class Ontology(object):
         clz: Optional[OntologyClass] = self.get_class(cls_reference)
         if clz is not None:
             for dp in self.data_properties:
-                if self.__check_hierarchy__(clz.reference, dp.domain):
-                    data_properties.append(dp.reference)
+                for domain in dp.domains:
+                    if self.__check_hierarchy__(clz.reference, domain):
+                        data_properties.append(dp.reference)
         return data_properties
 
     def object_properties_for(self, cls_reference: OntologyClassReference) -> List[OntologyPropertyReference]:
@@ -740,8 +741,9 @@ class Ontology(object):
         clz: Optional[OntologyClass] = self.get_class(cls_reference)
         if clz is not None:
             for dp in self.object_properties:
-                if self.__check_hierarchy__(clz.reference, dp.domain):
-                    object_properties.append(dp.reference)
+                for domain in dp.domains:
+                    if self.__check_hierarchy__(clz.reference, domain):
+                        object_properties.append(dp.reference)
         return object_properties
 
     def __repr__(self):

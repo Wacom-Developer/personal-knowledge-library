@@ -168,7 +168,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             else:
                 thing.tenant_access_right = TenantAccessRight()
             return thing
-        raise WacomServiceException(f'Pushing entity failed. '
+        raise WacomServiceException(f'Retrieving of entity content failed. URI:={uri}. '
                                     f'Response code:={response.status_code}, exception:= {response.content}')
 
     def delete_entities(self, auth_key: str, uris: List[str], force: bool = False):
@@ -389,7 +389,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         payload: Dict[str, Any] = self.__entity__(entity)
-        response: Response = requests.post(url, json=payload, headers=headers, verify=self.verify_calls)
+        try:
+            response: Response = requests.post(url, json=payload, headers=headers, verify=self.verify_calls, timeout=5)
+        except Exception as e:
+            raise WacomServiceException("Timeout after 5 sec")
         if response.ok:
             uri: str = response.json()[URI_TAG]
             if entity.image is not None and entity.image != '':

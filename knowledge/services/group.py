@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021 Wacom. All rights reserved.
 import urllib.parse
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 import requests
 from requests import Response
@@ -12,6 +12,7 @@ from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG
 
 # -------------------------------------- Constant flags ----------------------------------------------------------------
+from knowledge.services.users import User
 
 GROUP_USER_RIGHTS_TAG: str = "groupUserRights"
 JOIN_KEY_PARAM: str = "joinKey"
@@ -60,7 +61,7 @@ class Group(object):
         return self.__tenant_id
 
     @property
-    def owner_id(self) -> str:
+    def owner_id(self) -> Optional[str]:
         """Owner id (internal id) of the user, who owns the group."""
         return self.__owner_id
 
@@ -93,6 +94,39 @@ class Group(object):
     def __repr__(self):
         return f'<Group: id:={self.id}, name:={self.name}, group access right:={self.group_access_rights}]>'
 
+
+class GroupInfo(Group):
+    """
+    Group Information
+    -----------------
+    Provides additional information on the group.
+    Users within the group are listed.
+    """
+
+    def __init__(self, tenant_id: str, group_id: str, owner: str, name: str, join_key: str, rights: GroupAccessRight,
+                 group_users: List[User]):
+        self.__users: List[User] = group_users
+        super().__init__(tenant_id, group_id, owner, name, join_key, rights)
+
+    @property
+    def group_users(self) -> List:
+        """List of all users that are part of the group."""
+        return self.__users
+
+    @classmethod
+    def parse(cls, param: Dict[str, Any]) -> 'GroupInfo':
+        tenant_id: str = param.get('tenantId')
+        owner_id: str = param.get('ownerId')
+        join_key: str = param.get('joinKey')
+        group_id: str = param.get('id')
+        name: str = param.get('name')
+        rights: GroupAccessRight = GroupAccessRight.parse(param.get('groupUserRights', ['Read']))
+        return GroupInfo(tenant_id=tenant_id, group_id=group_id, owner=owner_id, join_key=join_key, name=name,
+                         rights=rights, group_users=[User.parse(u) for u in param.get('users', [])])
+
+    def __repr__(self):
+        return f'<GroupInfo: id:={self.id}, name:={self.name}, group access right:={self.group_access_rights}, ' \
+               f'number of users:={len(self.group_users)}]>'
 
 class GroupManagementServiceAPI(WacomServiceAPIClient):
     """
@@ -252,7 +286,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         raise WacomServiceException(f'Listing of group failed.'
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def group(self, auth_key: str, group_id: str) -> Group:
+    def group(self, auth_key: str, group_id: str) -> GroupInfo:
         """Get a group.
 
         Parameters
@@ -279,8 +313,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
         if response.ok:
             group: Dict[str, Any] = response.json()
-            return Group.parse(group)
-        raise WacomServiceException(f'Listing of users failed.'
+            return GroupInfo.parse(group)
+        raise WacomServiceException(f'Getting of group information failed.'
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 
     def join_group(self, auth_key: str, group_id: str, join_key: str):
