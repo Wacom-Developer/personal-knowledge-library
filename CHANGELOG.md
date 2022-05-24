@@ -1,3 +1,7 @@
+2022/03/31- RELEASE 0.4.0
+==========================
+- Properties can have now multiple domains and ranges.
+
 2022/03/31- RELEASE 0.3.1
 ==========================
 - Fix in ontology API.
