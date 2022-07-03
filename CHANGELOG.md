@@ -1,3 +1,8 @@
+2022/07/03- RELEASE 0.5.0
+==========================
+- Update all samples and tools to pass the instance of the deployed service
+- Check the supported languages
+
 2022/03/31- RELEASE 0.4.0
 ==========================
 - Properties can have now multiple domains and ranges.
