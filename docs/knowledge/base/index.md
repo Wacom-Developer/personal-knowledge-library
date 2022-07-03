@@ -1,5 +1,6 @@
 Module knowledge.base
 =====================
+Base structures.
 
 Sub-modules
 -----------

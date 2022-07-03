@@ -196,6 +196,39 @@ Classes
     * knowledge.base.ontology.DataProperty
     * knowledge.base.ontology.ObjectProperty
 
+`InflectionSetting(concept: str, inflection: str, case_sensitive: bool)`
+:   Inflection settings
+    --------------------
+    
+    Parameters
+    ----------
+    concept: str
+        Concept class
+    inflection: str
+        Inflection setting
+    case_sensitive: bool
+        Entity labels of the class treated case-sensitive
+
+    ### Ancestors (in MRO)
+
+    * abc.ABC
+
+    ### Static methods
+
+    `from_dict(entity: Dict[str, Any]) ‑> knowledge.base.ontology.InflectionSetting`
+    :
+
+    ### Instance variables
+
+    `case_sensitive: bool`
+    :   Are entity labels of the class treated case-sensitive.
+
+    `concept: knowledge.base.ontology.OntologyClassReference`
+    :   Concept class.
+
+    `inflection: str`
+    :   Inflection setting
+
 `ObjectProperty(relation: knowledge.base.ontology.OntologyPropertyReference, incoming: Optional[List[Union[str, ForwardRef('ThingObject')]]] = None, outgoing: Optional[List[Union[str, ForwardRef('ThingObject')]]] = None)`
 :   Object Property
     ---------------
@@ -447,7 +480,7 @@ Classes
     `scheme`
     :   Scheme.
 
-`OntologyProperty(kind: knowledge.base.ontology.PropertyType, tenant_id: str, context: str, name: knowledge.base.ontology.OntologyPropertyReference, icon: str = None, property_domain: Optional[knowledge.base.ontology.OntologyClassReference] = None, property_range: Union[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.DataPropertyType, None] = None, labels: Optional[List[knowledge.base.entity.Label]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, inverse_property_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None)`
+`OntologyProperty(kind: knowledge.base.ontology.PropertyType, tenant_id: str, context: str, name: knowledge.base.ontology.OntologyPropertyReference, icon: str = None, property_domain: Optional[List[knowledge.base.ontology.OntologyClassReference]] = None, property_range: Optional[List[Union[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.DataPropertyType]]] = None, labels: Optional[List[knowledge.base.entity.Label]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, inverse_property_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None)`
 :   Ontology Property
     -----------------
     Property ontology object.
@@ -492,7 +525,7 @@ Classes
 
     ### Instance variables
 
-    `domain: knowledge.base.ontology.OntologyClassReference`
+    `domains: List[knowledge.base.ontology.OntologyClassReference]`
     :   Domain of the property.
 
     `inverse_property_of: knowledge.base.ontology.OntologyPropertyReference`
@@ -504,8 +537,8 @@ Classes
     `kind: knowledge.base.ontology.PropertyType`
     :   Kind of the property.
 
-    `range: Union[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.DataPropertyType, None]`
-    :
+    `ranges: List[Union[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.DataPropertyType]]`
+    :   Ranges of the property.
 
     `reference: knowledge.base.ontology.OntologyPropertyReference`
     :   Reference to property

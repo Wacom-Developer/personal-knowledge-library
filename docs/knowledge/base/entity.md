@@ -147,7 +147,7 @@ Classes
     `language_code: LanguageCode`
     :   Language code of the content.
 
-`OntologyContext(cid: str, tenant_id: str, name: str, icon: str, labels: List[knowledge.base.entity.Label], comments: List[knowledge.base.entity.Comment], date_added: datetime.datetime, date_modified: datetime.datetime, context: str, base_uri: str, version: int, settings: knowledge.base.entity.OntologyContextSettings)`
+`OntologyContext(cid: str, tenant_id: str, name: str, icon: str, labels: List[knowledge.base.entity.Label], comments: List[knowledge.base.entity.Comment], date_added: datetime.datetime, date_modified: datetime.datetime, context: str, base_uri: str, version: int, orphaned: bool)`
 :   OntologyContext
     ----------------
     Ontology context representation.
@@ -166,8 +166,6 @@ Classes
         List of labels
     comments: List[Comment]
         List of comments
-    last_update:
-        Last update
     context: str
         context name
     base_uri: str
@@ -189,6 +187,9 @@ Classes
     :
 
     `id: str`
+    :
+
+    `orphaned: bool`
     :
 
 `OntologyContextSettings(rdf_prefix: str, rdfs_prefix: str, owl_prefix: str, base_literal_uri: str, base_class_uri: str, description_literal_name: str, depth: int)`
@@ -256,7 +257,7 @@ Classes
     ### Instance variables
 
     `comments: List[knowledge.base.entity.Comment]`
-    :
+    :   Comment related to ontology object.
 
     `context: str`
     :   Context.

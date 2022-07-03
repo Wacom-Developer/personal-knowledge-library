@@ -230,13 +230,14 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
+    parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com',
+                        help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom personal knowledge REST API Client
-    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
-        application_name="Wacom Knowledge Listing",
-        service_url='https://private-knowledge.wacom.com')
+    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
+                                                                    service_url=args.instance)
     # Use special tenant for testing:  Unit-test tenant
     user_token: str = knowledge_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     page_id: Optional[str] = None
@@ -401,16 +402,11 @@ Performing Named Entity Linking (NEL) on text and Universal Ink Model.
 import argparse
 from typing import List, Dict
 
-import urllib3
-
 from knowledge.base.entity import LanguageCode
 from knowledge.base.ontology import OntologyPropertyReference, ThingObject, ObjectProperty
 from knowledge.nel.base import KnowledgeGraphEntity
 from knowledge.nel.engine import WacomEntityLinkingEngine
 from knowledge.services.graph import WacomKnowledgeService
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 
 LANGUAGE_CODE: LanguageCode = LanguageCode("en_US")
 TEXT: str = "Leonardo da Vinci painted the Mona Lisa."
@@ -466,16 +462,17 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
+    parser.add_argument("-i", "--instance", default="https://stage-private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom personal knowledge REST API Client
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Named Entity Linking Knowledge access",
-        service_url='https://private-knowledge.wacom.com')
+        service_url=args.instance)
     #  Wacom Named Entity Linking
     nel_client: WacomEntityLinkingEngine = WacomEntityLinkingEngine(
-        service_url=WacomEntityLinkingEngine.SERVICE_URL,
+        service_url=args.instance,
         service_endpoint=WacomEntityLinkingEngine.SERVICE_ENDPOINT
     )
     # Use special tenant for testing:  Unit-test tenant
@@ -535,19 +532,18 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
+    parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com',
+                        help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom personal knowledge REST API Client
-    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
-        application_name="Wacom Knowledge Listing",
-        service_url='https://private-knowledge.wacom.com')
+    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
+                                                                    service_url=args.instance)
     # User Management
-    user_management: UserManagementServiceAPI = UserManagementServiceAPI(
-        service_url='https://private-knowledge.wacom.com')
+    user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=args.instance)
     # Group Management
-    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(
-        service_url='https://private-knowledge.wacom.com')
+    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
     admin_token: str = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     # Now, we create a users
     u1, u1_token = user_management.create_user(TENANT_KEY, "u1")
@@ -617,15 +613,11 @@ The samples show how the ontology can be extended and new entities can be added 
 import argparse
 from typing import List, Optional
 
-import urllib3
-
 from knowledge.base.entity import OntologyContext, Label, LanguageCode, Description
 from knowledge.base.ontology import DataPropertyType, OntologyClassReference, OntologyPropertyReference, ThingObject, \
     DataProperty
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ------------------------------- Constants ----------------------------------------------------------------------------
 LEONARDO_DA_VINCI: str = 'Leonardo da Vinci'
@@ -667,15 +659,16 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
+    parser.add_argument("-i", "--instance", default="https://stage-private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom Ontology REST API Client
-    ontology_client: OntologyService = OntologyService(service_url='https://private-knowledge.wacom.com')
+    ontology_client: OntologyService = OntologyService(service_url=args.instance)
     admin_token: str = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Ontology Creation Demo",
-        service_url='https://private-knowledge.wacom.com')
+        service_url=args.instance)
     contexts: List[OntologyContext] = ontology_client.contexts(admin_token)
     if len(contexts) == 0:
         # First, create a context for the ontology
@@ -725,40 +718,43 @@ The following samples show how to utilize the library to work with Wacom's Perso
 Listing the entities for tenant. 
 
 ```bash
->> python listing.py [-h] [-u USER] [-t TENANT] [-r]
+>> python listing.py [-h] -u USER -t TENANT [-r] [-i INSTANCE]
 ```
 
 **Parameters:**
 
-  - _-u USER, --user USER_ - External ID to identify user of the Wacom Personal Knowledge 
-  - _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
-  - _-r, --relations (optional)_ -  Requesting the relations for each entity
+- _-i INSTANCE, --instance INSTANCE_ - URL of instance
+- _-u USER, --user USER_ - External ID to identify user of the Wacom Personal Knowledge 
+- _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
+- _-r, --relations (optional)_ -  Requesting the relations for each entity
 
 ### Dump script
 
 Dump all entities of a user to a ndjson file. 
 
 ```bash
->> python  dump.py [-h] [-u USER] [-t TENANT] [-r] [-d DUMP]
+>> python  dump.py [-h] [-u USER] [-t TENANT] [-r] [-d DUMP] [-i INSTANCE]
 ```
 
 **Parameters:**
 
-  - _-u USER, --user USER_ - External ID to identify user of the Wacom Personal Knowledge 
-  - _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
-  - _-r, --relations (optional)_ -  Requesting the relations for each entity
-  - _-d DUMP, --dump DUMP_ -  Defines the location of an ndjson file
+- _-i INSTANCE, --instance INSTANCE_ - URL of instance
+- _-u USER, --user USER_ - External ID to identify user of the Wacom Personal Knowledge 
+- _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
+- _-r, --relations (optional)_ -  Requesting the relations for each entity
+- _-d DUMP, --dump DUMP_ -  Defines the location of an ndjson file
  
 ### Push entities script
 
 Pushing entities to knowledge graph.
 
 ```bash
->> python push_entities.py [-h] [-u USER] [-t TENANT] [-r]
+>> python push_entities.py [-h] [-u USER] [-t TENANT] [-r] [-i INSTANCE]
 ```
 
 **Parameters:**
 
+- _-i INSTANCE, --instance INSTANCE_ - URL of instance
 - _-u USER, --user USER_ - External ID to identify user of the Wacom Personal Knowledge 
 - _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
 - _-i CACHE, --cache CACHE_ - Path to entities that must be imported.
@@ -768,11 +764,12 @@ Pushing entities to knowledge graph.
 Resets a tenant by removing entities, groups, and users. 
 
 ```bash
->> python reset.py [-h] [-u USER] [-t TENANT]
+>> python reset.py [-h] [-u USER] [-t TENANT] [-i INSTANCE]
 ```
 
 **Parameters:**
 
+- _-i INSTANCE, --instance INSTANCE_ - URL of instance
 - _-u USER, --user USER_ - External ID to identify user of the Wacom Personal Knowledge 
 - _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
 - _-i CACHE, --cache CACHE_ - Path to entities that must be imported.  

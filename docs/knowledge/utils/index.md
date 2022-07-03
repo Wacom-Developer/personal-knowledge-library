@@ -1,5 +1,6 @@
 Module knowledge.utils
 ======================
+"Utilities
 
 Sub-modules
 -----------

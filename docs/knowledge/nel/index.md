@@ -1,5 +1,7 @@
 Module knowledge.nel
 ====================
+"
+Named Entity Linking
 
 Sub-modules
 -----------

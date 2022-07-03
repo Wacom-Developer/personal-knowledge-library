@@ -24,6 +24,10 @@ Classes
     rights: GroupAccessRight
         Access right for group
 
+    ### Descendants
+
+    * knowledge.services.group.GroupInfo
+
     ### Static methods
 
     `parse(param: Dict[str, Any]) ‑> knowledge.services.group.Group`
@@ -43,11 +47,31 @@ Classes
     `name: str`
     :   Name of the group.
 
-    `owner_id: str`
+    `owner_id: Optional[str]`
     :   Owner id (internal id) of the user, who owns the group.
 
     `tenant_id: str`
     :   Tenant ID.
+
+`GroupInfo(tenant_id: str, group_id: str, owner: str, name: str, join_key: str, rights: knowledge.base.access.GroupAccessRight, group_users: List[knowledge.services.users.User])`
+:   Group Information
+    -----------------
+    Provides additional information on the group.
+    Users within the group are listed.
+
+    ### Ancestors (in MRO)
+
+    * knowledge.services.group.Group
+
+    ### Static methods
+
+    `parse(param: Dict[str, Any]) ‑> knowledge.services.group.GroupInfo`
+    :
+
+    ### Instance variables
+
+    `group_users: List[~T]`
+    :   List of all users that are part of the group.
 
 `GroupManagementServiceAPI(service_url: str = 'https://stage-private-knowledge.wacom.com', service_endpoint: str = 'graph')`
 :   Group Management Service API
@@ -154,7 +178,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `group(self, auth_key: str, group_id: str) ‑> knowledge.services.group.Group`
+    `group(self, auth_key: str, group_id: str) ‑> knowledge.services.group.GroupInfo`
     :   Get a group.
         
         Parameters

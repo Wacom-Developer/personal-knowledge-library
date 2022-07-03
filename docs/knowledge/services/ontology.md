@@ -98,6 +98,40 @@ Classes
         concepts: List[Tuple[OntologyClassReference, OntologyClassReference]]
             List of ontology classes. Tuple<Classname, Superclass>
 
+    `context(self, auth_key: str, context_name: str) ‑> Dict[str, Any]`
+    :   Getting the information on the context.
+        
+        Parameters
+        ----------
+        auth_key: str
+            Auth key from user.
+        context_name: str
+            Name of the context.
+        
+        Returns
+        -------
+        context_description: Dict[str, Any]
+            The dictionary contains:
+                version: int - Version number
+                name: str - Name of context
+                concepts: List[str] - List of concepts
+                properties: List[str] - List of all properties (data and object)
+
+    `context_metadata(self, auth_key: str, context_name: str) ‑> List[knowledge.base.ontology.InflectionSetting]`
+    :   Getting the meta-data on the context.
+        
+        Parameters
+        ----------
+        auth_key: str
+            Auth key from user.
+        context_name: str
+            Name of the context.
+        
+        Returns
+        -------
+        list_inflection_settings: List[InflectionSetting]
+            List of inflection settings.
+
     `contexts(self, auth_key: str) ‑> List[knowledge.base.entity.OntologyContext]`
     :   List all concepts.
         
@@ -305,6 +339,9 @@ Classes
         -------
         rdf: str
             Ontology as RDFS / OWL  ontology
+
+    `remove_context(self, auth_key: str, name: str, force: bool = False)`
+    :
 
     `update_concept(self, auth_key: str, context: str, name: str, subclass_of: Optional[str], icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.Label]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None) ‑> Dict[str, str]`
     :   Update concept class.

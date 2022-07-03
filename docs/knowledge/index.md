@@ -1,5 +1,6 @@
 Module knowledge
 ================
+"Personal knowledge Library
 
 Sub-modules
 -----------

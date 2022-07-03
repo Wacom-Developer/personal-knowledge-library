@@ -57,7 +57,9 @@ Classes
     :
 
 `WikiDataAPIClient()`
-:   WikiData API client.
+:   WikiDataAPIClient
+    -----------------
+    WikiData API client.
 
     ### Ancestors (in MRO)
 
@@ -95,8 +97,20 @@ Classes
         :param qid: QID of entity
         :return: list of subclasses QIDs
 
-    `wikipedia_url(wikidata_id: str, lang: str = 'en')`
-    :
+    `wikipedia_url(wikidata_id: str, lang: str = 'en') ‑> Optional[str]`
+    :   Creates a wikipedia URL.
+        
+        Parameters
+        ----------
+        wikidata_id: str
+            Wikidata id
+        lang: str
+            Language code
+        
+        Returns
+        -------
+        wikipedia: str
+            Wikipedia URL, returns None if no URL is found.
 
     ### Methods
 
@@ -156,7 +170,9 @@ Classes
     :
 
 `WikiDataAPIException(*args, **kwargs)`
-:   Common base class for all non-exit exceptions.
+:   WikiDataAPIException
+    --------------------
+    Exception thrown when accessing WikiData fails.
 
     ### Ancestors (in MRO)
 
