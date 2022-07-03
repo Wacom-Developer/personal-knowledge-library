@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom Authors. All Rights Reserved.
+# Copyright © 2021-2022 Wacom Authors. All Rights Reserved.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,15 +15,11 @@
 import argparse
 from typing import List, Optional
 
-import urllib3
-
 from knowledge.base.entity import OntologyContext, Label, LanguageCode, Description
 from knowledge.base.ontology import DataPropertyType, OntologyClassReference, OntologyPropertyReference, ThingObject, \
     DataProperty
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ------------------------------- Constants ----------------------------------------------------------------------------
 LEONARDO_DA_VINCI: str = 'Leonardo da Vinci'
@@ -65,15 +61,16 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
+    parser.add_argument("-i", "--instance", default="https://stage-private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom Ontology REST API Client
-    ontology_client: OntologyService = OntologyService(service_url='https://private-knowledge.wacom.com')
+    ontology_client: OntologyService = OntologyService(service_url=args.instance)
     admin_token: str = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Ontology Creation Demo",
-        service_url='https://private-knowledge.wacom.com')
+        service_url=args.instance)
     contexts: List[OntologyContext] = ontology_client.contexts(admin_token)
     if len(contexts) == 0:
         # First, create a context for the ontology

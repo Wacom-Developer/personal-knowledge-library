@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom Authors. All Rights Reserved.
+# Copyright © 2021-2022 Wacom Authors. All Rights Reserved.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,16 +15,12 @@
 import argparse
 from typing import List, Tuple
 
-import urllib3
-
 from knowledge.base.entity import OntologyContext
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, OntologyClass, OntologyProperty,\
     Ontology
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
 from knowledge.utils.rdf import ontology_import
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 RESOURCE: str = "http://www.w3.org/2000/01/rdf-schema#Resource"
 
@@ -34,12 +30,12 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
+    parser.add_argument("-i", "--instance", default="https://stage-private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom Ontology REST API Client
-    ontology_client: OntologyService = OntologyService(
-        service_url='https://private-knowledge.wacom.com')
+    ontology_client: OntologyService = OntologyService(service_url=args.instance)
     auth_key: str = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     # Use special tenant for testing:  Unit-test tenant
     contexts: List[OntologyContext] = ontology_client.contexts(auth_key)
@@ -48,13 +44,13 @@ if __name__ == '__main__':
         ontology_client.create_context(auth_key, name="base")
         ontology_client.commit(auth_key, context_name="base")
         knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
-            application_name="Wacom Knowledge Listing",
-            service_url='https://private-knowledge.wacom.com')
+            application_name="Wacom Knowledge Listing", service_url=args.instance)
         knowledge_client.ontology_update(auth_key)
         contexts: List[OntologyContext] = ontology_client.contexts(auth_key)
 
     # All context create for a tenant.
     for c in contexts:
+        desc = ontology_client.context_metadata(auth_key, c.context)
         concepts: List[Tuple[OntologyClassReference, OntologyClassReference]] = ontology_client.concepts(auth_key,
                                                                                                          c.iri)
         # All context create for a tenant.
@@ -64,7 +60,8 @@ if __name__ == '__main__':
         for cpt, subclass_of_ref in sorted(concepts, key=lambda v: v[0].iri):
             if cpt.iri.startswith('wacom'):
                 onto_class: OntologyClass = ontology_client.concept(auth_key, c.iri, cpt.iri)
-                print(f'{onto_class.reference.context.upper()}_{onto_class.reference.name.upper()}: str = "{onto_class.iri}"')
+                print(f'{onto_class.reference.context.upper()}_{onto_class.reference.name.upper()}: str = '
+                      f'"{onto_class.iri}"')
         properties: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]] = \
             ontology_client.properties(auth_key, c.iri)
         # All context create for a tenant.

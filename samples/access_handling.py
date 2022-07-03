@@ -49,19 +49,18 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
+    parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com',
+                        help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom personal knowledge REST API Client
-    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
-        application_name="Wacom Knowledge Listing",
-        service_url='https://private-knowledge.wacom.com')
+    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
+                                                                    service_url=args.instance)
     # User Management
-    user_management: UserManagementServiceAPI = UserManagementServiceAPI(
-        service_url='https://private-knowledge.wacom.com')
+    user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=args.instance)
     # Group Management
-    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(
-        service_url='https://private-knowledge.wacom.com')
+    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
     admin_token: str = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     # Now, we create a users
     u1, u1_token = user_management.create_user(TENANT_KEY, "u1")

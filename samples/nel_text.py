@@ -80,16 +80,17 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
+    parser.add_argument("-i", "--instance", default="https://stage-private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom personal knowledge REST API Client
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Named Entity Linking Knowledge access",
-        service_url='https://private-knowledge.wacom.com')
+        service_url=args.instance)
     #  Wacom Named Entity Linking
     nel_client: WacomEntityLinkingEngine = WacomEntityLinkingEngine(
-        service_url=WacomEntityLinkingEngine.SERVICE_URL,
+        service_url=args.instance,
         service_endpoint=WacomEntityLinkingEngine.SERVICE_ENDPOINT
     )
     # Use special tenant for testing:  Unit-test tenant
