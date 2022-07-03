@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-2022 Wacom. All rights reserved.
 import argparse
 from typing import Optional, List
-
-import urllib3
 
 from knowledge.base.ontology import THING_CLASS
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.group import GroupManagementServiceAPI
 from knowledge.services.users import UserManagementServiceAPI
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 DEMO_USER_EXTERNAL_USER_ID: str = 'ee6b0b0c-e51b-458c-909d-5ba7e81166e6'
 
 
@@ -26,18 +23,16 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
+    parser.add_argument("-i", "--instance", default="https://stage-private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
 
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
-        application_name="Wacom Knowledge Listing",
-        service_url='https://private-knowledge.wacom.com')
+        application_name="Wacom Knowledge Listing", service_url=args.instance)
     # User Management
-    user_management: UserManagementServiceAPI = UserManagementServiceAPI(
-        service_url='https://private-knowledge.wacom.com')
+    user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=args.instance)
 
     # Group Management
-    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(
-        service_url='https://private-knowledge.wacom.com')
+    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
 
     admin_token: str = user_management.request_user_token(args.tenant, args.user)
     page_id: Optional[str] = None

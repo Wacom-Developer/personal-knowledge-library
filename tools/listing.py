@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-2022 Wacom. All rights reserved.
 import argparse
 from typing import List, Dict, Optional
 
-import urllib3
-
 from knowledge.base.ontology import OntologyClassReference, ThingObject
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 from knowledge.services.graph import WacomKnowledgeService
 
 THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
@@ -33,12 +28,13 @@ if __name__ == '__main__':
     parser.add_argument("-u", "--user", help="User")
     parser.add_argument("-t", "--tenant", help="Tenant")
     parser.add_argument("-r", "--relations", action="store_true", help="Find all relations.")
+    parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com',
+                        help="URL of instance")
     args = parser.parse_args()
 
     # Wacom personal knowledge REST API Client
-    wacom_client: WacomKnowledgeService = WacomKnowledgeService(
-        application_name="Wacom Knowledge Listing",
-        service_url='https://private-knowledge.wacom.com')
+    wacom_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
+                                                                service_url=args.instance)
     user_auth_key: str = wacom_client.request_user_token(args.tenant, args.user)
     page_id: Optional[str] = None
     page_number: int = 1

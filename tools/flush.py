@@ -3,12 +3,7 @@
 import argparse
 from typing import Optional, List
 
-import urllib3
-
 from knowledge.base.ontology import OntologyClassReference
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 from knowledge.services.graph import WacomKnowledgeService
 
 THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
@@ -20,12 +15,13 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
     parser.add_argument("-e", "--type", help="IRI of entity type. wacom:core#Thing will find all entities.")
+    parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com',
+                        help="URL of instance")
     args = parser.parse_args()
 
     # Wacom personal knowledge REST API Client
-    wacom_client: WacomKnowledgeService = WacomKnowledgeService(
-        application_name="Flush entities",
-        service_url='https://private-knowledge.wacom.com')
+    wacom_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Flush entities",
+                                                                service_url=args.instance)
     user_auth_key: str = wacom_client.request_user_token(args.tenant, args.user)
     page_id: Optional[str] = None
     deleted_uris: int = 0

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-2022 Wacom. All rights reserved.
 import argparse
 import json
 import os
@@ -9,7 +9,6 @@ from typing import Dict, List, Any, Optional, Tuple, Set
 
 import ndjson
 import requests
-import urllib3
 from requests import Response
 from tqdm import tqdm
 
@@ -18,8 +17,6 @@ from knowledge.base.entity import LanguageCode, IMAGE_TAG, DATA_PROPERTIES_TAG, 
 from knowledge.base.ontology import SYSTEM_SOURCE_SYSTEM, SYSTEM_SOURCE_REFERENCE_ID, ThingObject, \
     OntologyClassReference, DataProperty, OntologyPropertyReference, ObjectProperty
 from knowledge.public.wikidata import WIKIDATA_SPARQL_URL, INSTANCE_OF, WikiDataAPIClient, wikidate, IMAGE
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 # -------------------------------------------------- Structures --------------------------------------------------------
@@ -38,7 +35,9 @@ language_code_mapping: Dict[str, LanguageCode] = {
     'en': LanguageCode('en_US'),
     'ja': LanguageCode('ja_JP'),
     'de': LanguageCode('de_DE'),
-    'bg': LanguageCode('bg_BG')
+    'bg': LanguageCode('bg_BG'),
+    'fr': LanguageCode('fr_FR'),
+    'it': LanguageCode('it_IT')
 }
 
 
@@ -52,14 +51,15 @@ def localized_list_description(entity_dict: Dict[str, str]) -> List[Description]
 
 
 def localized_list_label(entity_dict: Dict[str, str]) -> List[Label]:
-    return [Label(cont, update_language_code(lang), main=True) for lang, cont in entity_dict.items()]
+    return [Label(cont, update_language_code(lang), main=True) for lang, cont in entity_dict.items() if cont != '']
 
 
 def localized_flatten_alias_list(entity_dict: Dict[str, List[str]]) -> List[Label]:
     flatten: List[Label] = []
     for language, items in entity_dict.items():
         for i in items:
-            flatten.append(Label(i, update_language_code(language), main=False))
+            if i != '':
+                flatten.append(Label(i, update_language_code(language), main=False))
     return flatten
 
 
@@ -101,9 +101,16 @@ def sparql_query(
 
 def strip(url: str) -> str:
     """Strip qid from url.
-    :param url: str
+
+    Parameters
+    ----------
+    url: str
         Strip QID from URL
-    :return: QID
+
+    Returns
+    -------
+    qid: str
+        QID
     """
     parts = url.split('/')
     return parts[-1]

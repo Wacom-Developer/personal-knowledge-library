@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-2022 Wacom. All rights reserved.
 import argparse
 import os
 from pathlib import Path
 from typing import List, Dict, Optional
 
 import ndjson
-import urllib3
 from tqdm import tqdm
 
 from knowledge.base.ontology import OntologyClassReference
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 from knowledge.base.ontology import ThingObject
 from knowledge.services.graph import WacomKnowledgeService
 
@@ -41,12 +37,12 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.")
     parser.add_argument("-r", "--relations", action="store_true", help="Include the relations in the dump.")
     parser.add_argument("-d", "--dump", default='dump.ndjson', help="Defines the location of an ndjson dump file.")
+    parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com', help="URL of instance")
     args = parser.parse_args()
 
     # Wacom personal knowledge REST API Client
-    wacom_client: WacomKnowledgeService = WacomKnowledgeService(
-        application_name="Wacom Knowledge Listing",
-        service_url='https://private-knowledge.wacom.com')
+    wacom_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
+                                                                service_url=args.instance)
     user_auth_key: str = wacom_client.request_user_token(args.tenant, args.user)
     page_id: Optional[str] = None
     page_number: int = 1
