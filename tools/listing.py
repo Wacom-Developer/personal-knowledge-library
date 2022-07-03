@@ -25,8 +25,10 @@ def print_summary(total: int, types: Dict[str, int], languages: Dict[str, int]):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="User")
-    parser.add_argument("-t", "--tenant", help="Tenant")
+    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
+                        required=True)
+    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
+                        required=True)
     parser.add_argument("-r", "--relations", action="store_true", help="Find all relations.")
     parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com',
                         help="URL of instance")
