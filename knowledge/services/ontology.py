@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
-import json
+# Copyright © 2021-2022 Wacom. All rights reserved.
 import urllib.parse
 from http import HTTPStatus
 from typing import Dict, List, Any, Optional, Tuple
@@ -9,8 +8,8 @@ import requests
 from requests import Response
 
 from knowledge.base.entity import OntologyContext, LocalizedContent, Label, Comment
-from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, OntologyProperty, OntologyClass,\
-    PropertyType, THING_CLASS, DataPropertyType
+from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, OntologyProperty, OntologyClass, \
+    PropertyType, THING_CLASS, DataPropertyType, InflectionSetting
 from knowledge.services import USER_AGENT_STR
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG
@@ -89,6 +88,61 @@ class OntologyService(WacomServiceAPIClient):
             return response_list
         raise WacomServiceException(f'Listing of context failed. '
                                     f'Response code:={response.status_code}, exception:= {response.text}')
+
+    def context(self, auth_key: str, context_name: str) -> Dict[str, Any]:
+        """
+        Getting the information on the context.
+
+        Parameters
+        ----------
+        auth_key: str
+            Auth key from user.
+        context_name: str
+            Name of the context.
+
+        Returns
+        -------
+        context_description: Dict[str, Any]
+            The dictionary contains:
+                version: int - Version number
+                name: str - Name of context
+                concepts: List[str] - List of concepts
+                properties: List[str] - List of all properties (data and object)
+        """
+        headers: Dict[str, str] = {
+            USER_AGENT_TAG: USER_AGENT_STR,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_name}',
+                                          headers=headers, verify=self.verify_calls)
+        if response.ok:
+            return response.json()
+
+    def context_metadata(self, auth_key: str, context_name: str) -> List[InflectionSetting]:
+        """
+        Getting the meta-data on the context.
+
+        Parameters
+        ----------
+        auth_key: str
+            Auth key from user.
+        context_name: str
+            Name of the context.
+
+        Returns
+        -------
+        list_inflection_settings: List[InflectionSetting]
+            List of inflection settings.
+        """
+        headers: Dict[str, str] = {
+            USER_AGENT_TAG: USER_AGENT_STR,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_name}'
+                                          f'/metadata',
+                                          headers=headers, verify=self.verify_calls)
+        if response.ok:
+            return [InflectionSetting.from_dict(c) for c in response.json()]
 
     def concepts(self, auth_key: str, context: str) -> List[Tuple[OntologyClassReference, OntologyClassReference]]:
         """Retrieve all concept classes.
@@ -543,6 +597,18 @@ class OntologyService(WacomServiceAPIClient):
             return response.json()
         raise WacomServiceException(f'Creation of concept failed. '
                                     f'Response code:={response.status_code}, exception:= {response.text}')
+
+    def remove_context(self, auth_key: str, name: str, force: bool = False):
+        headers: Dict[str, str] = {
+            USER_AGENT_TAG: USER_AGENT_STR,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{name}{"/force" if force else ""}'
+        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls)
+        if not response.ok:
+
+            raise WacomServiceException(f'Removing the context failed. '
+                                        f'Response code:={response.status_code}, exception:= {response.text}')
 
     def commit(self, auth_key: str, context_name: str):
         """

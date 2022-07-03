@@ -59,6 +59,9 @@ RELATION_TAG: str = 'relation'
 OUTGOING_TAG: str = 'out'
 INCOMING_TAG: str = 'in'
 TENANT_RIGHTS_TAG: str = 'tenantRights'
+INFLECTION_CONCEPT_CLASS: str = 'concept'
+INFLECTION_SETTING: str = 'inflection'
+INFLECTION_CASE_SENSITIVE: str = 'caseSensitive'
 
 
 class EntityStatus(enum.Enum):
@@ -296,6 +299,7 @@ class OntologyObject(abc.ABC):
 
     @property
     def comments(self) -> List[Comment]:
+        """Comment related to ontology object."""
         return self.__comments
 
     def comment_for_lang(self, language_code: LanguageCode) -> Optional[Comment]:
@@ -383,8 +387,6 @@ class OntologyContext(OntologyObject):
         List of labels
     comments: List[Comment]
         List of comments
-    last_update:
-        Last update
     context: str
         context name
     base_uri: str

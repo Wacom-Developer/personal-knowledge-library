@@ -13,6 +13,7 @@ BASE_URI: str = "http://www.w3.org/2001/XMLSchema#"
 SUB_CLASS_OF_TAG: str = 'subClassOf'
 TENANT_ID: str = 'tenantId'
 NAME_TAG: str = "name"
+SUPPORTED_LANGUAGES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES']
 
 
 class PropertyType(enum.Enum):
@@ -1211,10 +1212,11 @@ class ThingObject(abc.ABC):
         descriptions: List[Description] = []
 
         for label in entity[LABELS_TAG]:
-            if label[IS_MAIN_TAG]:
-                labels.append(Label.create_from_dict(label))
-            else:
-                alias.append(Label.create_from_dict(label))
+            if label[LOCALE_TAG] in SUPPORTED_LANGUAGES:
+                if label[IS_MAIN_TAG]:
+                    labels.append(Label.create_from_dict(label))
+                else:
+                    alias.append(Label.create_from_dict(label))
 
         for desc in entity[DESCRIPTIONS_TAG]:
             descriptions.append(Description.create_from_dict(desc))
@@ -1224,7 +1226,7 @@ class ThingObject(abc.ABC):
         thing: ThingObject = ThingObject(label=labels, icon=entity[IMAGE_TAG], description=descriptions,
                                          uri=entity[URI_TAG],
                                          concept_type=OntologyClassReference.parse(entity[TYPE_TAG]),
-                                         owner=entity.get(OWNER_TAG, True))
+                                         owner=entity.get(OWNER_TAG, True), use_for_nel=use_nel)
         if DATA_PROPERTIES_TAG in entity:
             if isinstance(entity[DATA_PROPERTIES_TAG], dict):
                 for data_property_type_str, data_properties in entity[DATA_PROPERTIES_TAG].items():
@@ -1262,6 +1264,56 @@ class ThingObject(abc.ABC):
     def __repr__(self):
         return f'<{self.concept_type.iri if self.__concept_type else "UNSET"}: uri:={self.uri}, labels:={self.label}, '\
                f'tenant access right:={self.tenant_access_right}]>'
+
+
+# --------------------------------------------- Inflection setting -----------------------------------------------------
+class InflectionSetting(abc.ABC):
+    """
+    Inflection settings
+    --------------------
+
+    Parameters
+    ----------
+    concept: str
+        Concept class
+    inflection: str
+        Inflection setting
+    case_sensitive: bool
+        Entity labels of the class treated case-sensitive
+    """
+
+    def __init__(self, concept: str, inflection: str, case_sensitive: bool):
+        self.__concept: OntologyClassReference = OntologyClassReference.parse(concept)
+        self.__inflection: str = inflection
+        self.__case_sensitive: bool = case_sensitive
+
+    @property
+    def concept(self) -> OntologyClassReference:
+        """Concept class."""
+        return self.__concept
+
+    @property
+    def inflection(self) -> str:
+        """Inflection setting """
+        return self.__inflection
+
+    @property
+    def case_sensitive(self) -> bool:
+        """Are entity labels of the class treated case-sensitive."""
+        return self.__case_sensitive
+
+    @staticmethod
+    def from_dict(entity: Dict[str, Any]) -> 'InflectionSetting':
+        concept_class: str = ''
+        inflection_setting: str = ''
+        case_sensitive: bool = False
+        if INFLECTION_CONCEPT_CLASS in entity:
+            concept_class = entity[INFLECTION_CONCEPT_CLASS]
+        if INFLECTION_SETTING in entity:
+            inflection_setting = entity[INFLECTION_SETTING]
+        if INFLECTION_CASE_SENSITIVE in entity:
+            case_sensitive = entity[INFLECTION_CASE_SENSITIVE]
+        return InflectionSetting(concept=concept_class, inflection=inflection_setting, case_sensitive=case_sensitive)
 
 
 # -------------------------------------------------- Encoder -----------------------------------------------------------

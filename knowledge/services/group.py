@@ -128,6 +128,7 @@ class GroupInfo(Group):
         return f'<GroupInfo: id:={self.id}, name:={self.name}, group access right:={self.group_access_rights}, ' \
                f'number of users:={len(self.group_users)}]>'
 
+
 class GroupManagementServiceAPI(WacomServiceAPIClient):
     """
     Group Management Service API
