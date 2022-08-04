@@ -764,6 +764,7 @@ class ThingObject(abc.ABC):
     - **description**: Description of entity
     - **concept_type**: Type of the concept
     - **concept_type_info**: Information on the concept type
+    - **visibility**: Visibility of the entity
     - **use_for_nel**: Use the entity for named entity linking
 
     Parameters
@@ -781,7 +782,7 @@ class ThingObject(abc.ABC):
     tenant_rights: TenantAccessRight
         Rights for tenants
     owner: bool
-        Is the logged in user the owner of the entity
+        Is the logged-in user the owner of the entity
     """
 
     def __init__(self, label: List[Label] = None, concept_type: OntologyClassReference = THING_CLASS,
@@ -800,6 +801,7 @@ class ThingObject(abc.ABC):
         self.__ontology_types: Optional[Set[str]] = None
         self.__owner: bool = owner
         self.__use_for_nel: bool = use_for_nel
+        self.__visibility: Optional[str] = None
 
     @property
     def uri(self) -> str:
@@ -809,6 +811,15 @@ class ThingObject(abc.ABC):
     @uri.setter
     def uri(self, uri: str):
         self.__uri = uri
+
+    @property
+    def visibility(self) -> str:
+        """Visibility."""
+        return self.__visibility
+
+    @visibility.setter
+    def visibility(self, vis: str):
+        self.__visibility = vis
 
     @property
     def use_for_nel(self) -> bool:
@@ -1222,11 +1233,12 @@ class ThingObject(abc.ABC):
             descriptions.append(Description.create_from_dict(desc))
 
         use_nel: bool = entity.get(USE_NEL_TAG, True)
-
+        visibility: Optional[str] = entity.get(VISIBILITY_TAG)
         thing: ThingObject = ThingObject(label=labels, icon=entity[IMAGE_TAG], description=descriptions,
                                          uri=entity[URI_TAG],
                                          concept_type=OntologyClassReference.parse(entity[TYPE_TAG]),
                                          owner=entity.get(OWNER_TAG, True), use_for_nel=use_nel)
+        thing.visibility = visibility
         if DATA_PROPERTIES_TAG in entity:
             if isinstance(entity[DATA_PROPERTIES_TAG], dict):
                 for data_property_type_str, data_properties in entity[DATA_PROPERTIES_TAG].items():
