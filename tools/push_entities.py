@@ -14,10 +14,10 @@ from tqdm import tqdm
 
 from knowledge import logger
 from knowledge.base.access import TenantAccessRight
-from knowledge.base.entity import LanguageCode, OBJECT_PROPERTIES_TAG, TENANT_RIGHTS_TAG, DATA_PROPERTY_TAG, VALUE_TAG, \
+from knowledge.base.entity import LanguageCode, OBJECT_PROPERTIES_TAG, TENANT_RIGHTS_TAG, DATA_PROPERTY_TAG, VALUE_TAG,\
     DATA_PROPERTIES_TAG, LOCALE_TAG, USE_NEL_TAG, IMAGE_TAG, URI_TAG, TYPE_TAG, OWNER_TAG, Description, \
     DESCRIPTIONS_TAG, Label, IS_MAIN_TAG, LABELS_TAG
-from knowledge.base.ontology import SYSTEM_SOURCE_REFERENCE_ID, OntologyPropertyReference, ThingObject, ObjectProperty, \
+from knowledge.base.ontology import SYSTEM_SOURCE_REFERENCE_ID, OntologyPropertyReference, ThingObject, ObjectProperty,\
     DataProperty, OntologyClassReference
 from knowledge.services.base import WacomServiceException, USER_AGENT_HEADER_FLAG
 from knowledge.services.graph import WacomKnowledgeService, SearchPattern

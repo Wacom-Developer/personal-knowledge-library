@@ -42,7 +42,7 @@ if __name__ == '__main__':
     if len(contexts) == 0:
         # No context available. So, let's create one
         ontology_client.create_context(auth_key, name="base")
-        ontology_client.commit(auth_key, context_name="base")
+        ontology_client.commit(auth_key, context="base")
         knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
             application_name="Wacom Knowledge Listing", service_url=args.instance)
         knowledge_client.ontology_update(auth_key)
@@ -89,4 +89,3 @@ if __name__ == '__main__':
         print(ontology.data_properties_for(OntologyClassReference.parse("wacom:core#Person")))
         print('Object properties for wacom:core#Person:')
         print(ontology.object_properties_for(OntologyClassReference.parse("wacom:core#Person")))
-
