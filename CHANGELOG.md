@@ -1,3 +1,10 @@
+2022/08/09- RELEASE 0.6.0
+==========================
+- Improve consistency in parameter naming
+- Adding visibility flag
+- Adding delete concept and property functions
+- Fix parameters for multiple domains
+
 2022/07/03- RELEASE 0.5.0
 ==========================
 - Update all samples and tools to pass the instance of the deployed service

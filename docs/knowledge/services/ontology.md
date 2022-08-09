@@ -27,9 +27,6 @@ Classes
 
     ### Class variables
 
-    `COMMIT_ENDPOINT: str`
-    :
-
     `CONCEPTS_ENDPOINT: str`
     :
 
@@ -50,17 +47,17 @@ Classes
 
     ### Methods
 
-    `commit(self, auth_key: str, context_name: str)`
+    `commit(self, auth_key: str, context: str)`
     :   Commit the ontology.
         
         Parameters
         ----------
         auth_key: str
             User token (must have TenantAdmin) role
-        context_name: str
+        context: str
             Name of the context.
 
-    `concept(self, auth_key: str, context_name: str, concept_name: str) ‑> knowledge.base.ontology.OntologyClass`
+    `concept(self, auth_key: str, context: str, concept_name: str) ‑> knowledge.base.ontology.OntologyClass`
     :   Retrieve a concept instance.
         
         **Remark:**
@@ -70,7 +67,7 @@ Classes
         ----------
         auth_key: str
             Auth key from user.
-        context_name: str
+        context: str
             Name of the context
         concept_name: str
             IRI of the concept
@@ -98,14 +95,14 @@ Classes
         concepts: List[Tuple[OntologyClassReference, OntologyClassReference]]
             List of ontology classes. Tuple<Classname, Superclass>
 
-    `context(self, auth_key: str, context_name: str) ‑> Dict[str, Any]`
+    `context(self, auth_key: str, context: str) ‑> Dict[str, Any]`
     :   Getting the information on the context.
         
         Parameters
         ----------
         auth_key: str
             Auth key from user.
-        context_name: str
+        context: str
             Name of the context.
         
         Returns
@@ -117,14 +114,14 @@ Classes
                 concepts: List[str] - List of concepts
                 properties: List[str] - List of all properties (data and object)
 
-    `context_metadata(self, auth_key: str, context_name: str) ‑> List[knowledge.base.ontology.InflectionSetting]`
+    `context_metadata(self, auth_key: str, context: str) ‑> List[knowledge.base.ontology.InflectionSetting]`
     :   Getting the meta-data on the context.
         
         Parameters
         ----------
         auth_key: str
             Auth key from user.
-        context_name: str
+        context: str
             Name of the context.
         
         Returns
@@ -211,7 +208,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_data_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domain_cls: knowledge.base.ontology.OntologyClassReference, range_cls: knowledge.base.ontology.DataPropertyType, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.LocalizedContent]] = None, comments: Optional[List[knowledge.base.entity.LocalizedContent]] = None) ‑> Dict[str, str]`
+    `create_data_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.DataPropertyType], subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.LocalizedContent]] = None, comments: Optional[List[knowledge.base.entity.LocalizedContent]] = None) ‑> Dict[str, str]`
     :   Create data property.
         
         **Remark:**
@@ -225,9 +222,9 @@ Classes
             Context of ontology
         reference: OntologyPropertyReference
             Name of the concept
-        domain_cls: OntologyClassReference
+        domains_cls: List[OntologyClassReference]
             IRI of the domain
-        range_cls: DataPropertyType
+        ranges_cls: List[DataPropertyType]
             Data property type
         subproperty_of: Optional[OntologyPropertyReference] = None,
             Super property of the concept
@@ -287,7 +284,47 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `properties(self, auth_key: str, context_name: str) ‑> List[Tuple[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.OntologyPropertyReference]]`
+    `delete_concept(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyClassReference)`
+    :   Delete concept class.
+        
+        **Remark:**
+        Only works for users with role 'TenantAdmin'.
+        
+        Parameters
+        ----------
+        auth_key: str
+            Auth key from user.
+        context: str
+            Context of ontology
+        reference: OntologyClassReference
+            Name of the concept
+        
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, exception is thrown.
+
+    `delete_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference)`
+    :   Delete property.
+        
+        **Remark:**
+        Only works for users with role 'TenantAdmin'.
+        
+        Parameters
+        ----------
+        auth_key: str
+            Auth key from user.
+        context: str
+            Context of ontology
+        reference: OntologyPropertyReference
+            Name of the property
+        
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, exception is thrown.
+
+    `properties(self, auth_key: str, context: str) ‑> List[Tuple[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.OntologyPropertyReference]]`
     :   List all properties.
         
         **Remark:**
@@ -297,7 +334,7 @@ Classes
         ----------
         auth_key: str
             Auth key from user.
-        context_name: str
+        context: str
             Name of the context
         
         Returns
@@ -305,7 +342,7 @@ Classes
         contexts: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]
             List of ontology contexts
 
-    `property(self, auth_key: str, context_name: str, property_name: str) ‑> knowledge.base.ontology.OntologyProperty`
+    `property(self, auth_key: str, context: str, property_name: str) ‑> knowledge.base.ontology.OntologyProperty`
     :   Retrieve a property instance.
         
         **Remark:**
@@ -315,7 +352,7 @@ Classes
         ----------
         auth_key: str
             Auth key from user.
-        context_name: str
+        context: str
             Name of the context
         property_name: str
             IRI of the property
@@ -325,14 +362,14 @@ Classes
         instance: OntologyProperty
             Instance of the property
 
-    `rdf_export(self, auth_key: str, context_name: str) ‑> str`
+    `rdf_export(self, auth_key: str, context: str) ‑> str`
     :   Export RDF.
         
         Parameters
         ----------
         auth_key: str
             User token (must have TenantAdmin) role
-        context_name: str
+        context: str
             Name of the context.
         
         Returns

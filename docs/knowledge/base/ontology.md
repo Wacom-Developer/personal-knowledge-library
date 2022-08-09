@@ -694,6 +694,7 @@ Classes
     - **description**: Description of entity
     - **concept_type**: Type of the concept
     - **concept_type_info**: Information on the concept type
+    - **visibility**: Visibility of the entity
     - **use_for_nel**: Use the entity for named entity linking
     
     Parameters
@@ -711,7 +712,7 @@ Classes
     tenant_rights: TenantAccessRight
         Rights for tenants
     owner: bool
-        Is the logged in user the owner of the entity
+        Is the logged-in user the owner of the entity
 
     ### Ancestors (in MRO)
 
@@ -768,6 +769,9 @@ Classes
 
     `use_for_nel: bool`
     :   Use the entity for named entity linking.
+
+    `visibility: str`
+    :   Visibility.
 
     ### Methods
 
