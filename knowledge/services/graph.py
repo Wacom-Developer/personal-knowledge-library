@@ -46,6 +46,7 @@ MIME_TYPE: Dict[str, str] = {
     '.png': 'image/png'
 }
 
+SUPPORTED_LANGUAGES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'ru_RU']
 
 # ------------------------------- Enum ---------------------------------------------------------------------------------
 class SearchPattern(enum.Enum):
@@ -280,7 +281,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         # Labels are tagged as main label
         for label in entity.label:
-            if len(label.content) > 0 and label.content != " ":
+            if label is not None and len(label.content) > 0 and label.content != " ":
                 labels.append({
                     VALUE_TAG: label.content,
                     LOCALE_TAG: label.language_code,
@@ -288,7 +289,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 })
         # Alias are no main labels
         for label in entity.alias:
-            if len(label.content) > 0 and label.content != " ":
+            if label is not None and len(label.content) > 0 and label.content != " ":
                 labels.append({
                     VALUE_TAG: label.content,
                     LOCALE_TAG: label.language_code,
@@ -300,7 +301,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 if li.data_property_type:
                     literals.append({
                         VALUE_TAG: li.value,
-                        LOCALE_TAG: li.language_code,
+                        LOCALE_TAG: li.language_code
+                        if li.language_code and li.language_code in SUPPORTED_LANGUAGES else "en_US",
                         DATA_PROPERTY_TAG: li.data_property_type.iri
                     })
         payload: Dict[str, Any] = {
