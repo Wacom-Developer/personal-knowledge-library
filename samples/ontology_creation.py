@@ -88,8 +88,8 @@ if __name__ == '__main__':
     # Data properties
     ontology_client.create_data_property(auth_key=admin_token, context=CONTEXT_NAME,
                                          reference=STAGE_NAME,
-                                         domain_cls=ARTIST_TYPE,
-                                         range_cls=DataPropertyType.STRING,
+                                         domains_cls=[ARTIST_TYPE],
+                                         ranges_cls=[DataPropertyType.STRING],
                                          subproperty_of=None)
 
     # Commit the changes of the ontology. This is very important to confirm changes.

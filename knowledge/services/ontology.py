@@ -18,14 +18,14 @@ from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG
 BASE_URI_TAG: str = "baseUri"
 COMMENTS_TAG: str = "comments"
 USER_AGENT_TAG: str = "User-Agent"
-DOMAIN_TAG: str = "domain"
+DOMAIN_TAG: str = "domains"
 ICON_TAG: str = "icon"
 INVERSE_OF_TAG: str = "inverseOf"
 KIND_TAG: str = "kind"
 LABELS_TAG: str = "labels"
 LANGUAGE_CODE: str = 'languageCode'
 NAME_TAG: str = "name"
-RANGE_TAG: str = "range"
+RANGE_TAG: str = "ranges"
 SUB_CLASS_OF_TAG: str = "subClassOf"
 SUB_PROPERTY_OF_TAG: str = "subPropertyOf"
 TEXT_TAG: str = 'value'
@@ -51,7 +51,6 @@ class OntologyService(WacomServiceAPIClient):
     CONCEPTS_ENDPOINT: str = 'context/{}/concepts'
     CONCEPT_ENDPOINT: str = 'context/{}/concepts/{}'
     PROPERTIES_ENDPOINT: str = "context/{}/properties"
-    COMMIT_ENDPOINT: str = "context/{}/commit"
     RDF_ENDPOINT: str = "context/{}/versions/rdf"
     PROPERTY_ENDPOINT: str = "context/{}/properties/{}"
 
@@ -89,7 +88,7 @@ class OntologyService(WacomServiceAPIClient):
         raise WacomServiceException(f'Listing of context failed. '
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def context(self, auth_key: str, context_name: str) -> Dict[str, Any]:
+    def context(self, auth_key: str, context: str) -> Dict[str, Any]:
         """
         Getting the information on the context.
 
@@ -97,7 +96,7 @@ class OntologyService(WacomServiceAPIClient):
         ----------
         auth_key: str
             Auth key from user.
-        context_name: str
+        context: str
             Name of the context.
 
         Returns
@@ -113,12 +112,12 @@ class OntologyService(WacomServiceAPIClient):
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_name}',
+        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}',
                                           headers=headers, verify=self.verify_calls)
         if response.ok:
             return response.json()
 
-    def context_metadata(self, auth_key: str, context_name: str) -> List[InflectionSetting]:
+    def context_metadata(self, auth_key: str, context: str) -> List[InflectionSetting]:
         """
         Getting the meta-data on the context.
 
@@ -126,7 +125,7 @@ class OntologyService(WacomServiceAPIClient):
         ----------
         auth_key: str
             Auth key from user.
-        context_name: str
+        context: str
             Name of the context.
 
         Returns
@@ -138,7 +137,7 @@ class OntologyService(WacomServiceAPIClient):
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_name}'
+        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}'
                                           f'/metadata',
                                           headers=headers, verify=self.verify_calls)
         if response.ok:
@@ -178,7 +177,7 @@ class OntologyService(WacomServiceAPIClient):
             return response_list
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def properties(self, auth_key: str, context_name: str) -> List[Tuple[OntologyPropertyReference,
+    def properties(self, auth_key: str, context: str) -> List[Tuple[OntologyPropertyReference,
                                                                          OntologyPropertyReference]]:
         """List all properties.
 
@@ -189,7 +188,7 @@ class OntologyService(WacomServiceAPIClient):
         ----------
         auth_key: str
             Auth key from user.
-        context_name: str
+        context: str
             Name of the context
 
         Returns
@@ -201,7 +200,7 @@ class OntologyService(WacomServiceAPIClient):
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        context_url: str = urllib.parse.quote_plus(context_name)
+        context_url: str = urllib.parse.quote_plus(context)
 
         response: Response = requests.get(f'{self.service_base_url}'
                                           f'{OntologyService.PROPERTIES_ENDPOINT.format(context_url)}',
@@ -218,7 +217,7 @@ class OntologyService(WacomServiceAPIClient):
             return response_list
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def concept(self, auth_key: str, context_name: str, concept_name: str) -> OntologyClass:
+    def concept(self, auth_key: str, context: str, concept_name: str) -> OntologyClass:
         """Retrieve a concept instance.
 
         **Remark:**
@@ -228,7 +227,7 @@ class OntologyService(WacomServiceAPIClient):
         ----------
         auth_key: str
             Auth key from user.
-        context_name: str
+        context: str
             Name of the context
         concept_name: str
             IRI of the concept
@@ -242,7 +241,7 @@ class OntologyService(WacomServiceAPIClient):
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        context_url: str = urllib.parse.quote_plus(context_name)
+        context_url: str = urllib.parse.quote_plus(context)
         concept_url: str = urllib.parse.quote_plus(concept_name)
         response: Response = requests.get(f'{self.service_base_url}'
                                           f'{OntologyService.CONCEPT_ENDPOINT.format(context_url, concept_url)}',
@@ -252,7 +251,7 @@ class OntologyService(WacomServiceAPIClient):
             return OntologyClass.from_dict(result)
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def property(self, auth_key: str, context_name: str, property_name: str) -> OntologyProperty:
+    def property(self, auth_key: str, context: str, property_name: str) -> OntologyProperty:
         """Retrieve a property instance.
 
         **Remark:**
@@ -262,7 +261,7 @@ class OntologyService(WacomServiceAPIClient):
         ----------
         auth_key: str
             Auth key from user.
-        context_name: str
+        context: str
             Name of the context
         property_name: str
             IRI of the property
@@ -276,7 +275,7 @@ class OntologyService(WacomServiceAPIClient):
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        context_url: str = urllib.parse.quote_plus(context_name)
+        context_url: str = urllib.parse.quote_plus(context)
         concept_url: str = urllib.parse.quote_plus(property_name)
         param: str = OntologyService.PROPERTY_ENDPOINT.format(context_url, concept_url)
         response: Response = requests.get(f'{self.service_base_url}{param}', headers=headers, verify=self.verify_calls)
@@ -402,6 +401,38 @@ class OntologyService(WacomServiceAPIClient):
         raise WacomServiceException(f'Update of concept failed. '
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 
+    def delete_concept(self, auth_key: str, context: str, reference: OntologyClassReference):
+        """Delete concept class.
+
+        **Remark:**
+        Only works for users with role 'TenantAdmin'.
+
+        Parameters
+        ----------
+        auth_key: str
+            Auth key from user.
+        context: str
+            Context of ontology
+        reference: OntologyClassReference
+            Name of the concept
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, exception is thrown.
+        """
+        headers: Dict[str, str] = {
+            USER_AGENT_TAG: USER_AGENT_STR,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        context_url: str = urllib.parse.quote_plus(context)
+        concept_url: str = urllib.parse.quote_plus(reference.iri)
+        url: str = f'{self.service_base_url}context/{context_url}/concepts/{concept_url}'
+        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls)
+        if not response.ok:
+            raise WacomServiceException(f'Deletion of concept failed. '
+                                        f'Response code:={response.status_code}, exception:= {response.text}')
+
     def create_object_property(self, auth_key: str, context: str,
                                reference: OntologyPropertyReference,
                                domain_cls: OntologyClassReference, range_cls: OntologyClassReference,
@@ -477,7 +508,7 @@ class OntologyService(WacomServiceAPIClient):
 
     def create_data_property(self, auth_key: str, context: str,
                              reference: OntologyPropertyReference,
-                             domain_cls: OntologyClassReference, range_cls: DataPropertyType,
+                             domains_cls: List[OntologyClassReference], ranges_cls: List[DataPropertyType],
                              subproperty_of: Optional[OntologyPropertyReference] = None,
                              icon: Optional[str] = None,
                              labels: Optional[List[LocalizedContent]] = None,
@@ -495,9 +526,9 @@ class OntologyService(WacomServiceAPIClient):
             Context of ontology
         reference: OntologyPropertyReference
             Name of the concept
-        domain_cls: OntologyClassReference
+        domains_cls: List[OntologyClassReference]
             IRI of the domain
-        range_cls: DataPropertyType
+        ranges_cls: List[DataPropertyType]
             Data property type
         subproperty_of: Optional[OntologyPropertyReference] = None,
             Super property of the concept
@@ -524,8 +555,8 @@ class OntologyService(WacomServiceAPIClient):
         }
         payload: Dict[str, Any] = {
             KIND_TAG: PropertyType.DATA_PROPERTY.value,
-            DOMAIN_TAG: domain_cls.iri,
-            RANGE_TAG: range_cls.value,
+            DOMAIN_TAG: [d.iri for d in domains_cls],
+            RANGE_TAG: [r.value for r in ranges_cls],
             SUB_PROPERTY_OF_TAG: subproperty_of.iri if subproperty_of is not None else None,
             NAME_TAG: reference.iri,
             LABELS_TAG: [],
@@ -543,6 +574,38 @@ class OntologyService(WacomServiceAPIClient):
             return response.json()
         raise WacomServiceException(f'Creation of data property failed. '
                                     f'Response code:={response.status_code}, exception:= {response.text}')
+
+    def delete_property(self, auth_key: str, context: str, reference: OntologyPropertyReference):
+        """Delete property.
+
+        **Remark:**
+        Only works for users with role 'TenantAdmin'.
+
+        Parameters
+        ----------
+        auth_key: str
+            Auth key from user.
+        context: str
+            Context of ontology
+        reference: OntologyPropertyReference
+            Name of the property
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, exception is thrown.
+        """
+        headers: Dict[str, str] = {
+            USER_AGENT_TAG: USER_AGENT_STR,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        context_url: str = urllib.parse.quote_plus(context)
+        property_url: str = urllib.parse.quote_plus(reference.iri)
+        url: str = f'{self.service_base_url}context/{context_url}/properties/{property_url}'
+        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls)
+        if not response.ok:
+            raise WacomServiceException(f'Deletion of property: {reference.iri} failed. '
+                                        f'Response code:={response.status_code}, exception:= {response.text}')
 
     def create_context(self, auth_key: str, name: str, base_uri: Optional[str] = None, icon: Optional[str] = None,
                        labels: List[Label] = None, comments: List[Comment] = None) -> Dict[str, str]:
@@ -610,7 +673,7 @@ class OntologyService(WacomServiceAPIClient):
             raise WacomServiceException(f'Removing the context failed. '
                                         f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def commit(self, auth_key: str, context_name: str):
+    def commit(self, auth_key: str, context: str):
         """
         Commit the ontology.
 
@@ -618,21 +681,21 @@ class OntologyService(WacomServiceAPIClient):
         ----------
         auth_key: str
             User token (must have TenantAdmin) role
-        context_name: str
+        context: str
             Name of the context.
         """
         headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        context_url: str = urllib.parse.quote_plus(context_name)
-        url: str = f'{self.service_base_url}{OntologyService.COMMIT_ENDPOINT.format(context_url)}'
+        context_url: str = urllib.parse.quote_plus(context)
+        url: str = f'{self.service_base_url}context/{context_url}/commit'
         response: Response = requests.put(url, headers=headers, verify=self.verify_calls)
         if not response.ok:
             raise WacomServiceException(f'Commit of ontology failed. '
                                         f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def rdf_export(self, auth_key: str, context_name: str) -> str:
+    def rdf_export(self, auth_key: str, context: str) -> str:
         """
         Export RDF.
 
@@ -640,7 +703,7 @@ class OntologyService(WacomServiceAPIClient):
         ----------
         auth_key: str
             User token (must have TenantAdmin) role
-        context_name: str
+        context: str
             Name of the context.
 
         Returns
@@ -652,7 +715,7 @@ class OntologyService(WacomServiceAPIClient):
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        context_url: str = urllib.parse.quote_plus(context_name)
+        context_url: str = urllib.parse.quote_plus(context)
         url: str = f'{self.service_base_url}{OntologyService.RDF_ENDPOINT.format(context_url)}'
         response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
         if response.ok:
