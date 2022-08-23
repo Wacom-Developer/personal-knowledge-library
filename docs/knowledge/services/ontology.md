@@ -245,7 +245,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_object_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domain_cls: knowledge.base.ontology.OntologyClassReference, range_cls: knowledge.base.ontology.OntologyClassReference, inverse_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.LocalizedContent]] = None, comments: Optional[List[knowledge.base.entity.LocalizedContent]] = None) ‑> Dict[str, str]`
+    `create_object_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.OntologyClassReference], inverse_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.LocalizedContent]] = None, comments: Optional[List[knowledge.base.entity.LocalizedContent]] = None) ‑> Dict[str, str]`
     :   Create property.
         
         **Remark:**

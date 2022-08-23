@@ -3,7 +3,8 @@
 import enum
 import json
 import os
-import urllib.parse
+import urllib
+from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional
 
 import requests
@@ -281,7 +282,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         # Labels are tagged as main label
         for label in entity.label:
-            if label is not None and len(label.content) > 0 and label.content != " ":
+            if label is not None and label.content is not None and len(label.content) > 0 and label.content != " ":
                 labels.append({
                     VALUE_TAG: label.content,
                     LOCALE_TAG: label.language_code,
@@ -397,7 +398,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             raise WacomServiceException("Timeout after 5 sec")
         if response.ok:
             uri: str = response.json()[URI_TAG]
-            if entity.image is not None and entity.image != '':
+            if entity.image is not None and entity.image.startswith('file:'):
+                from urllib.parse import urlparse
+
+                p = urlparse(entity.image)
+                self.set_entity_image_local(auth_key, uri, Path(p.path))
+            elif entity.image is not None and entity.image != '':
                 self.set_entity_image_url(auth_key, uri, entity.image)
             return uri
         raise WacomServiceException(f'Pushing entity failed. '
@@ -1066,6 +1072,37 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         for elem in response['result']:
             results.append(ThingObject.from_dict(elem))
         return results, response[NEXT_PAGE_ID_TAG]
+
+    def set_entity_image_local(self, auth_key: str, entity_uri: str, path: Path) -> str:
+        """Setting the image of the entity.
+       The image is stored locally.
+
+       Parameters
+       ----------
+       auth_key: str
+           Auth key from user
+       entity_uri: str
+           URI of the entity.
+       path: Path
+           Path of image.
+
+       Returns
+       -------
+       image_id: str
+           ID of uploaded image
+
+       Raises
+       ------
+       WacomServiceException
+           If the graph service returns an error code.
+       """
+        with path.open('rb') as fp:
+            image_bytes: bytes = fp.read()
+            file_name: str = str(path.absolute())
+            _, file_extension = os.path.splitext(file_name.lower())
+            mime_type = MIME_TYPE[file_extension]
+
+            return self.set_entity_image(auth_key, entity_uri, image_bytes, file_name, mime_type)
 
     def set_entity_image_url(self, auth_key: str, entity_uri: str, image_url: str, file_name: Optional[str] = None,
                              mime_type: Optional[str] = None) -> str:

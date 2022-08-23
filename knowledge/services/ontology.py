@@ -435,7 +435,7 @@ class OntologyService(WacomServiceAPIClient):
 
     def create_object_property(self, auth_key: str, context: str,
                                reference: OntologyPropertyReference,
-                               domain_cls: OntologyClassReference, range_cls: OntologyClassReference,
+                               domains_cls: List[OntologyClassReference], ranges_cls: List[OntologyClassReference],
                                inverse_of: Optional[OntologyPropertyReference] = None,
                                subproperty_of: Optional[OntologyPropertyReference] = None,
                                icon: Optional[str] = None,
@@ -485,8 +485,8 @@ class OntologyService(WacomServiceAPIClient):
         }
         payload: Dict[str, Any] = {
             KIND_TAG: PropertyType.OBJECT_PROPERTY.value,
-            DOMAIN_TAG: domain_cls.iri,
-            RANGE_TAG: range_cls.iri,
+            DOMAIN_TAG: [d.iri for d in domains_cls],
+            RANGE_TAG: [r.iri for r in ranges_cls],
             SUB_PROPERTY_OF_TAG: subproperty_of.iri if subproperty_of is not None else None,
             INVERSE_OF_TAG: inverse_of.iri if inverse_of is not None else None,
             NAME_TAG: reference.iri,

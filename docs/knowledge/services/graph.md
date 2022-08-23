@@ -578,6 +578,29 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
+    `set_entity_image_local(self, auth_key: str, entity_uri: str, path: pathlib.Path) ‑> str`
+    :   Setting the image of the entity.
+        The image is stored locally.
+        
+        Parameters
+        ----------
+        auth_key: str
+            Auth key from user
+        entity_uri: str
+            URI of the entity.
+        path: Path
+            Path of image.
+        
+        Returns
+        -------
+        image_id: str
+            ID of uploaded image
+        
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code.
+
     `set_entity_image_url(self, auth_key: str, entity_uri: str, image_url: str, file_name: Optional[str] = None, mime_type: Optional[str] = None) ‑> str`
     :   Setting the image of the entity.
         The image for the URL is downloaded and then pushed to the backend.

@@ -1198,17 +1198,20 @@ class ThingObject(abc.ABC):
         labels: List[Dict[str, Any]] = []
         labels.extend([la.__dict__() for la in self.label])
         labels.extend([la.__dict__() for la in self.alias])
-        dict_object: Dict[str, Any] = {
-            URI_TAG: self.uri,
-            IMAGE_TAG: self.image,
-            LABELS_TAG: labels,
-            DESCRIPTIONS_TAG: [desc.__dict__() for desc in self.description],
-            TYPE_TAG: self.concept_type.iri,
-            STATUS_FLAG_TAG: self.status_flag.value,
-            DATA_PROPERTIES_TAG: {},
-            OBJECT_PROPERTIES_TAG: {},
-            OWNER_TAG: self.owner
-        }
+        try:
+            dict_object: Dict[str, Any] = {
+                URI_TAG: self.uri,
+                IMAGE_TAG: self.image,
+                LABELS_TAG: labels,
+                DESCRIPTIONS_TAG: [desc.__dict__() for desc in self.description],
+                TYPE_TAG: self.concept_type.iri,
+                STATUS_FLAG_TAG: self.status_flag.value,
+                DATA_PROPERTIES_TAG: {},
+                OBJECT_PROPERTIES_TAG: {},
+                OWNER_TAG: self.owner
+            }
+        except Exception as e:
+            print(e)
         for literal_type, items in self.data_properties.items():
             dict_object[DATA_PROPERTIES_TAG][literal_type.iri] = [i.__dict__() for i in items]
         for relation_type, item in self.object_properties.items():

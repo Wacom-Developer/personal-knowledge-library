@@ -1,3 +1,8 @@
+2022/08/26- RELEASE 0.6.1
+==========================
+- Fix parameters for object properties
+- Adding push image functionality for local files
+
 2022/08/09- RELEASE 0.6.0
 ==========================
 - Improve consistency in parameter naming
