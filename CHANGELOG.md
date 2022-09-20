@@ -1,3 +1,8 @@
+2022/09/20 - RELEASE 0.6.2
+==========================
+- Additional function to remove alias
+- Fix group removal function
+
 2022/08/26- RELEASE 0.6.1
 ==========================
 - Fix parameters for object properties
