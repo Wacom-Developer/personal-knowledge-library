@@ -896,6 +896,20 @@ class ThingObject(abc.ABC):
                 del self.label[idx]
                 break
 
+    def remove_alias(self, label: Label):
+        """
+        Remove alias for entity if it exists for language.
+
+        Parameters
+        ----------
+        label: Label
+            Alias label
+        """
+        for idx, alias in enumerate(self.alias):
+            if label.language_code == label.language_code and label.content == alias.content:
+                del self.alias[idx]
+                break
+
     def label_lang(self, language_code: LanguageCode) -> Optional[Label]:
         """
         Get label for language_code code.
