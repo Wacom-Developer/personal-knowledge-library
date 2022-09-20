@@ -454,9 +454,9 @@ class OntologyService(WacomServiceAPIClient):
             Context of ontology
         reference: OntologyPropertyReference
             Name of the concept
-        domain_cls: OntologyClassReference
+        domains_cls: List[OntologyClassReference]
             IRI of the domain
-        range_cls: OntologyClassReference
+        ranges_cls: List[OntologyClassReference]
             IRI of the range
         inverse_of: Optional[OntologyPropertyReference] (default:= None)
             Inverse property
