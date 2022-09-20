@@ -423,11 +423,11 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         params: Dict[str, str] = {
-            USER_TO_ADD_PARAM: user_id,
+            USER_TO_REMOVE_PARAM: user_id,
         }
         response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls)
         if not response.ok:
-            raise WacomServiceException(f'Removing of user from group failed.'
+            raise WacomServiceException(f'Removing of user from group failed. URL: {url}'
                                         f'Response code:={response.status_code}, exception:= {response.text}')
 
     def add_entity_to_group(self, auth_key: str, group_id: str, entity_uri: str):
