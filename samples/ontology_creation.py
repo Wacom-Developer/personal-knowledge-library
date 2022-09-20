@@ -83,8 +83,8 @@ if __name__ == '__main__':
 
     # Object properties
     ontology_client.create_object_property(auth_key=admin_token, context=CONTEXT_NAME,
-                                           reference=IS_INSPIRED_BY, domain_cls=ARTIST_TYPE, range_cls=PERSON_TYPE,
-                                           inverse_of=None, subproperty_of=None)
+                                           reference=IS_INSPIRED_BY, domains_cls=[ARTIST_TYPE],
+                                           ranges_cls=[PERSON_TYPE], inverse_of=None, subproperty_of=None)
     # Data properties
     ontology_client.create_data_property(auth_key=admin_token, context=CONTEXT_NAME,
                                          reference=STAGE_NAME,
