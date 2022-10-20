@@ -252,7 +252,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         if not response.ok:
             raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def user_internal_id(self, tenant_key: str, external_id: str) -> Dict[str, Any]:
+    def user_internal_id(self, tenant_key: str, external_id: str) -> str:
         """User internal id.
 
         Parameters
