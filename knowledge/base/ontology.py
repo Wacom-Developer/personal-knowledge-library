@@ -13,7 +13,7 @@ BASE_URI: str = "http://www.w3.org/2001/XMLSchema#"
 SUB_CLASS_OF_TAG: str = 'subClassOf'
 TENANT_ID: str = 'tenantId'
 NAME_TAG: str = "name"
-SUPPORTED_LANGUAGES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES']
+SUPPORTED_LANGUAGES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'zh_CN']
 
 
 class PropertyType(enum.Enum):
@@ -115,7 +115,7 @@ class DataPropertyType(enum.Enum):
     """XML NCNames"""
 
 
-INVERSE_DATA_PROPERTY_TYPE_MAPPING: Dict[str, DataPropertyType] = dict([(lit_type.value, lit_type)
+INVERSE_DATA_PROPERTY_TYPE_MAPPING: Dict[str, DataPropertyType] = dict([(str(lit_type.value), lit_type)
                                                                         for lit_type in DataPropertyType])
 """Maps the string representation of the XSD data types to the data types enum constants."""
 
@@ -800,6 +800,8 @@ class ThingObject(abc.ABC):
         self.__status_flag: EntityStatus = EntityStatus.UNKNOWN
         self.__ontology_types: Optional[Set[str]] = None
         self.__owner: bool = owner
+        self.__owner_id: Optional[str] = None
+        self.__group_ids: List[str] = []
         self.__use_for_nel: bool = use_for_nel
         self.__visibility: Optional[str] = None
 
@@ -836,6 +838,24 @@ class ThingObject(abc.ABC):
         return self.__owner
 
     @property
+    def owner_id(self) -> str:
+        """Internal id of the owner."""
+        return self.__owner_id
+
+    @owner_id.setter
+    def owner_id(self, value: str):
+        self.__owner_id = value
+
+    @property
+    def group_ids(self) -> List[str]:
+        """List of group ids."""
+        return self.__group_ids
+
+    @group_ids.setter
+    def group_ids(self, value: List[str]):
+        self.__group_ids = value
+
+    @property
     def status_flag(self) -> EntityStatus:
         """Status flag."""
         return self.__status_flag
@@ -854,7 +874,7 @@ class ThingObject(abc.ABC):
         self.__label = value
 
     def add_label(self, label: str, language_code: LanguageCode):
-        """Adding an label for entity.
+        """Adding a label for entity.
 
         Parameters
         ----------
@@ -1147,7 +1167,7 @@ class ThingObject(abc.ABC):
         return aliases
 
     def update_alias(self, value: str, language_code: LanguageCode):
-        """Update or creates a alias for a specific language.
+        """Update or creates an alias for a specific language.
 
         Parameters
         ----------
@@ -1166,8 +1186,10 @@ class ThingObject(abc.ABC):
     def add_relation(self, prop: ObjectProperty):
         """Adding a relation to the entity.
 
-        :param prop: ObjectProperty -
-            ObjectProperty
+        Parameters
+        ----------
+        prop: ObjectProperty
+            Object property that is added
         """
         if prop.relation in self.object_properties:
             self.__object_properties[prop.relation].incoming_relations.extend(prop.incoming_relations)
@@ -1181,7 +1203,7 @@ class ThingObject(abc.ABC):
         Parameters
         ----------
         data_property: DataProperty
-            DataProperty
+            Data property that is added
         """
         if data_property.data_property_type not in self.__data_properties:
             self.__data_properties[data_property.data_property_type] = []
@@ -1212,25 +1234,23 @@ class ThingObject(abc.ABC):
         labels: List[Dict[str, Any]] = []
         labels.extend([la.__dict__() for la in self.label])
         labels.extend([la.__dict__() for la in self.alias])
-        try:
-            dict_object: Dict[str, Any] = {
-                URI_TAG: self.uri,
-                IMAGE_TAG: self.image,
-                LABELS_TAG: labels,
-                DESCRIPTIONS_TAG: [desc.__dict__() for desc in self.description],
-                TYPE_TAG: self.concept_type.iri,
-                STATUS_FLAG_TAG: self.status_flag.value,
-                DATA_PROPERTIES_TAG: {},
-                OBJECT_PROPERTIES_TAG: {},
-                OWNER_TAG: self.owner
-            }
-        except Exception as e:
-            print(e)
+        dict_object: Dict[str, Any] = {
+            URI_TAG: self.uri,
+            IMAGE_TAG: self.image,
+            LABELS_TAG: labels,
+            DESCRIPTIONS_TAG: [desc.__dict__() for desc in self.description],
+            TYPE_TAG: self.concept_type.iri,
+            STATUS_FLAG_TAG: self.status_flag.value,
+            DATA_PROPERTIES_TAG: {},
+            OBJECT_PROPERTIES_TAG: {},
+            GROUP_IDS: self.group_ids,
+            OWNER_TAG: self.owner,
+            OWNER_ID_TAG: self.owner_id
+        }
         for literal_type, items in self.data_properties.items():
             dict_object[DATA_PROPERTIES_TAG][literal_type.iri] = [i.__dict__() for i in items]
         for relation_type, item in self.object_properties.items():
             dict_object[OBJECT_PROPERTIES_TAG][relation_type.iri] = item.__dict__()
-
         return dict_object
 
     @staticmethod
@@ -1256,6 +1276,8 @@ class ThingObject(abc.ABC):
                                          concept_type=OntologyClassReference.parse(entity[TYPE_TAG]),
                                          owner=entity.get(OWNER_TAG, True), use_for_nel=use_nel)
         thing.visibility = visibility
+        thing.owner_id = entity.get(OWNER_ID_TAG)
+        thing.group_ids = entity.get(GROUP_IDS)
         if DATA_PROPERTIES_TAG in entity:
             if isinstance(entity[DATA_PROPERTIES_TAG], dict):
                 for data_property_type_str, data_properties in entity[DATA_PROPERTIES_TAG].items():
