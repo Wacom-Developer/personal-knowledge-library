@@ -1,3 +1,9 @@
+2022/10/26 - RELEASE 0.7.0
+==========================
+- Supporting the latest version of the service
+- Remove the multiple contexts in ontology service
+- Adding ownerID and group ids for entities
+
 2022/09/20 - RELEASE 0.6.2
 ==========================
 - Additional function to remove alias
