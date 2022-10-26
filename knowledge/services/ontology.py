@@ -2,12 +2,12 @@
 # Copyright © 2021-2022 Wacom. All rights reserved.
 import urllib.parse
 from http import HTTPStatus
-from typing import Dict, List, Any, Optional, Tuple
 
 import requests
 from requests import Response
+from typing import Dict, List, Any, Optional, Tuple
 
-from knowledge.base.entity import OntologyContext, LocalizedContent, Label, Comment
+from knowledge.base.entity import LocalizedContent, Label, Comment
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, OntologyProperty, OntologyClass, \
     PropertyType, THING_CLASS, DataPropertyType, InflectionSetting
 from knowledge.services import USER_AGENT_STR
@@ -58,37 +58,7 @@ class OntologyService(WacomServiceAPIClient):
         super().__init__(application_name="Ontology Service", service_url=service_url,
                          service_endpoint=service_endpoint)
 
-    def contexts(self, auth_key: str) -> List[OntologyContext]:
-        """List all concepts.
-
-        **Remark:**
-        Works for users with role 'User' and 'TenantAdmin'.
-
-        Parameters
-        ----------
-        auth_key: str
-            Auth key from user.
-
-        Returns
-        -------
-        contexts: List[OntologyContext]
-            List of ontology contexts
-        """
-        headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
-            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
-        }
-        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}',
-                                          headers=headers, verify=self.verify_calls)
-        if response.ok:
-            response_list: List[OntologyContext] = []
-            for c in response.json():
-                response_list.append(OntologyContext.from_dict(c))
-            return response_list
-        raise WacomServiceException(f'Listing of context failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
-
-    def context(self, auth_key: str, context: str) -> Dict[str, Any]:
+    def context(self, auth_key: str) -> Dict[str, Any]:
         """
         Getting the information on the context.
 
@@ -96,8 +66,6 @@ class OntologyService(WacomServiceAPIClient):
         ----------
         auth_key: str
             Auth key from user.
-        context: str
-            Name of the context.
 
         Returns
         -------
@@ -112,7 +80,7 @@ class OntologyService(WacomServiceAPIClient):
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}',
+        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}',
                                           headers=headers, verify=self.verify_calls)
         if response.ok:
             return response.json()
@@ -277,7 +245,7 @@ class OntologyService(WacomServiceAPIClient):
         }
         context_url: str = urllib.parse.quote_plus(context)
         concept_url: str = urllib.parse.quote_plus(property_name)
-        param: str = OntologyService.PROPERTY_ENDPOINT.format(context_url, concept_url)
+        param: str = f"context/{context_url}/properties/{concept_url}"
         response: Response = requests.get(f'{self.service_base_url}{param}', headers=headers, verify=self.verify_calls)
         if response.ok:
             return OntologyProperty.from_dict(response.json())
@@ -716,7 +684,7 @@ class OntologyService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         context_url: str = urllib.parse.quote_plus(context)
-        url: str = f'{self.service_base_url}{OntologyService.RDF_ENDPOINT.format(context_url)}'
+        url: str = f'{self.service_base_url}/context/{context_url}/versions/rdf'
         response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
         if response.ok:
             return response.text
