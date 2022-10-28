@@ -1,3 +1,7 @@
+2022/10/28 - RELEASE 0.7.1
+==========================
+- Minor fixes and updated samples
+
 2022/10/26 - RELEASE 0.7.0
 ==========================
 - Supporting the latest version of the service

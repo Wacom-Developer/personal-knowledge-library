@@ -221,9 +221,9 @@ class Comment(LocalizedContent):
 
     @staticmethod
     def create_from_dict(dict_description: Dict[str, Any]) -> 'Comment':
-        if DESCRIPTION_TAG not in dict_description or LOCALE_TAG not in dict_description:
+        if VALUE_TAG not in dict_description or LOCALE_TAG not in dict_description:
             raise ValueError("Dict is does not contain a localized comment.")
-        return Comment(dict_description[DESCRIPTION_TAG], dict_description[LOCALE_TAG])
+        return Comment(dict_description[VALUE_TAG], dict_description[LOCALE_TAG])
 
     @staticmethod
     def create_from_list(param: List[Dict[str, Any]]) -> List['Description']:
@@ -394,17 +394,23 @@ class OntologyContext(OntologyObject):
         context name
     base_uri: str
         Base URI
+    concepts: List[str]
+        List of classes / concepts
+    properties: List[str]
+        List of properties (data and object properties)
     """
 
     def __init__(self, cid: str, tenant_id: str, name: str, icon: str, labels: List[Label],
                  comments: List[Comment], date_added: datetime, date_modified: datetime, context: str, base_uri: str,
-                 version: int, orphaned: bool):
+                 version: int, orphaned: bool, concepts: List[str], properties: List[str]):
         self.__id = cid
         self.__base_uri: str = base_uri
         self.__version: int = version
         self.__date_added: datetime = date_added
         self.__date_modified: datetime = date_modified
         self.__orphaned: bool = orphaned
+        self.__concepts: List[str] = concepts
+        self.__properties: List[str] = properties
         super().__init__(tenant_id, name, icon, labels, comments, context)
 
     @property
@@ -421,7 +427,7 @@ class OntologyContext(OntologyObject):
 
     @classmethod
     def from_dict(cls, context_dict: Dict[str, Any]):
-        context_data: Dict[str, Any] = context_dict['data']
+        context_data: Dict[str, Any] = context_dict['context']
         labels: List[Label] = [] if context_data['labels'] is None else \
             [Label(content=la[VALUE_TAG], language_code=la[LOCALE_TAG]) for la in context_data['labels']]
         comments: List[Comment] = [] if context_data['comments'] is None else \
@@ -431,7 +437,8 @@ class OntologyContext(OntologyObject):
         return OntologyContext(context_data['id'], context_data['tenantId'], context_data['name'],
                                context_data['icon'], labels, comments, added, modified,
                                context_data['context'], context_data['baseURI'],
-                               context_dict['version'], context_data['orphaned'])
+                               context_dict['version'], context_data['orphaned'],
+                               context_dict.get('concepts'), context_dict.get('properties'))
 
     def __repr__(self):
         return f'<OntologyContext> - [id:={self.id}, iri:={self.iri}]'

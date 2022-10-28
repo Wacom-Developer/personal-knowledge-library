@@ -80,7 +80,7 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
-    parser.add_argument("-i", "--instance", default="https://stage-private-knowledge.wacom.com", help="URL of instance")
+    parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     user_token: str = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     entities: List[KnowledgeGraphEntity] = nel_client.\
         link_personal_entities(auth_key=user_token, text=TEXT,
-                               language_code=LANGUAGE_CODE)
+                               locale=LANGUAGE_CODE)
     idx: int = 1
     print('-----------------------------------------------------------------------------------------------------------')
     print(f'Text: "{TEXT}"@{LANGUAGE_CODE}')

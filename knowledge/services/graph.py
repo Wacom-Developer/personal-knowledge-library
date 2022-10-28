@@ -39,6 +39,9 @@ RELATION_URI: str = 'relationUri'
 SUBJECT_URI: str = 'subjectUri'
 NEXT_PAGE_ID_TAG: str = 'nextPageId'
 TENANT_RIGHTS_TAG: str = 'tenantRights'
+GROUP_IDS_TAG: str = 'groupIds'
+OWNER_ID_TAG: str = 'ownerId'
+
 RELATION_TAG: str = 'relation'
 APPLICATION_JSON_HEADER: str = 'application/json'
 
@@ -153,6 +156,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                              description=[Description.create_from_dict(d) for d in e[DESCRIPTIONS_TAG]],
                                              concept_type=OntologyClassReference.parse(e[TYPE_TAG]),
                                              uri=e[URI_TAG])
+            thing.group_ids = e.get(GROUP_IDS_TAG, [])
+            thing.owner_id = e.get(OWNER_ID_TAG)
             # Set the alias
             thing.alias = aliases
             # Configure data properties

@@ -49,7 +49,7 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
-    parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com',
+    parser.add_argument("-i", "--instance", default='https://private-knowledge.wacom.com',
                         help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant

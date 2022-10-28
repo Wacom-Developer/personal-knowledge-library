@@ -7,7 +7,7 @@ import requests
 from requests import Response
 from typing import Dict, List, Any, Optional, Tuple
 
-from knowledge.base.entity import LocalizedContent, Label, Comment
+from knowledge.base.entity import LocalizedContent, Label, Comment, OntologyContext
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, OntologyProperty, OntologyClass, \
     PropertyType, THING_CLASS, DataPropertyType, InflectionSetting
 from knowledge.services import USER_AGENT_STR
@@ -58,7 +58,7 @@ class OntologyService(WacomServiceAPIClient):
         super().__init__(application_name="Ontology Service", service_url=service_url,
                          service_endpoint=service_endpoint)
 
-    def context(self, auth_key: str) -> Dict[str, Any]:
+    def context(self, auth_key: str) -> Optional[OntologyContext]:
         """
         Getting the information on the context.
 
@@ -69,12 +69,8 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        context_description: Dict[str, Any]
-            The dictionary contains:
-                version: int - Version number
-                name: str - Name of context
-                concepts: List[str] - List of concepts
-                properties: List[str] - List of all properties (data and object)
+        context_description: Optional[OntologyContext]
+            Context of the Ontology
         """
         headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
@@ -83,7 +79,8 @@ class OntologyService(WacomServiceAPIClient):
         response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}',
                                           headers=headers, verify=self.verify_calls)
         if response.ok:
-            return response.json()
+            return OntologyContext.from_dict(response.json())
+        return None
 
     def context_metadata(self, auth_key: str, context: str) -> List[InflectionSetting]:
         """
@@ -684,7 +681,7 @@ class OntologyService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         context_url: str = urllib.parse.quote_plus(context)
-        url: str = f'{self.service_base_url}/context/{context_url}/versions/rdf'
+        url: str = f'{self.service_base_url}context/{context_url}/versions/rdf'
         response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
         if response.ok:
             return response.text

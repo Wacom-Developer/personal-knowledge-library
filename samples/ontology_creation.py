@@ -71,13 +71,13 @@ if __name__ == '__main__':
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Ontology Creation Demo",
         service_url=args.instance)
-    contexts: List[OntologyContext] = ontology_client.contexts(admin_token)
-    if len(contexts) == 0:
+    context: OntologyContext = ontology_client.context(admin_token)
+    if context is None:
         # First, create a context for the ontology
         ontology_client.create_context(admin_token, name=CONTEXT_NAME, base_uri=f'demo:{CONTEXT_NAME}')
         context_name: str = CONTEXT_NAME
     else:
-        context_name: str = contexts[0].context
+        context_name: str = context.context
     # Creating a class which is a subclass of a person
     ontology_client.create_concept(admin_token, CONTEXT_NAME, reference=ARTIST_TYPE, subclass_of=PERSON_TYPE)
 
