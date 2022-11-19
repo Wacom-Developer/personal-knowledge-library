@@ -36,7 +36,7 @@ class UserRole(enum.Enum):
     """TenantAdmin has access to all entities independent of the access rights."""
 
 
-USER_ROLE_MAPPING: Dict[str, UserRole] = dict([(r.value, r) for r in UserRole])
+USER_ROLE_MAPPING: Dict[str, UserRole] = dict([(str(r.value), r) for r in UserRole])
 
 
 class User(object):
@@ -54,7 +54,7 @@ class User(object):
     external_user_id: str
         External user id, referencing the user to authentication system.
     meta_data: Dict[str, Any]
-        Meta data associated with user.
+        Metadata associated with user.
     user_roles: List[UserRole]
         List of user roles.
     """

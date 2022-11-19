@@ -49,7 +49,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
         text: str
             Text where the entities shall be tagged in.
         locale: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
 
         Returns
         -------

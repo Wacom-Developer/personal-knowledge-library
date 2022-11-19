@@ -155,8 +155,8 @@ class WikiDataAPIClient(ABC):
     WikiData API client.
     """
     ACTIVATION_RELATIONS = [
-        'P625',  # coordinate location',
-        'P31',  # instance of',
+        'P625',  # 'coordinate location',
+        'P31',  # 'instance of',
         'P527',  # 'has part',
         'P361',  # 'part of',
         'P856',  # 'official website',
