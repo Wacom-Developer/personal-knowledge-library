@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-2022 Wacom. All rights reserved.
+# Copyright © 2022 Wacom. All rights reserved.
 import argparse
 import json
 import os
@@ -20,12 +20,16 @@ from knowledge.public.wikidata import WIKIDATA_SPARQL_URL, INSTANCE_OF, WikiData
 
 
 # -------------------------------------------------- Structures --------------------------------------------------------
+
+
 class WikidataSyncException(Exception):
     pass
 
 
 # -------------------------------------------------- Structures --------------------------------------------------------
 WACOM_KNOWLEDGE_TAG: str = 'wacom-knowledge'
+ICON_TAG: str = 'icon'
+DEFAULT_TYPE_TAG: str = "default-type"
 ENTITY_LIST_MODE: str = 'entity-list'
 SPARQL_QUERY_MODE: str = 'query'
 CLASS_MAPPING: str = 'class-mapping'
@@ -36,6 +40,7 @@ language_code_mapping: Dict[str, LanguageCode] = {
     'ja': LanguageCode('ja_JP'),
     'de': LanguageCode('de_DE'),
     'bg': LanguageCode('bg_BG'),
+    'zh': LanguageCode('zh_CN'),
     'fr': LanguageCode('fr_FR'),
     'it': LanguageCode('it_IT')
 }
@@ -101,24 +106,17 @@ def sparql_query(
 
 def strip(url: str) -> str:
     """Strip qid from url.
-
-    Parameters
-    ----------
-    url: str
+    :param url: str
         Strip QID from URL
-
-    Returns
-    -------
-    qid: str
-        QID
+    :return: QID
     """
     parts = url.split('/')
     return parts[-1]
 
 
 def build_entity(entity: Dict[str, Any], properties: Dict[str, Any], class_mapping: Dict[str, dict],
-                 concept_type: Optional[str] = None) \
-        -> Tuple[ThingObject, List[str]]:
+                 concept_type: Optional[str] = None, linked_to: Optional[str] = None, default_language: str = 'en') \
+        -> Tuple[ThingObject, List[Tuple[str, Optional[str], Optional[str]]]]:
     """Builds a ThingObject based on the mapping and properties from Wikidata.
 
     Parameters
@@ -131,7 +129,10 @@ def build_entity(entity: Dict[str, Any], properties: Dict[str, Any], class_mappi
         Class mapping
     concept_type: str, optional -
         Preset concept type
-
+    linked_to: str, optional -
+        If the entity is linked to another
+    default_language: str
+        Default language
     Returns
     -------
     result: ThingObject
@@ -141,7 +142,7 @@ def build_entity(entity: Dict[str, Any], properties: Dict[str, Any], class_mappi
     """
     qid: str = entity['uri']
     mapping: Dict[str, Any] = {}
-    additional_qids: List[str] = []
+    additional_qids: List[Tuple[str, Optional[str], Optional[str]]] = []
     wikidata: WikiDataAPIClient = WikiDataAPIClient()
     if concept_type is None:
         # First check the class of the Wikidata entity for class mapping
@@ -156,19 +157,21 @@ def build_entity(entity: Dict[str, Any], properties: Dict[str, Any], class_mappi
         if mapping is None:
             mapping = class_mapping.get(qid)
     else:
-        mapping: dict = {WACOM_KNOWLEDGE_TAG: concept_type}
+        for m in class_mapping.values():
+            if m[WACOM_KNOWLEDGE_TAG] == concept_type:
+                mapping = m
+                break
 
     # Without mapping we ignore the entity
     if mapping is None:
         classes: list = properties[INSTANCE_OF]['values']
         for ent in classes:
             w_class = wikidata.entity(ent['id'])
-            logger.warning('QID: {} -> {} - {}'.format(qid, w_class['uri'], w_class['label']))
+            #logger.warning('QID: {} -> {} - {}'.format(qid, w_class['uri'], w_class['label']))
         classes_types: list = [c['id'] for c in classes]
-        log_mapping_issue(qid, entity['label'], classes_types)
-        raise WikidataSyncException('No mapping existing for qid:= {} ({}). All classes: {}'.format(qid,
-                                                                                                    entity['label'],
-                                                                                                    classes_types))
+        log_mapping_issue(qid, entity['label'].get(default_language), linked_to, classes_types)
+        raise WikidataSyncException(f'No mapping existing for qid:= {qid} ({entity["label"]}). '
+                                    f'All classes: {classes_types}')
     # Validate that we have a mapping
     if WACOM_KNOWLEDGE_TAG not in mapping:
         raise WikidataSyncException(f'Invalid mapping qid:= {qid} ({entity["label"]}) - mapping:= {mapping}.')
@@ -177,8 +180,8 @@ def build_entity(entity: Dict[str, Any], properties: Dict[str, Any], class_mappi
     # Initialize icon with Wikidata or Wikipedia thumb
     icon: str = entity[IMAGE_TAG]
     # handling of image: Overwrite with different property, e.g., logo
-    if 'icon' in mapping:
-        img_prop: str = mapping['icon']
+    if ICON_TAG in mapping:
+        img_prop: str = mapping[ICON_TAG]
         # Overwrite icon
         if img_prop in properties and len(properties[img_prop]['values']) > 0:
             img_title: str = properties[img_prop]['values'][0]
@@ -187,7 +190,7 @@ def build_entity(entity: Dict[str, Any], properties: Dict[str, Any], class_mappi
     # If no mapping overwrite and not icon look for image property
     elif (icon is None or icon == '') and IMAGE in properties:
         img_prop: dict = properties[IMAGE]
-        entity['icon'] = WikiDataAPIClient.image_url(img_prop['values'][0])
+        entity[ICON_TAG] = WikiDataAPIClient.image_url(img_prop['values'][0])
     thing: ThingObject = from_dict(entity=entity, concept_type=concept_type)
     thing.add_source_system(DataProperty(content='wikidata', property_ref=SYSTEM_SOURCE_SYSTEM,
                                          language_code=LanguageCode('en_US')))
@@ -218,9 +221,23 @@ def build_entity(entity: Dict[str, Any], properties: Dict[str, Any], class_mappi
                                                          OntologyPropertyReference.parse(literal[WACOM_KNOWLEDGE_TAG])))
             # Pick the first
             elif 'values' in p and len(p['values']) > 0:
-                value: str = p['values'][0]
-                thing.add_data_property(DataProperty(value,
-                                                     OntologyPropertyReference.parse(literal[WACOM_KNOWLEDGE_TAG])))
+                value = p['values'][0]
+                value_str: str = ''
+                locale: Optional[LanguageCode] = None
+                if isinstance(value, str):
+                    value_str = value
+                if isinstance(value, dict):
+                    if 'entity-type' in value:
+                        if value['entity-type'] == "item":
+                            ent = wikidata.entity(value['id'])
+                            value_str = ent['label']
+                            locale = LanguageCode('en_US')
+                    elif 'text' in value:
+                        value_str = value['text']
+                        locale = update_language_code(value['language'])
+                thing.add_data_property(DataProperty(value_str,
+                                                     OntologyPropertyReference.parse(literal[WACOM_KNOWLEDGE_TAG]),
+                                                     language_code=locale))
 
     # Check relations
     for relation in mapping['relations']:
@@ -228,7 +245,7 @@ def build_entity(entity: Dict[str, Any], properties: Dict[str, Any], class_mappi
         if relation['wikidata'] in properties:
             p: dict = properties[relation['wikidata']]
             outgoing: List[str] = [v['id'] for v in p['values'] if isinstance(v, dict) and 'id' in v]
-            additional_qids.extend(outgoing)
+            additional_qids.extend([(o, relation.get(DEFAULT_TYPE_TAG), qid) for o in outgoing])
             thing.add_relation(ObjectProperty(relation_type, outgoing=outgoing))
     return thing, additional_qids
 
@@ -275,11 +292,12 @@ def build_query(params: Dict[str, Any]) -> List[str]:
     return queries
 
 
-def log_mapping_issue(qid: str, label: dict, classes: list, logfile: str = 'mapping_issues.ndjson'):
+def log_mapping_issue(qid: str, label: dict, reference_id: Optional[str],  classes: list,
+                      logfile: str = 'mapping_issues.ndjson'):
     # Writing items to a ndjson file
     with open(logfile, 'a') as f:
         writer = ndjson.writer(f, ensure_ascii=False)
-        writer.writerow({'qid': qid, 'label': label, 'classes': classes})
+        writer.writerow({'qid': qid, 'label': label, 'linked_to': reference_id, 'classes': classes})
 
 
 def cache_entity(thing: ThingObject, path: Path) -> str:
@@ -324,6 +342,8 @@ def main(mapping: Path, cache: Path, default_language: str, languages: List[str]
     languages: List[str]
         List of languages
     """
+    # All failed jobs
+    failed_jobs: set = set()
     cached_entities, types_count = load_qids(cache)
     # Mapping of wikidata classes to Wacom Ontology
     class_mapping: Dict[str, Dict[str, Any]] = {}
@@ -354,14 +374,14 @@ def main(mapping: Path, cache: Path, default_language: str, languages: List[str]
     # Iterate over entities
     for item in pbar:
         qid: str = strip(item)
-        jobs_qid: list = [qid]
-        batch: List[ThingObject] = []
+        jobs_qid: List[Tuple[str, Optional[str], Optional[str]]] = [(qid, None, None)]
         # Job queue
         while len(jobs_qid) > 0:
-            concept_type: Optional[str] = None
-            c_qid: Optional[str] = jobs_qid[0]
+            c_qid: str = jobs_qid[0][0]
+            concept_type: Optional[str] = jobs_qid[0][1]
+            linked_to: Optional[str] = jobs_qid[0][2]
             # Check if it already pushed to personal knowledge
-            if c_qid not in cached_entities:
+            if c_qid not in cached_entities and c_qid not in failed_jobs:
                 try:
                     # Pull for wikidata
                     entity, properties = wikidata.entity_rels_lang(c_qid, languages=languages,
@@ -369,21 +389,25 @@ def main(mapping: Path, cache: Path, default_language: str, languages: List[str]
                                                                    pull_wiki_content=True)
 
                     pbar.set_description_str(f'Entity QID:={qid} | related entities:={len(jobs_qid)} | '
+                                             f'failed:= {len(failed_jobs)} | '
                                              f'Cached entities: {len(cached_entities)} | '
-                                             f'Current imported QID:={c_qid} ({entity["label"]})')
+                                             f'Current imported QID:={c_qid} ({entity["label"].get(default_language)})')
                     # Build thing object from wikidata entity
                     try:
-                        thing, additional_qids = build_entity(entity, properties, class_mapping, concept_type)
+                        thing, additional_qids = build_entity(entity, properties, class_mapping, concept_type,
+                                                              linked_to, default_language)
                         for a in additional_qids:
-                            if a not in cached_entities:
-                                jobs_qid.extend(additional_qids)
+                            if a[0] not in cached_entities and a[0] not in failed_jobs:
+                                jobs_qid.append(a)
 
-                    except WikidataSyncException as exception:
-                        logger.error(f"Entity QID:={c_qid} can't be imported. Exception:= {str(exception)}")
+                    except WikidataSyncException as _:
                         # Job failed
+                        failed_jobs.add(jobs_qid[0])
                         del jobs_qid[0]
                         continue
                 except Exception as se:
+                    import traceback
+                    traceback.print_exc()
                     logger.error(se)
                     # Job failed
                     del jobs_qid[0]
