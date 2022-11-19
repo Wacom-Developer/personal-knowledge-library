@@ -28,7 +28,7 @@ LANGUAGE_PARAMETER: str = 'language'
 TYPES_PARAMETER: str = 'types'
 LIMIT_PARAMETER: str = 'limit'
 LISTING: str = 'listing'
-TOTAL_COUNT: str = 'totalCount'
+TOTAL_COUNT: str = 'estimatedCount'
 TARGET: str = 'target'
 OBJECT: str = 'object'
 PREDICATE: str = 'predicate'
@@ -41,6 +41,8 @@ NEXT_PAGE_ID_TAG: str = 'nextPageId'
 TENANT_RIGHTS_TAG: str = 'tenantRights'
 GROUP_IDS_TAG: str = 'groupIds'
 OWNER_ID_TAG: str = 'ownerId'
+VISIBILITY_TAG: str = 'visibility'
+ESTIMATE_COUNT: str = 'estimateCount'
 
 RELATION_TAG: str = 'relation'
 APPLICATION_JSON_HEADER: str = 'application/json'
@@ -70,18 +72,24 @@ class SearchPattern(enum.Enum):
     RANGE = 'range'
 
 
+class Visibility(enum.Enum):
+    PRIVATE = 'Private'
+    PUBLIC = 'Public'
+    SHARED = 'Shared'
+
+
 # -------------------------------------------- Service API Client ------------------------------------------------------
 class WacomKnowledgeService(WacomServiceAPIClient):
     """
     WacomKnowledgeService
     ---------------------
-    Client for the Semantic Ink Privat knowledge system.
+    Client for the Semantic Ink Private knowledge system.
 
-    Operations for entitys:
-        - Creation of entitys
-        - Update of entitys
-        - Deletion of entitys
-        - Listing of entitys
+    Operations for entities:
+        - Creation of entities
+        - Update of entities
+        - Deletion of entities
+        - Listing of entities
 
     Parameters
     ----------
@@ -186,7 +194,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         auth_key: str
             Auth key from user
         uris: List[str]
-            List of URI of entitys. **Remark:** More than 100 entities are not possible in one request
+            List of URI of entities. **Remark:** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
 
@@ -400,7 +408,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         try:
             response: Response = requests.post(url, json=payload, headers=headers, verify=self.verify_calls, timeout=5)
         except Exception as e:
-            raise WacomServiceException("Timeout after 5 sec")
+            raise WacomServiceException(f"Timeout after 5 sec. [Exception:={str(e)}]")
         if response.ok:
             uri: str = response.json()[URI_TAG]
             if entity.image is not None and entity.image.startswith('file:'):
@@ -687,7 +695,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
     def activations(self, auth_key: str, uris: List[str], depth: int) \
             -> Tuple[Dict[str, ThingObject], List[Tuple[str, OntologyPropertyReference, str]]]:
         """
-        Spreading activation, retrieving the entities related to a  entity.
+        Spreading activation, retrieving the entities related to an entity.
 
         Parameters
         ----------
@@ -735,7 +743,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             return things, relations
 
     def listing(self, auth_key: str, filter_type: OntologyClassReference, page_id: Optional[str] = None,
-                limit: int = 30, locale: LanguageCode = 'en_US') -> Tuple[List[ThingObject], int, str]:
+                limit: int = 30, locale: Optional[LanguageCode] = None, visibility: Optional[Visibility] = None,
+                estimate_count: bool = False) \
+            -> Tuple[List[ThingObject], int, str]:
         """
         List all entities visible to users.
 
@@ -749,14 +759,17 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Page id. Start from this page id
         limit: int
             Limit of the returned entities.
-        locale: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
-
+        locale: Optional[LanguageCode] [default:=None]
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
+        visibility: Optional[Visibility] [default:=None]
+            Filter the entities based on its visibilities
+        estimate_count: bool [default:=False]
+            Request an estimate of the entities in a tenant.
         Returns
         -------
         entities: List[ThingObject]
             List of entities
-        total_number: int
+        estimated_total_number: int
             Number of all entities
         next_page_id: str
             Identifier of the next page
@@ -773,11 +786,15 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         # Parameter with filtering and limit
-        parameters: dict = {
+        parameters: Dict[str, str] = {
             TYPE_TAG: filter_type.iri,
             LIMIT_PARAMETER: limit,
-            LANGUAGE_PARAMETER: locale
+            ESTIMATE_COUNT: estimate_count
         }
+        if locale:
+            parameters[LOCALE_TAG] = locale
+        if visibility:
+            parameters[VISIBILITY_TAG] = str(visibility.value)
         # If filtering is configured
         if page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = page_id
@@ -787,14 +804,14 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         if response.ok:
             entities_resp: dict = response.json()
             next_page_id: str = entities_resp[NEXT_PAGE_ID_TAG]
-            total_number: int = entities_resp[TOTAL_COUNT]
+            estimated_total_number: int = entities_resp.get(TOTAL_COUNT, 0)
             entities: List[ThingObject] = []
             if LISTING in entities_resp:
                 for e in entities_resp[LISTING]:
                     thing: ThingObject = ThingObject.from_dict(e)
                     thing.status_flag = EntityStatus.SYNCED
                     entities.append(thing)
-            return entities, total_number, next_page_id
+            return entities, estimated_total_number, next_page_id
 
         raise WacomServiceException(f'Failed to list the entities (since:= {page_id}, limit:={limit}). '
                                     f'Response code:={response.status_code}, exception:= {response.content}')
@@ -839,7 +856,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         search_term: str
             Search term.
         language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         types: List[OntologyClassReference]
             Limits the types for search.
         limit: int  (default:= 30)
@@ -889,7 +906,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         search_term: str
             Search term.
         language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         limit: int  (default:= 30)
             Size of the page for pagination.
         next_page_id: str (default:=None)
@@ -942,7 +959,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         pattern: SearchPattern (default:= SearchPattern.REGEX)
             Search pattern. The chosen search pattern must fit the type of the entity.
         language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         limit: int (default:= 30)
             Size of the page for pagination.
         next_page_id: str (default:=None)
@@ -969,7 +986,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             'SearchPattern': pattern.value,
             NEXT_PAGE_ID_TAG: next_page_id
         }
-        headers: dict = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         response: Response = requests.get(url, headers=headers, params=parameters, verify=self.verify_calls)
@@ -991,7 +1008,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         relation: OntologyPropertyReference
             Search term.
         language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         subject_uri: str (default:=None)
             URI of the subject
         object_uri: str (default:=None)
@@ -1044,7 +1061,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         search_term: str
             Search term.
         language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         limit: int  (default:= 30)
             Size of the page for pagination.
         next_page_id: str (default:=None)
@@ -1097,7 +1114,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
        entity_uri: str
            URI of the entity.
        path: Path
-           Path of image.
+           The path of image.
 
        Returns
        -------
