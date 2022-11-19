@@ -30,9 +30,6 @@ Classes
     `CONCEPTS_ENDPOINT: str`
     :
 
-    `CONCEPT_ENDPOINT: str`
-    :
-
     `CONTEXT_ENDPOINT: str`
     :
 
@@ -95,24 +92,18 @@ Classes
         concepts: List[Tuple[OntologyClassReference, OntologyClassReference]]
             List of ontology classes. Tuple<Classname, Superclass>
 
-    `context(self, auth_key: str, context: str) ‑> Dict[str, Any]`
+    `context(self, auth_key: str) ‑> Optional[knowledge.base.entity.OntologyContext]`
     :   Getting the information on the context.
         
         Parameters
         ----------
         auth_key: str
             Auth key from user.
-        context: str
-            Name of the context.
         
         Returns
         -------
-        context_description: Dict[str, Any]
-            The dictionary contains:
-                version: int - Version number
-                name: str - Name of context
-                concepts: List[str] - List of concepts
-                properties: List[str] - List of all properties (data and object)
+        context_description: Optional[OntologyContext]
+            Context of the Ontology
 
     `context_metadata(self, auth_key: str, context: str) ‑> List[knowledge.base.ontology.InflectionSetting]`
     :   Getting the meta-data on the context.
@@ -129,23 +120,7 @@ Classes
         list_inflection_settings: List[InflectionSetting]
             List of inflection settings.
 
-    `contexts(self, auth_key: str) ‑> List[knowledge.base.entity.OntologyContext]`
-    :   List all concepts.
-        
-        **Remark:**
-        Works for users with role 'User' and 'TenantAdmin'.
-        
-        Parameters
-        ----------
-        auth_key: str
-            Auth key from user.
-        
-        Returns
-        -------
-        contexts: List[OntologyContext]
-            List of ontology contexts
-
-    `create_concept(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyClassReference, subclass_of: knowledge.base.ontology.OntologyClassReference = wacom:core#Thing, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.Label]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None) ‑> Dict[str, str]`
+    `create_concept(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyClassReference, subclass_of: knowledge.base.ontology.OntologyClassReference = wacom:core#Thing, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.OntologyLabel]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None) ‑> Dict[str, str]`
     :   Create concept class.
         
         **Remark:**
@@ -163,7 +138,7 @@ Classes
             Super class of the concept
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[List[Label]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
@@ -177,7 +152,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_context(self, auth_key: str, name: str, base_uri: Optional[str] = None, icon: Optional[str] = None, labels: List[knowledge.base.entity.Label] = None, comments: List[knowledge.base.entity.Comment] = None) ‑> Dict[str, str]`
+    `create_context(self, auth_key: str, name: str, base_uri: Optional[str] = None, icon: Optional[str] = None, labels: List[knowledge.base.entity.OntologyLabel] = None, comments: List[knowledge.base.entity.Comment] = None) ‑> Dict[str, str]`
     :   Create context.
         
         **Remark:**
@@ -193,7 +168,7 @@ Classes
             Name of the context
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[List[Label]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the context
         comments: Optional[List[Comment]] (default:= None)
             Comments for the context
@@ -208,7 +183,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_data_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.DataPropertyType], subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.LocalizedContent]] = None, comments: Optional[List[knowledge.base.entity.LocalizedContent]] = None) ‑> Dict[str, str]`
+    `create_data_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.DataPropertyType], subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.OntologyLabel]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None) ‑> Dict[str, str]`
     :   Create data property.
         
         **Remark:**
@@ -245,7 +220,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_object_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.OntologyClassReference], inverse_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.LocalizedContent]] = None, comments: Optional[List[knowledge.base.entity.LocalizedContent]] = None) ‑> Dict[str, str]`
+    `create_object_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.OntologyClassReference], inverse_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.OntologyLabel]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None) ‑> Dict[str, str]`
     :   Create property.
         
         **Remark:**
@@ -259,9 +234,9 @@ Classes
             Context of ontology
         reference: OntologyPropertyReference
             Name of the concept
-        domain_cls: OntologyClassReference
+        domains_cls: List[OntologyClassReference]
             IRI of the domain
-        range_cls: OntologyClassReference
+        ranges_cls: List[OntologyClassReference]
             IRI of the range
         inverse_of: Optional[OntologyPropertyReference] (default:= None)
             Inverse property
@@ -269,7 +244,7 @@ Classes
             Super property of the concept
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[List[Label]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
@@ -380,7 +355,7 @@ Classes
     `remove_context(self, auth_key: str, name: str, force: bool = False)`
     :
 
-    `update_concept(self, auth_key: str, context: str, name: str, subclass_of: Optional[str], icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.Label]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None) ‑> Dict[str, str]`
+    `update_concept(self, auth_key: str, context: str, name: str, subclass_of: Optional[str], icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.OntologyLabel]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None) ‑> Dict[str, str]`
     :   Update concept class.
         
         **Remark:**
@@ -398,7 +373,7 @@ Classes
             Super class of the concept
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[List[Label]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class

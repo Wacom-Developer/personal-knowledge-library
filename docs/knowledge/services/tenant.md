@@ -4,7 +4,7 @@ Module knowledge.services.tenant
 Classes
 -------
 
-`TenantManagementServiceAPI(tenant_token: str, service_url: str = 'https://stage-private-knowledge.wacom.com', service_endpoint: str = 'graph')`
+`TenantManagementServiceAPI(tenant_token: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph')`
 :   Tenant Management Service API
     -----------------------------
     

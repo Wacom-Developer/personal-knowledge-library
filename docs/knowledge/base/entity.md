@@ -4,7 +4,7 @@ Module knowledge.base.entity
 Classes
 -------
 
-`Comment(text: str, language_code: LanguageCode = 'en_US')`
+`Comment(text: str, language_code: LanguageCode = 'en')`
 :   Comment
     -------
     Comment that is multi-lingual.
@@ -13,7 +13,7 @@ Classes
     ----------
     text: str
         Text value
-    language_code: LanguageCode (default:= 'en_US')
+    language_code: LanguageCode (default:= 'en')
         Language code of content
 
     ### Ancestors (in MRO)
@@ -26,7 +26,7 @@ Classes
     `create_from_dict(dict_description: Dict[str, Any]) ‑> knowledge.base.entity.Comment`
     :
 
-    `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.entity.Description]`
+    `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.entity.Comment]`
     :
 
 `Description(description: str, language_code: LanguageCode = 'en_US')`
@@ -138,6 +138,7 @@ Classes
     * knowledge.base.entity.Comment
     * knowledge.base.entity.Description
     * knowledge.base.entity.Label
+    * knowledge.base.entity.OntologyLabel
 
     ### Instance variables
 
@@ -147,7 +148,7 @@ Classes
     `language_code: LanguageCode`
     :   Language code of the content.
 
-`OntologyContext(cid: str, tenant_id: str, name: str, icon: str, labels: List[knowledge.base.entity.Label], comments: List[knowledge.base.entity.Comment], date_added: datetime.datetime, date_modified: datetime.datetime, context: str, base_uri: str, version: int, orphaned: bool)`
+`OntologyContext(cid: str, tenant_id: str, name: str, icon: str, labels: List[knowledge.base.entity.Label], comments: List[knowledge.base.entity.Comment], date_added: datetime.datetime, date_modified: datetime.datetime, context: str, base_uri: str, version: int, orphaned: bool, concepts: List[str], properties: List[str])`
 :   OntologyContext
     ----------------
     Ontology context representation.
@@ -170,6 +171,10 @@ Classes
         context name
     base_uri: str
         Base URI
+    concepts: List[str]
+        List of classes / concepts
+    properties: List[str]
+        List of properties (data and object properties)
 
     ### Ancestors (in MRO)
 
@@ -225,7 +230,39 @@ Classes
     `rdfs_prefix`
     :   RDFS prefix
 
-`OntologyObject(tenant_id: str, iri: str, icon: str, labels: List[knowledge.base.entity.Label], comments: List[knowledge.base.entity.Comment], context: str)`
+`OntologyLabel(content: str, language_code: LanguageCode = 'en', main: bool = False)`
+:   Ontology Label
+    --------------
+    Label that is multi-lingual.
+    
+    Parameters
+    ----------
+    content: str
+        Content value
+    language_code: LanguageCode (default:= 'en')
+        Language code of content
+    main: bool (default:=False)
+        Main content
+
+    ### Ancestors (in MRO)
+
+    * knowledge.base.entity.LocalizedContent
+    * abc.ABC
+
+    ### Static methods
+
+    `create_from_dict(dict_label: Dict[str, Any], tag_name: str = 'value', locale_name: str = 'locale') ‑> knowledge.base.entity.OntologyLabel`
+    :
+
+    `create_from_list(param: List[dict]) ‑> List[knowledge.base.entity.LocalizedContent]`
+    :
+
+    ### Instance variables
+
+    `main: bool`
+    :   Flag if the content is the  main content or an alias.
+
+`OntologyObject(tenant_id: str, iri: str, icon: str, labels: List[knowledge.base.entity.OntologyLabel], comments: List[knowledge.base.entity.Comment], context: str)`
 :   Generic ontology object
     -----------------------
     
@@ -268,7 +305,7 @@ Classes
     `iri: str`
     :   IRI
 
-    `labels: List[knowledge.base.entity.Label]`
+    `labels: List[knowledge.base.entity.OntologyLabel]`
     :
 
     `tenant_id: str`
@@ -279,7 +316,7 @@ Classes
     `comment_for_lang(self, language_code: LanguageCode) ‑> Optional[knowledge.base.entity.Comment]`
     :
 
-    `label_for_lang(self, language_code: LanguageCode) ‑> Optional[knowledge.base.entity.Label]`
+    `label_for_lang(self, language_code: LanguageCode) ‑> Optional[knowledge.base.entity.OntologyLabel]`
     :
 
 `ServiceException(*args, **kwargs)`

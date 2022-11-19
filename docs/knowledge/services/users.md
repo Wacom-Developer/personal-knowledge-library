@@ -18,7 +18,7 @@ Classes
     external_user_id: str
         External user id, referencing the user to authentication system.
     meta_data: Dict[str, Any]
-        Meta data associated with user.
+        Metadata associated with user.
     user_roles: List[UserRole]
         List of user roles.
 
@@ -156,7 +156,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `user_internal_id(self, tenant_key: str, external_id: str) ‑> Dict[str, Any]`
+    `user_internal_id(self, tenant_key: str, external_id: str) ‑> str`
     :   User internal id.
         
         Parameters

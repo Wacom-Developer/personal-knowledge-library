@@ -70,7 +70,7 @@ Classes
 
     ### Instance variables
 
-    `group_users: List[~T]`
+    `group_users: List`
     :   List of all users that are part of the group.
 
 `GroupManagementServiceAPI(service_url: str = 'https://stage-private-knowledge.wacom.com', service_endpoint: str = 'graph')`

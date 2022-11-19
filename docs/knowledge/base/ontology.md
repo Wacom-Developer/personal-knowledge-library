@@ -365,7 +365,7 @@ Classes
         object_properties: List[OntologyPropertyReference]
             List of object properties, where domain fit for the class of one of its super classes.
 
-`OntologyClass(tenant_id: str, context: str, reference: knowledge.base.ontology.OntologyClassReference, subclass_of: knowledge.base.ontology.OntologyClassReference = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.Label]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None)`
+`OntologyClass(tenant_id: str, context: str, reference: knowledge.base.ontology.OntologyClassReference, subclass_of: knowledge.base.ontology.OntologyClassReference = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.entity.OntologyLabel]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None)`
 :   OntologyClass
     ----------------
     Concept for ontology.
@@ -480,7 +480,7 @@ Classes
     `scheme`
     :   Scheme.
 
-`OntologyProperty(kind: knowledge.base.ontology.PropertyType, tenant_id: str, context: str, name: knowledge.base.ontology.OntologyPropertyReference, icon: str = None, property_domain: Optional[List[knowledge.base.ontology.OntologyClassReference]] = None, property_range: Optional[List[Union[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.DataPropertyType]]] = None, labels: Optional[List[knowledge.base.entity.Label]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, inverse_property_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None)`
+`OntologyProperty(kind: knowledge.base.ontology.PropertyType, tenant_id: str, context: str, name: knowledge.base.ontology.OntologyPropertyReference, icon: str = None, property_domain: Optional[List[knowledge.base.ontology.OntologyClassReference]] = None, property_range: Optional[List[Union[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.DataPropertyType]]] = None, labels: Optional[List[knowledge.base.entity.OntologyLabel]] = None, comments: Optional[List[knowledge.base.entity.Comment]] = None, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, inverse_property_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None)`
 :   Ontology Property
     -----------------
     Property ontology object.
@@ -737,6 +737,9 @@ Classes
     `description: Optional[List[knowledge.base.entity.Description]]`
     :   Description of the thing (optional).
 
+    `group_ids: List[str]`
+    :   List of group ids.
+
     `image: Optional[str]`
     :   Image depicting the entities (optional).
 
@@ -751,6 +754,9 @@ Classes
 
     `owner: bool`
     :   Is current user the owner of the entity.
+
+    `owner_id: str`
+    :   Internal id of the owner.
 
     `source_reference_id: Optional[List[knowledge.base.ontology.DataProperty]]`
     :   Reference id for to the source.
@@ -791,7 +797,7 @@ Classes
         Parameters
         ----------
         data_property: DataProperty
-            DataProperty
+            Data property that is added
 
     `add_description(self, description: str, language_code: LanguageCode)`
     :   Adding an description for entity.
@@ -804,7 +810,7 @@ Classes
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
 
     `add_label(self, label: str, language_code: LanguageCode)`
-    :   Adding an label for entity.
+    :   Adding a label for entity.
         
         Parameters
         ----------
@@ -816,8 +822,10 @@ Classes
     `add_relation(self, prop: knowledge.base.ontology.ObjectProperty)`
     :   Adding a relation to the entity.
         
-        :param prop: ObjectProperty -
-            ObjectProperty
+        Parameters
+        ----------
+        prop: ObjectProperty
+            Object property that is added
 
     `add_source_reference_id(self, value: knowledge.base.ontology.DataProperty)`
     :   Adding the reference id from the source system of the entity.
@@ -886,6 +894,14 @@ Classes
         label: Optional[Label]
             Returns the label for a specific language code
 
+    `remove_alias(self, label: knowledge.base.entity.Label)`
+    :   Remove alias for entity if it exists for language.
+        
+        Parameters
+        ----------
+        label: Label
+            Alias label
+
     `remove_description(self, language_code: LanguageCode)`
     :   Remove description for entity if it exists for language.
         
@@ -903,7 +919,7 @@ Classes
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
 
     `update_alias(self, value: str, language_code: LanguageCode)`
-    :   Update or creates a alias for a specific language.
+    :   Update or creates an alias for a specific language.
         
         Parameters
         ----------

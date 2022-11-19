@@ -34,7 +34,7 @@ Classes
 
     ### Methods
 
-    `link_personal_entities(self, auth_key: str, text: str, language_code: str = 'en_US') ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
+    `link_personal_entities(self, auth_key: str, text: str, locale: str = 'en_US') ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
     :   Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
         
@@ -44,8 +44,8 @@ Classes
             Auth key identifying a user within the Wacom personal knowledge service.
         text: str
             Text where the entities shall be tagged in.
-        language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+        locale: LanguageCode
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         
         Returns
         -------
