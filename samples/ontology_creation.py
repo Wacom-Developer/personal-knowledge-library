@@ -61,7 +61,7 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
-    parser.add_argument("-i", "--instance", default="https://stage-private-knowledge.wacom.com", help="URL of instance")
+    parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Ontology Creation Demo",
         service_url=args.instance)
-    context: OntologyContext = ontology_client.context(admin_token)
+    context: Optional[OntologyContext] = ontology_client.context(admin_token)
     if context is None:
         # First, create a context for the ontology
         ontology_client.create_context(admin_token, name=CONTEXT_NAME, base_uri=f'demo:{CONTEXT_NAME}')
@@ -79,22 +79,22 @@ if __name__ == '__main__':
     else:
         context_name: str = context.context
     # Creating a class which is a subclass of a person
-    ontology_client.create_concept(admin_token, CONTEXT_NAME, reference=ARTIST_TYPE, subclass_of=PERSON_TYPE)
+    ontology_client.create_concept(admin_token, context_name, reference=ARTIST_TYPE, subclass_of=PERSON_TYPE)
 
     # Object properties
-    ontology_client.create_object_property(auth_key=admin_token, context=CONTEXT_NAME,
+    ontology_client.create_object_property(auth_key=admin_token, context=context_name,
                                            reference=IS_INSPIRED_BY, domains_cls=[ARTIST_TYPE],
                                            ranges_cls=[PERSON_TYPE], inverse_of=None, subproperty_of=None)
     # Data properties
-    ontology_client.create_data_property(auth_key=admin_token, context=CONTEXT_NAME,
+    ontology_client.create_data_property(auth_key=admin_token, context=context_name,
                                          reference=STAGE_NAME,
                                          domains_cls=[ARTIST_TYPE],
                                          ranges_cls=[DataPropertyType.STRING],
                                          subproperty_of=None)
 
     # Commit the changes of the ontology. This is very important to confirm changes.
-    ontology_client.commit(admin_token, CONTEXT_NAME)
-    # Trigger graph updater. After the update the ontology is available and the new entities can be created
+    ontology_client.commit(admin_token, context_name)
+    # Trigger graph service. After the update the ontology is available and the new entities can be created
     knowledge_client.ontology_update(admin_token)
 
     res_entities, next_search_page = knowledge_client.search_labels(auth_key=admin_token, search_term=LEONARDO_DA_VINCI,

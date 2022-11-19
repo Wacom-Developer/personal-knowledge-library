@@ -48,7 +48,6 @@ if __name__ == '__main__':
             application_name="Wacom Knowledge Listing", service_url=args.instance)
         knowledge_client.ontology_update(auth_key)
         context: Optional[OntologyContext] = ontology_client.context(auth_key)
-
     # All context create for a tenant.
     desc = ontology_client.context_metadata(auth_key, context.context)
     concepts: List[Tuple[OntologyClassReference, OntologyClassReference]] = ontology_client.concepts(auth_key,
