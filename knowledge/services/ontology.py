@@ -2,12 +2,12 @@
 # Copyright © 2021-2022 Wacom. All rights reserved.
 import urllib.parse
 from http import HTTPStatus
+from typing import Dict, List, Any, Optional, Tuple
 
 import requests
 from requests import Response
-from typing import Dict, List, Any, Optional, Tuple
 
-from knowledge.base.entity import LocalizedContent, Label, Comment, OntologyContext
+from knowledge.base.entity import Comment, OntologyContext, OntologyLabel
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, OntologyProperty, OntologyClass, \
     PropertyType, THING_CLASS, DataPropertyType, InflectionSetting
 from knowledge.services import USER_AGENT_STR
@@ -23,7 +23,7 @@ ICON_TAG: str = "icon"
 INVERSE_OF_TAG: str = "inverseOf"
 KIND_TAG: str = "kind"
 LABELS_TAG: str = "labels"
-LANGUAGE_CODE: str = 'languageCode'
+LANGUAGE_CODE: str = 'lang'
 NAME_TAG: str = "name"
 RANGE_TAG: str = "ranges"
 SUB_CLASS_OF_TAG: str = "subClassOf"
@@ -48,9 +48,8 @@ class OntologyService(WacomServiceAPIClient):
         Base endpoint
     """
     CONTEXT_ENDPOINT: str = 'context'
-    CONCEPTS_ENDPOINT: str = 'context/{}/concepts'
-    CONCEPT_ENDPOINT: str = 'context/{}/concepts/{}'
-    PROPERTIES_ENDPOINT: str = "context/{}/properties"
+    CONCEPTS_ENDPOINT: str = 'concepts'
+    PROPERTIES_ENDPOINT: str = "properties"
     RDF_ENDPOINT: str = "context/{}/versions/rdf"
     PROPERTY_ENDPOINT: str = "context/{}/properties/{}"
 
@@ -130,8 +129,9 @@ class OntologyService(WacomServiceAPIClient):
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONCEPTS_ENDPOINT.format(context)}',
-                                          headers=headers, verify=self.verify_calls)
+        url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/' \
+                   f'{OntologyService.CONCEPTS_ENDPOINT}'
+        response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
         if response.ok:
             response_list: List[Tuple[OntologyClassReference, OntologyClassReference]] = []
             result = response.json()
@@ -142,8 +142,8 @@ class OntologyService(WacomServiceAPIClient):
             return response_list
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def properties(self, auth_key: str, context: str) -> List[Tuple[OntologyPropertyReference,
-                                                                         OntologyPropertyReference]]:
+    def properties(self, auth_key: str, context: str) \
+            -> List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]:
         """List all properties.
 
         **Remark:**
@@ -166,9 +166,8 @@ class OntologyService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         context_url: str = urllib.parse.quote_plus(context)
-
-        response: Response = requests.get(f'{self.service_base_url}'
-                                          f'{OntologyService.PROPERTIES_ENDPOINT.format(context_url)}',
+        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/'
+                                          f'{context_url}/{OntologyService.PROPERTIES_ENDPOINT}',
                                           headers=headers, verify=self.verify_calls)
         # Return empty list if the NOT_FOUND is reported
         if response.status_code == HTTPStatus.NOT_FOUND:
@@ -208,8 +207,8 @@ class OntologyService(WacomServiceAPIClient):
         }
         context_url: str = urllib.parse.quote_plus(context)
         concept_url: str = urllib.parse.quote_plus(concept_name)
-        response: Response = requests.get(f'{self.service_base_url}'
-                                          f'{OntologyService.CONCEPT_ENDPOINT.format(context_url, concept_url)}',
+        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}'
+                                          f'/{OntologyService.CONCEPTS_ENDPOINT}/{concept_url}',
                                           headers=headers, verify=self.verify_calls)
         if response.ok:
             result: Dict[str, Any] = response.json()
@@ -250,7 +249,7 @@ class OntologyService(WacomServiceAPIClient):
 
     def create_concept(self, auth_key: str, context: str, reference: OntologyClassReference,
                        subclass_of: OntologyClassReference = THING_CLASS,
-                       icon: Optional[str] = None, labels: Optional[List[Label]] = None,
+                       icon: Optional[str] = None, labels: Optional[List[OntologyLabel]] = None,
                        comments: Optional[List[Comment]] = None) -> Dict[str, str]:
         """Create concept class.
 
@@ -269,7 +268,7 @@ class OntologyService(WacomServiceAPIClient):
             Super class of the concept
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[List[Label]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
@@ -294,12 +293,12 @@ class OntologyService(WacomServiceAPIClient):
             COMMENTS_TAG: [],
             ICON_TAG: icon
         }
-        context_url: str = urllib.parse.quote_plus(context)
         for label in labels if labels is not None else []:
             payload[LABELS_TAG].append({TEXT_TAG: label.content, LANGUAGE_CODE: label.language_code})
         for comment in comments if comments is not None else []:
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
-        url: str = f'{self.service_base_url}{OntologyService.CONCEPTS_ENDPOINT.format(context_url)}'
+        url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/' \
+                   f'{OntologyService.CONCEPTS_ENDPOINT}'
         response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
         if response.ok:
             result_dict: Dict[str, str] = response.json()
@@ -308,7 +307,7 @@ class OntologyService(WacomServiceAPIClient):
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 
     def update_concept(self, auth_key: str, context: str, name: str, subclass_of: Optional[str],
-                       icon: Optional[str] = None, labels: Optional[List[Label]] = None,
+                       icon: Optional[str] = None, labels: Optional[List[OntologyLabel]] = None,
                        comments: Optional[List[Comment]] = None) -> Dict[str, str]:
         """Update concept class.
 
@@ -327,7 +326,7 @@ class OntologyService(WacomServiceAPIClient):
             Super class of the concept
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[List[Label]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
@@ -353,13 +352,12 @@ class OntologyService(WacomServiceAPIClient):
             COMMENTS_TAG: [],
             ICON_TAG: icon
         }
-        context_url: str = urllib.parse.quote_plus(context)
         for label in labels if labels is not None else []:
             payload[LABELS_TAG].append({TEXT_TAG: label.content, LANGUAGE_CODE: label.language_code})
         for comment in comments if comments is not None else []:
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
-        url: str = f'{self.service_url}{self.service_endpoint}' \
-                   f'{OntologyService.CONCEPTS_ENDPOINT.format(context_url)}'
+        url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/' \
+                   f'{OntologyService.CONCEPTS_ENDPOINT}'
         response: Response = requests.put(url, headers=headers, json=payload, verify=self.verify_calls)
         if response.ok:
             return response.json()
@@ -404,8 +402,8 @@ class OntologyService(WacomServiceAPIClient):
                                inverse_of: Optional[OntologyPropertyReference] = None,
                                subproperty_of: Optional[OntologyPropertyReference] = None,
                                icon: Optional[str] = None,
-                               labels: Optional[List[LocalizedContent]] = None,
-                               comments: Optional[List[LocalizedContent]] = None) -> Dict[str, str]:
+                               labels: Optional[List[OntologyLabel]] = None,
+                               comments: Optional[List[Comment]] = None) -> Dict[str, str]:
         """Create property.
 
         **Remark:**
@@ -429,7 +427,7 @@ class OntologyService(WacomServiceAPIClient):
             Super property of the concept
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[List[Label]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
@@ -464,7 +462,8 @@ class OntologyService(WacomServiceAPIClient):
             payload[LABELS_TAG].append({TEXT_TAG: label.content, LANGUAGE_CODE: label.language_code})
         for comment in comments if comments is not None else []:
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
-        url: str = f'{self.service_base_url}{OntologyService.PROPERTIES_ENDPOINT.format(context_url)}'
+        url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/' \
+                   f'{OntologyService.PROPERTIES_ENDPOINT}'
         response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
         if response.ok:
             return response.json()
@@ -476,8 +475,8 @@ class OntologyService(WacomServiceAPIClient):
                              domains_cls: List[OntologyClassReference], ranges_cls: List[DataPropertyType],
                              subproperty_of: Optional[OntologyPropertyReference] = None,
                              icon: Optional[str] = None,
-                             labels: Optional[List[LocalizedContent]] = None,
-                             comments: Optional[List[LocalizedContent]] = None) -> Dict[str, str]:
+                             labels: Optional[List[OntologyLabel]] = None,
+                             comments: Optional[List[Comment]] = None) -> Dict[str, str]:
         """Create data property.
 
         **Remark:**
@@ -533,7 +532,8 @@ class OntologyService(WacomServiceAPIClient):
             payload[LABELS_TAG].append({TEXT_TAG: label.content, LANGUAGE_CODE: label.language_code})
         for comment in comments if comments is not None else []:
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
-        url: str = f'{self.service_base_url}{OntologyService.PROPERTIES_ENDPOINT.format(context_url)}'
+        url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/' \
+                   f'{OntologyService.PROPERTIES_ENDPOINT}'
         response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
         if response.ok:
             return response.json()
@@ -573,7 +573,7 @@ class OntologyService(WacomServiceAPIClient):
                                         f'Response code:={response.status_code}, exception:= {response.text}')
 
     def create_context(self, auth_key: str, name: str, base_uri: Optional[str] = None, icon: Optional[str] = None,
-                       labels: List[Label] = None, comments: List[Comment] = None) -> Dict[str, str]:
+                       labels: List[OntologyLabel] = None, comments: List[Comment] = None) -> Dict[str, str]:
         """Create context.
 
         **Remark:**
@@ -589,7 +589,7 @@ class OntologyService(WacomServiceAPIClient):
             Name of the context
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[List[Label]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the context
         comments: Optional[List[Comment]] (default:= None)
             Comments for the context

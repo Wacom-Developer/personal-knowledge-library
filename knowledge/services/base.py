@@ -11,6 +11,7 @@ from knowledge.services import USER_AGENT_STR
 USER_AGENT_HEADER_FLAG: str = 'User-Agent'
 AUTHORIZATION_HEADER_FLAG: str = 'Authorization'
 CONTENT_TYPE_HEADER_FLAG: str = 'Content-Type'
+TENANT_API_KEY: str = 'x-tenant-api-key'
 
 
 class WacomServiceException(Exception):
@@ -99,8 +100,8 @@ class WacomServiceAPIClient(RESTAPIClient):
         url: str = f'{self.service_url}/graph/{WacomServiceAPIClient.USER_LOGIN_ENDPOINT}/'
         headers: dict = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
-            'x-tenant-api-key': tenant_key,
-            'Content-Type': 'application/json'
+            TENANT_API_KEY: tenant_key,
+            CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
         payload: dict = {
             'ExternalUserId': external_id

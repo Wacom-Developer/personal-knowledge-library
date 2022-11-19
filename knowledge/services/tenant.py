@@ -32,7 +32,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
 
     TENANT_ENDPOINT: str = 'tenant'
     USER_DETAILS_ENDPOINT: str = f'{WacomServiceAPIClient.USER_ENDPOINT}/users'
-    SERVICE_URL: str = 'https://stage-private-knowledge.wacom.com'
+    SERVICE_URL: str = 'https://private-knowledge.wacom.com'
 
     def __init__(self, tenant_token: str, service_url: str = SERVICE_URL, service_endpoint: str = 'graph'):
         self.__tenant_management_token: str = tenant_token
