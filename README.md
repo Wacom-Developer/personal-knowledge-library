@@ -692,7 +692,7 @@ if __name__ == '__main__':
 
     # Commit the changes of the ontology. This is very important to confirm changes.
     ontology_client.commit(admin_token, CONTEXT_NAME)
-    # Trigger graph updater. After the update the ontology is available and the new entities can be created
+    # Trigger graph service. After the update the ontology is available and the new entities can be created
     knowledge_client.ontology_update(admin_token)
 
     res_entities, next_search_page = knowledge_client.search_labels(auth_key=admin_token, search_term=LEONARDO_DA_VINCI,

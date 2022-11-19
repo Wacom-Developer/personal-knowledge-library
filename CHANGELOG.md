@@ -1,3 +1,7 @@
+2022/11/19 - RELEASE 0.8.0
+==========================
+- Update all samples with the latest changes
+
 2022/10/28 - RELEASE 0.7.1
 ==========================
 - Minor fixes and updated samples
