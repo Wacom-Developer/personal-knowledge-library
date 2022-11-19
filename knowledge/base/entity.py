@@ -9,6 +9,7 @@ import dateutil.parser
 
 #  ---------------------------------------- Type definitions -----------------------------------------------------------
 LanguageCode = NewType("LanguageCode", str)
+LocaleCode = NewType("LocaleCode", str)
 ReferenceId = NewType("ReferenceId", str)
 
 
@@ -31,6 +32,7 @@ RDF_SCHEMA_LABEL: str = 'http://www.w3.org/2000/01/rdf-schema#label'
 ALIAS_TAG: str = 'alias'
 DATA_PROPERTY_TAG: str = 'literal'
 VALUE_TAG: str = 'value'
+LANGUAGE_TAG: str = 'lang'
 LOCALE_TAG: str = 'locale'
 DATA_PROPERTIES_TAG: str = 'literals'
 SEND_TO_NEL_TAG: str = 'sendToNEL'
@@ -51,6 +53,7 @@ TYPE_TAG: str = 'type'
 IMAGE_TAG: str = 'image'
 DESCRIPTION_TAG: str = 'description'
 COMMENT_TAG: str = 'text'
+COMMENTS_TAG: str = 'comments'
 DESCRIPTIONS_TAG: str = 'descriptions'
 USE_NEL_TAG: str = 'use_for_nel'
 VISIBILITY_TAG: str = 'visibility'
@@ -168,6 +171,56 @@ class Label(LocalizedContent):
         }
 
 
+class OntologyLabel(LocalizedContent):
+    """
+    Ontology Label
+    --------------
+    Label that is multi-lingual.
+
+    Parameters
+    ----------
+    content: str
+        Content value
+    language_code: LanguageCode (default:= 'en')
+        Language code of content
+    main: bool (default:=False)
+        Main content
+    """
+
+    def __init__(self, content: str, language_code: LanguageCode = 'en', main: bool = False):
+        self.__main: bool = main
+        super().__init__(content, language_code)
+
+    @property
+    def main(self) -> bool:
+        """Flag if the content is the  main content or an alias."""
+        return self.__main
+
+    @staticmethod
+    def create_from_dict(dict_label: Dict[str, Any], tag_name: str = CONTENT_TAG, locale_name: str = LOCALE_TAG) \
+            -> 'OntologyLabel':
+        if tag_name not in dict_label:
+            raise ValueError("Dict is does not contain a localized label.")
+        if locale_name not in dict_label:
+            raise ValueError("Dict is does not contain a language code")
+        if IS_MAIN_TAG in dict_label:
+            return OntologyLabel(dict_label[tag_name], dict_label[locale_name], dict_label[IS_MAIN_TAG])
+        else:
+            return OntologyLabel(dict_label[tag_name], dict_label[locale_name])
+
+    @staticmethod
+    def create_from_list(param: List[dict]) -> List[LOCALIZED_CONTENT_TAG]:
+        return [Label.create_from_dict(p) for p in param]
+
+    def __dict__(self):
+        return {
+            CONTENT_TAG: self.content,
+            LOCALE_TAG: self.language_code,
+            IS_MAIN_TAG: self.main
+        }
+
+
+
 class Description(LocalizedContent):
     """
     Description
@@ -212,26 +265,26 @@ class Comment(LocalizedContent):
     ----------
     text: str
         Text value
-    language_code: LanguageCode (default:= 'en_US')
+    language_code: LanguageCode (default:= 'en')
         Language code of content
     """
 
-    def __init__(self, text: str, language_code: LanguageCode = 'en_US'):
+    def __init__(self, text: str, language_code: LanguageCode = 'en'):
         super().__init__(text, language_code)
 
     @staticmethod
     def create_from_dict(dict_description: Dict[str, Any]) -> 'Comment':
-        if VALUE_TAG not in dict_description or LOCALE_TAG not in dict_description:
+        if VALUE_TAG not in dict_description or LANGUAGE_TAG not in dict_description:
             raise ValueError("Dict is does not contain a localized comment.")
-        return Comment(dict_description[VALUE_TAG], dict_description[LOCALE_TAG])
+        return Comment(dict_description[VALUE_TAG], dict_description[LANGUAGE_TAG])
 
     @staticmethod
-    def create_from_list(param: List[Dict[str, Any]]) -> List['Description']:
-        return [Description.create_from_dict(p) for p in param]
+    def create_from_list(param: List[Dict[str, Any]]) -> List['Comment']:
+        return [Comment.create_from_dict(p) for p in param]
 
     def __dict__(self):
         return {
-            DESCRIPTION_TAG: self.content,
+            COMMENT_TAG: self.content,
             LOCALE_TAG: self.language_code,
         }
 
@@ -257,10 +310,10 @@ class OntologyObject(abc.ABC):
         Context
     """
 
-    def __init__(self, tenant_id: str, iri: str, icon: str, labels: List[Label],
+    def __init__(self, tenant_id: str, iri: str, icon: str, labels: List[OntologyLabel],
                  comments: List[Comment], context: str):
         self.__tenant_id: str = tenant_id
-        self.__labels: List[Label] = labels
+        self.__labels: List[OntologyLabel] = labels
         self.__comments: List[Comment] = comments
         self.__iri: str = iri
         self.__icon: str = icon
@@ -291,10 +344,10 @@ class OntologyObject(abc.ABC):
         self.__icon = value
 
     @property
-    def labels(self) -> List[Label]:
+    def labels(self) -> List[OntologyLabel]:
         return self.__labels
 
-    def label_for_lang(self, language_code: LanguageCode) -> Optional[Label]:
+    def label_for_lang(self, language_code: LanguageCode) -> Optional[OntologyLabel]:
         for label in self.labels:
             if label.language_code == language_code:
                 return label
