@@ -285,7 +285,7 @@ class OntologyClass(OntologyObject):
 
     def __init__(self, tenant_id: str, context: str, reference: OntologyClassReference,
                  subclass_of: OntologyClassReference = None, icon: Optional[str] = None,
-                 labels: Optional[List[Label]] = None, comments: Optional[List[Comment]] = None):
+                 labels: Optional[List[OntologyLabel]] = None, comments: Optional[List[Comment]] = None):
         self.__subclass_of: OntologyClassReference = subclass_of
         self.__reference: OntologyClassReference = reference
         super().__init__(tenant_id, reference.iri, icon, labels, comments, context)
@@ -309,10 +309,10 @@ class OntologyClass(OntologyObject):
 
     @classmethod
     def from_dict(cls, concept_dict: Dict[str, Any]):
-        labels: List[Label] = [] if concept_dict[LABELS_TAG] is None else \
-            [Label(content=la[VALUE_TAG], language_code=la[LOCALE_TAG]) for la in concept_dict[LABELS_TAG]]
-        comments: List[Comment] = [] if concept_dict['comments'] is None else \
-            [Comment(text=la[VALUE_TAG], language_code=la[LOCALE_TAG]) for la in concept_dict['comments']]
+        labels: List[OntologyLabel] = [] if concept_dict[LABELS_TAG] is None else \
+            [OntologyLabel(content=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in concept_dict[LABELS_TAG]]
+        comments: List[Comment] = [] if concept_dict[COMMENTS_TAG] is None else \
+            [Comment(text=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in concept_dict[COMMENTS_TAG]]
         return OntologyClass(tenant_id=concept_dict[TENANT_ID], context=concept_dict['context'],
                              reference=OntologyClassReference.parse(concept_dict[NAME_TAG]),
                              subclass_of=OntologyClassReference.parse(concept_dict[SUB_CLASS_OF_TAG]),
@@ -359,7 +359,7 @@ class OntologyProperty(OntologyObject):
                  icon: str = None,
                  property_domain: Optional[List[OntologyClassReference]] = None,
                  property_range: Optional[List[Union[OntologyClassReference, DataPropertyType]]] = None,
-                 labels: Optional[List[Label]] = None,
+                 labels: Optional[List[OntologyLabel]] = None,
                  comments: Optional[List[Comment]] = None,
                  subproperty_of: Optional[OntologyPropertyReference] = None,
                  inverse_property_of: Optional[OntologyPropertyReference] = None):
@@ -412,8 +412,8 @@ class OntologyProperty(OntologyObject):
 
     @classmethod
     def from_dict(cls, property_dict: Dict[str, Any]):
-        labels: List[Label] = [] if property_dict[LABELS_TAG] is None else \
-            [Label.create_from_dict(la) for la in property_dict[LABELS_TAG]]
+        labels: List[OntologyLabel] = [] if property_dict[LABELS_TAG] is None else \
+            [OntologyLabel.create_from_dict(la, locale_name=LANGUAGE_TAG) for la in property_dict[LABELS_TAG]]
         comments: List[Comment] = [] if property_dict['comments'] is None else \
             [Comment.create_from_dict(co) for co in property_dict['comments']]
         return OntologyProperty(INVERSE_PROPERTY_TYPE[property_dict['kind']],
@@ -602,7 +602,7 @@ class Ontology(object):
     """
 
     def __init__(self):
-        self.__classes: Dict[str, OntologyClass] = {}
+        self.__classes: Dict[OntologyClassReference, OntologyClass] = {}
         self.__data_properties: Dict[str, OntologyProperty] = {}
         self.__object_properties: Dict[str, OntologyProperty] = {}
 
@@ -615,7 +615,7 @@ class Ontology(object):
         class_obj: OntologyClass
             Class object
         """
-        self.__classes[class_obj.reference.iri] = class_obj
+        self.__classes[class_obj.reference] = class_obj
 
     def add_properties(self, prop_obj: OntologyProperty):
         """
@@ -667,7 +667,7 @@ class Ontology(object):
         instance: Optional[OntologyClass]
             Instance of ontology class.
         """
-        return self.__classes.get(class_reference.iri, None)
+        return self.__classes.get(class_reference, None)
 
     def get_object_properties(self, property_reference: OntologyPropertyReference) -> Optional[OntologyProperty]:
         """
