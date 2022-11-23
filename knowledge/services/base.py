@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021 Wacom. All rights reserved.
 from abc import ABC
+from typing import Any, Dict, Tuple
 
+import jwt
 import requests
 from requests import Response
 
@@ -12,6 +14,7 @@ USER_AGENT_HEADER_FLAG: str = 'User-Agent'
 AUTHORIZATION_HEADER_FLAG: str = 'Authorization'
 CONTENT_TYPE_HEADER_FLAG: str = 'Content-Type'
 TENANT_API_KEY: str = 'x-tenant-api-key'
+REFRESH_TOKEN_TAG: str = 'refreshToken'
 
 
 class WacomServiceException(Exception):
@@ -50,6 +53,11 @@ class RESTAPIClient(ABC):
         self.__verify_calls = value
 
 
+def refresh_token(refresh_token: str) -> str:
+
+    return refresh_token
+
+
 class WacomServiceAPIClient(RESTAPIClient):
     """
     Wacom Service API Client
@@ -70,13 +78,14 @@ class WacomServiceAPIClient(RESTAPIClient):
     AUTH_ENDPOINT: str = 'auth/user'
     USER_ENDPOINT: str = 'user'
     USER_LOGIN_ENDPOINT: str = f'{USER_ENDPOINT}/login'
+    USER_REFRESH_ENDPOINT: str = f'{USER_ENDPOINT}/refresh'
 
     def __init__(self, application_name: str, service_url: str, service_endpoint: str, verify_calls: bool = True):
         self.__application_name: str = application_name
         self.__service_endpoint: str = service_endpoint
         super().__init__(service_url, verify_calls)
 
-    def request_user_token(self, tenant_key: str, external_id: str) -> str:
+    def request_user_token(self, tenant_key: str, external_id: str) -> Tuple[str, str, str]:
         """
         Login as user by using the tenant key and its external user id.
 
@@ -91,6 +100,10 @@ class WacomServiceAPIClient(RESTAPIClient):
         -------
         auth_key: str
             Authentication key for identifying the user for the service calls.
+        refresh_key: str
+            Refresh token
+        expiration_time: str
+            Expiration time
 
         Raises
         ------
@@ -108,8 +121,30 @@ class WacomServiceAPIClient(RESTAPIClient):
         }
         response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
         if response.ok:
-            return response.text
-        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+            response_token: Dict[str, str] = response.json()
+            return response_token['accessToken'], response_token['refreshToken'], response_token['expirationDate']
+        raise WacomServiceException(f'User login failed.'
+                                    f'Response code:={response.status_code}, exception:= {response.text}')
+
+    def refresh_token(self, refresh_token: str) -> Tuple[str, str, str]:
+        url: str = f'{self.service_url}/graph/{WacomServiceAPIClient.USER_REFRESH_ENDPOINT}/'
+        headers: dict = {
+            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            CONTENT_TYPE_HEADER_FLAG: 'application/json'
+        }
+        payload: dict = {
+            REFRESH_TOKEN_TAG: refresh_token
+        }
+        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
+        if response.ok:
+            response_token: Dict[str, str] = response.json()
+            return response_token['accessToken'], response_token['refreshToken'], response_token['expirationDate']
+        raise WacomServiceException(f'Refresh failed. '
+                                    f'Response code:={response.status_code}, exception:= {response.text}')
+
+    @staticmethod
+    def unpack_token(auth_token: str) -> Dict[str, Any]:
+        return jwt.decode(auth_token, options={"verify_signature": False})
 
     @property
     def service_endpoint(self):

@@ -67,7 +67,7 @@ if __name__ == '__main__':
     EXTERNAL_USER_ID: str = args.user
     # Wacom Ontology REST API Client
     ontology_client: OntologyService = OntologyService(service_url=args.instance)
-    admin_token: str = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    admin_token, refresh_token, expiration_time  = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Ontology Creation Demo",
         service_url=args.instance)

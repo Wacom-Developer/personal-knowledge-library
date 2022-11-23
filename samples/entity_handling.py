@@ -101,7 +101,7 @@ if __name__ == '__main__':
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
                                                                     service_url=args.instance)
     # Use special tenant for testing:  Unit-test tenant
-    user_token: str = knowledge_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    user_token, refresh_token, expiration_time = knowledge_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     page_id: Optional[str] = None
     page_number: int = 1
     entity_count: int = 0

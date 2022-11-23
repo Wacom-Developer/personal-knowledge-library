@@ -239,7 +239,7 @@ if __name__ == '__main__':
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
                                                                     service_url=args.instance)
     # Use special tenant for testing:  Unit-test tenant
-    user_token: str = knowledge_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    user_token, refresh_token, expiration_time = knowledge_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     page_id: Optional[str] = None
     page_number: int = 1
     entity_count: int = 0
@@ -476,7 +476,7 @@ if __name__ == '__main__':
         service_endpoint=WacomEntityLinkingEngine.SERVICE_ENDPOINT
     )
     # Use special tenant for testing:  Unit-test tenant
-    user_token: str = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    user_token, refresh_token, expiration_time = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     entities: List[KnowledgeGraphEntity] = nel_client.\
         link_personal_entities(auth_key=user_token, text=TEXT,
                                language_code=LANGUAGE_CODE)
@@ -544,7 +544,7 @@ if __name__ == '__main__':
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=args.instance)
     # Group Management
     group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
-    admin_token: str = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    admin_token, refresh_token, expiration_time  = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     # Now, we create a users
     u1, u1_token = user_management.create_user(TENANT_KEY, "u1")
     u2, u2_token = user_management.create_user(TENANT_KEY, "u2")
@@ -665,7 +665,7 @@ if __name__ == '__main__':
     EXTERNAL_USER_ID: str = args.user
     # Wacom Ontology REST API Client
     ontology_client: OntologyService = OntologyService(service_url=args.instance)
-    admin_token: str = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    admin_token, refresh_token, expiration_time  = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Ontology Creation Demo",
         service_url=args.instance)
@@ -681,13 +681,14 @@ if __name__ == '__main__':
 
     # Object properties
     ontology_client.create_object_property(auth_key=admin_token, context=CONTEXT_NAME,
-                                           reference=IS_INSPIRED_BY, domain_cls=ARTIST_TYPE, range_cls=PERSON_TYPE,
+                                           reference=IS_INSPIRED_BY, domains_cls=[ARTIST_TYPE], 
+                                           ranges_cls=[PERSON_TYPE],
                                            inverse_of=None, subproperty_of=None)
     # Data properties
     ontology_client.create_data_property(auth_key=admin_token, context=CONTEXT_NAME,
                                          reference=STAGE_NAME,
-                                         domain_cls=ARTIST_TYPE,
-                                         range_cls=DataPropertyType.STRING,
+                                         domains_cls=[ARTIST_TYPE],
+                                         ranges_cls=[DataPropertyType.STRING],
                                          subproperty_of=None)
 
     # Commit the changes of the ontology. This is very important to confirm changes.

@@ -269,7 +269,7 @@ if __name__ == '__main__':
         application_name="Push Entities",
         service_url=args.instance)
     group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
-    user_auth_key: str = wacom_client.request_user_token(args.tenant, args.user)
+    user_auth_key, refresh_token, expiration_time = wacom_client.request_user_token(args.tenant, args.user)
     if cache_path.exists():
         try:
             main(wacom_client, group_management, user_auth_key, cache_path, args.user, args.public, args.group)

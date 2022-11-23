@@ -1022,6 +1022,26 @@ class ThingObject(abc.ABC):
                     return sr.value
         return None
 
+    def default_source_system(self, language_code: LanguageCode = LanguageCode('en_US')) -> Optional[str]:
+        """
+        Getting the source system for a certain language code.
+
+        Parameters
+        ----------
+        language_code: LanguageCode
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+
+        Returns
+        -------
+        id: str
+            Source system.
+        """
+        if SYSTEM_SOURCE_SYSTEM in self.__data_properties:
+            for sr in self.data_properties[SYSTEM_SOURCE_SYSTEM]:
+                if sr.language_code == language_code:
+                    return sr.value
+        return None
+
     @property
     def image(self) -> Optional[str]:
         """Image depicting the entities (optional)."""

@@ -61,7 +61,7 @@ if __name__ == '__main__':
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=args.instance)
     # Group Management
     group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
-    admin_token: str = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    admin_token, refresh_token, expiration_time = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     # Now, we create a users
     u1, u1_token = user_management.create_user(TENANT_KEY, "u1")
     u2, u2_token = user_management.create_user(TENANT_KEY, "u2")

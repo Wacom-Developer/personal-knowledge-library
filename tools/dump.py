@@ -43,7 +43,7 @@ if __name__ == '__main__':
     # Wacom personal knowledge REST API Client
     wacom_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
                                                                 service_url=args.instance)
-    user_auth_key: str = wacom_client.request_user_token(args.tenant, args.user)
+    user_auth_key, refresh_token, expiration_time = wacom_client.request_user_token(args.tenant, args.user)
     page_id: Optional[str] = None
     page_number: int = 1
     entity_count: int = 0

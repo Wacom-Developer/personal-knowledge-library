@@ -34,7 +34,7 @@ if __name__ == '__main__':
     # Group Management
     group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
 
-    admin_token: str = user_management.request_user_token(args.tenant, args.user)
+    admin_token, refresh_token, expiration_time = user_management.request_user_token(args.tenant, args.user)
     page_id: Optional[str] = None
     deleted_uris: int = 0
 

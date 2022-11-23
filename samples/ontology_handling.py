@@ -37,7 +37,7 @@ if __name__ == '__main__':
     EXTERNAL_USER_ID: str = args.user
     # Wacom Ontology REST API Client
     ontology_client: OntologyService = OntologyService(service_url=args.instance)
-    auth_key: str = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    auth_key, refresh_token, expiration_time  = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     # Use special tenant for testing:  Unit-test tenant
     context: Optional[OntologyContext] = ontology_client.context(auth_key)
     if not context:

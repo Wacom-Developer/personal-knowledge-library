@@ -94,7 +94,7 @@ if __name__ == '__main__':
         service_endpoint=WacomEntityLinkingEngine.SERVICE_ENDPOINT
     )
     # Use special tenant for testing:  Unit-test tenant
-    user_token: str = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    user_token, refresh_token, expiration_time = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     entities: List[KnowledgeGraphEntity] = nel_client.\
         link_personal_entities(auth_key=user_token, text=TEXT,
                                locale=LANGUAGE_CODE)
