@@ -136,7 +136,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
     # ------------------------------------------ Users handling --------------------------------------------------------
 
     def create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None,
-                    roles: List[UserRole] = None) -> Tuple[User, str]:
+                    roles: List[UserRole] = None) -> Tuple[User, str, str, str]:
         """
         Creates user for a tenant.
 
@@ -157,7 +157,10 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             Instance of the user
         token: str
             Auth token for user
-
+        refresh_key: str
+            Refresh token
+        expiration_time: str
+            Expiration time
         Raises
         ------
         WacomServiceException
@@ -177,7 +180,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
         if response.ok:
             results: Dict[str, Union[str, Dict[str, str], List[str]]] = response.json()
-            return User.parse(results['user']), results['token']
+            return User.parse(results['user']), results['token']['accessToken'], results['token']['refreshToken'], \
+                results['token']['expirationDate']
 
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
