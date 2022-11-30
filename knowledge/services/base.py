@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021 Wacom. All rights reserved.
 from abc import ABC
+from datetime import timezone, datetime
 from typing import Any, Dict, Tuple
 
 import jwt
@@ -51,11 +52,6 @@ class RESTAPIClient(ABC):
     @verify_calls.setter
     def verify_calls(self, value: bool):
         self.__verify_calls = value
-
-
-def refresh_token(refresh_token: str) -> str:
-
-    return refresh_token
 
 
 class WacomServiceAPIClient(RESTAPIClient):
@@ -121,18 +117,43 @@ class WacomServiceAPIClient(RESTAPIClient):
         }
         response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
         if response.ok:
-            response_token: Dict[str, str] = response.json()
-            return response_token['accessToken'], response_token['refreshToken'], response_token['expirationDate']
+            try:
+                response_token: Dict[str, str] = response.json()
+                return response_token['accessToken'], response_token['refreshToken'], response_token['expirationDate']
+            except:
+                return response.text, '', ''
         raise WacomServiceException(f'User login failed.'
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 
     def refresh_token(self, refresh_token: str) -> Tuple[str, str, str]:
+        """
+        Refreshing a token.
+
+        Parameters
+        ----------
+        refresh_token: str
+            Refresh token
+
+        Returns
+        -------
+        auth_key: str
+            Authentication key for identifying the user for the service calls.
+        refresh_key: str
+            Refresh token
+        expiration_time: str
+            Expiration time
+
+        Raises
+        ------
+        WacomServiceException
+            Exception if service returns HTTP error code.
+        """
         url: str = f'{self.service_url}/graph/{WacomServiceAPIClient.USER_REFRESH_ENDPOINT}/'
-        headers: dict = {
+        headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
-        payload: dict = {
+        payload: Dict[str, str] = {
             REFRESH_TOKEN_TAG: refresh_token
         }
         response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
@@ -145,6 +166,43 @@ class WacomServiceAPIClient(RESTAPIClient):
     @staticmethod
     def unpack_token(auth_token: str) -> Dict[str, Any]:
         return jwt.decode(auth_token, options={"verify_signature": False})
+
+    @staticmethod
+    def expired(auth_token: str) -> bool:
+        """
+        Checks if token is expired.
+
+        Parameters
+        ----------
+        auth_token: str
+            Authentication token
+
+        Returns
+        -------
+        expired: bool
+            Flag if token is expired
+        """
+        return WacomServiceAPIClient.expires_in(auth_token) > 0.
+
+    @staticmethod
+    def expires_in(auth_token: str) -> float:
+        """
+        Returns the seconds when the token expires.
+
+        Parameters
+        ----------
+        auth_token: str
+            Authentication token
+
+        Returns
+        -------
+        expired_in: float
+            Seconds until token is expired
+        """
+        token_dict: Dict[str, Any] = WacomServiceAPIClient.unpack_token(auth_token)
+        timestamp: datetime = datetime.now(tz=timezone.utc)
+        expiration_time: datetime = datetime.fromtimestamp(token_dict['exp'], tz=timezone.utc)
+        return expiration_time.timestamp() - timestamp.timestamp()
 
     @property
     def service_endpoint(self):
