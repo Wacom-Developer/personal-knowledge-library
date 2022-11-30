@@ -677,7 +677,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}{source}/relation'
+        url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation'
         params: Dict[str, str] = {
             RELATION_TAG: relation.iri,
             TARGET: target
