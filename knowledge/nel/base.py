@@ -281,7 +281,7 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
         Verifies all HTTPS calls and the associated certificate.
     """
 
-    def __init__(self, service_url: str = str, supported_languages: List[str] = None, verify_calls: bool = False):
+    def __init__(self, service_url: str = str, supported_languages: List[str] = None, verify_calls: bool = True):
         super().__init__(application_name="Personal entity linking", service_url=service_url,
                          service_endpoint="graph", verify_calls=verify_calls)
         self.__supported_languages: List[str] = supported_languages if supported_languages else []

@@ -220,7 +220,6 @@ class OntologyLabel(LocalizedContent):
         }
 
 
-
 class Description(LocalizedContent):
     """
     Description
