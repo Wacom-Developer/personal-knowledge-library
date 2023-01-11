@@ -481,9 +481,9 @@ class OntologyContext(OntologyObject):
     def from_dict(cls, context_dict: Dict[str, Any]):
         context_data: Dict[str, Any] = context_dict['context']
         labels: List[Label] = [] if context_data['labels'] is None else \
-            [Label(content=la[VALUE_TAG], language_code=la[LOCALE_TAG]) for la in context_data['labels']]
+            [Label(content=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in context_data['labels']]
         comments: List[Comment] = [] if context_data['comments'] is None else \
-            [Comment(text=la[VALUE_TAG], language_code=la[LOCALE_TAG]) for la in context_data['comments']]
+            [Comment(text=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in context_data['comments']]
         added: datetime = dateutil.parser.isoparse(context_data['dateAdded'])
         modified: datetime = dateutil.parser.isoparse(context_data['dateModified'])
         return OntologyContext(context_data['id'], context_data['tenantId'], context_data['name'],
