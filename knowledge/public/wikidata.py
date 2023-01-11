@@ -561,14 +561,24 @@ class WikiDataAPIClient(ABC):
         properties: Dict[str, dict] = {}
         # Properties
         for prop, claim_group in entity.get_truthy_claim_groups().items():
-            literal: List = [
-                claim.mainsnak.datavalue.value
-                for claim in claim_group
-                if claim.mainsnak.snaktype == "value"
-            ]
+            literal: List = []
+            qualifiers: List[Dict[str, Any]] = []
+
+            for claim in claim_group:
+                if claim.mainsnak.snaktype == "value":
+                    literal.append(claim.mainsnak.datavalue.value)
+                if claim.qualifiers:
+                    for p, qual in claim.qualifiers.items():
+                        for elem in qual:
+                            if elem.snak.datavalue:
+                                qualifiers.append({
+                                    "property": p,
+                                    "value": elem.snak.datavalue.value
+                                })
             properties[prop] = {
                 'property-label': WikiDataAPIClient.property(prop, default_language),
-                'values': literal
+                'values': literal,
+                'qualifiers': qualifiers
             }
         entity_result: dict = self.__entity_to_dict_lang__(entity, languages=languages)
         for lang in languages:
