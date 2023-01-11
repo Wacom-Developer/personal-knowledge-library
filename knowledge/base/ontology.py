@@ -926,7 +926,7 @@ class ThingObject(abc.ABC):
             Alias label
         """
         for idx, alias in enumerate(self.alias):
-            if label.language_code == label.language_code and label.content == alias.content:
+            if label.language_code == alias.language_code and label.content == alias.content:
                 del self.alias[idx]
                 break
 
