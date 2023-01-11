@@ -63,9 +63,9 @@ if __name__ == '__main__':
     group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
     admin_token, refresh_token, expiration_time = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     # Now, we create a users
-    u1, u1_token = user_management.create_user(TENANT_KEY, "u1")
-    u2, u2_token = user_management.create_user(TENANT_KEY, "u2")
-    u3, u3_token = user_management.create_user(TENANT_KEY, "u3")
+    u1, u1_token, _, _ = user_management.create_user(TENANT_KEY, "u1")
+    u2, u2_token, _, _ = user_management.create_user(TENANT_KEY, "u2")
+    u3, u3_token, _, _ = user_management.create_user(TENANT_KEY, "u3")
 
     # Now, let's create an entity
     thing: ThingObject = create_entity()
