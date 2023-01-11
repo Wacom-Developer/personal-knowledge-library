@@ -6,6 +6,7 @@ from typing import Any, Dict, Tuple
 
 import jwt
 import requests
+from dateutil.parser import parse, ParserError
 from requests import Response
 
 from knowledge.services import USER_AGENT_STR
@@ -81,7 +82,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         self.__service_endpoint: str = service_endpoint
         super().__init__(service_url, verify_calls)
 
-    def request_user_token(self, tenant_key: str, external_id: str) -> Tuple[str, str, str]:
+    def request_user_token(self, tenant_key: str, external_id: str) -> Tuple[str, str, datetime]:
         """
         Login as user by using the tenant key and its external user id.
 
@@ -98,7 +99,7 @@ class WacomServiceAPIClient(RESTAPIClient):
             Authentication key for identifying the user for the service calls.
         refresh_key: str
             Refresh token
-        expiration_time: str
+        expiration_time: datatime
             Expiration time
 
         Raises
@@ -119,9 +120,13 @@ class WacomServiceAPIClient(RESTAPIClient):
         if response.ok:
             try:
                 response_token: Dict[str, str] = response.json()
-                return response_token['accessToken'], response_token['refreshToken'], response_token['expirationDate']
+                try:
+                    date_object: datetime = parse(response_token['expirationDate'])
+                except (ParserError, OverflowError) as _:
+                    date_object: datetime = datetime.now()
+                return response_token['accessToken'], response_token['refreshToken'], date_object
             except:
-                return response.text, '', ''
+                return response.text, '', datetime.now()
         raise WacomServiceException(f'User login failed.'
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 

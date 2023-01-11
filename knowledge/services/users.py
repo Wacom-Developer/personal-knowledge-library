@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021 Wacom. All rights reserved.
+from datetime import datetime
 from typing import Dict, List, Any, Tuple, Union
 import enum
 
 import requests
+from dateutil.parser import parse, ParserError
 from requests import Response
 
 from knowledge.services import USER_AGENT_STR
@@ -136,7 +138,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
     # ------------------------------------------ Users handling --------------------------------------------------------
 
     def create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None,
-                    roles: List[UserRole] = None) -> Tuple[User, str, str, str]:
+                    roles: List[UserRole] = None) -> Tuple[User, str, str, datetime]:
         """
         Creates user for a tenant.
 
@@ -159,7 +161,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             Auth token for user
         refresh_key: str
             Refresh token
-        expiration_time: str
+        expiration_time: datetime
             Expiration time
         Raises
         ------
@@ -180,8 +182,14 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
         if response.ok:
             results: Dict[str, Union[str, Dict[str, str], List[str]]] = response.json()
+
+            try:
+                date_object: datetime = parse(results['token']['expirationDate'])
+            except (ParserError, OverflowError) as _:
+                date_object: datetime = datetime.now()
+
             return User.parse(results['user']), results['token']['accessToken'], results['token']['refreshToken'], \
-                results['token']['expirationDate']
+                date_object
 
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
