@@ -1,3 +1,8 @@
+2023/1/11- RELEASE 0.9.2
+==========================
+- Return datatime object rather than a str
+- Adding several minor fixes
+
 2022/11/30- RELEASE 0.9.1
 ==========================
 - Adding helper functions for expiration date
