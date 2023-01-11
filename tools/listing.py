@@ -48,7 +48,7 @@ if __name__ == '__main__':
     while True:
         # pull
         entities, total_number, next_page_id = wacom_client.listing(user_auth_key, THING_OBJECT, page_id=page_id,
-                                                                    limit=100)
+                                                                    limit=100, estimate_count=True)
         pulled_entities: int = len(entities)
         entity_count += pulled_entities
         print('---------------------------------------------------------------------------------------------------')
