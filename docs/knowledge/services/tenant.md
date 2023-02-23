@@ -4,7 +4,7 @@ Module knowledge.services.tenant
 Classes
 -------
 
-`TenantManagementServiceAPI(tenant_token: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph')`
+`TenantManagementServiceAPI(tenant_token: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
 :   Tenant Management Service API
     -----------------------------
     
@@ -29,9 +29,6 @@ Classes
     * abc.ABC
 
     ### Class variables
-
-    `SERVICE_URL: str`
-    :
 
     `TENANT_ENDPOINT: str`
     :
@@ -80,7 +77,9 @@ Classes
             >>> [
             >>>     {
             >>>        "id": "<Tenant-ID>",
-            >>>        "apiKey": "<Tenant-API-Key>",
+            >>>        "ontologyName": "<Name-Of-Ontology>",
+            >>>        "ontologyVersion": "<Version-Of-Ontology>",
+            >>>        "isLocked": "<Lock-Flag>",
             >>>        "name": "<Tenant-Name>"
             >>>     },
             >>>     ...

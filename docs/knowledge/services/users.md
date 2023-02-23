@@ -44,7 +44,7 @@ Classes
     `user_roles: List[knowledge.services.users.UserRole]`
     :   List of user roles
 
-`UserManagementServiceAPI(service_url: str = 'https://stage-private-knowledge.wacom.com', service_endpoint: str = 'graph')`
+`UserManagementServiceAPI(service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
 :   User-Management Service API
     -----------------------------
     
@@ -67,15 +67,12 @@ Classes
 
     ### Class variables
 
-    `SERVICE_URL: str`
-    :
-
     `USER_DETAILS_ENDPOINT: str`
     :
 
     ### Methods
 
-    `create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None, roles: List[knowledge.services.users.UserRole] = None) ‑> Tuple[knowledge.services.users.User, str]`
+    `create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None, roles: List[knowledge.services.users.UserRole] = None) ‑> Tuple[knowledge.services.users.User, str, str, datetime.datetime]`
     :   Creates user for a tenant.
         
         Parameters
@@ -95,7 +92,10 @@ Classes
             Instance of the user
         token: str
             Auth token for user
-        
+        refresh_key: str
+            Refresh token
+        expiration_time: datetime
+            Expiration time
         Raises
         ------
         WacomServiceException

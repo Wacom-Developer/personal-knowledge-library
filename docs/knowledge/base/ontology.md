@@ -870,6 +870,19 @@ Classes
         id: str
             Source reference id.
 
+    `default_source_system(self, language_code: LanguageCode = 'en_US') ‑> Optional[str]`
+    :   Getting the source system for a certain language code.
+        
+        Parameters
+        ----------
+        language_code: LanguageCode
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+        
+        Returns
+        -------
+        id: str
+            Source system.
+
     `description_lang(self, language_code: str) ‑> Optional[knowledge.base.entity.Description]`
     :   Get description for entity.
         

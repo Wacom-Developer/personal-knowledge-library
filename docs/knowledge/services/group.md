@@ -73,7 +73,7 @@ Classes
     `group_users: List`
     :   List of all users that are part of the group.
 
-`GroupManagementServiceAPI(service_url: str = 'https://stage-private-knowledge.wacom.com', service_endpoint: str = 'graph')`
+`GroupManagementServiceAPI(service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
 :   Group Management Service API
     -----------------------------
     The service is managing groups.
@@ -101,9 +101,6 @@ Classes
 
     `GROUP_ENDPOINT: str`
     :   "Endpoint for all group related functionality.
-
-    `SERVICE_URL: str`
-    :
 
     ### Methods
 

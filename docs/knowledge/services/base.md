@@ -69,10 +69,50 @@ Classes
     `AUTH_ENDPOINT: str`
     :
 
+    `SERVICE_URL: str`
+    :
+
+    `STAGING_SERVICE_URL: str`
+    :
+
     `USER_ENDPOINT: str`
     :
 
     `USER_LOGIN_ENDPOINT: str`
+    :
+
+    `USER_REFRESH_ENDPOINT: str`
+    :
+
+    ### Static methods
+
+    `expired(auth_token: str) ‑> bool`
+    :   Checks if token is expired.
+        
+        Parameters
+        ----------
+        auth_token: str
+            Authentication token
+        
+        Returns
+        -------
+        expired: bool
+            Flag if token is expired
+
+    `expires_in(auth_token: str) ‑> float`
+    :   Returns the seconds when the token expires.
+        
+        Parameters
+        ----------
+        auth_token: str
+            Authentication token
+        
+        Returns
+        -------
+        expired_in: float
+            Seconds until token is expired
+
+    `unpack_token(auth_token: str) ‑> Dict[str, Any]`
     :
 
     ### Instance variables
@@ -88,7 +128,29 @@ Classes
 
     ### Methods
 
-    `request_user_token(self, tenant_key: str, external_id: str) ‑> str`
+    `refresh_token(self, refresh_token: str) ‑> Tuple[str, str, str]`
+    :   Refreshing a token.
+        
+        Parameters
+        ----------
+        refresh_token: str
+            Refresh token
+        
+        Returns
+        -------
+        auth_key: str
+            Authentication key for identifying the user for the service calls.
+        refresh_key: str
+            Refresh token
+        expiration_time: str
+            Expiration time
+        
+        Raises
+        ------
+        WacomServiceException
+            Exception if service returns HTTP error code.
+
+    `request_user_token(self, tenant_key: str, external_id: str) ‑> Tuple[str, str, datetime.datetime]`
     :   Login as user by using the tenant key and its external user id.
         
         Parameters
@@ -102,6 +164,10 @@ Classes
         -------
         auth_key: str
             Authentication key for identifying the user for the service calls.
+        refresh_key: str
+            Refresh token
+        expiration_time: datatime
+            Expiration time
         
         Raises
         ------

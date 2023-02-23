@@ -54,7 +54,7 @@ Classes
     `SHARED`
     :
 
-`WacomKnowledgeService(application_name: str, service_url: str = 'https://stage-private-knowledge.wacom.com', service_endpoint: str = 'graph')`
+`WacomKnowledgeService(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
 :   WacomKnowledgeService
     ---------------------
     Client for the Semantic Ink Private knowledge system.
@@ -98,9 +98,6 @@ Classes
     :
 
     `ONTOLOGY_UPDATE_ENDPOINT: str`
-    :
-
-    `PERSONAL_KNOWLEDGE_URL: str`
     :
 
     `RELATIONS_ENDPOINT: str`

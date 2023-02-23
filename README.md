@@ -729,21 +729,24 @@ Listing the entities for tenant.
 - _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
 - _-r, --relations (optional)_ -  Requesting the relations for each entity
 
-### Dump script
+### Export entities script
 
 Dump all entities of a user to a ndjson file. 
 
 ```bash
->> python  dump.py [-h] [-u USER] [-t TENANT] [-r] [-d DUMP] [-i INSTANCE]
+>> python  export_entities.py [-h] -u USER -t TENANT [-r] [-a] [-p] [-d DUMP] [-i INSTANCE]
 ```
 
 **Parameters:**
 
-- _-i INSTANCE, --instance INSTANCE_ - URL of instance
+- _-i INSTANCE, --instance INSTANCE_ - URL of instance. (default:=https://private-
+                        knowledge.wacom.com)
 - _-u USER, --user USER_ - External ID to identify user of the Wacom Personal Knowledge 
 - _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
 - _-r, --relations (optional)_ -  Requesting the relations for each entity
-- _-d DUMP, --dump DUMP_ -  Defines the location of an ndjson file
+- _-a, --all (optional)_ - All entities the user as access to, otherwise only his own entities are dumped.
+- _-p, --images (optional)_ - Include the images in the dump.
+- _-d DUMP, --dump DUMP_ -  Defines the location of the dump path.
  
 ### Push entities script
 

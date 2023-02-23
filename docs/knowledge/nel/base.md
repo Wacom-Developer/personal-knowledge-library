@@ -244,10 +244,19 @@ Classes
     `AUTH_ENDPOINT: str`
     :
 
+    `SERVICE_URL: str`
+    :
+
+    `STAGING_SERVICE_URL: str`
+    :
+
     `USER_ENDPOINT: str`
     :
 
     `USER_LOGIN_ENDPOINT: str`
+    :
+
+    `USER_REFRESH_ENDPOINT: str`
     :
 
     ### Instance variables
@@ -285,7 +294,7 @@ Classes
         entities: List[NamedEntity]
             List of knowledge named entities.
 
-`PersonalEntityLinkingProcessor(service_url: str = builtins.str, supported_languages: List[str] = None, verify_calls: bool = False)`
+`PersonalEntityLinkingProcessor(service_url: str = builtins.str, supported_languages: List[str] = None, verify_calls: bool = True)`
 :   PersonalEntityLinkingProcessor
     ------------------------------
     Service that links entities to a entities in a personal knowledge graph.
@@ -314,10 +323,19 @@ Classes
     `AUTH_ENDPOINT: str`
     :
 
+    `SERVICE_URL: str`
+    :
+
+    `STAGING_SERVICE_URL: str`
+    :
+
     `USER_ENDPOINT: str`
     :
 
     `USER_LOGIN_ENDPOINT: str`
+    :
+
+    `USER_REFRESH_ENDPOINT: str`
     :
 
     ### Instance variables
