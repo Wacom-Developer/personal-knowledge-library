@@ -1,3 +1,8 @@
+2023/2/23- RELEASE 0.9.3
+==========================
+- REST API introduced versioning (v1), added the service endpoint constant in constructors
+- Improvements in export entities script
+
 2023/1/11- RELEASE 0.9.2
 ==========================
 - Return datatime object rather than a str
