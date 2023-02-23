@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-23 Wacom. All rights reserved.
 from abc import ABC
 from datetime import timezone, datetime
 from typing import Any, Dict, Tuple
@@ -76,6 +76,8 @@ class WacomServiceAPIClient(RESTAPIClient):
     USER_ENDPOINT: str = 'user'
     USER_LOGIN_ENDPOINT: str = f'{USER_ENDPOINT}/login'
     USER_REFRESH_ENDPOINT: str = f'{USER_ENDPOINT}/refresh'
+    SERVICE_URL: str = 'https://private-knowledge.wacom.com'
+    STAGING_SERVICE_URL: str = 'https://stage-private-knowledge.wacom.com'
 
     def __init__(self, application_name: str, service_url: str, service_endpoint: str, verify_calls: bool = True):
         self.__application_name: str = application_name
@@ -107,7 +109,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         WacomServiceException
             Exception if service returns HTTP error code.
         """
-        url: str = f'{self.service_url}/graph/{WacomServiceAPIClient.USER_LOGIN_ENDPOINT}/'
+        url: str = f'{self.service_base_url}{WacomServiceAPIClient.USER_LOGIN_ENDPOINT}/'
         headers: dict = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             TENANT_API_KEY: tenant_key,
@@ -153,7 +155,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         WacomServiceException
             Exception if service returns HTTP error code.
         """
-        url: str = f'{self.service_url}/graph/{WacomServiceAPIClient.USER_REFRESH_ENDPOINT}/'
+        url: str = f'{self.service_base_url}/{WacomServiceAPIClient.USER_REFRESH_ENDPOINT}/'
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             CONTENT_TYPE_HEADER_FLAG: 'application/json'

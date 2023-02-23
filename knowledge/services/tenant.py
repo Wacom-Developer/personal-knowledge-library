@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-23 Wacom. All rights reserved.
 from typing import List, Dict
 
 import requests
 from requests import Response
 
 from knowledge.services import USER_AGENT_STR
-from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
+from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, USER_AGENT_HEADER_FLAG, \
+    CONTENT_TYPE_HEADER_FLAG
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG
 
 
@@ -32,9 +33,9 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
 
     TENANT_ENDPOINT: str = 'tenant'
     USER_DETAILS_ENDPOINT: str = f'{WacomServiceAPIClient.USER_ENDPOINT}/users'
-    SERVICE_URL: str = 'https://private-knowledge.wacom.com'
 
-    def __init__(self, tenant_token: str, service_url: str = SERVICE_URL, service_endpoint: str = 'graph'):
+    def __init__(self, tenant_token: str, service_url: str = WacomServiceAPIClient.SERVICE_URL,
+                 service_endpoint: str = 'graph/v1'):
         self.__tenant_management_token: str = tenant_token
         super().__init__("TenantManagementServiceAPI", service_url=service_url, service_endpoint=service_endpoint)
 
@@ -74,12 +75,11 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        url: str = '{}/{}{}'.format(self.service_url, self.service_endpoint,
-                                    TenantManagementServiceAPI.TENANT_ENDPOINT)
+        url: str = f'{self.service_base_url}{TenantManagementServiceAPI.TENANT_ENDPOINT}'
         headers: dict = {
-            'User-Agent': USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {self.__tenant_management_token}',
-            'Content-Type': 'application/json'
+            CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
         payload: dict = {
             'name': name
@@ -99,7 +99,9 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             >>> [
             >>>     {
             >>>        "id": "<Tenant-ID>",
-            >>>        "apiKey": "<Tenant-API-Key>",
+            >>>        "ontologyName": "<Name-Of-Ontology>",
+            >>>        "ontologyVersion": "<Version-Of-Ontology>",
+            >>>        "isLocked": "<Lock-Flag>",
             >>>        "name": "<Tenant-Name>"
             >>>     },
             >>>     ...
@@ -111,7 +113,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{TenantManagementServiceAPI.TENANT_ENDPOINT}'
         headers: dict = {
-            'User-Agent': USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {self.__tenant_management_token}'
         }
         response: Response = requests.get(url, headers=headers, data={}, verify=self.verify_calls)

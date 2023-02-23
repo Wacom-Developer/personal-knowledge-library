@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-23 Wacom. All rights reserved.
 import enum
 import json
 import os
@@ -21,12 +21,16 @@ from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
     USER_AGENT_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG
 
 
+
 # ------------------------------------------------- Constants ----------------------------------------------------------
 ACTIVATION_TAG: str = 'activation'
 SEARCH_TERM: str = 'searchTerm'
 LANGUAGE_PARAMETER: str = 'language'
 TYPES_PARAMETER: str = 'types'
 LIMIT_PARAMETER: str = 'limit'
+LITERAL_PARAMETER: str = 'Literal'
+VALUE: str = 'Value'
+SEARCH_PATTERN_PARAMETER: str = 'SearchPattern'
 LISTING: str = 'listing'
 TOTAL_COUNT: str = 'estimatedCount'
 TARGET: str = 'target'
@@ -100,7 +104,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
     service_endpoint: str
         Base endpoint
     """
-    PERSONAL_KNOWLEDGE_URL: str = 'https://stage-private-knowledge.wacom.com'
     USER_ENDPOINT: str = 'user'
     ENTITY_ENDPOINT: str = 'entity'
     ENTITY_BULK_ENDPOINT: str = 'entity/bulk'
@@ -116,8 +119,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
     SEARCH_RELATION_ENDPOINT: str = "semantic-search/relation"
     ONTOLOGY_UPDATE_ENDPOINT: str = 'ontology-update'
 
-    def __init__(self, application_name: str, service_url: str = PERSONAL_KNOWLEDGE_URL,
-                 service_endpoint: str = 'graph'):
+    def __init__(self, application_name: str, service_url: str = WacomServiceAPIClient.SERVICE_URL,
+                 service_endpoint: str = 'graph/v1'):
         super().__init__(application_name, service_url, service_endpoint)
 
     def entity(self, auth_key: str, uri: str) -> ThingObject:
@@ -741,6 +744,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 if r[SUBJECT] in things:
                     things[r[SUBJECT]].add_relation(ObjectProperty(relation, outgoing=[r[OBJECT]]))
             return things, relations
+        raise WacomServiceException(f'Activation failed, uris:= {uris} activation:={depth}). '
+                                    f'Response code:={response.status_code}, exception:= {response.content}')
 
     def listing(self, auth_key: str, filter_type: OntologyClassReference, page_id: Optional[str] = None,
                 limit: int = 30, locale: Optional[LanguageCode] = None, visibility: Optional[Visibility] = None,
@@ -779,7 +784,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        url: str = f'{self.service_url}/{self.service_endpoint}{WacomKnowledgeService.LISTING_ENDPOINT}'
+        url: str = f'{self.service_base_url}{WacomKnowledgeService.LISTING_ENDPOINT}'
         # Header with auth token
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
@@ -934,7 +939,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             LIMIT: limit,
             NEXT_PAGE_ID_TAG: next_page_id
         }
-        url: str = f'{self.service_url}/{self.service_endpoint}{WacomKnowledgeService.SEARCH_LABELS_ENDPOINT}'
+        url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_LABELS_ENDPOINT}'
         response: Response = requests.get(url, headers=headers, params=parameters, verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
@@ -977,13 +982,13 @@ class WacomKnowledgeService(WacomServiceAPIClient):
        WacomServiceException
            If the graph service returns an error code.
        """
-        url: str = f'{self.service_url}/{self.service_endpoint}{WacomKnowledgeService.SEARCH_LITERALS_ENDPOINT}'
+        url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_LITERALS_ENDPOINT}'
         parameters: Dict[str, Any] = {
-            'Value': search_term,
-            'Literal': literal.iri,
+            VALUE: search_term,
+            LITERAL_PARAMETER: literal.iri,
             LANGUAGE_PARAMETER: language_code,
             LIMIT_PARAMETER: limit,
-            'SearchPattern': pattern.value,
+            SEARCH_PATTERN_PARAMETER: pattern.value,
             NEXT_PAGE_ID_TAG: next_page_id
         }
         headers: Dict[str, str] = {
@@ -1030,7 +1035,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
        WacomServiceException
            If the graph service returns an error code.
        """
-        url: str = f'{self.service_url}/{self.service_endpoint}{WacomKnowledgeService.SEARCH_RELATION_ENDPOINT}'
+        url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_RELATION_ENDPOINT}'
         parameters: Dict[str, Any] = {
             SUBJECT_URI: subject_uri,
             RELATION_URI: relation.iri,

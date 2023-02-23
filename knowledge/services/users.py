@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-23 Wacom. All rights reserved.
 from datetime import datetime
 from typing import Dict, List, Any, Tuple, Union
 import enum
@@ -130,9 +130,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
     """
 
     USER_DETAILS_ENDPOINT: str = f'{WacomServiceAPIClient.USER_ENDPOINT}/internal-id'
-    SERVICE_URL: str = 'https://stage-private-knowledge.wacom.com'
 
-    def __init__(self, service_url: str = SERVICE_URL, service_endpoint: str = 'graph'):
+    def __init__(self, service_url: str = WacomServiceAPIClient.SERVICE_URL, service_endpoint: str = 'graph/v1'):
         super().__init__("GroupManagementServiceAPI", service_url=service_url, service_endpoint=service_endpoint)
 
     # ------------------------------------------ Users handling --------------------------------------------------------
@@ -316,7 +315,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         user: List[User]
             List of users.
         """
-        url: str = f'{self.service_url}/{self.service_endpoint}{UserManagementServiceAPI.USER_ENDPOINT}'
+        url: str = f'{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}'
         headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             TENANT_API_KEY_FLAG: tenant_key

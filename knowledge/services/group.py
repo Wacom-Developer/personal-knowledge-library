@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-23 Wacom. All rights reserved.
 import urllib.parse
 from typing import Dict, List, Any, Optional
 
@@ -151,9 +151,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
 
     GROUP_ENDPOINT: str = 'group'
     """"Endpoint for all group related functionality."""
-    SERVICE_URL: str = 'https://stage-private-knowledge.wacom.com'
 
-    def __init__(self, service_url: str = SERVICE_URL, service_endpoint: str = 'graph'):
+    def __init__(self, service_url: str = WacomServiceAPIClient.SERVICE_URL, service_endpoint: str = 'graph/v1'):
         super().__init__("GroupManagementServiceAPI", service_url=service_url, service_endpoint=service_endpoint)
 
     # ------------------------------------------ Groups handling ------------------------------------------------------

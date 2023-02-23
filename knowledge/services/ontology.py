@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-2022 Wacom. All rights reserved.
+# Copyright © 2021-23 Wacom. All rights reserved.
 import urllib.parse
 from http import HTTPStatus
 from typing import Dict, List, Any, Optional, Tuple
@@ -53,7 +53,7 @@ class OntologyService(WacomServiceAPIClient):
     RDF_ENDPOINT: str = "context/{}/versions/rdf"
     PROPERTY_ENDPOINT: str = "context/{}/properties/{}"
 
-    def __init__(self, service_url: str, service_endpoint: str = 'ontology'):
+    def __init__(self, service_url: str = WacomServiceAPIClient.SERVICE_URL, service_endpoint: str = 'ontology/v1'):
         super().__init__(application_name="Ontology Service", service_url=service_url,
                          service_endpoint=service_endpoint)
 
