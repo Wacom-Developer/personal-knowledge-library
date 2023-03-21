@@ -238,10 +238,11 @@ class Description(LocalizedContent):
         super().__init__(description, language_code)
 
     @staticmethod
-    def create_from_dict(dict_description: Dict[str, Any]) -> 'Description':
-        if DESCRIPTION_TAG not in dict_description or LOCALE_TAG not in dict_description:
+    def create_from_dict(dict_description: Dict[str, Any], tag_name: str = DESCRIPTION_TAG, locale_name: str = LOCALE_TAG) \
+            -> 'Description':
+        if tag_name not in dict_description or locale_name not in dict_description:
             raise ValueError("Dict is does not contain a localized label.")
-        return Description(dict_description[DESCRIPTION_TAG], dict_description[LOCALE_TAG])
+        return Description(dict_description[tag_name], dict_description[locale_name])
 
     @staticmethod
     def create_from_list(param: List[Dict[str, Any]]) -> List['Description']:
@@ -452,7 +453,7 @@ class OntologyContext(OntologyObject):
         List of properties (data and object properties)
     """
 
-    def __init__(self, cid: str, tenant_id: str, name: str, icon: str, labels: List[Label],
+    def __init__(self, cid: str, tenant_id: str, name: str, icon: str, labels: List[OntologyLabel],
                  comments: List[Comment], date_added: datetime, date_modified: datetime, context: str, base_uri: str,
                  version: int, orphaned: bool, concepts: List[str], properties: List[str]):
         self.__id = cid
@@ -480,7 +481,7 @@ class OntologyContext(OntologyObject):
     @classmethod
     def from_dict(cls, context_dict: Dict[str, Any]):
         context_data: Dict[str, Any] = context_dict['context']
-        labels: List[Label] = [] if context_data['labels'] is None else \
+        labels: List[OntologyLabel] = [] if context_data['labels'] is None else \
             [Label(content=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in context_data['labels']]
         comments: List[Comment] = [] if context_data['comments'] is None else \
             [Comment(text=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in context_data['comments']]
