@@ -1,3 +1,7 @@
+2023/2/23- RELEASE 0.9.4
+==========================
+- Fixing named entity linking URL
+
 2023/2/23- RELEASE 0.9.3
 ==========================
 - REST API introduced versioning (v1), added the service endpoint constant in constructors
