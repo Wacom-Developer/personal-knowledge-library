@@ -24,7 +24,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
     service_url: str
         URL of the service
     """
-    SERVICE_ENDPOINT: str = 'graph/nel/text'
+    SERVICE_ENDPOINT: str = 'graph/v1/nel/text'
     SERVICE_URL: str = 'https://private-knowledge.wacom.com'
     LANGUAGES: List[LanguageCode] = [
         LanguageCode('de_DE'),
