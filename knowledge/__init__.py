@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-23 Wacom. All rights reserved.
 """"Personal knowledge Library"""
 import logging
 from typing import Optional
 
 __author__ = "Markus Weber"
-__copyright__ = "Copyright 2021 Wacom. All rights reserved."
+__copyright__ = "Copyright 2021-2023 Wacom. All rights reserved."
 __credits__ = ["Markus Weber"]
 __license__ = "Wacom"
 __maintainer__ = ["Markus Weber"]
 __email__ = "markus.weber@wacom.com"
 __status__ = "beta"
+__version__ = "0.9.5"
 
 # Create the Logger
 logger: Optional[logging.Logger] = None
@@ -33,5 +34,5 @@ from knowledge import public
 from knowledge import services
 from knowledge import utils
 
-__all__ = ['__copyright__', '__credits__', '__license__', '__maintainer__', '__email__', '__status__',
+__all__ = ['__copyright__', '__credits__', '__license__', '__maintainer__', '__email__', '__status__', '__version__',
            'logger', 'base', 'nel', 'public', 'services', 'utils']

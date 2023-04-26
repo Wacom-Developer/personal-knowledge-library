@@ -127,12 +127,14 @@ class WacomServiceAPIClient(RESTAPIClient):
                 except (ParserError, OverflowError) as _:
                     date_object: datetime = datetime.now()
                 return response_token['accessToken'], response_token['refreshToken'], date_object
-            except:
-                return response.text, '', datetime.now()
+            except Exception as e:
+                raise WacomServiceException(f'Login failed'
+                                            f'Response code:={response.status_code}, response text:= {response.text}, '
+                                            f'exception:= {e} ')
         raise WacomServiceException(f'User login failed.'
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def refresh_token(self, refresh_token: str) -> Tuple[str, str, str]:
+    def refresh_token(self, refresh_token: str) -> Tuple[str, str, datetime]:
         """
         Refreshing a token.
 
@@ -166,7 +168,11 @@ class WacomServiceAPIClient(RESTAPIClient):
         response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
         if response.ok:
             response_token: Dict[str, str] = response.json()
-            return response_token['accessToken'], response_token['refreshToken'], response_token['expirationDate']
+            try:
+                date_object: datetime = parse(response_token['expirationDate'])
+            except (ParserError, OverflowError) as _:
+                date_object: datetime = datetime.now()
+            return response_token['accessToken'], response_token['refreshToken'], date_object
         raise WacomServiceException(f'Refresh failed. '
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 

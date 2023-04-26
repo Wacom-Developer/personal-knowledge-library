@@ -1,3 +1,9 @@
+2023/3/24- RELEASE 0.9.5
+==========================
+- Adding some helper functions for the entity management 
+- Fixing some issues with parameters, e.g., force in delete
+- Introducing session with retry and backoff in case of private knowledge service is under load
+
 2023/3/24- RELEASE 0.9.4
 ==========================
 - Fixing named entity linking URL

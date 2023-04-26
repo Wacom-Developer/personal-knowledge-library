@@ -9,11 +9,13 @@ from typing import List, Dict, Any, Tuple, Optional
 
 import requests
 from requests import Response
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 
 from knowledge.base.access import TenantAccessRight
 from knowledge.base.entity import LanguageCode, DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, IMAGE_TAG, \
     DESCRIPTION_TAG, TYPE_TAG, URI_TAG, LABELS_TAG, IS_MAIN_TAG, DESCRIPTIONS_TAG, RELATIONS_TAG, SEND_TO_NEL_TAG, \
-    LOCALE_TAG, EntityStatus, Label, Description, URIS_TAG
+    LOCALE_TAG, EntityStatus, Label, Description, URIS_TAG, FORCE_TAG
 from knowledge.base.ontology import DataProperty, OntologyPropertyReference, ThingObject, OntologyClassReference, \
     ObjectProperty
 from knowledge.services import USER_AGENT_STR
@@ -188,7 +190,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         raise WacomServiceException(f'Retrieving of entity content failed. URI:={uri}. '
                                     f'Response code:={response.status_code}, exception:= {response.content}')
 
-    def delete_entities(self, auth_key: str, uris: List[str], force: bool = False):
+    def delete_entities(self, auth_key: str, uris: List[str], force: bool = False, max_retries: int = 3,
+                        backoff_factor: float = 0.1):
         """
         Delete a list of entities.
 
@@ -200,6 +203,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             List of URI of entities. **Remark:** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Raises
         ------
@@ -215,14 +223,21 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         }
         params: Dict[str, Any] = {
             URIS_TAG: uris,
-            'forceDelete': force
+            FORCE_TAG: force
         }
-        response: Response = requests.delete(url, headers=headers, params=params, verify=self.verify_calls)
-        if not response.ok:
-            raise WacomServiceException(f'Deletion of entity failed.'
-                                        f'Response code:={response.status_code}, exception:= {response.content}')
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=[502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.delete(url, headers=headers, params=params, verify=self.verify_calls)
+            if not response.ok:
+                raise WacomServiceException(f'Deletion of entities failed.'
+                                            f'Response code:={response.status_code}, exception:= {response.content}')
 
-    def delete_entity(self, auth_key: str, uri: str, force: bool = False):
+    def delete_entity(self, auth_key: str, uri: str, force: bool = False, max_retries: int = 3,
+                      backoff_factor: float = 0.1):
         """
         Deletes an entity.
 
@@ -234,6 +249,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             URI of entity
         force: bool
             Force deletion process
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Raises
         ------
@@ -245,12 +265,18 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.delete(url, headers=headers, params={'forceDelete': force},
-                                             verify=self.verify_calls)
-        if not response.ok:
-            raise WacomServiceException('Deletion of entity failed. Response code:={}, exception:= {}'
-                                        .format(response.status_code,
-                                                response.content))
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=[502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.delete(url, headers=headers, params={FORCE_TAG: force},
+                                                verify=self.verify_calls)
+            if not response.ok:
+                raise WacomServiceException(f'Deletion of entity (URI:={uri}) failed.'
+                                            f'Response code:={response.status_code}, exception:= {response.content}')
+
 
     def exists(self, auth_key: str, uri: str) -> bool:
         """
@@ -378,7 +404,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         return entities
 
-    def create_entity(self, auth_key: str, entity: ThingObject) -> str:
+    def create_entity(self, auth_key: str, entity: ThingObject, max_retries: int = 3, backoff_factor: float = 0.1,
+                      ignore_image: bool = False) \
+            -> str:
         """
         Creates entity in graph.
 
@@ -387,12 +415,18 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         auth_key: str
             Auth key from user
         entity: ThingObject
-            entity object
+            Entity object that needs to be created
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Returns
         -------
         uri: str
             URI of entity
+
 
         Raises
         ------
@@ -400,28 +434,31 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the graph service returns an error code
         """
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}'
-
         # Header info
-        headers: dict = {
+        headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         payload: Dict[str, Any] = WacomKnowledgeService.__entity__(entity)
-        try:
-            response: Response = requests.post(url, json=payload, headers=headers, verify=self.verify_calls, timeout=5)
-        except Exception as e:
-            raise WacomServiceException(f"Timeout after 5 sec. [Exception:={str(e)}]")
-        if response.ok:
-            uri: str = response.json()[URI_TAG]
-            if entity.image is not None and entity.image.startswith('file:'):
-                from urllib.parse import urlparse
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=[502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.post(url, json=payload, headers=headers, verify=self.verify_calls, timeout=5)
 
-                p = urlparse(entity.image)
-                self.set_entity_image_local(auth_key, uri, Path(p.path))
-            elif entity.image is not None and entity.image != '':
-                self.set_entity_image_url(auth_key, uri, entity.image)
-            return uri
+            if response.ok and not ignore_image:
+                uri: str = response.json()[URI_TAG]
+                # Set image
+                if entity.image is not None and entity.image.startswith('file:'):
+                    from urllib.parse import urlparse
+                    p = urlparse(entity.image)
+                    self.set_entity_image_local(auth_key, uri, Path(p.path))
+                elif entity.image is not None and entity.image != '':
+                    self.set_entity_image_url(auth_key, uri, entity.image)
+                return uri
         raise WacomServiceException(f'Pushing entity failed. '
                                     f'Response code:={response.status_code}, exception:= {response.content}. '
                                     f'Payload: \n{json.dumps(payload, indent=4)}')
@@ -653,7 +690,13 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             RELATION_TAG: relation.iri,
             TARGET: target
         }
-        response: Response = requests.post(url, params=params, headers=headers, verify=self.verify_calls)
+        mount_point: str = \
+            'https://' if self.service_url.startswith('https') else 'http://'
+        session: requests.Session = requests.Session()
+        retries: Retry = Retry(backoff_factor=0.1,
+                               status_forcelist=[500, 502, 503, 504])
+        session.mount(mount_point, HTTPAdapter(max_retries=retries))
+        response: Response = session.post(url, params=params, headers=headers, verify=self.verify_calls)
         if not response.ok:
             raise WacomServiceException(f'Create relations failed. '
                                         f'Response code:={response.status_code}, exception:= {response.content}. '
@@ -749,7 +792,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
     def listing(self, auth_key: str, filter_type: OntologyClassReference, page_id: Optional[str] = None,
                 limit: int = 30, locale: Optional[LanguageCode] = None, visibility: Optional[Visibility] = None,
-                estimate_count: bool = False) \
+                estimate_count: bool = False, max_retries: int = 3, backoff_factor: float = 0.1) \
             -> Tuple[List[ThingObject], int, str]:
         """
         List all entities visible to users.
@@ -770,6 +813,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Filter the entities based on its visibilities
         estimate_count: bool [default:=False]
             Request an estimate of the entities in a tenant.
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+
         Returns
         -------
         entities: List[ThingObject]
@@ -803,6 +852,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         # If filtering is configured
         if page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = page_id
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=[502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
         # Send request
         response: Response = requests.get(url, params=parameters, headers=headers, verify=self.verify_calls)
         # If response is successful
@@ -1170,8 +1225,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         with requests.session() as session:
             headers: Dict[str, str] = {
                 USER_AGENT_HEADER_FLAG:
-                    'ImageFetcher/0.1 (https://github.com/Wacom-Developer/personal-knowledge-library)'
-                    ' personal-knowledge-library/0.2.4'
+                    f'ImageFetcher/0.1 (https://github.com/Wacom-Developer/personal-knowledge-library)'
+                    f' personal-knowledge-library/0.9.5'
             }
             response: Response = session.get(image_url, headers=headers)
             if response.ok:

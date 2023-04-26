@@ -4,6 +4,7 @@ from typing import List, Optional, Dict
 
 import requests
 from requests import Response
+from requests.adapters import HTTPAdapter, Retry
 
 from knowledge.base.entity import LOCALE_TAG, LanguageCode, TEXT_TAG
 from knowledge.base.ontology import OntologyClassReference
@@ -71,27 +72,40 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
             LOCALE_TAG: locale,
             TEXT_TAG: text
         }
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
-        if response.ok:
-            results: dict = response.json()
-            for e in results:
-                entity_types: List[str] = []
-                # --------------------------- Entity content -------------------------------------------------------
-                source: Optional[EntitySource] = None
-                if 'uri' in e:
-                    source = EntitySource(e['uri'], KnowledgeSource.WACOM_KNOWLEDGE)
-                # --------------------------- Ontology types -------------------------------------------------------
-                if 'type' in e:
-                    entity_types.append(e['type'])
-                # --------------------------------------------------------------------------------------------------
-                ne: KnowledgeGraphEntity = KnowledgeGraphEntity(ref_text=text[e['startPosition']:e['endPosition'] + 1],
-                                                                start_idx=e['startPosition'], end_idx=e['endPosition'],
-                                                                label=e['value'], confidence=0.,
-                                                                source=source, content_link='',
-                                                                ontology_types=entity_types,
-                                                                entity_type=EntityType.PERSONAL_ENTITY)
-                ne.relevant_type = OntologyClassReference.parse(e['type'])
-                named_entities.append(ne)
-            return named_entities
+        # Define the retry policy
+        retry_policy: Retry = Retry(
+            total=10,  # maximum number of retries
+            backoff_factor=1.5,  # factor by which to multiply the delay between retries
+            status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
+            method_whitelist=["POST"],  # HTTP methods to retry on
+            respect_retry_after_header=True  # respect the Retry-After header
+        )
+
+        # Create a session and mount the retry adapter
+        with requests.Session() as session:
+            retry_adapter = HTTPAdapter(max_retries=retry_policy)
+            session.mount("https://", retry_adapter)
+            response: Response = session.post(url, headers=headers, json=payload, verify=self.verify_calls)
+            if response.ok:
+                results: dict = response.json()
+                for e in results:
+                    entity_types: List[str] = []
+                    # --------------------------- Entity content -------------------------------------------------------
+                    source: Optional[EntitySource] = None
+                    if 'uri' in e:
+                        source = EntitySource(e['uri'], KnowledgeSource.WACOM_KNOWLEDGE)
+                    # --------------------------- Ontology types -------------------------------------------------------
+                    if 'type' in e:
+                        entity_types.append(e['type'])
+                    # --------------------------------------------------------------------------------------------------
+                    ne: KnowledgeGraphEntity = KnowledgeGraphEntity(ref_text=text[e['startPosition']:e['endPosition'] + 1],
+                                                                    start_idx=e['startPosition'], end_idx=e['endPosition'],
+                                                                    label=e['value'], confidence=0.,
+                                                                    source=source, content_link='',
+                                                                    ontology_types=entity_types,
+                                                                    entity_type=EntityType.PERSONAL_ENTITY)
+                    ne.relevant_type = OntologyClassReference.parse(e['type'])
+                    named_entities.append(ne)
+                return named_entities
         raise WacomServiceException(f'Named entity linking for text:={text}@{locale}. '
                                     f'Response code:={response.status_code}, exception:= {response.content}')

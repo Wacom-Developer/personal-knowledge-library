@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2022 Wacom Authors. All Rights Reserved.
+# Copyright © 2022-23 Wacom Authors. All Rights Reserved.
 from typing import Optional, List
 
 from rdflib import Graph, RDF, RDFS, OWL, URIRef, Literal

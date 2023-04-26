@@ -13,8 +13,10 @@ BASE_URI: str = "http://www.w3.org/2001/XMLSchema#"
 SUB_CLASS_OF_TAG: str = 'subClassOf'
 TENANT_ID: str = 'tenantId'
 NAME_TAG: str = "name"
-SUPPORTED_LANGUAGES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'zh_CN']
-
+SUPPORTED_LOCALES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'zh_CN']
+SUPPORTED_LANGUAGES: List[str] = ['ja', 'en', 'de', 'bg', 'fr', 'it', 'es', 'zh']
+LANGUAGE_LOCALE_MAPPING: Dict[str, str] = dict([(lang, locale)
+                                                for lang, locale in zip(SUPPORTED_LANGUAGES, SUPPORTED_LOCALES)])
 
 class PropertyType(enum.Enum):
     """
@@ -1158,6 +1160,24 @@ class ThingObject(abc.ABC):
     def object_properties(self, relations: Dict[OntologyPropertyReference, ObjectProperty]):
         self.__object_properties = relations
 
+    def data_property_lang(self, property: OntologyPropertyReference, language_code: LanguageCode) \
+            -> List[DataProperty]:
+        """
+        Get data property for language_code code.
+
+        Parameters
+        ----------
+        property: OntologyPropertyReference
+            Data property.
+        language_code: LanguageCode
+            Requested language_code code
+        Returns
+        -------
+        data_properties: List[DataProperty]
+            Returns a list of data properties for a specific language code
+        """
+        return [d for d in self.data_properties.get(property, []) if d.language_code == language_code]
+
     @property
     def alias(self) -> List[Label]:
         """Alternative labels of the concept."""
@@ -1280,7 +1300,7 @@ class ThingObject(abc.ABC):
         descriptions: List[Description] = []
 
         for label in entity[LABELS_TAG]:
-            if label[LOCALE_TAG] in SUPPORTED_LANGUAGES:
+            if label[LOCALE_TAG] in SUPPORTED_LOCALES:
                 if label[IS_MAIN_TAG]:
                     labels.append(Label.create_from_dict(label))
                 else:
@@ -1323,6 +1343,65 @@ class ThingObject(abc.ABC):
         if TENANT_RIGHTS_TAG in entity:
             thing.tenant_access_right = TenantAccessRight.parse(entity[TENANT_RIGHTS_TAG])
         return thing
+
+    def __getstate__(self) -> Dict[str, Any]:
+        return self.__dict__()
+
+    def __setstate__(self, state: Dict[str, Any]):
+        self.__label: List[Label] = []
+        self.__description: List[Description] = []
+        self.__alias: List[Label] = []
+        self.__data_properties: Dict[OntologyPropertyReference, List[DataProperty]] = {}
+        self.__object_properties: Dict[OntologyPropertyReference, ObjectProperty] = {}
+        self.__status_flag: EntityStatus = EntityStatus.UNKNOWN
+        self.__ontology_types: Optional[Set[str]] = None
+        self.__owner_id: Optional[str] = None
+        self.__group_ids: List[str] = []
+        self.__visibility: Optional[str] = None
+
+        for label in state[LABELS_TAG]:
+            if label[LOCALE_TAG] in SUPPORTED_LOCALES:
+                if label[IS_MAIN_TAG]:
+                    self.__label.append(Label.create_from_dict(label))
+                else:
+                    self.__alias.append(Label.create_from_dict(label))
+
+        for desc in state[DESCRIPTIONS_TAG]:
+            self.__description.append(Description.create_from_dict(desc))
+
+        use_nel: bool = state.get(USE_NEL_TAG, True)
+        visibility: Optional[str] = state.get(VISIBILITY_TAG)
+        self.__icon=state[IMAGE_TAG]
+        self.__uri=state[URI_TAG]
+        self.__concept_type=OntologyClassReference.parse(state[TYPE_TAG])
+        self.__owner=state.get(OWNER_TAG, True)
+        self.__use_for_nel=use_nel
+        self.__visibility = visibility
+        self.__owner_id = state.get(OWNER_ID_TAG)
+        self.__group_ids = state.get(GROUP_IDS)
+        if DATA_PROPERTIES_TAG in state:
+            if isinstance(state[DATA_PROPERTIES_TAG], dict):
+                for data_property_type_str, data_properties in state[DATA_PROPERTIES_TAG].items():
+                    data_property_type: OntologyPropertyReference = \
+                        OntologyPropertyReference.parse(data_property_type_str)
+                    for data_property in data_properties:
+                        language_code: LanguageCode = LanguageCode(data_property[LOCALE_TAG])
+                        value: str = data_property[VALUE_TAG]
+                        self.add_data_property(DataProperty(value, data_property_type, language_code))
+            elif isinstance(state[DATA_PROPERTIES_TAG], list):
+                for data_property in state[DATA_PROPERTIES_TAG]:
+                    language_code: LanguageCode = LanguageCode(data_property[LOCALE_TAG])
+                    value: str = data_property[VALUE_TAG]
+                    data_property_type: OntologyPropertyReference = \
+                        OntologyPropertyReference.parse(data_property[DATA_PROPERTY_TAG])
+                    self.add_data_property(DataProperty(value, data_property_type, language_code))
+        if OBJECT_PROPERTIES_TAG in state:
+            for object_property in state[OBJECT_PROPERTIES_TAG].values():
+                prop, obj = ObjectProperty.create_from_dict(object_property)
+                self.add_relation(obj)
+        # Finally, retrieve rights
+        if TENANT_RIGHTS_TAG in state:
+            self.tenant_access_right = TenantAccessRight.parse(state[TENANT_RIGHTS_TAG])
 
     def __hash__(self):
         return 0

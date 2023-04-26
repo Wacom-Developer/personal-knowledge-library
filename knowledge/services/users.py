@@ -21,6 +21,7 @@ ROLES_TAG: str = 'roles'
 META_DATA_TAG: str = 'metaData'
 INTERNAL_USER_ID_TAG: str = 'internalUserId'
 EXTERNAL_USER_ID_TAG: str = 'externalUserId'
+FORCE_TAG: str = 'force'
 CONTENT_TYPE_FLAG: str = 'Content-Type'
 TENANT_API_KEY_FLAG: str = 'x-tenant-api-key'
 USER_AGENT_TAG: str = "User-Agent"
@@ -132,7 +133,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
     USER_DETAILS_ENDPOINT: str = f'{WacomServiceAPIClient.USER_ENDPOINT}/internal-id'
 
     def __init__(self, service_url: str = WacomServiceAPIClient.SERVICE_URL, service_endpoint: str = 'graph/v1'):
-        super().__init__("GroupManagementServiceAPI", service_url=service_url, service_endpoint=service_endpoint)
+        super().__init__("UserManagementServiceAPI", service_url=service_url, service_endpoint=service_endpoint)
 
     # ------------------------------------------ Users handling --------------------------------------------------------
 
@@ -233,7 +234,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             raise WacomServiceException(f'Updating user failed. '
                                         f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def delete_user(self, tenant_key: str, external_id: str, internal_id: str):
+    def delete_user(self, tenant_key: str, external_id: str, internal_id: str, force: bool = False):
         """Deletes user from tenant.
 
         Parameters
@@ -244,6 +245,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             External id of user identification service.
         internal_id: str
             Internal id of user.
+        force: bool
+            If set to true removes all user data including groups and entities.
 
         Raises
         ------
@@ -257,7 +260,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         }
         params: Dict[str, str] = {
             USER_ID_TAG: internal_id,
-            EXTERNAL_USER_ID_TAG: external_id
+            EXTERNAL_USER_ID_TAG: external_id,
+            FORCE_TAG: force
         }
         response: Response = requests.delete(url, headers=headers, params=params, verify=self.verify_calls)
         if not response.ok:

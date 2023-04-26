@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-23 Wacom. All rights reserved.
 from http import HTTPStatus
 from typing import Dict, Any
 
@@ -11,6 +11,9 @@ from knowledge.base.entity import LanguageCode
 
 
 class ExtractionException(Exception):
+    """
+    Exception for extraction errors.
+    """
     pass
 
 
