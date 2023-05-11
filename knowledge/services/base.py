@@ -21,6 +21,14 @@ REFRESH_TOKEN_TAG: str = 'refreshToken'
 
 class WacomServiceException(Exception):
     """Exception thrown if Wacom service fails."""
+    def __init__(self, message: str, status_code: int = 500):
+        super().__init__(message)
+        self.__status_code: int = status_code
+
+    @property
+    def status_code(self) -> int:
+        """Status code of the exception."""
+        return self.__status_code
 
 
 class RESTAPIClient(ABC):
