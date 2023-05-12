@@ -5,6 +5,8 @@ from typing import Dict, Any
 
 import requests
 from requests import Response
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 
 from knowledge import logger
 from knowledge.base.entity import LanguageCode
@@ -17,7 +19,7 @@ class ExtractionException(Exception):
     pass
 
 
-def __extract_abstract__(title: str, language: str = 'en') -> str:
+def __extract_abstract__(title: str, language: str = 'en',  max_retries: int = 3, backoff_factor: float = 0.1) -> str:
     """Extracting an abstract.
 
     Parameters
@@ -43,18 +45,24 @@ def __extract_abstract__(title: str, language: str = 'en') -> str:
     }
 
     url: str = f'https://{language}.wikipedia.org/w/api.php'
-    response: Response = requests.get(url, params=params)
-    if response.status_code == HTTPStatus.OK:
-        result: Dict[str, Any] = response.json()
-        if 'query' in result:
-            pages = result['query']['pages']
-            if len(pages) == 1:
-                for v in pages.values():
-                    return v.get('extract', '')
+    mount_point: str = 'https://'
+    with requests.Session() as session:
+        retries: Retry = Retry(total=max_retries,
+                               backoff_factor=backoff_factor,
+                               status_forcelist=[502, 503, 504])
+        session.mount(mount_point, HTTPAdapter(max_retries=retries))
+        response: Response = session.get(url, params=params)
+        if response.ok:
+            result: Dict[str, Any] = response.json()
+            if 'query' in result:
+                pages = result['query']['pages']
+                if len(pages) == 1:
+                    for v in pages.values():
+                        return v.get('extract', '')
     raise ExtractionException(f"Abstract for article with {title} in language_code {language} cannot be extracted.")
 
 
-def __extract_thumb__(title: str, language: str = 'en') -> str:
+def __extract_thumb__(title: str, language: str = 'en', max_retries: int = 3, backoff_factor: float = 0.1) -> str:
     """
     Extracting thumbnail from Wikipedia.
 
@@ -64,6 +72,11 @@ def __extract_thumb__(title: str, language: str = 'en') -> str:
         Title of wikipedia article
     language: LanguageCode
         Language code of Wikipedia
+    max_retries: int
+        Maximum number of retries
+    backoff_factor: float
+        A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+        second try without a delay)
 
     Returns
     -------
@@ -79,22 +92,51 @@ def __extract_thumb__(title: str, language: str = 'en') -> str:
     }
 
     url: str = f'https://{language}.wikipedia.org/w/api.php'
-    response: Response = requests.get(url, params=params)
-    if response.ok:
-        result: dict = response.json()
-        try:
-            if 'query' in result:
-                pages: dict = result['query']['pages']
-                if len(pages) == 1:
-                    for v in pages.values():
-                        if 'thumbnail' in v:
-                            return v['thumbnail']['source']
-        except Exception as e:
-            logger.error(e)
+    mount_point: str = 'https://'
+    with requests.Session() as session:
+        retries: Retry = Retry(total=max_retries,
+                               backoff_factor=backoff_factor,
+                               status_forcelist=[502, 503, 504])
+        session.mount(mount_point, HTTPAdapter(max_retries=retries))
+        response: Response = session.get(url, params=params)
+        if response.ok:
+            result: dict = response.json()
+            try:
+                if 'query' in result:
+                    pages: dict = result['query']['pages']
+                    if len(pages) == 1:
+                        for v in pages.values():
+                            if 'thumbnail' in v:
+                                return v['thumbnail']['source']
+            except Exception as e:
+                logger.error(e)
     raise ExtractionException(f"Thumbnail for article with {title} in language_code {language} cannot be extracted.")
 
 
-def get_wikipedia_summary(title: str, lang: str = 'en') -> Dict[str, str]:
+def get_wikipedia_summary(title: str, lang: str = 'en') -> str:
+    """
+    Extracting summary wikipedia URL.
+
+    Parameters
+    ----------
+    title: str
+        Title of the Wikipedia article
+    lang: str
+        Language code
+
+    Returns
+    -------
+    result: Dict[str, str]
+        Summary dict with image and summary text
+    """
+    try:
+        summary: str = __extract_abstract__(title, lang)
+    except ExtractionException as _:
+        summary = ''
+    return summary
+
+
+def get_wikipedia_summary_image(title: str, lang: str = 'en') -> Dict[str, str]:
     """
     Extracting summary image and abstract for wikipedia URL.
 
