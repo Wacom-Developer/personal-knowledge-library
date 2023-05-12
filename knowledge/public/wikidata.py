@@ -1,657 +1,938 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
-import hashlib
-import math
-import urllib.parse
+# Copyright © 2023 Wacom. All rights reserved.
+import multiprocessing
 from abc import ABC
-from datetime import datetime
-from enum import Enum
-from http import HTTPStatus
-from typing import Tuple, List, Dict, Set, Any, Optional
+from multiprocessing import Pool
+from typing import List, Optional, Tuple, Union, Set
 
-import dateutil.parser
-import requests
-from qwikidata.entity import WikidataItem, WikidataClaimGroup, WikidataProperty
-from qwikidata.linked_data_interface import get_entity_dict_from_api, InvalidEntityId
-from qwikidata.sparql import get_subclasses_of_item
-from qwikidata.typedefs import PropertyId, ItemId, LanguageCode
+from tqdm import tqdm
 
-from knowledge import logger
-from knowledge.public import PROPERTY_MAPPING
-from knowledge.utils.wikipedia import get_wikipedia_summary, get_wikipedia_summary_url
+from knowledge.base.entity import Description, DESCRIPTIONS_TAG, Label, LanguageCode, LABELS_TAG
+from knowledge.base.ontology import LANGUAGE_LOCALE_MAPPING
+from knowledge.public import PROPERTY_MAPPING, INSTANCE_OF_PROPERTY, IMAGE_PROPERTY
+from knowledge.public.helper import *
+from knowledge.public.helper import __waiting_request__, __waiting_multi_request__
+
+# Constants
+QUALIFIERS_TAG: str = "QUALIFIERS"
+LITERALS_TAG: str = "LITERALS"
 
 
-class WikiDataAPIException(Exception):
+def chunks(lst: List[str], chunk_size: int):
     """
-    WikiDataAPIException
-    --------------------
-    Exception thrown when accessing WikiData fails.
-    """
-    pass
-
-
-# OntologyPropertyReference constants
-INSTANCE_OF_PROPERTY: str = 'P31'
-IMAGE_PROPERTY: str = 'P18'
-API_LIMIT: int = 50
-
-THUMB_IMAGE_URL: str = 'https://upload.wikimedia.org/wikipedia/commons/thumb/{}/{}/{}/200px-{}'
-MULTIPLE_ENTITIES_API: str = 'https://www.wikidata.org/w/api.php?action=wbgetentities&ids={}&languages={}&format=json'
-
-
-class Precision(Enum):
-    """
-    Precision enum for date.
-    """
-    BILLION_YEARS = 0
-    MILLION_YEARS = 3
-    HUNDREDS_THOUSAND_YEARS = 4
-    MILLENIUM = 6
-    CENTURY = 7
-    DECADE = 8
-    YEAR = 9
-    MONTH = 10
-    DAY = 11
-
-
-# Wikidata Properties
-STUDENT_OF: str = 'P1066'
-STUDENT: str = 'P802'
-INCEPTION: str = 'P571'
-MOVEMENT: str = 'P135'
-SUBCLASS_OF: str = 'P279'
-TITLE: str = 'P1476'
-COLLECTION: str = 'P195'
-GENRE: str = 'P136'
-CREATOR: str = 'P170'
-LOGO_IMAGE: str = 'P154'
-FLAG_IMAGE: str = 'P41'
-GREGORIAN_CALENDAR: str = 'Q1985727'
-START_TIME: str = 'P580'
-END_TIME: str = 'P582'
-FOLLOWS: str = 'P155'
-FOLLOWED_BY: str = 'P156'
-COUNTRY_OF_ORIGIN: str = 'P495'
-COUNTRY: str = 'P17'
-INSTANCE_OF: str = 'P31'
-IMAGE: str = 'P18'
-# URL - Wikidata
-GREGORIAN_CALENDAR_URL: str = 'http://www.wikidata.org/entity/Q1985786'
-# Template of wikidata entity
-WIKIDATA_ORG_WIKI_TEMPLATE: str = 'https://www.wikidata.org/wiki/{}'
-# URL - Wikidata service
-WIKIDATA_SPARQL_URL: str = "https://query.wikidata.org/sparql"
-
-
-def wikidate(param: Dict[str, Any]) -> dict:
-    """
-    Parse and extract wikidata structure.
+    Yield successive n-sized chunks from lst.Yield successive n-sized chunks from lst.
     Parameters
     ----------
-    param: Dict[str, Any]
-        Entity wikidata
+    lst: List[str]
+        Full length.
+    chunk_size: int
+        Chunk size.
 
-    Returns
-    -------
-    result: Dict[str, Any]
-        Dict with pretty print of date
     """
-    time: str = param['values'][0]['time']
-    timezone: int = param['values'][0]['timezone']
-    before: int = param['values'][0]['before']
-    after: int = param['values'][0]['after']
-    precision: int = param['values'][0]['precision']
-    calendar_model: str = param['values'][0]['calendarmodel']
-    after_christ: bool = True
-    pretty: str = ''
-    if time.startswith('+'):
-        time = time[1:]
-    elif time.startswith('-'):
-        time = time[1:]
-        after_christ = False
-    # Probably not necessary
-    date_str = time.strip()
-    # Remove + sign
-    if date_str[0] == '+':
-        date_str = date_str[1:]
-    # Remove missing month/day
-    date_str = date_str.split('-00', maxsplit=1)[0]
-    # Parse date
-    dt_obj: datetime = dateutil.parser.parse(date_str)
-    if Precision.BILLION_YEARS.value == precision:
-        pass
-    elif Precision.MILLION_YEARS.value == precision:
-        pass
-    elif Precision.HUNDREDS_THOUSAND_YEARS.value == precision:
-        pass
-    elif Precision.MILLENIUM.value == precision:
-        pass
-    elif Precision.CENTURY.value == precision:
-        century: int = int(math.ceil(dt_obj.year / 100))
-        pretty = f'{century}th century'
-    elif Precision.DECADE.value == precision:
-        pretty = f"{dt_obj.year}s{'' if after_christ else ' BC'}"
-    elif Precision.YEAR.value == precision:
-        pretty = f"{dt_obj.year}{'' if after_christ else ' BC'}"
-    elif Precision.MONTH.value == precision:
-        pretty = dt_obj.strftime("%B %Y")
-    elif Precision.DAY.value == precision:
-        pretty = dt_obj.strftime("%-d %B %Y")
-    return {
-        'time': time,
-        'timezone': timezone,
-        'before': before,
-        'after': after,
-        'precision': precision,
-        'calendarmodel': calendar_model,
-        'pretty': pretty
-    }
+    for i in range(0, len(lst), chunk_size):
+        yield lst[i:i + chunk_size]
+
+
+class WikidataProperty(object):
+    """
+    WikidataProperty
+    ----------------
+    Property id and its label from wikidata.
+
+    Parameters
+    ----------
+    pid: str
+        Property ID.
+
+    """
+    def __init__(self, pid: str, label: Optional[str] = None):
+        super().__init__()
+        self.__pid: str = pid
+        self.__label: Optional[str] = label
+
+    @property
+    def pid(self):
+        """Property id."""
+        return self.__pid
+
+    @property
+    def label(self) -> str:
+        """Label with lazy loading mechanism."""
+        if self.__label:
+            return self.__label
+        if self.pid in PROPERTY_MAPPING:  # only English mappings
+            self.__label = PROPERTY_MAPPING[self.pid]
+        else:
+            prop_dict = __waiting_request__(self.pid)
+            self.__label = prop_dict['labels'].get('en', self.__pid) if prop_dict.get('labels') else self.__pid
+        return self.__label
+
+    @property
+    def label_cached(self) -> str:
+        """Label with cached value."""
+        if self.__label:
+            return self.__label
+        if self.pid in PROPERTY_MAPPING:  # only English mappings
+            self.__label = PROPERTY_MAPPING[self.pid]
+        return self.__label
+
+    def __dict__(self):
+        return {
+            PID_TAG: self.pid,
+            LABEL_TAG: self.label_cached
+        }
+
+    @classmethod
+    def create_from_dict(cls, prop_dict: Dict[str, Any]) -> 'WikidataProperty':
+        return WikidataProperty(prop_dict[PID_TAG], prop_dict.get(LABEL_TAG))
+
+    def __repr__(self):
+        return f'<Property:={self.pid}]>'
+
+
+class WikidataClass(object):
+    """
+    WikidataClass
+    ----------------
+    In Wikidata, classes are used to group items together based on their common characteristics.
+    Classes in Wikidata are represented as items themselves, and they are typically identified by the prefix "Q"
+    followed by a unique number.
+
+    There are several types of classes in Wikidata, including:
+
+    - **Main Classes**: These are the most general classes in Wikidata, and they represent broad categories of items.
+    Examples of main classes include "person" (Q215627), "physical location" (Q17334923), and "event" (occurrence).
+    - **Subclasses**: These are more specific classes that are grouped under a main class.
+    For example, "politician" (Q82955) is a subclass of "person" (Q215627), and "city" (Q515) is a subclass
+    of "location" (Q17334923).
+    - **Properties**: These are classes that represent specific attributes or characteristics of items. For example,
+    "gender" (Q48277) is a property that can be used to describe the gender of a person.
+    - **Instances**: These are individual items that belong to a class. For example, Barack Obama (Q76) is an instance
+    of the "person" (Q215627) class.
+    - **Metaclasses**: These are classes that are used to group together other classes based on their properties or
+    characteristics. For example, the "monotypic taxon" (Q310890) class groups together classes that represent
+    individual species of organisms.
+
+    Overall, classes in Wikidata are a tool for organizing and categorizing information in a structured and consistent
+    way, which makes it easier to search and analyze data across a wide range of topics and domains.
+
+    Parameters
+    ----------
+    qid: str
+        Class QID.
+
+    """
+    def __init__(self, qid: str, label: Optional[str] = None):
+        super().__init__()
+        self.__qid: str = qid
+        self.__label: Optional[str] = label
+        self.__superclasses: List[WikidataClass] = []
+
+    @property
+    def qid(self):
+        """Property id."""
+        return self.__qid
+
+    @property
+    def label(self) -> str:
+        """Label with lazy loading mechanism."""
+        if self.__label:
+            return self.__label
+
+        class_dict = __waiting_request__(self.qid)
+        self.__label = class_dict['labels'].get('en').get('value', self.__qid) \
+            if class_dict.get('labels') and class_dict['labels'].get('en') else self.__qid
+        return self.__label
+
+    @property
+    def superclasses(self) -> List['WikidataClass']:
+        return self.__superclasses
+
+    @classmethod
+    def create_from_dict(cls, class_dict: Dict[str, Any]) -> 'WikidataClass':
+        wiki_cls: WikidataClass = cls(class_dict[QID_TAG], class_dict.get(LABEL_TAG))
+        for superclass in class_dict.get(SUPERCLASSES_TAG, []):
+            wiki_cls.__superclasses.append(WikidataClass.create_from_dict(superclass))
+
+        return wiki_cls
+
+    def __dict__(self):
+        return {
+            QID_TAG: self.qid,
+            LABEL_TAG: self.label,
+            SUPERCLASSES_TAG: [superclass.__dict__() for superclass in self.superclasses]
+        }
+
+    def __repr__(self):
+        return f'<WikidataClass:={self.qid}]>'
+
+    """
+    def __str__(self, padding: str = ''):
+        ret: str = f'{padding}|-- {self.qid} ({self.label})\n'
+        for parent in self.superclasses:
+            ret += parent.__str__(padding + '|   ')
+        return ret
+    """
+
+
+class Claim(object):
+    """
+    Claim
+    ------
+    A Wikidata claim is a statement that describes a particular property-value relationship about an item in the
+    Wikidata knowledge base. In Wikidata, an item represents a specific concept, such as a person, place, or
+    organization, and a property describes a particular aspect of that concept, such as its name, date of birth,
+    or location.
+
+    A claim consists of three elements:
+
+    - Subject: The item to which the statement applies
+    - Predicate: The property that describes the statement
+    - Object: The value of the property for the given item
+
+    For example, a claim could be "Barack Obama (subject) has a birth-date (predicate) of August 4, 1961 (object)."
+    Claims in Wikidata help to organize information and provide a structured way to represent knowledge that can
+    be easily queried, analyzed, and visualized.
+    """
+
+    def __init__(self, pid: WikidataProperty, literal: List[Dict[str, Any]], qualifiers: List[Dict[str, Any]]):
+        super().__init__()
+        self.__pid: WikidataProperty = pid
+        self.__literals: List[Dict[str, Any]] = literal
+        self.__qualifiers: List[Dict[str, Any]] = qualifiers
+
+    @property
+    def pid(self) -> WikidataProperty:
+        """Property name. Predicate of the claim."""
+        return self.__pid
+
+    @property
+    def literals(self) -> List[Dict[str, Any]]:
+        """Literals. Objects of the statement."""
+        return self.__literals
+
+    @property
+    def qualifiers(self) -> List[Dict[str, Any]] :
+        """Qualifiers."""
+        return self.__qualifiers
+
+    def __dict__(self):
+        return {
+            PID_TAG: self.pid.__dict__(),
+            LITERALS_TAG: self.literals,
+            QUALIFIERS_TAG: self.qualifiers
+        }
+
+    def __eq__(self, other):
+        if not isinstance(other, Claim):
+            return False
+        return self.pid == other.pid
+
+    def __hash__(self):
+        return hash(self.pid)
+
+    def __repr__(self):
+        return f'<Claim:={self.pid}, {self.literals}]>'
+
+    @classmethod
+    def create_from_dict(cls, claim) -> 'Claim':
+        """Create a claim from a dictionary."""
+        pid: WikidataProperty = WikidataProperty.create_from_dict(claim['pid'])
+        literals = claim[LITERALS_TAG]
+        qualifiers = claim[QUALIFIERS_TAG]
+        return cls(pid, literals, qualifiers)
+
+
+class SiteLinks(object):
+    """
+    SiteLinks
+    ---------
+    Sitelinks in Wikidata are links between items in Wikidata and pages on external websites, such as Wikipedia,
+    Wikimedia Commons, and other Wikimedia projects. A sitelink connects a Wikidata item to a specific page on an
+    external website that provides more information about the topic represented by the item.
+
+    For example, a Wikidata item about a particular city might have sitelinks to the corresponding page on the English,
+    French, and German Wikipedia sites. Each sitelink connects the Wikidata item to a specific page on the external
+    website that provides more detailed information about the city.
+
+    Sitelinks in Wikidata help to connect and integrate information across different languages and projects,
+    making it easier to access and share knowledge on a wide range of topics. They also help to provide context and
+    additional information about Wikidata items, improving the overall quality and usefulness of the knowledge base.
+
+    Parameters
+    ----------
+    source: str
+        Source of sitelinks.
+    """
+
+    def __init__(self, source: str):
+        self.__source: str = source
+        self.__urls: Dict[str, str] = {}
+        self.__title: Dict[str, str] = {}
+
+    @property
+    def urls(self) -> Dict[str, str]:
+        """URLs for the source."""
+        return self.__urls
+
+    @property
+    def titles(self) -> Dict[str, str]:
+        """Titles for the source."""
+        return self.__title
+
+    @property
+    def urls_languages(self) -> List[str]:
+        """List of all supported languages."""
+        return list(self.__urls.keys())
+
+    @property
+    def source(self) -> str:
+        """Sitelinks source."""
+        return self.__source
+
+    @classmethod
+    def create_from_dict(cls, entity_dict: Dict[str, Any]) -> 'SiteLinks':
+        site: SiteLinks = SiteLinks(source=entity_dict[SOURCE_TAG])
+        site.__urls = entity_dict[URLS_TAG]
+        site.__title = entity_dict[TITLES_TAG]
+        return site
+
+    def __dict__(self):
+        return {
+            SOURCE_TAG: self.__source,
+            URLS_TAG: self.__urls,
+            TITLES_TAG: self.__title
+        }
+
+    def __repr__(self):
+        return f'<SiteLinks:={self.source}, supported languages:=[{"|".join(self.urls_languages)}]>'
+
+
+class WikidataThing(object):
+    """
+    WikidataEntity
+    -----------
+    Generic entity within wikidata.
+
+    Each entity is derived from this object, thus all entity shares:
+    - **qid**: A unique resource identity to identify the entity and reference it in relations
+    - **label**: Human understandable label
+    - **description**: Description of entity
+
+    Parameters
+    ----------
+    label: List[Label]
+        List of labels
+    description: List[Description] (optional)
+        List of descriptions
+    qid: str
+         QID for entity. For new entities the URI is None, as the knowledge graph backend assigns this.
+    """
+
+    def __init__(self, revision: str, qid: str, modified: datetime,
+                 label: Optional[Dict[str, Label]] = None, aliases: Optional[Dict[str, List[Label]]] = None,
+                 description: Optional[Dict[str, Description]] = None):
+        self.__qid: str = qid
+        self.__revision: str = revision
+        self.__modified: datetime = modified
+        self.__label: Dict[str, Label] = label if label else {}
+        self.__description: Dict[str, Description] = description if description else {}
+        self.__aliases: Dict[str, List[Label]] = aliases if aliases else {}
+        self.__claims: Dict[str, Claim] = {}
+        self.__sitelinks: Dict[str, SiteLinks] = {}
+        self.__ontology_types: List[str] = []
+
+    @property
+    def qid(self) -> str:
+        """QID for entity."""
+        return self.__qid
+
+    @property
+    def revision(self) -> str:
+        """Revision version of entity."""
+        return self.__revision
+
+    @property
+    def modified(self) -> datetime:
+        """Modification date of entity."""
+        return self.__modified
+
+    @property
+    def label(self) -> Dict[str, Label]:
+        """Labels of the entity."""
+        return self.__label
+
+    @property
+    def ontology_types(self) -> List[str]:
+        """Ontology types of the entity."""
+        return self.__ontology_types
+
+    @ontology_types.setter
+    def ontology_types(self, ontology_types: List[str]):
+        self.__ontology_types = ontology_types
+
+    @property
+    def label_languages(self) -> List[str]:
+        """All available languages for a labels."""
+        return list(self.__label.keys())
+
+    @property
+    def aliases(self) -> Dict[str, List[Label]]:
+        """Alternative labels of the concept."""
+        return self.__aliases
+
+    @property
+    def alias_languages(self) -> List[str]:
+        """All available languages for a aliaes."""
+        return list(self.__aliases.keys())
+
+    @property
+    def description(self) -> Dict[str, Description]:
+        """Description of the thing (optional)."""
+        return self.__description
+
+    @description.setter
+    def description(self, description: Dict[str, Description]):
+        self.__description = description
+
+    @property
+    def description_languages(self) -> List[str]:
+        return list(self.__description.keys())
+
+    def add_label(self, label: str, language_code: str):
+        """Adding a label for entity.
+
+        Parameters
+        ----------
+        label: str
+            Label
+        language_code: str
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+        """
+        self.__label[language_code] = Label(label, LanguageCode(language_code), True)
+
+    def label_lang(self, language_code: str) -> Optional[Label]:
+        """
+        Get label for language_code code.
+
+        Parameters
+        ----------
+        language_code: LanguageCode
+            Requested language_code code
+        Returns
+        -------
+        label: Optional[Label]
+            Returns the label for a specific language code
+        """
+        return self.label.get(language_code)
+
+    def add_description(self, description: str, language_code: str):
+        """Adding a description for entity.
+
+        Parameters
+        ----------
+        description: str
+            Description
+        language_code: str
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+        """
+        self.__description[language_code] = Description(description=description,
+                                                        language_code=LanguageCode(language_code))
+
+    def description_lang(self, language_code: str) -> Optional[Description]:
+        """
+        Get description for entity.
+
+        Parameters
+        ----------
+        language_code: LanguageCode
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+        Returns
+        -------
+        label: LocalizedContent
+            Returns the  label for a specific language_code code
+        """
+        return self.description.get(language_code)
+
+    def alias_lang(self, language_code: LanguageCode) -> List[Label]:
+        """
+        Get alias for language_code code.
+
+        Parameters
+        ----------
+        language_code: LanguageCode
+            Requested language_code code
+        Returns
+        -------
+        aliases: List[Label]
+            Returns a list of aliases for a specific language code
+        """
+        return self.aliases.get(language_code)
+
+    def add_alias(self, alias: str, language_code: str):
+        """Adding an alias for entity.
+
+        Parameters
+        ----------
+        alias: str
+            Alias
+        language_code: str
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+        """
+        if language_code not in self.__aliases:
+            self.aliases[language_code] = []
+        self.__aliases[language_code].append(Label(alias, LanguageCode(language_code), False))
+
+    def image(self, dpi: int = 500) -> Optional[str]:
+        """
+        Generate URL for image from Wikimedia.
+
+        Parameters
+        ----------
+        dpi: int
+            DPI value. Range: [50-1000]
+
+        Returns
+        -------
+        wikimedia_url: str
+            URL for Wikimedia
+        """
+        if not (50 <= dpi <= 1000):
+            raise ValueError(f"DPI should bei with range of [50-1000]. Value:={dpi}")
+        claim: Optional[Claim] = self.claims.get(IMAGE_PROPERTY)
+        if claim and len(claim.literals) > 0:
+            img = claim.literals[0]['value']
+            if isinstance(img, dict) and 'image_url' in img:
+                return img['image_url']
+            else:
+                extension: str = ''
+                conversion: str = ''
+                fixed_img: str = img.replace(' ', '_')
+                if fixed_img.lower().endswith('svg'):
+                    extension: str = '.png'
+                if fixed_img.lower().endswith('tif') or fixed_img.lower().endswith('tiff'):
+                    extension: str = '.jpg'
+                    conversion: str = 'lossy-page1-'
+                hash_img: str = hashlib.md5(fixed_img.encode('utf-8')).hexdigest()
+                url_img_part: str = urllib.parse.quote_plus(fixed_img)
+                return f'https://upload.wikimedia.org/wikipedia/commons/thumb/' \
+                       f'{hash_img[0]}/{hash_img[:2]}/{url_img_part}/{dpi}px-{conversion + url_img_part + extension}'
+        return None
+
+    @property
+    def instance_of(self) -> List[WikidataClass]:
+        claim: Optional[Claim] = self.claims.get(INSTANCE_OF_PROPERTY)
+        if claim:
+            return [WikidataClass(l['value'].get('id')) for l in claim.literals if 'value' in l]
+        return []
+
+    @property
+    def sitelinks(self) -> Dict[str, SiteLinks]:
+        """Different sitelinks assigned to entity."""
+        return self.__sitelinks
+
+    def __dict__(self):
+        return {
+            QID_TAG: self.qid,
+            REVISION_TAG: self.revision,
+            MODIFIED_TAG: self.modified.isoformat(),
+            LABELS_TAG: dict([(lang, la.__dict__()) for lang, la in self.label.items()]),
+            DESCRIPTIONS_TAG: dict([(lang, la.__dict__()) for lang, la in self.description.items()]),
+            ALIASES_TAG: dict([(l, [a.__dict__() for a in al]) for l, al in self.aliases.items()]),
+            CLAIMS_TAG: dict([(pid, cl.__dict__()) for pid, cl in self.claims.items()]),
+            ONTOLOGY_TYPES_TAG: self.ontology_types,
+            SITELINKS_TAG: dict([(source, site.__dict__()) for source, site in self.sitelinks.items()])
+        }
+
+    @classmethod
+    def create_from_dict(cls, entity_dict: Dict[str, Any]) -> 'WikidataThing':
+        """
+        Create WikidataThing from dict.
+        Parameters
+        ----------
+        entity_dict: Dict[str, Any]
+            Dictionary with WikidataThing information.
+
+        Returns
+        -------
+        thing: WikidataThing
+            Instance of WikidataThing
+        """
+        labels: Dict[str, Label] = {}
+        aliases: Dict[str, List[Label]] = {}
+        descriptions: Dict[str, Description] = {}
+        for language, la in entity_dict[LABELS_TAG].items():
+            labels[language] = Label.create_from_dict(la)
+        for language, de in entity_dict[DESCRIPTIONS_TAG].items():
+            descriptions[language] = Description.create_from_dict(de)
+        for language, al in entity_dict[ALIASES_TAG].items():
+            aliases[language] = []
+            for a in al:
+                aliases[language].append(Label.create_from_dict(a))
+        # Initiate the wikidata thing
+        thing: WikidataThing = WikidataThing(qid=entity_dict[QID_TAG], revision=entity_dict[REVISION_TAG],
+                                             modified=parse(entity_dict[MODIFIED_TAG]), label=labels, aliases=aliases,
+                                             description=descriptions)
+        # Load the ontology types
+        thing.ontology_types = entity_dict.get(ONTOLOGY_TYPES_TAG, [])
+        # Load the claims
+        for pid, claim in entity_dict[CLAIMS_TAG].items():
+            thing.claims[pid] = Claim.create_from_dict(claim)
+        # Load the sitelinks
+        for wiki_source, site_link in entity_dict[SITELINKS_TAG].items():
+            thing.sitelinks[wiki_source] = SiteLinks.create_from_dict(site_link)
+        return thing
+
+    @staticmethod
+    def from_wikidata(entity_dict: Dict[str, Any], supported_languages: Optional[List[str]] = None) -> 'WikidataThing':
+        """
+        Create WikidataThing from Wikidata JSON response.
+        Parameters
+        ----------
+        entity_dict: Dict[str, Any]
+            Dictionary with WikidataThing information.
+        supported_languages: Optional[List[str]]
+            List of supported languages. If None, all languages are supported.
+
+        Returns
+        -------
+        thing: WikidataThing
+            Instance of WikidataThing.
+        """
+        labels: Dict[str, Label] = {}
+        aliases: Dict[str, List[Label]] = {}
+        descriptions: Dict[str, Description] = {}
+        if LABELS_TAG in entity_dict:
+            # Extract the labels
+            for label in entity_dict[LABELS_TAG].values():
+                if supported_languages is None or label[WIKIDATA_LANGUAGE_TAG] in supported_languages:
+                    la_content: str = label[LABEL_VALUE_TAG]
+                    la_lang: str = label[WIKIDATA_LANGUAGE_TAG]
+                    if la_lang in LANGUAGE_LOCALE_MAPPING:
+                        la: Label = Label(content=la_content,
+                                          language_code=LanguageCode(LANGUAGE_LOCALE_MAPPING[la_lang]), main=True)
+                        labels[la.language_code] = la
+        else:
+            labels['en_US'] = Label('No Label', LanguageCode('en_US'))
+        if ALIASES_TAG in entity_dict:
+            # Extract the aliases
+            for alias in entity_dict[ALIASES_TAG].values():
+                if supported_languages is None or alias[WIKIDATA_LANGUAGE_TAG] in supported_languages:
+                    for a in alias:
+                        la_content: str = a[LABEL_VALUE_TAG]
+                        la_lang: str = a[WIKIDATA_LANGUAGE_TAG]
+                        if la_lang in LANGUAGE_LOCALE_MAPPING:
+                            la: Label = Label(content=la_content,
+                                              language_code=LanguageCode(LANGUAGE_LOCALE_MAPPING[la_lang]), main=False)
+                            if la.language_code not in aliases:
+                                aliases[la.language_code] = []
+                            aliases[la.language_code].append(la)
+        if DESCRIPTIONS_TAG in entity_dict:
+            # Extracting the descriptions
+            for desc in entity_dict[DESCRIPTIONS_TAG].values():
+                if supported_languages is None or desc[WIKIDATA_LANGUAGE_TAG] in supported_languages:
+                    desc_content: str = desc[LABEL_VALUE_TAG]
+                    desc_lang: str = desc[WIKIDATA_LANGUAGE_TAG]
+                    if desc_lang in LANGUAGE_LOCALE_MAPPING:
+                        de: Description = Description(description=desc_content,
+                                                      language_code=LanguageCode(LANGUAGE_LOCALE_MAPPING[desc_lang]))
+                        descriptions[de.language_code] = de
+        # Initiate the wikidata thing
+        thing: WikidataThing = WikidataThing(qid=entity_dict[ID_TAG], revision=entity_dict[LAST_REVID_TAG],
+                                             modified=parse(entity_dict[MODIFIED_TAG]), label=labels, aliases=aliases,
+                                             description=descriptions)
+
+        # Iterate over the claims
+        for pid, claim_group in entity_dict[CLAIMS_TAG].items():
+            literal: List[Dict[str, Any]] = []
+            qualifiers: List[Dict[str, Any]] = []
+            for claim in claim_group:
+                try:
+
+                    snak_type: str = claim['mainsnak']['snaktype']
+                    if snak_type == "value":
+                        data_value: Dict[str, Any] = claim['mainsnak']['datavalue']
+                        data_type: str = claim['mainsnak']['datatype']
+                        val: Dict[str, Any] = {}
+                        if data_type == 'monolingualtext':
+                            val = data_value['value']
+                        elif data_type in ['string', 'external-id', 'url']:
+                            val = data_value['value']
+                        elif data_type == 'commonsMedia':
+                            val = {
+                                'image_url': image_url(data_value['value'])
+                            }
+                        elif data_type == 'time':
+                            val = wikidate(data_value['value'])
+                        elif data_type == 'quantity':
+                            if 'amount' in data_value['value']:
+                                val = {
+                                    "amount": data_value['value']['amount'],
+                                    "unit": data_value['value']['unit']
+                                }
+                        elif data_type == 'wikibase-lexeme':
+                            val = {
+                                'id': data_value['value']['id']
+                            }
+                        elif data_type in ['geo-shape', 'wikibase-property']:
+                            # Not supported
+                            val =  data_value['value']
+                        elif data_type in ['globe-coordinate', 'globecoordinate']:
+                            val = {
+                                'longitude': data_value['value'].get('longitude'),
+                                'latitude': data_value['value'].get('latitude'),
+                                'altitude': data_value['value'].get('altitude'),
+                                'globe': data_value['value'].get('globe'),
+                                'precision': data_value['value'].get('precision')
+                            }
+                        elif data_type in ["wikibase-entityid", 'wikibase-item']:
+                            val = {
+                                'id': data_value['value']['id']
+                            }
+                        elif data_type == 'math':
+                            val = {
+                                'math': data_value['value']
+                            }
+                        elif data_type == "tabular-data":
+                            val = {
+                                'tabular': data_value['value']
+                            }
+                        else:
+                            raise WikiDataAPIException(f"Data type: {data_type} not supported.")
+                        literal.append({
+                            'type': data_type,
+                            'value': val
+                        })
+
+                    if 'qualifiers' in claim:
+                        for p, qual in claim['qualifiers'].items():
+                            for elem in qual:
+                                if 'datavalue' in elem:
+                                    qualifiers.append({
+                                        "property": p,
+                                        "datatype": elem['datavalue']['type'],
+                                        "value": elem['datavalue']['value']
+                                    })
+                except Exception as e:
+                    logger.exception(e)
+            thing.add_claim(pid, Claim(WikidataProperty(pid), literal, qualifiers))
+        # Extract sitelinks
+        if SITELINKS_TAG in entity_dict:
+            for source, sitelink in entity_dict[SITELINKS_TAG].items():
+                try:
+                    start_idx = source.find('wiki')
+                    language_code: str = source[:start_idx]
+                    wiki_source: str = source[start_idx:]
+                    url: Optional[str] = sitelink.get('url')
+                    title: Optional[str] = sitelink.get('title')
+                    if wiki_source not in thing.sitelinks:
+                        thing.sitelinks[wiki_source] = SiteLinks(source=wiki_source)
+                    if url and language_code not in thing.sitelinks[wiki_source].urls:
+                        thing.sitelinks[wiki_source].urls[language_code] = requests.utils.unquote(url)
+                    if title and language_code not in thing.sitelinks[wiki_source].titles:
+                        thing.sitelinks[wiki_source].titles[language_code] = title
+                except Exception as e:
+                    logger.warning(f"Unexpected source: {source}. Exception: {e}")
+        return thing
+
+    @property
+    def claims(self) -> Dict[str, Claim]:
+        return self.__claims
+
+    @property
+    def claims_dict(self) -> Dict[str, Claim]:
+        return dict([(p, c) for p, c in self.__claims.items()])
+
+    @property
+    def claim_properties(self) -> List[WikidataProperty]:
+        return [p.pid for p in self.__claims.values()]
+
+    def add_claim(self, pid: str, claim: Claim):
+        """
+        Adding a claim.
+
+        Parameters
+        ----------
+        pid: str
+            Property ID.
+        claim: Claim
+            Wikidata claim
+        """
+        self.__claims[pid] = claim
+
+    def __hash__(self):
+        return 0
+
+    def __eq__(self, other):
+        # another object is equal to self, iff
+        # it is an instance of MyClass
+        return isinstance(other, WikidataThing) and other.qid == self.qid
+
+    def __repr__(self):
+        return f'<WikidataThing [QID:={self.qid}]>'
+
+    def __getstate__(self) -> Dict[str, Any]:
+        return self.__dict__().copy()
+
+    def __setstate__(self, state: Dict[str, Any]):
+        labels: Dict[str, Label] = {}
+        aliases: Dict[str, List[Label]] = {}
+        descriptions: Dict[str, Description] = {}
+        for language, la in state[LABELS_TAG].items():
+            labels[language] = Label.create_from_dict(la)
+        for language, de in state[DESCRIPTIONS_TAG].items():
+            descriptions[language] = Description.create_from_dict(de)
+        for language, al in state[ALIASES_TAG].items():
+            aliases[language] = []
+            for a in al:
+                aliases[language].append(Label.create_from_dict(a))
+        # Initiate the wikidata thing
+        self.__qid = state[QID_TAG]
+        self.__revision = state.get(REVISION_TAG)
+        self.__modified = parse(state[MODIFIED_TAG]) if MODIFIED_TAG in state else None
+        self.__label = labels
+        self.__aliases = aliases
+        self.__description = descriptions
+        # Load the ontology types
+        self.__ontology_types = state.get(ONTOLOGY_TYPES_TAG, [])
+        # Load the claims
+        self.__claims = {}
+        for pid, claim in state[CLAIMS_TAG].items():
+            self.__claims[pid] = Claim.create_from_dict(claim)
+        # Load the sitelinks
+        self.__sitelinks = {}
+        for wiki_source, site_link in state[SITELINKS_TAG].items():
+            self.__sitelinks[wiki_source] = SiteLinks.create_from_dict(site_link)
+
+
+def detect_cycle(super_class_qid: str, cycle_detector: List[Tuple[str, str]]):
+    for e in cycle_detector:
+        if e[0] == super_class_qid:
+            return True
+    return False
 
 
 class WikiDataAPIClient(ABC):
     """
     WikiDataAPIClient
     -----------------
-    WikiData API client.
-    """
-    ACTIVATION_RELATIONS = [
-        'P625',  # 'coordinate location',
-        'P31',  # 'instance of',
-        'P527',  # 'has part',
-        'P361',  # 'part of',
-        'P856',  # 'official website',
-        'P47',  # 'shares border with',
-        'P6',  # 'head of government',
-        'P1082',  # 'population',
-        'P421',  # 'located in timezone',
-        'P17',  # 'country',
-        'P910',  # 'topics main category',
-        'P373',  # 'Commons category',
-        'P901',  # 'FIPS 10-4 (countries and regions)',
-        'P948',  # 'page banner',
-        'P646',  # 'Freebase ID',
-        'P1376',  # 'capital of',
-        'P1814',  # 'name in kana',
-        'P571',  # 'inception',
-        'P2046',  # 'area',
-        'P163',  # 'flag',
-        'P2044',  # 'elevation above sea level',
-        'P610',  # 'highest point',
-        'P1365',  # 'replaces',
-        'P36',  # 'capital',
-        'P6794',  # 'minimum wage',
-        'P18',  # 'image',
-        # Person
-        'P21',  # 'sex or gender',
-        'P345',  # 'IMDb ID',
-        'P27',  # 'country of citizenship',
-        'P19',  # 'place of birth',
-        'P569',  # 'date of birth',
-        'P106',  # 'occupation',
-        'P102',  # 'political party',
-        'P166',  # 'award received',
-        'P2002',  # 'Twitter username',
-        'P26',  # 'spouse',
-        'P735',  # 'given name',
-        'P734',  # 'family name',
-        'P1412',  # 'languages spoken, written or signed',
-        'P69',  # 'educated at',
-        'P1559',  # 'name in native language_code',
-        'P1477',  # 'birth name',
-        'P103',  # 'native language_code',
-        'P793',  # 'significant event',
-        'P2003',  # 'Instagram username',
-        'P1340',  # 'eye color',
-        'P1884',  # 'hair color',
-        'P2048',  # 'height',
-        'P2067',  # 'mass',
-        'P108',  # 'employer',
-        'P800',  # 'notable work',
-        'P10',  # 'video',
-        'P1971',  # 'number of children',
-        'P91'  # 'sexual orientation'
-    ]
+    Utility class for the WikiData.
 
-    PROPERTY_OFFICIAL_WEBSITE: str = 'P856'
-    PROPERTY_PERSON_FIRSTNAME: str = 'P735'
-    PROPERTY_PERSON_LASTNAME: str = 'P734'
+    """
 
     def __init__(self):
-        self.__properties = list(WikiDataAPIClient.ACTIVATION_RELATIONS)
+        pass
 
     @staticmethod
-    def image_url(img: str):
-        extension: str = ''
-        conversion: str = ''
-        fixed_img: str = img.replace(' ', '_')
-        if fixed_img.lower().endswith('svg'):
-            extension: str = '.png'
-        if fixed_img.lower().endswith('tif') or fixed_img.lower().endswith('tiff'):
-            extension: str = '.jpg'
-            conversion: str = 'lossy-page1-'
-        hash_img = hashlib.md5(fixed_img.encode('utf-8')).hexdigest()
-        url_img_part: str = urllib.parse.quote_plus(fixed_img)
-        return THUMB_IMAGE_URL.format(hash_img[0], hash_img[:2], url_img_part, conversion + url_img_part + extension)
+    def sparql_query(
+            query_string: str, wikidata_sparql_url: str = WIKIDATA_SPARQL_URL, max_retries: int = 3
+    ) -> Dict:
+        """Send a SPARQL query and return the JSON formatted result.
 
-    @staticmethod
-    def wikipedia_url(wikidata_id: str, lang: str = 'en') -> Optional[str]:
+        Parameters
+        -----------
+        query_string: str
+          SPARQL query string
+        wikidata_sparql_url: str
+          Wikidata SPARQL endpoint to use
         """
-        Creates a wikipedia URL.
+        # Define the retry policy
+        retry_policy: Retry = Retry(
+            total=max_retries,  # maximum number of retries
+            backoff_factor=1,  # factor by which to multiply the delay between retries
+            status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
+            method_whitelist=["GET"],  # HTTP methods to retry on
+            respect_retry_after_header=True  # respect the Retry-After header
+        )
+
+        # Create a session and mount the retry adapter
+        with requests.Session() as session:
+            retry_adapter = HTTPAdapter(max_retries=retry_policy)
+            session.mount("https://", retry_adapter)
+
+            # Make a request using the session
+            response: Response = session.get(wikidata_sparql_url, params={"query": query_string, "format": "json"},
+                                             timeout=200000)
+        if response.ok:
+            return response.json()
+        raise WikiDataAPIException(f'Failed to query entities. '
+                                   f'Response code:={response.status_code}, Exception:= {response.content}.')
+
+    @staticmethod
+    def superclasses(qid: str) -> Optional[WikidataClass]:
+        query: str = f'''SELECT ?class ?classLabel ?superclass ?superclassLabel
+        WHERE
+        {{
+            wd:{qid} wdt:P279* ?class.
+            ?class wdt:P279 ?superclass.
+            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
+        }}'''
+        reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
+        wikidata_classes: Dict[str, WikidataClass] = {}
+        cycle_detector: List[Tuple[str, str]] = []
+        if 'results' in reply:
+            for b in reply['results']['bindings']:
+                superclass_qid: str = b['superclass']['value'].split('/')[-1]
+                class_qid: str = b['class']['value'].split('/')[-1]
+                superclass_label: str = b['superclassLabel']['value']
+                class_label: str = b['classLabel']['value']
+                if class_qid not in wikidata_classes:
+                    wikidata_classes[class_qid] = WikidataClass(qid=class_qid, label=class_label)
+                if superclass_qid not in wikidata_classes:
+                    wikidata_classes[superclass_qid] = WikidataClass(qid=superclass_qid, label=superclass_label)
+                if not detect_cycle(superclass_qid, cycle_detector):
+                    wikidata_classes[class_qid].superclasses.append(wikidata_classes[superclass_qid])
+                    cycle_detector.append((class_qid, superclass_qid))
+        return wikidata_classes.get(qid)
+
+    @staticmethod
+    def __wikidata_task__(qid: str) -> WikidataThing:
+        try:
+            return WikidataThing.from_wikidata(__waiting_request__(qid))
+        except Exception as e:
+            logger.exception(e)
+            raise WikiDataAPIException(e)
+
+    @staticmethod
+    def __wikidata_multiple_task__(qids: List[str]) -> List[WikidataThing]:
+        try:
+            return [WikidataThing.from_wikidata(e) for e in __waiting_multi_request__(qids)]
+        except Exception as e:
+            logger.exception(e)
+            raise WikiDataAPIException(e)
+
+    @staticmethod
+    def retrieve_entity(qid: str) -> WikidataThing:
+        """
+        Retrieve a single Wikidata thing.
 
         Parameters
         ----------
-        wikidata_id: str
-            Wikidata id
-        lang: str
-            Language code
+        qid: str
+            QID of the entity.
 
         Returns
         -------
-        wikipedia: str
-            Wikipedia URL, returns None if no URL is found.
+        instance: WikidataThing
+            Single wikidata thing
         """
-        url: str = f'https://www.wikidata.org/w/api.php?action=wbgetentities' \
-                   f'&props=sitelinks/urls&ids={wikidata_id}&format=json'
-        json_response = requests.get(url).json()
-        entities: dict = json_response['entities']
-        if entities:
-            entity: dict = entities[wikidata_id]
-            if entity:
-                sitelinks: dict = entity['sitelinks']
-                if sitelinks:
-                    # filter only the specified language_code
-                    sitelink: str = sitelinks.get(f'{lang}wiki')
-                    if sitelink:
-                        wiki_url = sitelink.get('url')
-                        if wiki_url:
-                            return requests.utils.unquote(wiki_url)
-        return None
+        return WikiDataAPIClient.__wikidata_task__(qid)
 
     @staticmethod
-    def __entity_image__(entity: WikidataItem) -> str:
-        claim_group: WikidataClaimGroup = entity.get_claim_group(PropertyId(IMAGE_PROPERTY))
-        if len(claim_group) > 0 and claim_group[0].mainsnak.datavalue:
-            img: str = claim_group[0].mainsnak.datavalue.value.replace(' ', '_')
-            return WikiDataAPIClient.image_url(img)
-        return ''
-
-    @staticmethod
-    def __entity_image_dict__(prop: List[dict]) -> str:
-        if len(prop) > 0:
-            img: str = prop[0]['mainsnak']['datavalue']['value'].replace(' ', '_')
-            return WikiDataAPIClient.image_url(img)
-        return ''
-
-    @staticmethod
-    def __entity_type__(entity: WikidataItem) -> str:
-        claim_group: WikidataClaimGroup = entity.get_claim_group(PropertyId('P31'))
-        if len(claim_group) > 0:
-            type_entity = claim_group[0].mainsnak.datavalue.value['id']
-            return type_entity
-        return ''
-
-    @staticmethod
-    def __entity_type_dict__(entity: dict) -> set:
-        if INSTANCE_OF_PROPERTY in entity:
-            props: dict = entity[INSTANCE_OF_PROPERTY]
-            if len(props) > 0:
-                return set([p['mainsnak']['datavalue']['value']['id'] for p in props])
-        return set()
-
-    @staticmethod
-    def __entity_type_obj__(entity: WikidataItem) -> Set[str]:
-        props: WikidataClaimGroup = entity.get_claim_group(PropertyId(INSTANCE_OF_PROPERTY))
-        if len(props) > 0:
-            return set([p.mainsnak.datavalue.value['id'] for p in props])
-        return set()
-
-    @staticmethod
-    def __data_type__(prop: list):
-        return prop[0]['mainsnak']['datatype']
-
-    @staticmethod
-    def __entity_id__(prop: list):
-        if len(prop) > 0:
-            if 'datavalue' in prop[0]['mainsnak']:
-                return prop[0]['mainsnak']['datavalue']['value']['id']
-        return None
-
-    @staticmethod
-    def __value__(prop: list):
-        data_type: str = WikiDataAPIClient.__data_type__(prop)
-        val = None
-        if 'datavalue' in prop[0]['mainsnak']:
-            if data_type == 'monolingualtext':
-                val = prop[0]['mainsnak']['datavalue']['value']['text']
-            elif data_type in ['string', 'external-id', 'url']:
-                val = prop[0]['mainsnak']['datavalue']['value']
-            elif data_type == 'commonsMedia':
-                val = WikiDataAPIClient.__entity_image_dict__(prop)
-            elif data_type == 'time':
-                val = prop[0]['mainsnak']['datavalue']['value']['time']
-            elif data_type == 'quantity':
-                if 'amount' in prop[0]['mainsnak']['datavalue']['value']:
-                    val = f"{prop[0]['mainsnak']['datavalue']['value']['amount']} " \
-                          f"{prop[0]['mainsnak']['datavalue']['value']['unit']}"
-
-            elif data_type == 'wikibase-lexeme':
-                val = prop[0]['mainsnak']['datavalue']['value']['id']
-            elif data_type in ['geo-shape', 'wikibase-property']:
-                # Not supported
-                val = None
-            elif data_type == 'globe-coordinate':
-                val = {
-                    'longitude': prop[0]['mainsnak']['datavalue']['value']['longitude'],
-                    'latitude': prop[0]['mainsnak']['datavalue']['value']['latitude'],
-                    'altitude': prop[0]['mainsnak']['datavalue']['value']['altitude']
-                }
-            else:
-                raise WikiDataAPIException(f"Unkown type {data_type}")
-        return val
-
-    @staticmethod
-    def __entity_to_dict__(entity: WikidataItem, language: LanguageCode = LanguageCode('en')) -> Dict[str, Any]:
-        type_uris: set = WikiDataAPIClient.__entity_type_obj__(entity)
-        return {
-            'uri': entity.entity_id,
-            'label': entity.get_label(language),
-            'description': entity.get_description(language),
-            'alias': entity.get_aliases(language),
-            'image': WikiDataAPIClient.__entity_image__(entity),
-            'types': type_uris
-        }
-
-    @staticmethod
-    def __entity_to_dict_lang__(entity: WikidataItem, languages: List[LanguageCode]) -> Dict[str, Any]:
-        type_uris: Set[str] = WikiDataAPIClient.__entity_type_obj__(entity)
-        image: str = WikiDataAPIClient.__entity_image__(entity)
-        return {
-            'uri': entity.entity_id,
-            'label': dict([(lang, entity.get_label(lang)) for lang in languages]),
-            'description': dict([(lang, entity.get_description(lang)) for lang in languages]),
-            'alias': dict([(lang, entity.get_aliases(lang)) for lang in languages]),
-            'image': image,
-            'types': type_uris
-        }
-
-    @staticmethod
-    def __pull_entities__(language: str, uris: list):
-        query = '|'.join(map(str, uris))
-        response = requests.get(MULTIPLE_ENTITIES_API.format(query, language))
-        if response.status_code != HTTPStatus.OK:
-            raise WikiDataAPIException(f'Response return has not been successful. [HTTP Code:={response.status_code}]')
-        return response.json()
-
-    @staticmethod
-    def __label__(label: dict, language: str):
-        if 'labels' in label and language in label['labels']:
-            return label['labels'][language]['value']
-        return ''
-
-    @staticmethod
-    def __description__(desc: dict, language: str):
-        if 'descriptions' in desc and language in desc['descriptions']:
-            return desc['descriptions'][language]['value']
-        return ''
-
-    @staticmethod
-    def __extract_entities__(result: dict, language: str, add_literals: bool = True, add_relations: bool = False):
-        relations: list = []
-        entities: list = []
-        missing_entities: set = set()
-        for qid, val in result['entities'].items():
-            # Extracting the properties
-            if IMAGE_PROPERTY in val['claims']:
-                image_url: str = WikiDataAPIClient.__entity_image_dict__(val['claims'][IMAGE_PROPERTY])
-            else:
-                image_url: str = ''
-            label: str = WikiDataAPIClient.__label__(val, language)
-            description: str = WikiDataAPIClient.__description__(val, language)
-            # Collect the literals for entity
-            literals: dict = {}
-            # Now iterate over claims
-            for pid, value in val['claims'].items():
-                if pid in WikiDataAPIClient.ACTIVATION_RELATIONS:
-                    if WikiDataAPIClient.__data_type__(value) == 'wikibase-item':
-                        # Extract the relations
-                        if add_relations:
-                            t_qid = WikiDataAPIClient.__entity_id__(value)
-                            if pid in PROPERTY_MAPPING and t_qid:
-                                missing_entities.add(t_qid)
-                                relations.append({'property': pid,
-                                                  'subject': qid, 'predicate': PROPERTY_MAPPING[pid], 'object': t_qid})
-                    else:
-                        # Extract the literals
-                        if add_literals:
-                            if pid in PROPERTY_MAPPING:
-                                # Collect literals
-                                literals[pid] = {
-                                    'uri': pid,
-                                    'label': PROPERTY_MAPPING[pid],
-                                    'value': WikiDataAPIClient.__value__(value)
-                                }
-
-            # Adding entity to result list
-            entities.append({'uri': qid, 'label': label, 'description': description,
-                             'image': image_url,
-                             'literals': literals})
-        return entities, relations, missing_entities
-
-    def activations(self, uris: list, language: str = 'en') -> tuple:
-        """Activations of URIs
-        :param uris: list of URIs
-        :param language: language_code of entity
-        :return: list of entities, list of relations
-        """
-        result = self.__pull_entities__(language, uris)
-        entities, relations, missing_entities = WikiDataAPIClient.__extract_entities__(result, language,
-                                                                                       add_literals=True,
-                                                                                       add_relations=True)
-        jobs = list(missing_entities)
-        # pull missing entities
-        while len(jobs) > 0:
-            result_other = self.__pull_entities__(language, jobs[:API_LIMIT])
-            more_entities, _, _ = WikiDataAPIClient.__extract_entities__(result_other, language,
-                                                                         add_literals=True,
-                                                                         add_relations=False)
-            entities.extend(more_entities)
-            del jobs[:API_LIMIT]
-        return entities, relations
-
-    def entity(self, qid: str, language: str = 'en', pull_wiki_content: bool = False) -> dict:
-        """Get entity information from public including relations
-
-        :param qid: QID representing the entity in the public knowledge graph
-        :param language: language_code for text
-        :param pull_wiki_content: pulling extended description and summary
-        :return: dict with relevant information
-        """
-        entity_dict = get_entity_dict_from_api(ItemId(qid))
-        entity = WikidataItem(entity_dict)
-        entity_dict: dict = self.__entity_to_dict__(entity, language=LanguageCode(language))
-        if pull_wiki_content:
-            url: str = WikiDataAPIClient.wikipedia_url(qid)
-            if url:
-                summary: dict = get_wikipedia_summary_url(url)
-                entity_dict['image'] = summary['summary-image']
-                entity_dict['description'] = summary['summary-text']
-                entity_dict['wikiurl'] = url
-        return entity_dict
-
-    def entity_lang(self, qid: ItemId, languages: List[LanguageCode] = None, pull_wiki_content: bool = False) -> dict:
-        """Get entity information from public including relations
-
-        :param qid: str -
-         QID representing the entity in the public knowledge graph
-        :param languages: List[str] -
-            List of languages for text
-        :param pull_wiki_content: pulling extended description and summary
-        :return: dict with relevant information
-        """
-        entity_dict = get_entity_dict_from_api(qid)
-        entity = WikidataItem(entity_dict)
-        entity_dict: dict = self.__entity_to_dict_lang__(entity, languages=languages)
-        if pull_wiki_content:
-            entity_dict['wikiurl'] = {}
-            for lang in languages:
-                url: str = WikiDataAPIClient.wikipedia_url(qid, lang)
-                if url:
-                    summary: dict = get_wikipedia_summary_url(url, lang)
-                    if len(summary['summary-image']) > 0:
-                        entity_dict['image'] = summary['summary-image']
-                    if len(summary['summary-text']) > 0:
-                        entity_dict['description'][lang] = summary['summary-text']
-                    entity_dict['wikiurl'][lang] = url
-        return entity_dict
-
-    def entity_rels(self, qid: str, language: str = 'en', pull_wiki_content: bool = False) -> Tuple[dict, dict]:
-        """Get entity information from public including relations
-
-        :param qid: QID representing the entity in the public knowledge graph
-        :param language: language_code for text
-        :param pull_wiki_content: pulling extended description and summary
-        :return: dict with relevant information
-        """
-        entity_dict: dict = get_entity_dict_from_api(ItemId(qid))
-        entity: WikidataItem = WikidataItem(entity_dict)
-        properties: dict = {}
-        for prop, claim_group in entity.get_truthy_claim_groups().items():
-            literal = [
-                claim.mainsnak.datavalue.value
-                for claim in claim_group
-                if claim.mainsnak.snaktype == "value"
-            ]
-            properties[prop] = {
-                'property-label': WikiDataAPIClient.property(prop, LanguageCode(language)),
-                'values': literal
-            }
-        entity_result: dict = self.__entity_to_dict__(entity, language=LanguageCode(language))
-        wikiurl: dict = entity.get_sitelinks(f'{language}wiki')
-        if len(wikiurl) > 0 and f'{language}wiki' in wikiurl:
-            url: str = wikiurl[f'{language}wiki']['url']
-            title: str = wikiurl[f'{language}wiki']['title']
-            entity_result['wikiurl'] = url
-            if pull_wiki_content:
-                summary: dict = get_wikipedia_summary(title)
-                # Only update if there is a meaningful update
-                img: str = summary['summary-image']
-                if img:
-                    entity_result['image'] = img
-                abstract: str = summary['summary-text']
-                if abstract:
-                    entity_result['description'] = abstract
-        return entity_result, properties
-
-    def entity_rels_lang(self, qid: str, languages: List[LanguageCode] = None, pull_wiki_content: bool = False,
-                         default_language: str = 'en') -> tuple:
-        """Get entity information from public including relations.
-
-        :param qid: str -
-            QID representing the entity in the public knowledge graph
-        :param languages: List[str] -
-            List of languages for text
-        :param pull_wiki_content: bool -
-            Pulling extended description and summary
-        :param default_language: str -
-            Default language_code
-        :return: dict with relevant information
-        """
-        entity_dict: dict = get_entity_dict_from_api(ItemId(qid))
-        entity: WikidataItem = WikidataItem(entity_dict)
-        properties: Dict[str, dict] = {}
-        # Properties
-        for prop, claim_group in entity.get_truthy_claim_groups().items():
-            literal: List = []
-            qualifiers: List[Dict[str, Any]] = []
-
-            for claim in claim_group:
-                if claim.mainsnak.snaktype == "value":
-                    literal.append(claim.mainsnak.datavalue.value)
-                if claim.qualifiers:
-                    for p, qual in claim.qualifiers.items():
-                        for elem in qual:
-                            if elem.snak.datavalue:
-                                qualifiers.append({
-                                    "property": p,
-                                    "value": elem.snak.datavalue.value
-                                })
-            properties[prop] = {
-                'property-label': WikiDataAPIClient.property(prop, default_language),
-                'values': literal,
-                'qualifiers': qualifiers
-            }
-        entity_result: dict = self.__entity_to_dict_lang__(entity, languages=languages)
-        for lang in languages:
-            wiki_url: dict = entity.get_sitelinks(f'{lang}wiki')
-            if len(wiki_url) > 0 and f'{lang}wiki' in wiki_url:
-                if 'wikiurl' not in entity_result:
-                    entity_result['wikiurl'] = {}
-                url: str = wiki_url[f'{lang}wiki']['url']
-                title: str = wiki_url[f'{lang}wiki']['title']
-                entity_result['wikiurl'][lang] = url
-                if pull_wiki_content:
-                    summary: dict = get_wikipedia_summary(title, lang)
-                    # Only update if there is a meaningful update
-                    img: str = summary['summary-image']
-                    if img is not None or img == '':
-                        entity_result['image'] = img
-                    abstract: str = summary['summary-text']
-                    if abstract is not None or abstract == '':
-                        entity_result['description'][lang] = abstract
-        return entity_result, properties
-
-    def references(self, qid: str, language: str = 'en'):
-        references = []
-        _, properties = self.entity_rels(qid, language)
-        if WikiDataAPIClient.PROPERTY_OFFICIAL_WEBSITE in properties:
-            references.append({'property': properties[WikiDataAPIClient.PROPERTY_OFFICIAL_WEBSITE],
-                               'property-label': PROPERTY_MAPPING[WikiDataAPIClient.PROPERTY_OFFICIAL_WEBSITE]})
-        return references
-
-    def entities_rel(self, qids: list, language: str = 'en') -> tuple:
-        """Return relations and entities for qids.
-
-        :param qids: list of entities in Wikidata
-        :param language: language_code the content
-        :return: entities, relations
-        """
-        jobs = list(qids)
-        entities: list = []
-        relations: list = []
-        while len(jobs) > 0:
-            result = self.__pull_entities__(language, jobs[:API_LIMIT])
-            p_entities, p_relations, _ = WikiDataAPIClient.__extract_entities__(result, language,
-                                                                                add_literals=True,
-                                                                                add_relations=True)
-            del jobs[:API_LIMIT]
-            entities.extend(p_entities)
-            relations.extend(p_relations)
-
-        return entities, relations
-
-    @staticmethod
-    def property(pid: str, language: str = 'en'):
-        """Extract property.
-
-        :param pid: property id
-        :param language: language_code code for property name
-        :return: property nam
-        """
-        try:
-            if pid in PROPERTY_MAPPING:  # only English mappings
-                return PROPERTY_MAPPING[pid]
-            prop_dict = get_entity_dict_from_api(PropertyId(pid))
-            return WikidataProperty(prop_dict).get_label(LanguageCode(language))
-        except InvalidEntityId as iei:
-            logger.exception(iei)
-            return None
-
-    @staticmethod
-    def subclasses(qid: str) -> list:
-        """Check for subclasses.
-
-        :param qid: QID of entity
-        :return: list of subclasses QIDs
-        """
-        subclasses_of_uri = get_subclasses_of_item(qid)
-        return subclasses_of_uri
+    def retrieve_entities(qids: Union[List[str], Set[str]]) -> List[WikidataThing]:
+        pulled: List[WikidataThing] = []
+        if len(qids) == 0:
+            return []
+        jobs: List[List[str]] = [ch for ch in chunks(list(qids), API_LIMIT)]
+        num_processes: int = min(len(jobs), multiprocessing.cpu_count())
+        if num_processes > 1:
+            with Pool(processes=num_processes) as pool:
+                # Wikidata thing is not support in multiprocessing
+                with tqdm(total=len(jobs)) as pbar:
+                    for lst in pool.imap_unordered(__waiting_multi_request__, jobs):
+                        pulled.extend([WikidataThing.from_wikidata(e) for e in lst])
+                        pbar.set_description_str(f"{len(pulled)} / {len(qids)} entities retrieved.")
+                        pbar.update(1)
+        else:
+            pulled = WikiDataAPIClient.__wikidata_multiple_task__(jobs[0])
+        return pulled
