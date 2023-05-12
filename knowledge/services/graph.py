@@ -277,7 +277,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 raise WacomServiceException(f'Deletion of entity (URI:={uri}) failed.'
                                             f'Response code:={response.status_code}, exception:= {response.content}')
 
-
     def exists(self, auth_key: str, uri: str) -> bool:
         """
         Check if entity exists in knowledge graph.
@@ -577,10 +576,16 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
-        if response.ok:
-            rel: list = response.json().get(RELATIONS_TAG)
-            return ObjectProperty.create_from_list(rel)
+        mount_point: str = \
+            'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(backoff_factor=0.1,
+                                   status_forcelist=[500, 502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(url, headers=headers, verify=self.verify_calls)
+            if response.ok:
+                rel: list = response.json().get(RELATIONS_TAG)
+                return ObjectProperty.create_from_list(rel)
         raise WacomServiceException(f'Failed to pull relations. '
                                     f'Response code:={response.status_code}, exception:= {response.content}')
 
@@ -692,16 +697,16 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         }
         mount_point: str = \
             'https://' if self.service_url.startswith('https') else 'http://'
-        session: requests.Session = requests.Session()
-        retries: Retry = Retry(backoff_factor=0.1,
-                               status_forcelist=[500, 502, 503, 504])
-        session.mount(mount_point, HTTPAdapter(max_retries=retries))
-        response: Response = session.post(url, params=params, headers=headers, verify=self.verify_calls)
-        if not response.ok:
-            raise WacomServiceException(f'Create relations failed. '
-                                        f'Response code:={response.status_code}, exception:= {response.content}. '
-                                        f'URL: {url}'
-                                        f'Parameters: \n{json.dumps(params, indent=4)}')
+        with requests.Session() as session:
+            retries: Retry = Retry(backoff_factor=0.1,
+                                   status_forcelist=[500, 502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.post(url, params=params, headers=headers, verify=self.verify_calls)
+            if not response.ok:
+                raise WacomServiceException(f'Create relations failed. '
+                                            f'Response code:={response.status_code}, exception:= {response.content}. '
+                                            f'URL: {url}'
+                                            f'Parameters: \n{json.dumps(params, indent=4)}')
 
     def remove_relation(self, auth_key: str, source: str, relation: OntologyPropertyReference, target: str):
         """
