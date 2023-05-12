@@ -5,6 +5,8 @@ from typing import Dict, List, Any, Optional
 
 import requests
 from requests import Response
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 
 from knowledge.base.access import GroupAccessRight
 from knowledge.base.ontology import NAME_TAG
@@ -279,10 +281,16 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
-        if response.ok:
-            groups: List[Dict[str, Any]] = response.json()
-            return [Group.parse(g) for g in groups]
+        mount_point: str = \
+            'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(backoff_factor=0.1,
+                                   status_forcelist=[500, 502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(url, headers=headers, verify=self.verify_calls)
+            if response.ok:
+                groups: List[Dict[str, Any]] = response.json()
+                return [Group.parse(g) for g in groups]
         raise WacomServiceException(f'Listing of group failed.'
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 
@@ -451,11 +459,16 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-
-        response: Response = requests.post(url, headers=headers, verify=self.verify_calls)
-        if not response.ok:
-            raise WacomServiceException(f'Adding of entity to group failed.'
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+        mount_point: str = \
+            'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(backoff_factor=0.1,
+                                   status_forcelist=[500, 502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.post(url, headers=headers, verify=self.verify_calls)
+            if not response.ok:
+                raise WacomServiceException(f'Adding of entity to group failed.'
+                                            f'Response code:={response.status_code}, exception:= {response.text}')
 
     def remove_entity_to_group(self, auth_key: str, group_id: str, entity_uri: str):
         """Remove a entity from group.
@@ -479,8 +492,13 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-
-        response: Response = requests.post(url, headers=headers, verify=self.verify_calls)
-        if not response.ok:
-            raise WacomServiceException(f'Removing of entity to group failed.'
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+        mount_point: str = \
+            'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(backoff_factor=0.1,
+                                   status_forcelist=[500, 502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.post(url, headers=headers, verify=self.verify_calls)
+            if not response.ok:
+                raise WacomServiceException(f'Removing of entity to group failed.'
+                                            f'Response code:={response.status_code}, exception:= {response.text}')
