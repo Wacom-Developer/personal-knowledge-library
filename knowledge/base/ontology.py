@@ -17,7 +17,11 @@ SUPPORTED_LOCALES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it
 SUPPORTED_LANGUAGES: List[str] = ['ja', 'en', 'de', 'bg', 'fr', 'it', 'es', 'zh']
 LANGUAGE_LOCALE_MAPPING: Dict[str, str] = dict([(lang, locale)
                                                 for lang, locale in zip(SUPPORTED_LANGUAGES, SUPPORTED_LOCALES)])
+LOCALE_LANGUAGE_MAPPING: Dict[str, str] = dict([(locale, lang)
+                                                for locale, lang in zip(SUPPORTED_LOCALES, SUPPORTED_LANGUAGES)])
 
+
+# ---------------------------------------------------- Ontology --------------------------------------------------------
 class PropertyType(enum.Enum):
     """
     PropertyType
@@ -1004,6 +1008,58 @@ class ThingObject(abc.ABC):
                 del self.__data_properties[SYSTEM_SOURCE_REFERENCE_ID][idx]
         self.__data_properties[SYSTEM_SOURCE_REFERENCE_ID].append(value)
 
+    @property
+    def reference_id(self) -> Optional[str]:
+        """Default reference id for the entity."""
+        if SYSTEM_SOURCE_REFERENCE_ID in self.__data_properties:
+            # The en_US is the default language for the source reference id
+            for sr in self.data_properties[SYSTEM_SOURCE_REFERENCE_ID]:
+                if sr.language_code == LanguageCode('en_US'):
+                    return sr.value
+            if len(self.data_properties[SYSTEM_SOURCE_REFERENCE_ID]) > 0:
+                return self.data_properties[SYSTEM_SOURCE_REFERENCE_ID][0].value
+        return None
+
+    @reference_id.setter
+    def reference_id(self, value: str):
+        """
+        Setting the default reference id for the entity.
+
+        Parameters
+        ----------
+        value: str
+            Reference id to be set
+        """
+        if SYSTEM_SOURCE_REFERENCE_ID not in self.__data_properties:
+            self.__data_properties[SYSTEM_SOURCE_REFERENCE_ID] = []
+        self.__data_properties[SYSTEM_SOURCE_REFERENCE_ID].append(DataProperty(value, SYSTEM_SOURCE_REFERENCE_ID))
+
+    @property
+    def source_system(self) -> Optional[str]:
+        """Default reference system for the entity."""
+        if SYSTEM_SOURCE_REFERENCE_ID in self.__data_properties:
+            # The en_US is the default language for the source reference system
+            for sr in self.data_properties[SYSTEM_SOURCE_SYSTEM]:
+                if sr.language_code == LanguageCode('en_US'):
+                    return sr.value
+            if len(self.data_properties[SYSTEM_SOURCE_SYSTEM]) > 0:
+                return self.data_properties[SYSTEM_SOURCE_SYSTEM][0].value
+        return None
+
+    @source_system.setter
+    def source_system(self, value: str):
+        """
+        Setting the default reference system for the entity.
+
+        Parameters
+        ----------
+        value: str
+            Reference id to be set
+        """
+        if SYSTEM_SOURCE_SYSTEM not in self.__data_properties:
+            self.__data_properties[SYSTEM_SOURCE_SYSTEM] = []
+        self.__data_properties[SYSTEM_SOURCE_SYSTEM].append(DataProperty(value, SYSTEM_SOURCE_SYSTEM))
+
     def default_source_reference_id(self, language_code: LanguageCode = LanguageCode('en_US')) -> Optional[str]:
         """
         Getting the source reference id for a certain language code.
@@ -1160,14 +1216,14 @@ class ThingObject(abc.ABC):
     def object_properties(self, relations: Dict[OntologyPropertyReference, ObjectProperty]):
         self.__object_properties = relations
 
-    def data_property_lang(self, property: OntologyPropertyReference, language_code: LanguageCode) \
+    def data_property_lang(self, data_property: OntologyPropertyReference, language_code: LanguageCode) \
             -> List[DataProperty]:
         """
         Get data property for language_code code.
 
         Parameters
         ----------
-        property: OntologyPropertyReference
+        data_property: OntologyPropertyReference
             Data property.
         language_code: LanguageCode
             Requested language_code code
@@ -1176,7 +1232,17 @@ class ThingObject(abc.ABC):
         data_properties: List[DataProperty]
             Returns a list of data properties for a specific language code
         """
-        return [d for d in self.data_properties.get(property, []) if d.language_code == language_code]
+        return [d for d in self.data_properties.get(data_property, []) if d.language_code == language_code]
+
+    def remove_data_property(self, data_property: OntologyPropertyReference):
+        """Remove data property.
+
+        Parameters
+        ----------
+        data_property: OntologyPropertyReference
+            Data property to be removed.
+        """
+        self.__data_properties.pop(data_property, None)
 
     @property
     def alias(self) -> List[Label]:
@@ -1293,6 +1359,29 @@ class ThingObject(abc.ABC):
             dict_object[OBJECT_PROPERTIES_TAG][relation_type.iri] = item.__dict__()
         return dict_object
 
+    def __import_format_dict__(self, group_ids: List[Dict[str, str]] = None):
+        labels: List[Dict[str, Any]] = []
+        labels.extend([la.__dict__() for la in self.label])
+        labels.extend([la.__dict__() for la in self.alias])
+        dict_object: Dict[str, Any] = {
+            SOURCE_REFERENCE_ID_TAG: self.reference_id,
+            SOURCE_SYSTEM_TAG: self.source_system,
+            IMAGE_TAG: self.image,
+            LABELS_TAG: labels,
+            DESCRIPTIONS_TAG: [desc.__dict__() for desc in self.description],
+            TYPE_TAG: self.concept_type.iri,
+            DATA_PROPERTIES_TAG: [],
+            OBJECT_PROPERTIES_TAG: [],
+            TENANT_RIGHTS_TAG: self.tenant_access_right.to_list(),
+            GROUP_IDS: group_ids if group_ids else [],
+            SEND_TO_NEL_TAG: self.use_for_nel
+        }
+        for literal_type, items in self.data_properties.items():
+            dict_object[DATA_PROPERTIES_TAG].extend([i.__dict__() for i in items])
+        for relation_type, item in self.object_properties.items():
+            dict_object[OBJECT_PROPERTIES_TAG].append(item.__dict__())
+        return dict_object
+
     @staticmethod
     def from_dict(entity: Dict[str, Any]) -> 'ThingObject':
         labels: List[Label] = []
@@ -1371,11 +1460,11 @@ class ThingObject(abc.ABC):
 
         use_nel: bool = state.get(USE_NEL_TAG, True)
         visibility: Optional[str] = state.get(VISIBILITY_TAG)
-        self.__icon=state[IMAGE_TAG]
-        self.__uri=state[URI_TAG]
-        self.__concept_type=OntologyClassReference.parse(state[TYPE_TAG])
-        self.__owner=state.get(OWNER_TAG, True)
-        self.__use_for_nel=use_nel
+        self.__icon = state[IMAGE_TAG]
+        self.__uri = state[URI_TAG]
+        self.__concept_type = OntologyClassReference.parse(state[TYPE_TAG])
+        self.__owner = state.get(OWNER_TAG, True)
+        self.__use_for_nel = use_nel
         self.__visibility = visibility
         self.__owner_id = state.get(OWNER_ID_TAG)
         self.__group_ids = state.get(GROUP_IDS)
