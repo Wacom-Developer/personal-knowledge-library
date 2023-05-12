@@ -140,7 +140,8 @@ class WacomServiceAPIClient(RESTAPIClient):
                                             f'Response code:={response.status_code}, response text:= {response.text}, '
                                             f'exception:= {e} ')
         raise WacomServiceException(f'User login failed.'
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+                                    f'Response code:={response.status_code}, exception:= {response.text}',
+                                    status_code=response.status_code)
 
     def refresh_token(self, refresh_token: str) -> Tuple[str, str, datetime]:
         """
