@@ -1,22 +1,21 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2022 Wacom. All rights reserved.
+# Copyright © 2023 Wacom. All rights reserved.
 import argparse
 import json
 import os
-import time
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Set
 
 import ndjson
-import requests
-from requests import Response
 from tqdm import tqdm
 
 from knowledge import logger
 from knowledge.base.entity import LanguageCode, IMAGE_TAG, DATA_PROPERTIES_TAG, STATUS_FLAG_TAG, Description, Label
 from knowledge.base.ontology import SYSTEM_SOURCE_SYSTEM, SYSTEM_SOURCE_REFERENCE_ID, ThingObject, \
-    OntologyClassReference, DataProperty, OntologyPropertyReference, ObjectProperty
-from knowledge.public.wikidata import WIKIDATA_SPARQL_URL, INSTANCE_OF, WikiDataAPIClient, wikidate, IMAGE
+    OntologyClassReference, DataProperty, OntologyPropertyReference, ObjectProperty, SUPPORTED_LOCALES
+from knowledge.ontomapping.manager import wikidata_to_thing, wikidata_taxonomy
+from knowledge.public.relations import wikidata_relations_extractor
+from knowledge.public.wikidata import INSTANCE_OF, WikiDataAPIClient, wikidate, IMAGE, WikidataThing, WikidataClass
 
 
 # -------------------------------------------------- Structures --------------------------------------------------------
@@ -86,23 +85,6 @@ def from_dict(entity: Dict[str, Any], concept_type: OntologyClassReference) -> T
 
 
 # --------------------------------------------------- Utilities --------------------------------------------------------
-def sparql_query(
-        query_string: str, wikidata_sparql_url: str = WIKIDATA_SPARQL_URL
-) -> Dict:
-    """Send a SPARQL query and return the JSON formatted result.
-    :param query_string: str
-      SPARQL query string
-    :param wikidata_sparql_url: str, optional
-      wikidata SPARQL endpoint to use
-    """
-    response: Response = requests.get(
-        wikidata_sparql_url, params={"query": query_string, "format": "json"}, timeout=200000
-    )
-    if response.ok:
-        return response.json()
-    raise Exception('Failed to query entities. Response code:={}, exception:= {}'.format(response.status_code,
-                                                                                         response.content))
-
 
 def strip(url: str) -> str:
     """Strip qid from url.
@@ -327,6 +309,29 @@ def count_type(concept_type: str, types_mapping: Dict[str, int]):
     types_mapping[concept_type] += 1
 
 
+def check_missing_qids(entities: List[WikidataThing], retrieved_entities: Set[str], mapping: Dict[str, Dict[str, Any]])\
+        -> Set[str]:
+    for entity in entities:
+        for cls in entity.instance_of:
+            hierarchy: WikidataClass = wikidata_taxonomy(cls.qid)
+            if hierarchy.qid in mapping:
+                class_mapping: Dict[str, Any] = mapping[hierarchy.qid]
+
+        for pid in entity:
+            if pid in mapping:
+                for c in entity.instance_of[pid]:
+                    if c.target not in retrieved_entities:
+                        print(f"Missing {c.target} for {entity.qid}")
+        for pid, cl in entity.claims.items():
+            if pid in mapping:
+                for c in cl:
+                    if c.target not in retrieved_entities:
+                        print(f"Missing {c.target} for {entity.qid}")
+            print()
+
+    return set()
+
+
 def main(mapping: Path, cache: Path, default_language: str, languages: List[str] = None):
     """
     Main.
@@ -347,79 +352,54 @@ def main(mapping: Path, cache: Path, default_language: str, languages: List[str]
     cached_entities, types_count = load_qids(cache)
     # Mapping of wikidata classes to Wacom Ontology
     class_mapping: Dict[str, Dict[str, Any]] = {}
-    # Wikidata
-    wikidata: WikiDataAPIClient = WikiDataAPIClient()
+
     with mapping.open('r') as json_file:
         configuration: Dict[str, Any] = json.load(json_file)
         for c in configuration['class-mapping']:
             for qid in c['wikidata']:
                 class_mapping[qid] = c
+    # List of qids
+    qids: Set[str] = set()
 
     # First query the entry entities
     if SPARQL_QUERY_MODE in configuration:
         queries: list = build_query(configuration[SPARQL_QUERY_MODE])
-        entities: list = []
         for query in queries:
-            results: dict = sparql_query(query)
-            entities.extend([item['item']['value'] for item in results['results']['bindings']])
-            # Avoid timeout
-            time.sleep(2)
-        pbar: tqdm = tqdm(entities)
+            results: dict = WikiDataAPIClient.sparql_query(query)
+            qids.update([item['item']['value'] for item in results['results']['bindings']])
     elif ENTITY_LIST_MODE in configuration:
-        pbar: tqdm = tqdm(configuration[ENTITY_LIST_MODE])
+        qids = set(configuration[ENTITY_LIST_MODE])
     else:
         logger.error("No jobs defined.")
         import sys
         sys.exit(0)
-    # Iterate over entities
-    for item in pbar:
-        qid: str = strip(item)
-        jobs_qid: List[Tuple[str, Optional[str], Optional[str]]] = [(qid, None, None)]
-        # Job queue
-        while len(jobs_qid) > 0:
-            c_qid: str = jobs_qid[0][0]
-            concept_type: Optional[str] = jobs_qid[0][1]
-            linked_to: Optional[str] = jobs_qid[0][2]
-            # Check if it already pushed to personal knowledge
-            if c_qid not in cached_entities and c_qid not in failed_jobs:
-                try:
-                    # Pull for wikidata
-                    entity, properties = wikidata.entity_rels_lang(c_qid, languages=languages,
-                                                                   default_language=default_language,
-                                                                   pull_wiki_content=True)
+    all_wikidata_things: Dict[str, WikidataThing] = {}
+    while len(qids) > 0:
+        entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(qids)
+        for entity in entities:
+            all_wikidata_things[entity.qid] = entity
+        qids = check_missing_qids(entities, set(all_wikidata_things.keys()), class_mapping)
+    relations: Dict[str, Dict[str, Any]] = wikidata_relations_extractor(all_wikidata_things)
+    for wiki_thing in all_wikidata_things.values():
+        thing = wikidata_to_thing(wiki_thing, relations, SUPPORTED_LOCALES)
 
-                    pbar.set_description_str(f'Entity QID:={qid} | related entities:={len(jobs_qid)} | '
-                                             f'failed:= {len(failed_jobs)} | '
-                                             f'Cached entities: {len(cached_entities)} | '
-                                             f'Current imported QID:={c_qid} ({entity["label"].get(default_language)})')
-                    # Build thing object from wikidata entity
-                    try:
-                        thing, additional_qids = build_entity(entity, properties, class_mapping, concept_type,
-                                                              linked_to, default_language)
-                        for a in additional_qids:
-                            if a[0] not in cached_entities and a[0] not in failed_jobs:
-                                jobs_qid.append(a)
+    logger.info("{} entities are imported".format(len(all_wikidata_things)))
+    analytics: Dict[str, Any] = {
+        'ontology': {},
+        'wikidata': {},
+        'dbpedia': {}
+    }
+    thing_objects: List[ThingObject] = []
+    for qid, w_thing in tqdm(all_wikidata_things.items(),
+                             desc=f"Processing {len(all_wikidata_things)} Wikidata entities."):
+        thing = wikidata_to_thing(w_thing, relations, SUPPORTED_LOCALES)
+        thing_objects.append(thing)
 
-                    except WikidataSyncException as _:
-                        # Job failed
-                        failed_jobs.add(jobs_qid[0])
-                        del jobs_qid[0]
-                        continue
-                except Exception as se:
-                    import traceback
-                    traceback.print_exc()
-                    logger.error(se)
-                    # Job failed
-                    del jobs_qid[0]
-                    continue
-                # Book-keeping
-                count_type(thing.concept_type.iri, types_count)
-                cached_entities.add(cache_entity(thing, cache))
-            del jobs_qid[0]
-    logger.info("{} entities are imported".format(len(cached_entities)))
-
-    for c_type, c in types_count.items():
-        logger.info(" -> {} : {}".format(c_type, c))
+    with Path(cache / 'things.ndjson').open('w') as fp:
+        for item in thing_objects:
+            fp.write(f"{json.dumps(item.__dict__(), ensure_ascii=False)}\n")
+    with Path(cache / 'analytics.json').open('w') as fp:
+        json.dump(analytics, fp, indent=2)
 
 
 if __name__ == '__main__':

@@ -37,7 +37,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
         self.__service_endpoint: str = service_endpoint
         super().__init__(supported_languages=WacomEntityLinkingEngine.LANGUAGES, service_url=service_url)
 
-    def link_personal_entities(self, auth_key: str, text: str, locale: str = 'en_US') \
+    def link_personal_entities(self, auth_key: str, text: str, locale: str = 'en_US', max_retries: int = 5) \
             -> List[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
@@ -51,6 +51,8 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
             Text where the entities shall be tagged in.
         locale: LanguageCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
+        max_retries: int
+            Maximum number of retries, if the service is not available.
 
         Returns
         -------
@@ -74,8 +76,8 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
         }
         # Define the retry policy
         retry_policy: Retry = Retry(
-            total=10,  # maximum number of retries
-            backoff_factor=1.5,  # factor by which to multiply the delay between retries
+            total=max_retries,  # maximum number of retries
+            backoff_factor=0.5,  # factor by which to multiply the delay between retries
             status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
             method_whitelist=["POST"],  # HTTP methods to retry on
             respect_retry_after_header=True  # respect the Retry-After header
