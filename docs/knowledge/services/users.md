@@ -25,7 +25,16 @@ Classes
     ### Static methods
 
     `parse(param: Dict[str, Any]) ‑> knowledge.services.users.User`
-    :
+    :   Parse user from dictionary.
+        Parameters
+        ----------
+        param: Dict[str, Any]
+            Dictionary containing user information.
+        
+        Returns
+        -------
+        user: User
+            Instance of user.
 
     ### Instance variables
 
@@ -101,7 +110,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `delete_user(self, tenant_key: str, external_id: str, internal_id: str)`
+    `delete_user(self, tenant_key: str, external_id: str, internal_id: str, force: bool = False)`
     :   Deletes user from tenant.
         
         Parameters
@@ -112,6 +121,8 @@ Classes
             External id of user identification service.
         internal_id: str
             Internal id of user.
+        force: bool
+            If set to true removes all user data including groups and entities.
         
         Raises
         ------

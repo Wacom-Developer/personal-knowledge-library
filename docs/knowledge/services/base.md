@@ -128,7 +128,7 @@ Classes
 
     ### Methods
 
-    `refresh_token(self, refresh_token: str) ‑> Tuple[str, str, str]`
+    `refresh_token(self, refresh_token: str) ‑> Tuple[str, str, datetime.datetime]`
     :   Refreshing a token.
         
         Parameters
@@ -174,10 +174,15 @@ Classes
         WacomServiceException
             Exception if service returns HTTP error code.
 
-`WacomServiceException(*args, **kwargs)`
+`WacomServiceException(message: str, status_code: int = 500)`
 :   Exception thrown if Wacom service fails.
 
     ### Ancestors (in MRO)
 
     * builtins.Exception
     * builtins.BaseException
+
+    ### Instance variables
+
+    `status_code: int`
+    :   Status code of the exception.

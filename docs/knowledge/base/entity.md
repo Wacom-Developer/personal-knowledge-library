@@ -4,7 +4,7 @@ Module knowledge.base.entity
 Classes
 -------
 
-`Comment(text: str, language_code: LanguageCode = 'en')`
+`Comment(text: str, language_code: knowledge.base.entity.LanguageCode = 'en')`
 :   Comment
     -------
     Comment that is multi-lingual.
@@ -29,7 +29,7 @@ Classes
     `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.entity.Comment]`
     :
 
-`Description(description: str, language_code: LanguageCode = 'en_US')`
+`Description(description: str, language_code: knowledge.base.entity.LanguageCode = 'en_US')`
 :   Description
     -----------
     Description that is multi-lingual.
@@ -48,7 +48,7 @@ Classes
 
     ### Static methods
 
-    `create_from_dict(dict_description: Dict[str, Any]) ‑> knowledge.base.entity.Description`
+    `create_from_dict(dict_description: Dict[str, Any], tag_name: str = 'description', locale_name: str = 'locale') ‑> knowledge.base.entity.Description`
     :
 
     `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.entity.Description]`
@@ -85,7 +85,7 @@ Classes
     * builtins.Exception
     * builtins.BaseException
 
-`Label(content: str, language_code: LanguageCode = 'en_US', main: bool = False)`
+`Label(content: str, language_code: knowledge.base.entity.LanguageCode = 'en_US', main: bool = False)`
 :   Label
     -----
     Label that is multi-lingual.
@@ -107,7 +107,20 @@ Classes
     ### Static methods
 
     `create_from_dict(dict_label: Dict[str, Any], tag_name: str = 'value', locale_name: str = 'locale') ‑> knowledge.base.entity.Label`
-    :
+    :   Create a label from a dictionary.
+        Parameters
+        ----------
+        dict_label: Dict[str, Any]
+            Dictionary containing the label information.
+        tag_name: str
+            Tag name of the content.
+        locale_name: str
+            Tag name of the language code.
+        
+        Returns
+        -------
+        instance: Label
+            Label instance.
 
     `create_from_list(param: List[dict]) ‑> List[knowledge.base.entity.LocalizedContent]`
     :
@@ -117,7 +130,7 @@ Classes
     `main: bool`
     :   Flag if the content is the  main content or an alias.
 
-`LocalizedContent(content: str, language_code: LanguageCode = 'en_US')`
+`LocalizedContent(content: str, language_code: knowledge.base.entity.LanguageCode = 'en_US')`
 :   Localized content
     -----------------
     Content that is multi-lingual.
@@ -145,10 +158,10 @@ Classes
     `content: str`
     :   String representation of the content.
 
-    `language_code: LanguageCode`
+    `language_code: knowledge.base.entity.LanguageCode`
     :   Language code of the content.
 
-`OntologyContext(cid: str, tenant_id: str, name: str, icon: str, labels: List[knowledge.base.entity.Label], comments: List[knowledge.base.entity.Comment], date_added: datetime.datetime, date_modified: datetime.datetime, context: str, base_uri: str, version: int, orphaned: bool, concepts: List[str], properties: List[str])`
+`OntologyContext(cid: str, tenant_id: str, name: str, icon: str, labels: List[knowledge.base.entity.OntologyLabel], comments: List[knowledge.base.entity.Comment], date_added: datetime.datetime, date_modified: datetime.datetime, context: str, base_uri: str, version: int, orphaned: bool, concepts: List[str], properties: List[str])`
 :   OntologyContext
     ----------------
     Ontology context representation.
@@ -189,13 +202,28 @@ Classes
     ### Instance variables
 
     `base_uri: str`
-    :
+    :   Base URI.
+
+    `concepts: List[str]`
+    :   List of concepts.
+
+    `date_added: datetime.datetime`
+    :   Date added.
+
+    `date_modified: datetime.datetime`
+    :   Date modified.
 
     `id: str`
-    :
+    :   Context id.
 
     `orphaned: bool`
-    :
+    :   Orphaned.
+
+    `properties: List[str]`
+    :   List of properties.
+
+    `version: int`
+    :   Version.
 
 `OntologyContextSettings(rdf_prefix: str, rdfs_prefix: str, owl_prefix: str, base_literal_uri: str, base_class_uri: str, description_literal_name: str, depth: int)`
 :   OntologyContextSettings
@@ -230,7 +258,7 @@ Classes
     `rdfs_prefix`
     :   RDFS prefix
 
-`OntologyLabel(content: str, language_code: LanguageCode = 'en', main: bool = False)`
+`OntologyLabel(content: str, language_code: knowledge.base.entity.LanguageCode = 'en', main: bool = False)`
 :   Ontology Label
     --------------
     Label that is multi-lingual.
@@ -313,10 +341,10 @@ Classes
 
     ### Methods
 
-    `comment_for_lang(self, language_code: LanguageCode) ‑> Optional[knowledge.base.entity.Comment]`
+    `comment_for_lang(self, language_code: knowledge.base.entity.LanguageCode) ‑> Optional[knowledge.base.entity.Comment]`
     :
 
-    `label_for_lang(self, language_code: LanguageCode) ‑> Optional[knowledge.base.entity.OntologyLabel]`
+    `label_for_lang(self, language_code: knowledge.base.entity.LanguageCode) ‑> Optional[knowledge.base.entity.OntologyLabel]`
     :
 
 `ServiceException(*args, **kwargs)`

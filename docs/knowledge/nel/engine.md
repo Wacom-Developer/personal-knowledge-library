@@ -4,7 +4,7 @@ Module knowledge.nel.engine
 Classes
 -------
 
-`WacomEntityLinkingEngine(service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/nel/text')`
+`WacomEntityLinkingEngine(service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1/nel/text')`
 :   Wacom Engine
     ------------
     Performing Wacom's Named entity linking.
@@ -23,7 +23,7 @@ Classes
 
     ### Class variables
 
-    `LANGUAGES: List[LanguageCode]`
+    `LANGUAGES: List[knowledge.base.entity.LanguageCode]`
     :
 
     `SERVICE_ENDPOINT: str`
@@ -34,7 +34,7 @@ Classes
 
     ### Methods
 
-    `link_personal_entities(self, auth_key: str, text: str, locale: str = 'en_US') ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
+    `link_personal_entities(self, auth_key: str, text: str, locale: str = 'en_US', max_retries: int = 5) ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
     :   Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
         
@@ -46,6 +46,8 @@ Classes
             Text where the entities shall be tagged in.
         locale: LanguageCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
+        max_retries: int
+            Maximum number of retries, if the service is not available.
         
         Returns
         -------

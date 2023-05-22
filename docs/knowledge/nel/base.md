@@ -219,7 +219,7 @@ Classes
     `start_idx: int`
     :   Start index within the text handed to the named entity recognition.
 
-`NamedEntityRecognitionProcessor(service_url: str, supported_languages: List[LanguageCode] = None, verify_calls: bool = False)`
+`NamedEntityRecognitionProcessor(service_url: str, supported_languages: List[knowledge.base.entity.LanguageCode] = None, verify_calls: bool = False)`
 :   NamedEntityRecognitionProcessor
     -------------------------------
     Service that recognizes entities.
@@ -239,34 +239,14 @@ Classes
     * knowledge.services.base.RESTAPIClient
     * abc.ABC
 
-    ### Class variables
-
-    `AUTH_ENDPOINT: str`
-    :
-
-    `SERVICE_URL: str`
-    :
-
-    `STAGING_SERVICE_URL: str`
-    :
-
-    `USER_ENDPOINT: str`
-    :
-
-    `USER_LOGIN_ENDPOINT: str`
-    :
-
-    `USER_REFRESH_ENDPOINT: str`
-    :
-
     ### Instance variables
 
-    `supported_language: List[LanguageCode]`
+    `supported_language: List[knowledge.base.entity.LanguageCode]`
     :   List of supported languages.
 
     ### Methods
 
-    `is_language_supported(self, language_code: LanguageCode) ‑> bool`
+    `is_language_supported(self, language_code: knowledge.base.entity.LanguageCode) ‑> bool`
     :   Is the language_code code supported by the engine.
         
         Parameters
@@ -279,7 +259,7 @@ Classes
         flag: bool
             Flag if this language_code code is supported
 
-    `named_entities(self, text: str, language_code: LanguageCode = 'en_US') ‑> List[knowledge.nel.base.NamedEntity]`
+    `named_entities(self, text: str, language_code: knowledge.base.entity.LanguageCode = 'en_US') ‑> List[knowledge.nel.base.NamedEntity]`
     :   Performs Named Entity Recognition on a text.
         
         Parameters
@@ -318,26 +298,6 @@ Classes
 
     * knowledge.nel.engine.WacomEntityLinkingEngine
 
-    ### Class variables
-
-    `AUTH_ENDPOINT: str`
-    :
-
-    `SERVICE_URL: str`
-    :
-
-    `STAGING_SERVICE_URL: str`
-    :
-
-    `USER_ENDPOINT: str`
-    :
-
-    `USER_LOGIN_ENDPOINT: str`
-    :
-
-    `USER_REFRESH_ENDPOINT: str`
-    :
-
     ### Instance variables
 
     `supported_language: List[str]`
@@ -345,7 +305,7 @@ Classes
 
     ### Methods
 
-    `is_language_supported(self, language_code: LanguageCode) ‑> bool`
+    `is_language_supported(self, language_code: knowledge.base.entity.LanguageCode) ‑> bool`
     :   Is the language_code code supported by the engine.
         
         Parameters
@@ -358,7 +318,7 @@ Classes
         flag: bool
             Flag if this language_code code is supported.
 
-    `link_personal_entities(self, auth_key: str, text: str, language_code: LanguageCode = 'en_US') ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
+    `link_personal_entities(self, auth_key: str, text: str, language_code: knowledge.base.entity.LanguageCode = 'en_US') ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
     :   Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
         
@@ -415,7 +375,7 @@ Classes
         flag: bool
             Flag if this language_code code is supported
 
-    `link_public_entities(self, text: str, language_code: LanguageCode = 'en_US') ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
+    `link_public_entities(self, text: str, language_code: knowledge.base.entity.LanguageCode = 'en_US') ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
     :   Performs Named Entity Linking on a text. It only finds entities within a large public knowledge graph.
         
         Parameters

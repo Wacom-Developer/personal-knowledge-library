@@ -11,7 +11,7 @@ Variables
 Classes
 -------
 
-`DataProperty(content: Any, property_ref: knowledge.base.ontology.OntologyPropertyReference, language_code: LanguageCode = 'en_US', data_type: knowledge.base.ontology.DataPropertyType = None)`
+`DataProperty(content: Any, property_ref: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.entity.LanguageCode = 'en_US', data_type: knowledge.base.ontology.DataPropertyType = None)`
 :   DataProperty
     ------------
     Data property for entities.
@@ -48,7 +48,7 @@ Classes
     `data_type: Optional[knowledge.base.ontology.DataPropertyType]`
     :   Data type (optional).
 
-    `language_code: LanguageCode`
+    `language_code: knowledge.base.entity.LanguageCode`
     :   Language code of the content.
 
     `value: Any`
@@ -593,7 +593,7 @@ Classes
     :
 
 `ThingEncoder(*, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True, sort_keys=False, indent=None, separators=None, default=None)`
-:   Extensible JSON <http://json.org> encoder for Python data structures.
+:   Extensible JSON <https://json.org> encoder for Python data structures.
     
     Supports the following objects and types by default:
     
@@ -632,7 +632,7 @@ Classes
     
     If check_circular is true, then lists, dicts, and custom encoded
     objects will be checked for circular references during encoding to
-    prevent an infinite recursion (which would cause an OverflowError).
+    prevent an infinite recursion (which would cause an RecursionError).
     Otherwise, no such check takes place.
     
     If allow_nan is true, then NaN, Infinity, and -Infinity will be
@@ -758,11 +758,14 @@ Classes
     `owner_id: str`
     :   Internal id of the owner.
 
+    `reference_id: Optional[str]`
+    :   Default reference id for the entity.
+
     `source_reference_id: Optional[List[knowledge.base.ontology.DataProperty]]`
     :   Reference id for to the source.
 
-    `source_system: Optional[List[knowledge.base.ontology.DataProperty]]`
-    :   Source of the entity.
+    `source_system: Optional[str]`
+    :   Default reference system for the entity.
 
     `status_flag: knowledge.base.entity.EntityStatus`
     :   Status flag.
@@ -781,7 +784,7 @@ Classes
 
     ### Methods
 
-    `add_alias(self, alias: str, language_code: LanguageCode)`
+    `add_alias(self, alias: str, language_code: knowledge.base.entity.LanguageCode)`
     :   Adding an alias for entity.
         
         Parameters
@@ -799,7 +802,7 @@ Classes
         data_property: DataProperty
             Data property that is added
 
-    `add_description(self, description: str, language_code: LanguageCode)`
+    `add_description(self, description: str, language_code: knowledge.base.entity.LanguageCode)`
     :   Adding an description for entity.
         
         Parameters
@@ -809,7 +812,7 @@ Classes
         language_code: LanguageCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
 
-    `add_label(self, label: str, language_code: LanguageCode)`
+    `add_label(self, label: str, language_code: knowledge.base.entity.LanguageCode)`
     :   Adding a label for entity.
         
         Parameters
@@ -845,7 +848,7 @@ Classes
             Adds the source system as a Data Property. **Remark:** The data property must have the property type
             'wacom:core#sourceSystem'.
 
-    `alias_lang(self, language_code: LanguageCode) ‑> List[knowledge.base.entity.Label]`
+    `alias_lang(self, language_code: knowledge.base.entity.LanguageCode) ‑> List[knowledge.base.entity.Label]`
     :   Get alias for language_code code.
         
         Parameters
@@ -857,7 +860,21 @@ Classes
         aliases: List[Label]
             Returns a list of aliases for a specific language code
 
-    `default_source_reference_id(self, language_code: LanguageCode = 'en_US') ‑> Optional[str]`
+    `data_property_lang(self, data_property: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.entity.LanguageCode) ‑> List[knowledge.base.ontology.DataProperty]`
+    :   Get data property for language_code code.
+        
+        Parameters
+        ----------
+        data_property: OntologyPropertyReference
+            Data property.
+        language_code: LanguageCode
+            Requested language_code code
+        Returns
+        -------
+        data_properties: List[DataProperty]
+            Returns a list of data properties for a specific language code
+
+    `default_source_reference_id(self, language_code: knowledge.base.entity.LanguageCode = 'en_US') ‑> Optional[str]`
     :   Getting the source reference id for a certain language code.
         
         Parameters
@@ -870,7 +887,7 @@ Classes
         id: str
             Source reference id.
 
-    `default_source_system(self, language_code: LanguageCode = 'en_US') ‑> Optional[str]`
+    `default_source_system(self, language_code: knowledge.base.entity.LanguageCode = 'en_US') ‑> Optional[str]`
     :   Getting the source system for a certain language code.
         
         Parameters
@@ -895,7 +912,7 @@ Classes
         label: LocalizedContent
             Returns the  label for a specific language_code code
 
-    `label_lang(self, language_code: LanguageCode) ‑> Optional[knowledge.base.entity.Label]`
+    `label_lang(self, language_code: knowledge.base.entity.LanguageCode) ‑> Optional[knowledge.base.entity.Label]`
     :   Get label for language_code code.
         
         Parameters
@@ -915,7 +932,15 @@ Classes
         label: Label
             Alias label
 
-    `remove_description(self, language_code: LanguageCode)`
+    `remove_data_property(self, data_property: knowledge.base.ontology.OntologyPropertyReference)`
+    :   Remove data property.
+        
+        Parameters
+        ----------
+        data_property: OntologyPropertyReference
+            Data property to be removed.
+
+    `remove_description(self, language_code: knowledge.base.entity.LanguageCode)`
     :   Remove description for entity if it exists for language.
         
         Parameters
@@ -923,7 +948,7 @@ Classes
         language_code: LanguageCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
 
-    `remove_label(self, language_code: LanguageCode)`
+    `remove_label(self, language_code: knowledge.base.entity.LanguageCode)`
     :   Remove label for entity if it exists for language.
         
         Parameters
@@ -931,7 +956,7 @@ Classes
         language_code: LanguageCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
 
-    `update_alias(self, value: str, language_code: LanguageCode)`
+    `update_alias(self, value: str, language_code: knowledge.base.entity.LanguageCode)`
     :   Update or creates an alias for a specific language.
         
         Parameters
@@ -941,7 +966,7 @@ Classes
         language_code: LanguageCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
 
-    `update_description(self, value: str, language_code: LanguageCode)`
+    `update_description(self, value: str, language_code: knowledge.base.entity.LanguageCode)`
     :   Update or creates a description for a specific language.
         
         Parameters
@@ -951,7 +976,7 @@ Classes
         language_code: LanguageCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
 
-    `update_label(self, value: str, language_code: LanguageCode)`
+    `update_label(self, value: str, language_code: knowledge.base.entity.LanguageCode)`
     :   Update or creates a label for a specific language.
         
         Parameters
