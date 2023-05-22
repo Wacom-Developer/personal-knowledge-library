@@ -1,4 +1,10 @@
-2023/3/24- RELEASE 0.9.5
+2023/4/22- RELEASE 0.9.6
+==========================
+- Improve the session management
+- Rename metaData tag to metadata
+- Some fixes 
+
+2023/4/24- RELEASE 0.9.5
 ==========================
 - Adding some helper functions for the entity management 
 - Fixing some issues with parameters, e.g., force in delete

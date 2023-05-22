@@ -26,7 +26,7 @@ an older version of knowledge-service-lib :
 
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
-__version__ = "1.0.0"
+__version__ = "0.9.6"
 
 # The text of the README file
 README = (HERE / "README.md").read_text()
