@@ -19,7 +19,7 @@ class ExtractionException(Exception):
     pass
 
 
-def __extract_abstract__(title: str, language: str = 'en',  max_retries: int = 3, backoff_factor: float = 0.1) -> str:
+def __extract_abstract__(title: str, language: str = 'en',  max_retries: int = 5, backoff_factor: float = 0.5) -> str:
     """Extracting an abstract.
 
     Parameters
@@ -62,7 +62,7 @@ def __extract_abstract__(title: str, language: str = 'en',  max_retries: int = 3
     raise ExtractionException(f"Abstract for article with {title} in language_code {language} cannot be extracted.")
 
 
-def __extract_thumb__(title: str, language: str = 'en', max_retries: int = 3, backoff_factor: float = 0.1) -> str:
+def __extract_thumb__(title: str, language: str = 'en', max_retries: int = 5, backoff_factor: float = 0.5) -> str:
     """
     Extracting thumbnail from Wikipedia.
 
