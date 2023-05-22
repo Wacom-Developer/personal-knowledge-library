@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 from rdflib import Graph, RDFS, URIRef
 
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference
-from knowledge.public.wikidata import WikidataClass, WikidataThing
+from knowledge.public.wikidata import WikidataClass
 
 # Classes
 TOPIC_CLASS: str = 'wacom:core#Topic'
