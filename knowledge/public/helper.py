@@ -25,6 +25,7 @@ class Precision(Enum):
     BILLION_YEARS = 0
     MILLION_YEARS = 3
     HUNDREDS_THOUSAND_YEARS = 4
+    TEN_THOUSAND_YEARS = 5
     MILLENIUM = 6
     CENTURY = 7
     DECADE = 8
@@ -160,26 +161,29 @@ def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
     date_str = date_str.split('-00', maxsplit=1)[0]
     # Parse date
     try:
-        dt_obj: datetime = dateutil.parser.parse(date_str)
         if Precision.BILLION_YEARS.value == precision:
-            pass
+            pretty = date_str
         elif Precision.MILLION_YEARS.value == precision:
-            pass
+            pretty = date_str
         elif Precision.HUNDREDS_THOUSAND_YEARS.value == precision:
-            pass
+            pretty = date_str
         elif Precision.MILLENIUM.value == precision:
-            pass
-        elif Precision.CENTURY.value == precision:
-            century: int = int(math.ceil(dt_obj.year / 100))
-            pretty = f'{century}th century'
-        elif Precision.DECADE.value == precision:
-            pretty = f"{dt_obj.year}s{'' if after_christ else ' BC'}"
-        elif Precision.YEAR.value == precision:
-            pretty = f"{dt_obj.year}{'' if after_christ else ' BC'}"
-        elif Precision.MONTH.value == precision:
-            pretty = dt_obj.strftime("%B %Y")
-        elif Precision.DAY.value == precision:
-            pretty = dt_obj.strftime("%-d %B %Y")
+            pretty = date_str
+        elif Precision.TEN_THOUSAND_YEARS.value == precision:
+            pretty = date_str
+        else:
+            dt_obj: datetime = dateutil.parser.parse(date_str)
+            if Precision.CENTURY.value == precision:
+                century: int = int(math.ceil(dt_obj.year / 100))
+                pretty = f'{century}th century'
+            elif Precision.DECADE.value == precision:
+                pretty = f"{dt_obj.year}s{'' if after_christ else ' BC'}"
+            elif Precision.YEAR.value == precision:
+                pretty = f"{dt_obj.year}{'' if after_christ else ' BC'}"
+            elif Precision.MONTH.value == precision:
+                pretty = dt_obj.strftime("%B %Y")
+            elif Precision.DAY.value == precision:
+                pretty = dt_obj.strftime("%-d %B %Y")
     except Exception as pe:
         logger.error(param)
         logger.exception(pe)
