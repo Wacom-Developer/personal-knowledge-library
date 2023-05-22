@@ -13,8 +13,13 @@ from knowledge.services.users import UserManagementServiceAPI, User, UserRole
 
 @pytest.fixture(scope="class")
 def cache_class(request):
+    """
+    Fixture to store data for the test cases.
+    """
     class ClassDB:
-
+        """
+        Class to store data for the test cases.
+        """
         def __init__(self):
             self.__external_id: Optional[str] = None
             self.__token: Optional[str] = None
@@ -44,8 +49,9 @@ class UserFlow(TestCase):
     """
     Testing the user flow
     ---------------------
-
-
+    - Create user
+    - Check user
+    - Delete user
     """
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get('INSTANCE'))
     '''User management service.'''
@@ -53,11 +59,12 @@ class UserFlow(TestCase):
     LIMIT: int = 10000
 
     def test_1_create_user(self):
+        """ Create user."""
         list_user_before: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=UserFlow.LIMIT)
         # Create an external user id
         self.cache.external_id = str(uuid.uuid4())
         # Create user
-        user, token, refresh, expire = self.user_management.create_user(self.tenant_api_key,
+        user, token, _, _ = self.user_management.create_user(self.tenant_api_key,
                                                                         external_id=self.cache.external_id,
                                                                         meta_data={'account-type': 'qa-test'},
                                                                         roles=[UserRole.USER])
@@ -77,10 +84,12 @@ class UserFlow(TestCase):
         self.assertGreater(len(list_user_after), len(list_user_before), 'There should be more users than before.')
 
     def test_2_check_user(self):
+        """ Check user."""
         internal_id: str = self.user_management.user_internal_id(self.tenant_api_key, self.cache.external_id)
         self.assertIsNotNone(internal_id)
 
     def test_3_delete_user(self):
+        """ Delete user."""
         list_user_before: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=UserFlow.LIMIT)
         user_in_list: bool = False
         for u_i in list_user_before:
@@ -90,6 +99,7 @@ class UserFlow(TestCase):
         self.assertTrue(user_in_list, 'User is not available')
 
     def teardown_class(cls):
+        """ Clean up the user."""
         list_user_all: List[User] = cls.user_management.listing_users(cls.tenant_api_key, limit=UserFlow.LIMIT)
         for u_i in list_user_all:
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
