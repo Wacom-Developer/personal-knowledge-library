@@ -586,10 +586,29 @@ class ObjectProperty(EntityProperty):
         return relation_type, ObjectProperty(relation_type, incoming, outgoing)
 
     def __dict__(self):
+        outgoing_relations: List[str] = []
+        incoming_relations: List[str] = []
+        for e in self.incoming_relations:
+
+            if isinstance(e, ThingObject):
+                if e.uri is not None:
+                    incoming_relations.append(e.uri)
+                else:
+                    incoming_relations.append(e.reference_id)
+            else:
+                incoming_relations.append(e)
+        for e in self.outgoing_relations:
+            if isinstance(e, ThingObject):
+                if e.uri is not None:
+                    outgoing_relations.append(e.uri)
+                else:
+                    outgoing_relations.append(e.reference_id)
+            else:
+                outgoing_relations.append(e)
         return {
             RELATION_TAG: self.relation.iri,
-            INCOMING_TAG: [e.uri if isinstance(e, ThingObject) else e for e in self.incoming_relations],
-            OUTGOING_TAG: [e.uri if isinstance(e, ThingObject) else e for e in self.outgoing_relations]
+            INCOMING_TAG: incoming_relations,
+            OUTGOING_TAG: outgoing_relations
         }
 
     def __repr__(self):
