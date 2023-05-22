@@ -151,6 +151,22 @@ class Label(LocalizedContent):
     @staticmethod
     def create_from_dict(dict_label: Dict[str, Any], tag_name: str = CONTENT_TAG, locale_name: str = LOCALE_TAG) \
             -> 'Label':
+        """
+        Create a label from a dictionary.
+        Parameters
+        ----------
+        dict_label: Dict[str, Any]
+            Dictionary containing the label information.
+        tag_name: str
+            Tag name of the content.
+        locale_name: str
+            Tag name of the language code.
+
+        Returns
+        -------
+        instance: Label
+            Label instance.
+        """
         if tag_name not in dict_label:
             raise ValueError("Dict is does not contain a localized label.")
         if locale_name not in dict_label:
@@ -469,15 +485,43 @@ class OntologyContext(OntologyObject):
 
     @property
     def id(self) -> str:
+        """Context id."""
         return self.__id
 
     @property
     def base_uri(self) -> str:
+        """Base URI."""
         return self.__base_uri
 
     @property
     def orphaned(self) -> bool:
+        """Orphaned."""
         return self.__orphaned
+
+    @property
+    def version(self) -> int:
+        """Version."""
+        return self.__version
+
+    @property
+    def date_added(self) -> datetime:
+        """Date added."""
+        return self.__date_added
+
+    @property
+    def date_modified(self) -> datetime:
+        """Date modified."""
+        return self.__date_modified
+
+    @property
+    def concepts(self) -> List[str]:
+        """List of concepts."""
+        return self.__concepts
+
+    @property
+    def properties(self) -> List[str]:
+        """List of properties."""
+        return self.__properties
 
     @classmethod
     def from_dict(cls, context_dict: Dict[str, Any]):

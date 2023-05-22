@@ -29,6 +29,7 @@ RANGE_TAG: str = "ranges"
 SUB_CLASS_OF_TAG: str = "subClassOf"
 SUB_PROPERTY_OF_TAG: str = "subPropertyOf"
 TEXT_TAG: str = 'value'
+DEFAULT_TIMEOUT: int = 30
 
 
 class OntologyService(WacomServiceAPIClient):
@@ -131,7 +132,7 @@ class OntologyService(WacomServiceAPIClient):
         }
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/' \
                    f'{OntologyService.CONCEPTS_ENDPOINT}'
-        response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
+        response: Response = requests.get(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if response.ok:
             response_list: List[Tuple[OntologyClassReference, OntologyClassReference]] = []
             result = response.json()
@@ -209,7 +210,7 @@ class OntologyService(WacomServiceAPIClient):
         concept_url: str = urllib.parse.quote_plus(concept_name)
         response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}'
                                           f'/{OntologyService.CONCEPTS_ENDPOINT}/{concept_url}',
-                                          headers=headers, verify=self.verify_calls)
+                                          headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if response.ok:
             result: Dict[str, Any] = response.json()
             return OntologyClass.from_dict(result)
@@ -242,7 +243,8 @@ class OntologyService(WacomServiceAPIClient):
         context_url: str = urllib.parse.quote_plus(context)
         concept_url: str = urllib.parse.quote_plus(property_name)
         param: str = f"context/{context_url}/properties/{concept_url}"
-        response: Response = requests.get(f'{self.service_base_url}{param}', headers=headers, verify=self.verify_calls)
+        response: Response = requests.get(f'{self.service_base_url}{param}', headers=headers, verify=self.verify_calls,
+                                          timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return OntologyProperty.from_dict(response.json())
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
@@ -299,7 +301,8 @@ class OntologyService(WacomServiceAPIClient):
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/' \
                    f'{OntologyService.CONCEPTS_ENDPOINT}'
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls,
+                                           timeout=DEFAULT_TIMEOUT)
         if response.ok:
             result_dict: Dict[str, str] = response.json()
             return result_dict
@@ -358,7 +361,8 @@ class OntologyService(WacomServiceAPIClient):
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/' \
                    f'{OntologyService.CONCEPTS_ENDPOINT}'
-        response: Response = requests.put(url, headers=headers, json=payload, verify=self.verify_calls)
+        response: Response = requests.put(url, headers=headers, json=payload, verify=self.verify_calls,
+                                          timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return response.json()
         raise WacomServiceException(f'Update of concept failed. '
@@ -391,7 +395,7 @@ class OntologyService(WacomServiceAPIClient):
         context_url: str = urllib.parse.quote_plus(context)
         concept_url: str = urllib.parse.quote_plus(reference.iri)
         url: str = f'{self.service_base_url}context/{context_url}/concepts/{concept_url}'
-        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls)
+        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
             raise WacomServiceException(f'Deletion of concept failed. '
                                         f'Response code:={response.status_code}, exception:= {response.text}')
@@ -464,7 +468,8 @@ class OntologyService(WacomServiceAPIClient):
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/' \
                    f'{OntologyService.PROPERTIES_ENDPOINT}'
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls,
+                                           timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return response.json()
         raise WacomServiceException(f'Creation of object property failed. '
@@ -534,7 +539,8 @@ class OntologyService(WacomServiceAPIClient):
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/' \
                    f'{OntologyService.PROPERTIES_ENDPOINT}'
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls,
+                                           timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return response.json()
         raise WacomServiceException(f'Creation of data property failed. '
@@ -567,7 +573,7 @@ class OntologyService(WacomServiceAPIClient):
         context_url: str = urllib.parse.quote_plus(context)
         property_url: str = urllib.parse.quote_plus(reference.iri)
         url: str = f'{self.service_base_url}context/{context_url}/properties/{property_url}'
-        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls)
+        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
             raise WacomServiceException(f'Deletion of property: {reference.iri} failed. '
                                         f'Response code:={response.status_code}, exception:= {response.text}')
@@ -620,7 +626,8 @@ class OntologyService(WacomServiceAPIClient):
         for comment in comments if comments is not None else []:
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}'
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls,
+                                           timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return response.json()
         raise WacomServiceException(f'Creation of concept failed. '
@@ -632,7 +639,7 @@ class OntologyService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{name}{"/force" if force else ""}'
-        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls)
+        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
 
             raise WacomServiceException(f'Removing the context failed. '
@@ -655,7 +662,7 @@ class OntologyService(WacomServiceAPIClient):
         }
         context_url: str = urllib.parse.quote_plus(context)
         url: str = f'{self.service_base_url}context/{context_url}/commit'
-        response: Response = requests.put(url, headers=headers, verify=self.verify_calls)
+        response: Response = requests.put(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
             raise WacomServiceException(f'Commit of ontology failed. '
                                         f'Response code:={response.status_code}, exception:= {response.text}')
@@ -682,7 +689,7 @@ class OntologyService(WacomServiceAPIClient):
         }
         context_url: str = urllib.parse.quote_plus(context)
         url: str = f'{self.service_base_url}context/{context_url}/versions/rdf'
-        response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
+        response: Response = requests.get(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return response.text
         raise WacomServiceException(f'RDF export failed. '

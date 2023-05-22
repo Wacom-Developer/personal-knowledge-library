@@ -35,6 +35,13 @@ STAGE_NAME: OntologyPropertyReference = OntologyPropertyReference.parse("demo:cr
 
 
 def create_artist() -> ThingObject:
+    """
+    Create a new artist entity.
+    Returns
+    -------
+    instance: ThingObject
+        Artist entity
+    """
     # Main labels for entity
     topic_labels: List[Label] = [
         Label('Gian Giacomo Caprotti', LanguageCode('en_US'))

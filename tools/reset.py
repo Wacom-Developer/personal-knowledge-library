@@ -61,4 +61,3 @@ if __name__ == '__main__':
             print(f' Delete user: {u.external_user_id}')
             user_management.delete_user(tenant_key=args.tenant, external_id=u.external_user_id, internal_id=u.id)
     print('-----------------------------------------------------------------------------------------------------------')
-

@@ -20,6 +20,7 @@ GROUP_USER_RIGHTS_TAG: str = "groupUserRights"
 JOIN_KEY_PARAM: str = "joinKey"
 USER_TO_ADD_PARAM: str = "userToAddId"
 USER_TO_REMOVE_PARAM: str = "userToRemoveId"
+DEFAULT_TIMEOUT: int = 30
 
 
 class Group(object):
@@ -192,7 +193,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             NAME_TAG: name,
             GROUP_USER_RIGHTS_TAG: rights.to_list()
         }
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls,
+                                           timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return Group.parse(response.json())
         raise WacomServiceException(f'Creation of group failed.'
@@ -227,7 +229,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             NAME_TAG: name,
             GROUP_USER_RIGHTS_TAG: rights.to_list()
         }
-        response: Response = requests.patch(url, headers=headers, json=payload, verify=self.verify_calls)
+        response: Response = requests.patch(url, headers=headers, json=payload, verify=self.verify_calls,
+                                            timeout=DEFAULT_TIMEOUT)
         if not response.ok:
             raise WacomServiceException(f'Update of group failed.'
                                         f'Response code:={response.status_code}, exception:= {response.text}')
@@ -252,7 +255,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls)
+        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
             raise WacomServiceException(f'Deletion of group failed.'
                                         f'Response code:={response.status_code}, exception:= {response.text}')
@@ -287,7 +290,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             retries: Retry = Retry(backoff_factor=0.1,
                                    status_forcelist=[500, 502, 503, 504])
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(url, headers=headers, verify=self.verify_calls)
+            response: Response = session.get(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if response.ok:
                 groups: List[Dict[str, Any]] = response.json()
                 return [Group.parse(g) for g in groups]
@@ -318,7 +321,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
+        response: Response = requests.get(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if response.ok:
             group: Dict[str, Any] = response.json()
             return GroupInfo.parse(group)
@@ -349,7 +352,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         params: Dict[str, str] = {
             JOIN_KEY_PARAM: join_key,
         }
-        response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
+                                           timeout=DEFAULT_TIMEOUT)
         if not response.ok:
             raise WacomServiceException(f'Joining the group failed.'
                                         f'Response code:={response.status_code}, exception:= {response.text}')
@@ -374,7 +378,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
 
-        response: Response = requests.post(url, headers=headers, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
             raise WacomServiceException(f'Leaving group failed.'
                                         f'Response code:={response.status_code}, exception:= {response.text}')
@@ -403,7 +407,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         params: Dict[str, str] = {
             USER_TO_ADD_PARAM: user_id,
         }
-        response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
+                                           timeout=DEFAULT_TIMEOUT)
         if not response.ok:
             raise WacomServiceException(f'Adding of user to group failed.'
                                         f'Response code:={response.status_code}, exception:= {response.text}')
@@ -432,7 +437,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         params: Dict[str, str] = {
             USER_TO_REMOVE_PARAM: user_id,
         }
-        response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
+                                           timeout=DEFAULT_TIMEOUT)
         if not response.ok:
             raise WacomServiceException(f'Removing of user from group failed. URL: {url}'
                                         f'Response code:={response.status_code}, exception:= {response.text}')
@@ -465,7 +471,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             retries: Retry = Retry(backoff_factor=0.1,
                                    status_forcelist=[500, 502, 503, 504])
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(url, headers=headers, verify=self.verify_calls)
+            response: Response = session.post(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if not response.ok:
                 raise WacomServiceException(f'Adding of entity to group failed.'
                                             f'Response code:={response.status_code}, exception:= {response.text}')
@@ -498,7 +504,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             retries: Retry = Retry(backoff_factor=0.1,
                                    status_forcelist=[500, 502, 503, 504])
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(url, headers=headers, verify=self.verify_calls)
+            response: Response = session.post(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if not response.ok:
                 raise WacomServiceException(f'Removing of entity to group failed.'
                                             f'Response code:={response.status_code}, exception:= {response.text}')

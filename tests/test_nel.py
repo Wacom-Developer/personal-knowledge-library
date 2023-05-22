@@ -25,7 +25,21 @@ from knowledge.services.users import UserManagementServiceAPI, User, UserRole
 THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
 
 
-def random_value(data_type: str, ref: OntologyPropertyReference, faker_inst: Faker) -> Any:
+def random_value(data_type: str, faker_inst: Faker) -> Any:
+    """
+    Create a random value for a property.
+    Parameters
+    ----------
+    data_type: str
+        Data type of the property.
+    faker_inst: Faker
+        Faker instance.
+
+    Returns
+    -------
+    value: Any
+        Random value.
+    """
     if data_type == 'http://www.w3.org/2001/XMLSchema#string':
         return faker_inst.catch_phrase()
     elif data_type == 'http://www.w3.org/2001/XMLSchema#dateTime':
@@ -43,6 +57,20 @@ def random_value(data_type: str, ref: OntologyPropertyReference, faker_inst: Fak
 
 def create_thing(class_ref: OntoClass) -> Tuple[ThingObject, Dict[OntologyPropertyReference,
                                                                   List[OntologyClassReference]]]:
+    """
+    Create a thing object with random data.
+    Parameters
+    ----------
+    class_ref: OntoClass
+        OntoClass instance.
+
+    Returns
+    -------
+    instance: ThingObject
+        Thing object with random data.
+    mapping: Dict[OntologyPropertyReference, List[OntologyClassReference]]
+        Mapping of properties to classes.
+    """
     thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse(class_ref.uri))
     relations: Dict[OntologyPropertyReference, List[OntologyClassReference]] = {}
     for lang in ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'ru_RU']:
@@ -60,7 +88,7 @@ def create_thing(class_ref: OntoClass) -> Tuple[ThingObject, Dict[OntologyProper
                             [OntologyClassReference.parse(str(e.uri)) for e in prop.ranges]
                     else:
                         prop_ref: OntologyPropertyReference = OntologyPropertyReference.parse(onto_prop.uri)
-                        content: Any = random_value(str(prop.ranges[0].uri), prop_ref, fake)
+                        content: Any = random_value(str(prop.ranges[0].uri), fake)
                         thing.add_data_property(DataProperty(content, property_ref=prop_ref,
                                                              language_code=LanguageCode(lang)))
 
@@ -70,6 +98,9 @@ def create_thing(class_ref: OntoClass) -> Tuple[ThingObject, Dict[OntologyProper
 @pytest.fixture(scope="class")
 def cache_class(request):
     class ClassDB:
+        """
+        Class to store data for the test cases.
+        """
 
         def __init__(self):
             self.__external_id: Optional[str] = None
@@ -78,6 +109,7 @@ def cache_class(request):
 
         @property
         def external_id(self) -> Optional[str]:
+            """External user id."""
             return self.__external_id
 
         @external_id.setter
@@ -86,6 +118,7 @@ def cache_class(request):
 
         @property
         def token(self) -> Optional[str]:
+            """User token."""
             return self.__token
 
         @token.setter
@@ -94,6 +127,7 @@ def cache_class(request):
 
         @property
         def model(self) -> Optional[Ontospy]:
+            """ Ontology model."""
             return self.__model
 
         @model.setter
@@ -128,6 +162,7 @@ class EntityFlow(TestCase):
     LIMIT: int = 10000
 
     def test_1_create_user(self):
+        """ Create a user. """
         # Create an external user id
         self.cache.external_id = str(uuid.uuid4())
         # Create user
@@ -138,6 +173,7 @@ class EntityFlow(TestCase):
         self.cache.token = token
 
     def test_2_nel_en(self):
+        """ Test the named entity linking for English."""
         en_us: LanguageCode = LanguageCode('en_US')
         entities, _, _ = self.knowledge_client.listing(self.cache.token, THING_OBJECT, page_id=None, limit=10,
                                                        locale=en_us)
@@ -151,6 +187,7 @@ class EntityFlow(TestCase):
                 self.assertGreaterEqual(len(linked_entities), 1)
 
     def test_3_nel_ja(self):
+        """ Test the named entity linking for Japanese."""
         ja_jp: LanguageCode = LanguageCode('ja_JP')
         entities, _, _ = self.knowledge_client.listing(self.cache.token, THING_OBJECT, page_id=None, limit=10,
                                                        locale=ja_jp)
@@ -165,6 +202,7 @@ class EntityFlow(TestCase):
                 self.assertGreaterEqual(len(linked_entities), 1)
 
     def test_4_nel_de(self):
+        """ Test the named entity linking for German."""
         de_de: LanguageCode = LanguageCode('de_DE')
         entities, _, _ = self.knowledge_client.listing(self.cache.token, THING_OBJECT, page_id=None, limit=10,
                                                        locale=de_de)
@@ -178,6 +216,7 @@ class EntityFlow(TestCase):
                 self.assertGreaterEqual(len(linked_entities), 1)
 
     def teardown_class(self):
+        """ Clean up the test environment. """
         list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=EntityFlow.LIMIT)
         for u_i in list_user_all:
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
@@ -186,4 +225,4 @@ class EntityFlow(TestCase):
                     self.user_management.delete_user(self.tenant_api_key,
                                                      external_id=u_i.external_user_id, internal_id=u_i.id)
                 except WacomServiceException as we:
-                    pass
+                    logging.error(f'Error during user deletion: {we}')

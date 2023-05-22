@@ -38,13 +38,14 @@ CREATED: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:core
 HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:creative#hasArtstyle')
 
 
-def print_entity(entity: ThingObject, list_idx: int, auth_key: str, client: WacomKnowledgeService, short: bool = False):
+def print_entity(print_entity: ThingObject, list_idx: int, auth_key: str, client: WacomKnowledgeService,
+                 short: bool = False):
     """
     Printing entity details.
 
     Parameters
     ----------
-    entity: ThingObject
+    print_entity: ThingObject
         Entity with properties
     list_idx: int
         Index with a list
@@ -55,28 +56,28 @@ def print_entity(entity: ThingObject, list_idx: int, auth_key: str, client: Waco
     short: bool
         Short summary
     """
-    print(f'[{list_idx}] : {entity.uri} <{entity.concept_type.iri}>')
-    if len(entity.label) > 0:
+    print(f'[{list_idx}] : {print_entity.uri} <{print_entity.concept_type.iri}>')
+    if len(print_entity.label) > 0:
         print('    | [Labels]')
-        for la in entity.label:
+        for la in print_entity.label:
             print(f'    |     |- "{la.content}"@{la.language_code}')
         print('    |')
     if not short:
-        if len(entity.alias) > 0:
+        if len(print_entity.alias) > 0:
             print('    | [Alias]')
-            for la in entity.alias:
+            for la in print_entity.alias:
                 print(f'    |     |- "{la.content}"@{la.language_code}')
             print('    |')
-        if len(entity.data_properties) > 0:
+        if len(print_entity.data_properties) > 0:
             print('    | [Attributes]')
-            for data_property, labels in entity.data_properties.items():
+            for data_property, labels in print_entity.data_properties.items():
                 print(f'    |    |- {data_property.iri}:')
                 for li in labels:
                     print(f'    |    |-- "{li.value}"@{li.language_code}')
             print('    |')
 
         relations_obj: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key,
-                                                                                          uri=entity.uri)
+                                                                                          uri=print_entity.uri)
         if len(relations_obj) > 0:
             print('    | [Relations]')
             for re in relations_obj.values():

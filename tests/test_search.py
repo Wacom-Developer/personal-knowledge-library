@@ -3,15 +3,14 @@
 import logging
 import os
 import uuid
-from typing import List, Optional, Dict, Tuple, Any
+from typing import List, Optional
 from unittest import TestCase
 
 import pytest
-from faker import Faker
-from ontospy import Ontospy, OntoClass, OntoProperty
+from ontospy import Ontospy
 
 from knowledge.base.entity import LanguageCode
-from knowledge.base.ontology import ThingObject, OntologyClassReference, OntologyPropertyReference, DataProperty
+from knowledge.base.ontology import ThingObject, OntologyClassReference, OntologyPropertyReference
 from knowledge.services.graph import WacomKnowledgeService, SearchPattern
 from knowledge.services.group import GroupManagementServiceAPI
 from knowledge.services.ontology import OntologyService
@@ -29,6 +28,9 @@ HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse('waco
 @pytest.fixture(scope="class")
 def cache_class(request):
     class ClassDB:
+        """
+        Class to store data for the test cases.
+        """
 
         def __init__(self):
             self.__external_id: Optional[str] = None

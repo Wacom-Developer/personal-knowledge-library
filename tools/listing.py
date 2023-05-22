@@ -10,6 +10,18 @@ THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', '
 
 
 def print_summary(total: int, types: Dict[str, int], languages: Dict[str, int]):
+    """
+    Print summary of the listing.
+
+    Parameters:
+    -----------
+    total: int
+        Total number of entities.
+    types: Dict[str, int]
+        Dictionary of types and their counts.
+    languages: Dict[str, int]
+        Dictionary of languages and their counts.
+    """
     print('---------------------------------------------------------------------------------------------------')
     print(f' Total number: {total}')
     print('---------------------------------------------------------------------------------------------------')
@@ -79,5 +91,3 @@ if __name__ == '__main__':
             break
         page_number += 1
         page_id = next_page_id
-
-

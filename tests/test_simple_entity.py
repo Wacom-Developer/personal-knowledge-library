@@ -20,6 +20,13 @@ THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', '
 
 
 def create_thing() -> ThingObject:
+    """
+    Create a thing object with random data.
+    Returns
+    -------
+    instance: ThingObject
+        Thing object with random data.
+    """
     thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse('wacom:core#Person'))
     for lang in ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'ru_RU']:
         fake: Faker = Faker(lang)
@@ -43,7 +50,18 @@ def create_thing() -> ThingObject:
 
 @pytest.fixture(scope="class")
 def cache_class(request):
+    """
+    Fixture to store data for the test cases.
+
+    Parameters
+    ----------
+    request: pytest.FixtureRequest
+        Request object.
+    """
     class ClassDB:
+        """
+        Class to store data for the test cases.
+        """
 
         def __init__(self):
             self.__external_id: Optional[str] = None
@@ -83,8 +101,14 @@ class EntityFlow(TestCase):
     """
     Testing the entity flow
     ---------------------
-    - Create entity
-
+    - Create user
+    - Push entity
+    - Get entity
+    - Update entity
+    - Pull literals from the entity
+    - Pull labels from the entity
+    - Pull relations from the entity
+    - Delete entity
     """
     # -----------------------------------------------------------------------------------------------------------------
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
@@ -100,6 +124,7 @@ class EntityFlow(TestCase):
     LIMIT: int = 10000
 
     def test_1_create_user(self):
+        """Create user."""
         # Create an external user id
         self.cache.external_id = str(uuid.uuid4())
         # Create user
@@ -110,29 +135,35 @@ class EntityFlow(TestCase):
         self.cache.token = token
 
     def test_2_push_entity(self):
+        """Push entity."""
         thing: ThingObject = create_thing()
         uri_thing: str = self.knowledge_client.create_entity(self.cache.token, thing)
         self.cache.thing_uri = uri_thing
 
     def test_3_get_entity(self):
+        """Get entity."""
         full_entity: ThingObject = self.knowledge_client.entity(self.cache.token, self.cache.thing_uri)
         # Entity must not be empty
         self.assertIsNotNone(full_entity)
 
     def test_4_update_entity(self):
+        """Update entity. """
         full_entity: ThingObject = self.knowledge_client.entity(self.cache.token, self.cache.thing_uri)
         # Entity must not be empty
         self.assertIsNotNone(full_entity)
 
     def test_5_literal_entity(self):
+        """Pull literals from the entity."""
         literals: List[DataProperty] = self.knowledge_client.literals(self.cache.token, self.cache.thing_uri)
         self.assertIsNotNone(literals)
 
     def test_6_labels_entity(self):
+        """Pull labels from the entity."""
         labels: List[Label] = self.knowledge_client.labels(self.cache.token, self.cache.thing_uri)
         self.assertIsNotNone(labels)
 
     def test_7_relations_entity(self):
+        """Pull relations from the entity."""
         # Pull relations if configured
         relations: Dict[OntologyPropertyReference, ObjectProperty] = \
             self.knowledge_client.relations(auth_key=self.cache.token, uri=self.cache.thing_uri)
@@ -141,9 +172,11 @@ class EntityFlow(TestCase):
         self.assertEqual(len(relations), 0)
 
     def test_8_delete_entity(self):
+        """Delete the entity."""
         self.knowledge_client.delete_entity(self.cache.token, self.cache.thing_uri, force=True)
 
     def teardown_class(self):
+        """Clean up the test environment."""
         list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=EntityFlow.LIMIT)
         for u_i in list_user_all:
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':

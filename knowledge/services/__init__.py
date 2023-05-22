@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2023 Wacom. All rights reserved.
 
 USER_AGENT_STR: str = "Personal Knowledge Library/0.3.0 " \
                       "(+https://github.com/Wacom-Developer/personal-knowledge-library)"

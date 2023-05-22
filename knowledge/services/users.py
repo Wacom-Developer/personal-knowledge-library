@@ -101,14 +101,27 @@ class User(object):
 
     @classmethod
     def parse(cls, param: Dict[str, Any]) -> 'User':
+        """
+        Parse user from dictionary.
+        Parameters
+        ----------
+        param: Dict[str, Any]
+            Dictionary containing user information.
+
+        Returns
+        -------
+        user: User
+            Instance of user.
+        """
         user_id: str = param['id']
         tenant_id: str = param[TENANT_ID]
         external_user_id: str = param['externalUserId']
         meta_data: Dict[str, Any] = {}
         if META_DATA_TAG in param:
             meta_data = param[META_DATA_TAG]
+        # Support the old version of the user management service
         elif 'metaData' in param:
-            meta_data = param['metadata']
+            meta_data = param['metaData']
         user_roles: List[UserRole] = [USER_ROLE_MAPPING[r] for r in param['roles']]
         return User(tenant_id=tenant_id, user_id=user_id, external_user_id=external_user_id, meta_data=meta_data,
                     user_roles=user_roles)

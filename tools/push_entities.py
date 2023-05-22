@@ -34,12 +34,36 @@ SUPPORTED_LANGUAGES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', '
 
 
 def log_issue(error_path: Path, param: Dict[str, Any]):
+    """
+    Logs the given parameter to the given error path.
+
+    Parameters
+    ----------
+    error_path: Path
+        Path to the error file.
+    param: Dict[str, Any]
+        Parameter to be logged.
+    """
     with error_path.open('a') as f_writer:
         writer = ndjson.writer(f_writer, ensure_ascii=False)
         writer.writerow(param)
 
 
 def cache_image(image_url: str, path: Path) -> Tuple[Optional[bytes], Optional[str], Optional[str]]:
+    """
+    Caches the image from the given URL to the given path.
+    Parameters
+    ----------
+    image_url: str
+        URL of the image to be cached.
+    path: Path
+        Path to the cache directory.
+
+    Returns
+    -------
+    cache_image: Tuple[Optional[bytes], Optional[str], Optional[str]]
+        Returns the image bytes, the image cache name and the file extension.
+    """
     with requests.session() as session:
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG:
@@ -71,6 +95,17 @@ def cache_image(image_url: str, path: Path) -> Tuple[Optional[bytes], Optional[s
 
 
 def from_dict(entity: Dict[str, Any]) -> 'ThingObject':
+    """
+    Creates a ThingObject from the given dictionary.
+    Parameters
+    ----------
+    entity: Dict[str, Any]
+        Dictionary containing the entity data.
+    Returns
+    -------
+    thing: ThingObject
+        Instance of ThingObject.
+    """
     labels: List[Label] = []
     alias: List[Label] = []
     descriptions: List[Description] = []
@@ -110,7 +145,7 @@ def from_dict(entity: Dict[str, Any]) -> 'ThingObject':
                 thing.add_data_property(DataProperty(value, data_property_type, language_code))
     if OBJECT_PROPERTIES_TAG in entity:
         for object_property in entity[OBJECT_PROPERTIES_TAG].values():
-            prop, obj = ObjectProperty.create_from_dict(object_property)
+            _, obj = ObjectProperty.create_from_dict(object_property)
             thing.add_relation(obj)
     thing.alias = alias
     # Finally, retrieve rights
@@ -120,6 +155,20 @@ def from_dict(entity: Dict[str, Any]) -> 'ThingObject':
 
 
 def check_cache_image(image_url: str, path: Path) -> Tuple[Optional[bytes], Optional[str], Optional[str]]:
+    """
+    Checks if the image is already cached and returns the image bytes, the mime type and the file name.
+    Parameters
+    ----------
+    image_url: str
+        URL of the image to be cached.
+    path: Path
+        Path to the cache directory.
+
+    Returns
+    -------
+    cache_image: Tuple[Optional[bytes], Optional[str], Optional[str]]
+        Returns the image bytes, the image cache name and the file extension.
+    """
     index_path: Path = path / 'index.json'
     if index_path.exists():
         cache: Dict[str, Dict[str, str]] = json.loads(index_path.open('r').read())
@@ -135,6 +184,25 @@ def check_cache_image(image_url: str, path: Path) -> Tuple[Optional[bytes], Opti
 
 def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, auth_key: str, cache_file: Path,
          user: str, public: bool, group_name: Optional[str]):
+    """
+    Main function of the script.
+    Parameters
+    ----------
+    client: WacomKnowledgeService
+        Instance of the WacomKnowledgeService.
+    management: GroupManagementServiceAPI
+        Instance of the GroupManagementServiceAPI.
+    auth_key: str
+        Authentication key.
+    cache_file: Path
+        Path to the cache file.
+    user: str
+        User name.
+    public: bool
+        If True, the things will be public.
+    group_name: Optional[str]
+        Name of the group to which the things will be added.
+    """
     cache_path_dir: Path = cache_file.parent
     session_path: Path = Path(f'{str(cache_file)}.{user}.session')
     error_path: Path = Path(f'{str(cache_file)}.{user}.errors')
@@ -176,7 +244,7 @@ def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, a
             org_uri: str = thing.default_source_reference_id()
             if org_uri not in session:
                 # search for existing entity in graph with original QID
-                entities, next_page = wacom_client.search_literal(auth_key, org_uri, SYSTEM_SOURCE_REFERENCE_ID,
+                entities, _ = wacom_client.search_literal(auth_key, org_uri, SYSTEM_SOURCE_REFERENCE_ID,
                                                                   SearchPattern.REGEX, LanguageCode('en_US'))
                 if len(entities) > 0:
                     existing_thing: ThingObject = entities[0]

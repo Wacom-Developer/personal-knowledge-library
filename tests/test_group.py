@@ -35,6 +35,9 @@ def create_thing() -> ThingObject:
 @pytest.fixture(scope="class")
 def cache_class(request):
     class ClassDB:
+        """
+        Class to store data for the test cases.
+        """
 
         def __init__(self):
             self.__group_id: Optional[str] = None
@@ -136,6 +139,7 @@ class GroupFlow(TestCase):
     LIMIT: int = 10000
 
     def test_1_create_users(self):
+        """ Create users."""
         # Create an external user id
         self.cache.external_id = str(uuid.uuid4())
         self.cache.external_id_2 = str(uuid.uuid4())
@@ -154,6 +158,7 @@ class GroupFlow(TestCase):
         self.cache.internal_id_2 = info.id
 
     def test_2_push_entity(self):
+        """ Push entity."""
         thing: ThingObject = create_thing()
         uri_thing: str = self.knowledge_client.create_entity(self.cache.token, thing)
         self.cache.thing_uri = uri_thing
@@ -161,24 +166,27 @@ class GroupFlow(TestCase):
                                                      Path(__file__).parent / '..' / 'assets' / 'dummy.png')
 
     def test_3_create_group(self):
+        """ Create group."""
         # Now, user 1 creates a group
         g: Group = self.group_management.create_group(self.cache.token, "qa-test-group")
         self.cache.group_id = g.id
         self.cache.join_key = g.join_key
 
     def test_4_join_group(self):
+        """ Join group."""
         self.knowledge_client.entity(self.cache.token, self.cache.thing_uri)
         try:
             self.knowledge_client.entity(self.cache.token_2, self.cache.thing_uri)
             self.fail("User 2 should not have access to the entity.")
         except WacomServiceException as we:
-            pass
+            logging.error(we)
         # Shares the join key with user 2 and user 2 joins
         self.group_management.join_group(self.cache.token_2, self.cache.group_id, self.cache.join_key)
         groups: List[Group] = self.group_management.listing_groups(self.cache.token_2)
         self.assertEqual(len(groups), 1, "User 2 should only be in 1 group.")
 
     def test_5_add_user(self):
+        """ Add user to group."""
         external_id_3 = str(uuid.uuid4())
         info, token, _, _ = self.user_management.create_user(self.tenant_api_key, external_id=external_id_3,
                                                              meta_data={'account-type': 'qa-test'},
@@ -186,6 +194,7 @@ class GroupFlow(TestCase):
         self.group_management.add_user_to_group(self.cache.token, self.cache.group_id, info.id)
 
     def test_6_add_entity_to_group(self):
+        """ Add entity to group."""
         # Adding entity to group
         groups: List[Group] = self.group_management.listing_groups(self.cache.token_2)
         self.group_management.add_entity_to_group(self.cache.token, groups[0].id, self.cache.thing_uri)
@@ -206,6 +215,7 @@ class GroupFlow(TestCase):
         self.knowledge_client.entity(self.cache.token_2, self.cache.thing_uri)
 
     def test_7_public_entity(self):
+        """ Public entity."""
         full_entity: ThingObject = self.knowledge_client.entity(self.cache.token, self.cache.thing_uri)
         self.assertIsNotNone(full_entity)
         # Entity must not be empty
@@ -228,9 +238,11 @@ class GroupFlow(TestCase):
         self.knowledge_client.update_entity(self.cache.token_2, pull_entity)
 
     def test_8_delete_entity(self):
+        """ Delete entity."""
         self.knowledge_client.delete_entity(self.cache.token, self.cache.thing_uri, force=True)
 
     def teardown_class(self):
+        """ Clean up."""
         list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=GroupFlow.LIMIT)
         for u_i in list_user_all:
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':

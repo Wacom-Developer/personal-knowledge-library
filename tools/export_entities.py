@@ -19,6 +19,23 @@ EN_US: LanguageCode = LanguageCode('en_US')
 
 
 def download_file(url: str, user_images_path: Path, uri: str) -> str:
+    """
+    Download file from the given url and save it to the user_images_path.
+
+    Parameters
+    ----------
+    url: str
+        Url of the image.
+    user_images_path: Path
+        Path to the user images folder.
+    uri: str
+        Uri of the entity.
+
+    Returns
+    -------
+    file_uri: str
+        Uri of the downloaded file.
+    """
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
         img_offline: Path = user_images_path / f'{uri}.png'
@@ -29,6 +46,19 @@ def download_file(url: str, user_images_path: Path, uri: str) -> str:
 
 
 def print_summary(total: int, types: Dict[str, int], languages: Dict[str, int]):
+    """
+    Print summary of the listing.
+
+    Parameters
+    ----------
+    total: int
+        Total number of entities.
+    types: Dict[str, int]
+        Dictionary of types and their counts.
+    languages: Dict[str, int]
+        Dictionary of languages and their counts.
+
+    """
     print('---------------------------------------------------------------------------------------------------')
     print(f' Total number: {total}')
     print('---------------------------------------------------------------------------------------------------')

@@ -22,8 +22,6 @@ from knowledge.services import USER_AGENT_STR
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, AUTHORIZATION_HEADER_FLAG, \
     USER_AGENT_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG
 
-
-
 # ------------------------------------------------- Constants ----------------------------------------------------------
 ACTIVATION_TAG: str = 'activation'
 SEARCH_TERM: str = 'searchTerm'
@@ -338,7 +336,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                     IS_MAIN_TAG: False
                 })
         # Labels are tagged as main label
-        for literal_property, list_literals in entity.data_properties.items():
+        for _, list_literals in entity.data_properties.items():
             for li in list_literals:
                 if li.data_property_type:
                     literals.append({
@@ -420,6 +418,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         backoff_factor: float
             A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
             second try without a delay)
+        ignore_image: bool
+            Ignore image.
 
         Returns
         -------
