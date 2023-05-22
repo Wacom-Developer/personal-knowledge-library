@@ -18,7 +18,7 @@ USER_ID_TAG: str = 'userId'
 LIMIT_TAG: str = 'limit'
 OFFSET_TAG: str = 'offset'
 ROLES_TAG: str = 'roles'
-META_DATA_TAG: str = 'metaData'
+META_DATA_TAG: str = 'metadata'
 INTERNAL_USER_ID_TAG: str = 'internalUserId'
 EXTERNAL_USER_ID_TAG: str = 'externalUserId'
 FORCE_TAG: str = 'force'
@@ -104,7 +104,11 @@ class User(object):
         user_id: str = param['id']
         tenant_id: str = param[TENANT_ID]
         external_user_id: str = param['externalUserId']
-        meta_data: Dict[str, Any] = param['metaData']
+        meta_data: Dict[str, Any] = {}
+        if META_DATA_TAG in param:
+            meta_data = param[META_DATA_TAG]
+        elif 'metaData' in param:
+            meta_data = param['metadata']
         user_roles: List[UserRole] = [USER_ROLE_MAPPING[r] for r in param['roles']]
         return User(tenant_id=tenant_id, user_id=user_id, external_user_id=external_user_id, meta_data=meta_data,
                     user_roles=user_roles)
