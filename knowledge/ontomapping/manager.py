@@ -70,6 +70,35 @@ def wikidata_taxonomy(qid: str) -> Optional[WikidataClass]:
     return hierarchy
 
 
+def convert_dict(structure: Dict[str, Any]) -> str:
+    """
+    Converts a dictionary to a string.
+    Parameters
+    ----------
+    structure:  Dict[str, Any]
+        Dictionary to convert.
+
+    Returns
+    -------
+    string: str
+        String representation of the dictionary.
+    """
+    if 'type' in structure and 'value' in structure:
+        structure_type: str = structure['type']
+        value: Any = structure['value']
+        if structure_type == 'time' and isinstance(value, dict):
+            return value['time']
+        elif structure_type == 'quantity' and isinstance(value, dict):
+            return value['amount']
+        elif structure_type == 'wikibase-item' and isinstance(value, dict):
+            return value['id']
+        elif structure_type == 'external-id':
+            return value
+        elif structure_type == 'string':
+            return value
+    raise NotImplementedError()
+
+
 def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, Any], supported_locales: List[str],
                       pull_wikipedia: bool = False) -> ThingObject:
     """
@@ -141,7 +170,7 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
             property_type: OntologyPropertyReference = OntologyPropertyReference.parse(prop.iri)
             for c in cl.literals:
                 if isinstance(c, dict):
-                    thing.add_data_property(DataProperty(content=c['value'], property_ref=property_type))
+                    thing.add_data_property(DataProperty(content=convert_dict(c), property_ref=property_type))
                 elif isinstance(c, (str, float, int)):
                     thing.add_data_property(DataProperty(content=c, property_ref=property_type))
     for relation in all_relations.get(qid, []):
