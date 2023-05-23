@@ -201,7 +201,8 @@ class GroupFlow(TestCase):
         entity: ThingObject = self.knowledge_client.entity(self.cache.token, self.cache.thing_uri)
         self.assertEqual(groups[0].id, entity.group_ids[0])
         self.knowledge_client.entity(self.cache.token_2, self.cache.thing_uri)
-        self.group_management.remove_user_to_group(self.cache.token, self.cache.group_id, self.cache.internal_id_2)
+        self.group_management.remove_user_from_group(self.cache.token, self.cache.group_id, self.cache.internal_id_2,
+                                                     force=True)
         try:
             self.knowledge_client.entity(self.cache.token_2, self.cache.thing_uri)
             self.fail("User 2 should not have access to the entity.")
@@ -248,4 +249,4 @@ class GroupFlow(TestCase):
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
                 logging.info(f'Clean user {u_i.external_user_id}')
                 self.user_management.delete_user(self.tenant_api_key,
-                                                 external_id=u_i.external_user_id, internal_id=u_i.id)
+                                                 external_id=u_i.external_user_id, internal_id=u_i.id, force=True)

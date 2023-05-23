@@ -21,7 +21,6 @@ LEONARDO_DA_VINCI: str = 'Leonardo da Vinci'
 MONA_LISA: str = 'Mona Lisa'
 FIRST_NAME: str = 'Leonardo'
 LAST_NAME: str = 'da Vinci'
-
 HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:creative#hasArtstyle')
 
 
@@ -78,6 +77,7 @@ class SearchFlow(TestCase):
     LIMIT: int = 10000
 
     def test_1_create_user(self):
+        """ Create a user and join a group. """
         # Create an external user id
         self.cache.external_id = str(uuid.uuid4())
         # Create user
@@ -90,6 +90,7 @@ class SearchFlow(TestCase):
         self.cache.token = token
 
     def test_2_search_labels(self):
+        """ Search for labels."""
         res_entities, next_search_page = self.knowledge_client.search_labels(auth_key=self.cache.token,
                                                                              search_term=LEONARDO_DA_VINCI,
                                                                              language_code=LanguageCode('en_US'),
@@ -98,6 +99,7 @@ class SearchFlow(TestCase):
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_3_search_description(self):
+        """ Search for description."""
         res_entities, next_search_page = self.knowledge_client.search_description(self.cache.token,
                                                                                   'Mona Lisa',
                                                                                   LanguageCode('en_US'), limit=1000)
@@ -105,6 +107,7 @@ class SearchFlow(TestCase):
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_4_search_relations(self):
+        """ Search for relations."""
         art_style: Optional[ThingObject] = None
         results, _, _ = self.knowledge_client.listing(self.cache.token,
                                                       OntologyClassReference.parse('wacom:creative#ArtStyle'),
@@ -120,6 +123,7 @@ class SearchFlow(TestCase):
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_5_search_literals(self):
+        """" Search for literals."""
         res_entities, next_search_page = self.knowledge_client.search_literal(auth_key=self.cache.token,
                                                                               search_term="1950-00-00T00:00:00Z",
                                                                               pattern=SearchPattern.GT,
@@ -130,6 +134,7 @@ class SearchFlow(TestCase):
         self.assertGreaterEqual(len(res_entities), 1)
 
     def teardown_class(self):
+        """ Clean up the test data."""
         list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=SearchFlow.LIMIT)
         for u_i in list_user_all:
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
