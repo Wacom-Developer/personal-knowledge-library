@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-23 Wacom. All rights reserved.
-""""Personal knowledge Library"""
+""""
+Personal knowledge Library
+--------------------------
+This library provides a set of tools to manage Wacom private knowledge graph API.
+All services are wrapped in a pythonic way to make it easy to use.
+"""
 import logging
 from typing import Optional
 
@@ -11,7 +16,7 @@ __license__ = "Wacom"
 __maintainer__ = ["Markus Weber"]
 __email__ = "markus.weber@wacom.com"
 __status__ = "beta"
-__version__ = "0.9.5"
+__version__ = "0.9.6"
 
 # Create the Logger
 logger: Optional[logging.Logger] = None

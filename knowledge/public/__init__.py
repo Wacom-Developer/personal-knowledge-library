@@ -4,9 +4,6 @@
 import json
 from pathlib import Path
 from typing import Dict
-from knowledge.public import wikidata
-from knowledge.public import helper
-from knowledge.public import relations
 
 # OntologyPropertyReference constants
 INSTANCE_OF_PROPERTY: str = 'P31'
@@ -20,6 +17,10 @@ CONFIGURATION_FILE: Path = CWD / '../../pkl-cache/property_cache.json'
 if CONFIGURATION_FILE.exists():
     with CONFIGURATION_FILE.open('r') as f:
         PROPERTY_MAPPING = json.load(f)
+
+from knowledge.public import wikidata
+from knowledge.public import helper
+from knowledge.public import relations
 
 __all__ = ['wikidata', 'helper', 'relations', 'PROPERTY_MAPPING', 'INSTANCE_OF_PROPERTY', 'IMAGE_PROPERTY']
 
