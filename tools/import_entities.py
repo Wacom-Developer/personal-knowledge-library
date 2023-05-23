@@ -1,0 +1,309 @@
+# -*- coding: utf-8 -*-
+# Copyright © 2023 Wacom. All rights reserved.
+import argparse
+import json
+import os
+import uuid
+from pathlib import Path
+from typing import Dict, List, Tuple, Optional, Any
+
+import ndjson
+import requests
+from requests import Response
+from tqdm import tqdm
+
+from knowledge import logger
+from knowledge.base.access import TenantAccessRight
+from knowledge.base.entity import LanguageCode, OBJECT_PROPERTIES_TAG, TENANT_RIGHTS_TAG, DATA_PROPERTY_TAG, VALUE_TAG, \
+    DATA_PROPERTIES_TAG, LOCALE_TAG, USE_NEL_TAG, IMAGE_TAG, TYPE_TAG, Description, \
+    DESCRIPTIONS_TAG, Label, IS_MAIN_TAG, LABELS_TAG
+from knowledge.base.ontology import OntologyPropertyReference, ThingObject, ObjectProperty, \
+    DataProperty, OntologyClassReference
+from knowledge.services.base import WacomServiceException, USER_AGENT_HEADER_FLAG
+from knowledge.services.graph import WacomKnowledgeService
+from knowledge.services.group import GroupManagementServiceAPI, Group
+
+MIME_TYPE: Dict[str, str] = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png'
+}
+
+# Core ontology
+THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
+CONTENT: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:core#content")
+
+# So far only these locales are supported
+SUPPORTED_LANGUAGES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'ru_RU']
+SOURCE_ID_TAG: str = "source_reference_id"
+GROUP_IDS_TAG: str = "groupIds"
+
+
+def log_issue(error_path: Path, param: Dict[str, Any]):
+    with error_path.open('a') as f_writer:
+        writer = ndjson.writer(f_writer, ensure_ascii=False)
+        writer.writerow(param)
+
+
+def cache_image(image_url: str, path: Path) -> Tuple[Optional[bytes], Optional[str], Optional[str]]:
+    with requests.session() as session:
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG:
+                'ImageFetcher/0.1 (https://github.com/Wacom-Developer/personal-knowledge-library)'
+                ' personal-knowledge-library/0.2.4'
+        }
+        response: Response = session.get(image_url, headers=headers)
+        if response.ok:
+            index_path: Path = path / 'index.json'
+            cache: Dict[str, Dict[str]] = {}
+            if index_path.exists():
+                cache = json.loads(index_path.open('r').read())
+            image_bytes: bytes = response.content
+            image_cache_name: str = str(uuid.uuid4())
+            file_name: str = image_url
+            _, file_extension = os.path.splitext(file_name.lower())
+            mime_type = MIME_TYPE[file_extension]
+            with (path / f'{image_cache_name}{file_extension}').open('wb') as fp:
+                fp.write(image_bytes)
+            cache[image_url] = {
+                'mime-type': mime_type,
+                'file': str((path / f'{image_cache_name}{file_extension}').absolute())
+            }
+            with index_path.open('w') as fp:
+                fp.write(json.dumps(cache))
+            return image_bytes, mime_type, file_name
+        else:
+            return None, None, None
+
+
+def from_dict(entity: Dict[str, Any]) -> 'ThingObject':
+    labels: List[Label] = []
+    alias: List[Label] = []
+    descriptions: List[Description] = []
+
+    for label in entity[LABELS_TAG]:
+        if label[LOCALE_TAG] in SUPPORTED_LANGUAGES:
+            if label[IS_MAIN_TAG]:
+                labels.append(Label.create_from_dict(label))
+            else:
+                alias.append(Label.create_from_dict(label))
+
+    for desc in entity[DESCRIPTIONS_TAG]:
+        if desc[LOCALE_TAG] in SUPPORTED_LANGUAGES:
+            descriptions.append(Description.create_from_dict(desc))
+
+    use_nel: bool = entity.get(USE_NEL_TAG, True)
+
+    thing: ThingObject = ThingObject(label=labels, icon=entity[IMAGE_TAG], description=descriptions,
+                                     concept_type=OntologyClassReference.parse(entity[TYPE_TAG]),
+                                     use_for_nel=use_nel)
+    if DATA_PROPERTIES_TAG in entity:
+        if isinstance(entity[DATA_PROPERTIES_TAG], dict):
+            for data_property_type_str, data_properties in entity[DATA_PROPERTIES_TAG].items():
+                data_property_type: OntologyPropertyReference = \
+                    OntologyPropertyReference.parse(data_property_type_str)
+                for data_property in data_properties:
+                    language_code: LanguageCode = LanguageCode(data_property[LOCALE_TAG])
+                    value: str = data_property[VALUE_TAG]
+                    thing.add_data_property(DataProperty(value, data_property_type, language_code))
+        elif isinstance(entity[DATA_PROPERTIES_TAG], list):
+            for data_property in entity[DATA_PROPERTIES_TAG]:
+                language_code: LanguageCode = LanguageCode(data_property[LOCALE_TAG])
+                value: str = data_property[VALUE_TAG]
+                data_property_type: OntologyPropertyReference = \
+                    OntologyPropertyReference.parse(data_property[DATA_PROPERTY_TAG])
+                thing.add_data_property(DataProperty(value, data_property_type, language_code))
+    if OBJECT_PROPERTIES_TAG in entity:
+        for object_property in entity[OBJECT_PROPERTIES_TAG]:
+            prop, obj = ObjectProperty.create_from_dict(object_property)
+            thing.add_relation(obj)
+    thing.alias = alias
+    # Finally, retrieve rights
+    if TENANT_RIGHTS_TAG in entity:
+        thing.tenant_access_right = TenantAccessRight.parse(entity[TENANT_RIGHTS_TAG])
+    return thing
+
+
+def check_cache_image(image_url: str, path: Path) -> Tuple[Optional[bytes], Optional[str], Optional[str]]:
+    index_path: Path = path / 'index.json'
+    if index_path.exists():
+        cache: Dict[str, Dict[str, str]] = json.loads(index_path.open('r').read())
+        if image_url in cache:
+            entry: Dict[str, str] = cache[image_url]
+            with Path(entry['file']).open('rb') as fp:
+                image_bytes: bytes = fp.read()
+                file_name: str = image_url
+                mime_type = entry['mime-type']
+                return image_bytes, mime_type, file_name
+    return None, None, None
+
+
+def imported_uris_own(client: WacomKnowledgeService, user_auth_key: str, refresh_token: str) \
+        -> Tuple[Dict[str, str], str, str]:
+    """
+    Retrieve all the URIs of the imported objects of the user.
+    Parameters
+    ----------
+    client: WacomKnowledgeService
+        The client to use.
+    user_auth_key: str
+        The user auth key.
+    refresh_token: str
+        The refresh token.
+
+    Returns
+    -------
+    session: Dict[str, str]
+        The URIs of the imported objects and the user auth key.
+    user_auth_key: str
+        The updated auth token.
+    refresh_token: str
+        The refresh token.
+    """
+    page_id: Optional[str] = None
+    session: Dict[str, str] = {}
+    while True:
+        if client.expires_in(user_auth_key) < 60:
+            user_auth_key, refresh_token, _ = client.refresh_token(refresh_token)
+        try:
+            entities, _, next_page_id = client.listing(user_auth_key, THING_OBJECT, page_id=page_id, limit=100)
+        except WacomServiceException as _:
+            break
+        if len(entities) == 0:
+            break
+        for e in entities:
+            if e.owner:
+                session[e.default_source_reference_id()] = e.uri
+        page_id = next_page_id
+    return session, user_auth_key, refresh_token
+
+
+def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, auth_key: str, refresh_token: str,
+         cache_file: Path, user: str, public: bool, group_name: Optional[str]):
+    cache_path_dir: Path = cache_file.parent
+    error_path: Path = Path(f'{str(cache_file)}.{user}.errors')
+    image_cache: Path = cache_path_dir / 'image_cache'
+    image_cache.mkdir(parents=True, exist_ok=True)
+    errors: List[Dict[str, Any]] = []
+    # Get all imported uris
+    session, auth_key, refresh_token = imported_uris_own(client, auth_key, refresh_token)
+
+    if error_path.exists():
+        with error_path.open('r') as sf:
+            reader = ndjson.reader(sf)
+            for w in reader:
+                errors.append(w)
+    group: Optional[Group] = None
+    if group_name:
+        list_groups: List[Group] = management.listing_groups(auth_key)
+        for g in list_groups:
+            if g.name == group_name:
+                group = g
+        if group is None:
+            group = management.create_group(user_auth_key, group_name)
+
+    relations: List[Tuple[str, OntologyPropertyReference, str]] = []
+    with cache_file.open(encoding="utf8") as f:
+        reader = ndjson.reader(f)
+        cached_entities: List[ThingObject] = [from_dict(entity) for entity in reader]
+        pbar: tqdm = tqdm(cached_entities, desc='Importing entities from cache.')
+        for thing in pbar:
+            if public:
+                thing.tenant_access_right.read = True
+            if len(thing.description) == 0 or thing.description[0].content is None:
+                continue
+            # Check if there already exists and entity that has been imported, e.g., from Wikidata
+            org_uri: str = thing.default_source_reference_id()
+            if org_uri not in session:
+                try:
+                    wacom_uri: str = client.create_entity(auth_key, thing)
+                    if group:
+                        group_management.add_entity_to_group(user_auth_key, group.id, wacom_uri)
+
+                    if thing.image is not None and thing.image != '':
+                        image_bytes, mime_type, file_name = check_cache_image(image_url=thing.image,
+                                                                              path=image_cache)
+                        if image_bytes is None:
+                            image_bytes, mime_type, file_name = cache_image(thing.image, image_cache)
+                        client.set_entity_image(auth_key, entity_uri=wacom_uri, image_byte=image_bytes,
+                                                file_name=file_name, mime_type=mime_type)
+                except WacomServiceException as wse:
+                    logger.error(wse)
+                    log_issue(error_path, {'org-uri': org_uri, 'exception': str(wse)})
+                    continue
+
+                # Adding mapping of Wacom ID to original source.
+                session[org_uri] = wacom_uri
+            else:
+                wacom_uri: str = session[org_uri]
+            pbar.set_description_str(f'Entity with system source reference id: {org_uri} imported. '
+                                     f'Imported entities #{len(session)} '
+                                     f'URI:= {wacom_uri} (public:={public})')
+            for relation_type, relation in thing.object_properties.items():
+                for item in relation.outgoing_relations:
+                    relations.append((wacom_uri, relation_type, item))
+        # Finally, create the relations
+        pbar = tqdm(relations)
+        for rel in pbar:
+            source: str = rel[0]
+            predicate: OntologyPropertyReference = rel[1]
+            target: str = session.get(rel[2])
+            try:
+                rels_source: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key, source)
+                if predicate in rels_source:
+                    rel_source: ObjectProperty = rels_source[predicate]
+                    if target in [t.uri for t in rel_source.outgoing_relations] or \
+                            target in [t.uri for t in rel_source.incoming_relations]:
+                        continue
+            except WacomServiceException as we:
+                logger.error(we)
+                log_issue(error_path, {
+                    'type': 'relation', 'relation': predicate.iri, 'source': source, 'target': target,
+                    'exception': str(we)
+                })
+                continue
+
+            if target is not None:
+                try:
+                    client.create_relation(auth_key, source, predicate, target)
+                    pbar.set_description_str(f'Relation source:={source} predicate:= {predicate} target:= {target}')
+                except WacomServiceException as exp:
+                    logger.error(exp)
+                    log_issue(error_path, {'type': 'relation', 'relation': predicate.iri,
+                                           'source': source, 'target': target, 'exception': str(exp)})
+            else:
+                logger.warning(f'{rel[2]} has no mapping.')
+                log_issue(error_path, {'type': 'mapping', 'class': rel[2],
+                                       "exception": 'There is no mapping for the entity.'})
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
+                        required=True)
+    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
+                        required=True)
+    parser.add_argument("-c", "--cache", help="Path to dump ndjson file that should be imported .",
+                        required=True)
+    parser.add_argument("-p", "--public", action="store_true",
+                        help="All entities must be push  with tenant right read.")
+    parser.add_argument("-n", "--group", help="Adds the entities to group.")
+    parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com',
+                        help="URL of instance")
+    args = parser.parse_args()
+
+    cache_path: Path = Path(args.cache)
+    # Wacom personal knowledge REST API Client
+    wacom_client: WacomKnowledgeService = WacomKnowledgeService(
+        application_name="Push Entities",
+        service_url=args.instance)
+    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
+    user_auth_key, refresh_token, expiration_time = wacom_client.request_user_token(args.tenant, args.user)
+    if cache_path.exists():
+        try:
+            main(wacom_client, group_management, user_auth_key, refresh_token, cache_path, args.user,
+                 args.public, args.group)
+        except Exception as e:
+            logger.error(e)
+            import traceback
+            traceback.print_exc()
