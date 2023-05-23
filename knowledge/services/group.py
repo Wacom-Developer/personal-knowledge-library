@@ -20,6 +20,7 @@ GROUP_USER_RIGHTS_TAG: str = "groupUserRights"
 JOIN_KEY_PARAM: str = "joinKey"
 USER_TO_ADD_PARAM: str = "userToAddId"
 USER_TO_REMOVE_PARAM: str = "userToRemoveId"
+FORCE_PARAM: str = "force"
 DEFAULT_TIMEOUT: int = 30
 
 
@@ -193,12 +194,18 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             NAME_TAG: name,
             GROUP_USER_RIGHTS_TAG: rights.to_list()
         }
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls,
-                                           timeout=DEFAULT_TIMEOUT)
-        if response.ok:
-            return Group.parse(response.json())
-        raise WacomServiceException(f'Creation of group failed.'
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+        mount_point: str = \
+            'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(backoff_factor=0.1,
+                                   status_forcelist=[500, 502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.post(url, headers=headers, json=payload, verify=self.verify_calls,
+                                              timeout=DEFAULT_TIMEOUT)
+            if response.ok:
+                return Group.parse(response.json())
+            raise WacomServiceException(f'Creation of group failed.'
+                                        f'Response code:={response.status_code}, exception:= {response.text}')
 
     def update_group(self, auth_key: str, group_id: str, name: str, rights: GroupAccessRight = GroupAccessRight):
         """
@@ -229,11 +236,17 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             NAME_TAG: name,
             GROUP_USER_RIGHTS_TAG: rights.to_list()
         }
-        response: Response = requests.patch(url, headers=headers, json=payload, verify=self.verify_calls,
-                                            timeout=DEFAULT_TIMEOUT)
-        if not response.ok:
-            raise WacomServiceException(f'Update of group failed.'
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+        mount_point: str = \
+            'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(backoff_factor=0.1,
+                                   status_forcelist=[500, 502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.patch(url, headers=headers, json=payload, verify=self.verify_calls,
+                                               timeout=DEFAULT_TIMEOUT)
+            if not response.ok:
+                raise WacomServiceException(f'Update of group failed.'
+                                            f'Response code:={response.status_code}, exception:= {response.text}')
 
     def delete_group(self, auth_key: str, group_id: str):
         """
@@ -255,10 +268,16 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
-        if not response.ok:
-            raise WacomServiceException(f'Deletion of group failed.'
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+        mount_point: str = \
+            'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(backoff_factor=0.1,
+                                   status_forcelist=[500, 502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
+            if not response.ok:
+                raise WacomServiceException(f'Deletion of group failed.'
+                                            f'Response code:={response.status_code}, exception:= {response.text}')
 
     def listing_groups(self, auth_key: str, admin: bool = False) -> List[Group]:
         """
@@ -413,8 +432,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             raise WacomServiceException(f'Adding of user to group failed.'
                                         f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def remove_user_to_group(self, auth_key: str, group_id: str, user_id: str):
-        """Remove a user to group.
+    def remove_user_from_group(self, auth_key: str, group_id: str, user_id: str, force: bool = False):
+        """Remove a user from group.
 
         Parameters
         ----------
@@ -424,6 +443,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             Id of group
         user_id: str
             User who is remove from the group
+        force: bool
+            If true remove user and entities owned by the user if any
 
         Raises
         ------
@@ -436,6 +457,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         }
         params: Dict[str, str] = {
             USER_TO_REMOVE_PARAM: user_id,
+            FORCE_PARAM: force
         }
         response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
                                            timeout=DEFAULT_TIMEOUT)
