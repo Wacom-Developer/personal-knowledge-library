@@ -1,4 +1,4 @@
-2023/5/22- RELEASE 0.9.6
+2023/5/23 - RELEASE 0.9.6
 ==========================
 - Improve the session management
 - Rename metaData tag to metadata
