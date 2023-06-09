@@ -13,8 +13,10 @@ BASE_URI: str = "http://www.w3.org/2001/XMLSchema#"
 SUB_CLASS_OF_TAG: str = 'subClassOf'
 TENANT_ID: str = 'tenantId'
 NAME_TAG: str = "name"
-SUPPORTED_LOCALES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'zh_CN']
-SUPPORTED_LANGUAGES: List[str] = ['ja', 'en', 'de', 'bg', 'fr', 'it', 'es', 'zh']
+EN_US: str = "en_US"
+EN: str = "en"
+SUPPORTED_LOCALES: List[str] = ['ja_JP', EN_US, 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'zh_CN']
+SUPPORTED_LANGUAGES: List[str] = ['ja', EN, 'de', 'bg', 'fr', 'it', 'es', 'zh']
 LANGUAGE_LOCALE_MAPPING: Dict[str, str] = dict([(lang, locale)
                                                 for lang, locale in zip(SUPPORTED_LANGUAGES, SUPPORTED_LOCALES)])
 LOCALE_LANGUAGE_MAPPING: Dict[str, str] = dict([(locale, lang)
@@ -1400,6 +1402,54 @@ class ThingObject(abc.ABC):
         for relation_type, item in self.object_properties.items():
             dict_object[OBJECT_PROPERTIES_TAG].append(item.__dict__())
         return dict_object
+
+    @staticmethod
+    def from_import_dict(entity: Dict[str, Any]) -> 'ThingObject':
+        labels: List[Label] = []
+        alias: List[Label] = []
+        descriptions: List[Description] = []
+
+        for label in entity[LABELS_TAG]:
+            if label[LOCALE_TAG] in SUPPORTED_LANGUAGES:
+                if label[IS_MAIN_TAG]:
+                    labels.append(Label.create_from_dict(label))
+                else:
+                    alias.append(Label.create_from_dict(label))
+
+        for desc in entity[DESCRIPTIONS_TAG]:
+            if desc[LOCALE_TAG] in SUPPORTED_LANGUAGES:
+                descriptions.append(Description.create_from_dict(desc))
+
+        use_nel: bool = entity.get(USE_NEL_TAG, True)
+
+        thing: ThingObject = ThingObject(label=labels, icon=entity[IMAGE_TAG], description=descriptions,
+                                         concept_type=OntologyClassReference.parse(entity[TYPE_TAG]),
+                                         use_for_nel=use_nel)
+        if DATA_PROPERTIES_TAG in entity:
+            if isinstance(entity[DATA_PROPERTIES_TAG], dict):
+                for data_property_type_str, data_properties in entity[DATA_PROPERTIES_TAG].items():
+                    data_property_type: OntologyPropertyReference = \
+                        OntologyPropertyReference.parse(data_property_type_str)
+                    for data_property in data_properties:
+                        language_code: LanguageCode = LanguageCode(data_property[LOCALE_TAG])
+                        value: str = data_property[VALUE_TAG]
+                        thing.add_data_property(DataProperty(value, data_property_type, language_code))
+            elif isinstance(entity[DATA_PROPERTIES_TAG], list):
+                for data_property in entity[DATA_PROPERTIES_TAG]:
+                    language_code: LanguageCode = LanguageCode(data_property[LOCALE_TAG])
+                    value: str = data_property[VALUE_TAG]
+                    data_property_type: OntologyPropertyReference = \
+                        OntologyPropertyReference.parse(data_property[DATA_PROPERTY_TAG])
+                    thing.add_data_property(DataProperty(value, data_property_type, language_code))
+        if OBJECT_PROPERTIES_TAG in entity:
+            for object_property in entity[OBJECT_PROPERTIES_TAG]:
+                prop, obj = ObjectProperty.create_from_dict(object_property)
+                thing.add_relation(obj)
+        thing.alias = alias
+        # Finally, retrieve rights
+        if TENANT_RIGHTS_TAG in entity:
+            thing.tenant_access_right = TenantAccessRight.parse(entity[TENANT_RIGHTS_TAG])
+        return thing
 
     @staticmethod
     def from_dict(entity: Dict[str, Any]) -> 'ThingObject':
