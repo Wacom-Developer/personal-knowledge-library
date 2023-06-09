@@ -5,7 +5,7 @@ import math
 import urllib
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 import dateutil
 import requests
@@ -92,6 +92,7 @@ IMAGE: str = 'P18'
 GREGORIAN_CALENDAR_URL: str = 'http://www.wikidata.org/entity/Q1985786'
 # URL - Wikidata service
 WIKIDATA_SPARQL_URL: str = "https://query.wikidata.org/sparql"
+WIKIDATA_SEARCH_URL: str = "https://www.wikidata.org/w/api.php"
 
 
 # --------------------------------------- Helper functions -------------------------------------------------------------
@@ -145,8 +146,20 @@ def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
     after: int = param['after']
     precision: int = param['precision']
     calendar_model: str = param['calendarmodel']
+    iso_encoded: Optional[str] = None
     after_christ: bool = True
     pretty: str = ''
+    if calendar_model != 'https://www.wikidata.org/wiki/Q1985727':
+        return {
+            'time': time,
+            'timezone': timezone,
+            'before': before,
+            'after': after,
+            'precision': precision,
+            'calendar-model': calendar_model,
+            'pretty': pretty,
+            'iso': iso_encoded
+        }
     if time.startswith('+'):
         time = time[1:]
     elif time.startswith('-'):
@@ -184,6 +197,7 @@ def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
                 pretty = dt_obj.strftime("%B %Y")
             elif Precision.DAY.value == precision:
                 pretty = dt_obj.strftime("%-d %B %Y")
+            iso_encoded = dt_obj.isoformat()
     except Exception as pe:
         logger.error(param)
         logger.exception(pe)
@@ -195,7 +209,8 @@ def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
         'after': after,
         'precision': precision,
         'calendar-model': calendar_model,
-        'pretty': pretty
+        'pretty': pretty,
+        'iso': iso_encoded
     }
 
 
