@@ -21,6 +21,8 @@ if CONFIGURATION_FILE.exists():
 from knowledge.public import wikidata
 from knowledge.public import helper
 from knowledge.public import relations
+from knowledge.public import cache
 
-__all__ = ['wikidata', 'helper', 'relations', 'PROPERTY_MAPPING', 'INSTANCE_OF_PROPERTY', 'IMAGE_PROPERTY']
+
+__all__ = ['wikidata', 'helper', 'relations', 'cache', 'PROPERTY_MAPPING', 'INSTANCE_OF_PROPERTY', 'IMAGE_PROPERTY']
 
