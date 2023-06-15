@@ -15,8 +15,19 @@ Functions
         Chunk size.
 
     
-`detect_cycle(super_class_qid: str, cycle_detector: list[tuple[str, str]])`
-:   
+`detect_cycle(super_class_qid: str, cycle_detector: list[tuple[str, str]]) ‑> bool`
+:   Detects if there is a cycle in the super class hierarchy.
+    Parameters
+    ----------
+    super_class_qid: str
+        Super class QID
+    cycle_detector: list[tuple[str, str]]
+        List of tuples of the form (subclass_qid, super_class_qid)
+    
+    Returns
+    -------
+    cycle: bool
+        True if there is a cycle, False otherwise.
 
 Classes
 -------
@@ -55,7 +66,7 @@ Classes
     `qualifiers: list[dict[str, typing.Any]]`
     :   Qualifiers.
 
-`SiteLinks(source: str)`
+`SiteLinks(source: str, urls: Optional[dict[str, str]] = None, titles: Optional[dict[str, str]] = None)`
 :   SiteLinks
     ---------
     Sitelinks in Wikidata are links between items in Wikidata and pages on external websites, such as Wikipedia,
@@ -169,7 +180,16 @@ Classes
             Maximum number of retries
 
     `superclasses(qid: str) ‑> Optional[knowledge.public.wikidata.WikidataClass]`
-    :
+    :   Returns the superclasses of the given QID.
+        Parameters
+        ----------
+        qid: str
+            Wikidata QID
+        
+        Returns
+        -------
+        wikidata_classes: Optional[WikidataClass]
+            Wikidata class
 
 `WikidataClass(qid: str, label: Optional[str] = None)`
 :   WikidataClass
@@ -230,7 +250,16 @@ Classes
     ### Static methods
 
     `create_from_dict(prop_dict: dict[str, typing.Any]) ‑> knowledge.public.wikidata.WikidataProperty`
-    :
+    :   Create a property from a dictionary.
+        Parameters
+        ----------
+        prop_dict: dict[str, Any]
+            Property dictionary.
+        
+        Returns
+        -------
+        instance: WikidataProperty
+            Instance of WikidataProperty.
 
     ### Instance variables
 
@@ -251,21 +280,33 @@ Classes
     ### Static methods
 
     `from_dict(search_result: dict[str, typing.Any]) ‑> knowledge.public.wikidata.WikidataSearchResult`
-    :
+    :   Create a search result from a dictionary.
+        Parameters
+        ----------
+        search_result: dict[str, Any]
+            Search result dictionary.
+        
+        Returns
+        -------
+        WikidataSearchResult
+            Instance of WikidataSearchResult.
 
     ### Instance variables
 
+    `aliases: list[str]`
+    :   Aliases of the search result.
+
     `description: Optional[knowledge.base.entity.Description]`
-    :
+    :   Description of the search result.
 
     `label: knowledge.base.entity.Label`
-    :
+    :   Label of the search result.
 
     `qid: str`
-    :
+    :   QID of the search result.
 
     `repository: str`
-    :
+    :   Repository of the search result.
 
 `WikidataThing(revision: str, qid: str, modified: datetime.datetime, label: Optional[dict[str, knowledge.base.entity.Label]] = None, aliases: Optional[dict[str, list[knowledge.base.entity.Label]]] = None, description: Optional[dict[str, knowledge.base.entity.Description]] = None)`
 :   WikidataEntity
@@ -279,6 +320,12 @@ Classes
     
     Parameters
     ----------
+    revision: str
+        Revision of the entity
+    qid: str
+        QID for entity. For new entities the URI is None, as the knowledge graph backend assigns this.
+    modified: datetime
+        Last modified date
     label: list[Label]
         List of labels
     description: list[Description] (optional)
@@ -324,22 +371,22 @@ Classes
     :   Alternative labels of the concept.
 
     `claim_properties: list[knowledge.public.wikidata.WikidataProperty]`
-    :
+    :   Returns the list of properties of the claims.
 
     `claims: dict[str, knowledge.public.wikidata.Claim]`
-    :
+    :   Returns the claims.
 
     `claims_dict: dict[str, knowledge.public.wikidata.Claim]`
-    :
+    :   Returns the claims as a dictionary.
 
     `description: dict[str, knowledge.base.entity.Description]`
     :   Description of the thing (optional).
 
     `description_languages: list[str]`
-    :
+    :   All available languages for a description.
 
     `instance_of: list[knowledge.public.wikidata.WikidataClass]`
-    :
+    :   Instance of.
 
     `label: dict[str, knowledge.base.entity.Label]`
     :   Labels of the entity.

@@ -20,4 +20,14 @@ Functions
 
     
 `wikidata_relations_extractor(wikidata: dict[str, knowledge.public.wikidata.WikidataThing]) ‑> dict[str, list[dict[str, typing.Any]]]`
-:
+:   Extracts relations from Wikidata.
+    
+    Parameters
+    ----------
+    wikidata: dict[str, WikidataThing]
+        Wikidata map
+    
+    Returns
+    -------
+    relations: dict[str, list[dict[str, Any]]]
+        Relations map.

@@ -31,10 +31,28 @@ Classes
     ### Static methods
 
     `create_from_dict(dict_description: dict[str, typing.Any]) ‑> knowledge.base.ontology.Comment`
-    :
+    :   Create a comment from a dictionary.
+        Parameters
+        ----------
+        dict_description: dict[str, Any]
+            Dictionary containing the comment
+        
+        Returns
+        -------
+        instance: Comment
+            Instance of comment
 
     `create_from_list(param: list[dict[str, typing.Any]]) ‑> list['Comment']`
-    :
+    :   Create a list of comments from a list of dictionaries.
+        Parameters
+        ----------
+        param: list[dict[str, Any]]
+            List of dictionaries containing the comments
+        
+        Returns
+        -------
+        instances: list[Comment]
+            List of instances of comments
 
 `DataProperty(content: Any, property_ref: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.entity.LanguageCode = 'en_US', data_type: knowledge.base.ontology.DataPropertyType = None)`
 :   DataProperty
@@ -60,10 +78,30 @@ Classes
     ### Static methods
 
     `create_from_dict(data_property_struct: dict)`
-    :
+    :   Create data property from dictionary.
+        
+        Parameters
+        ----------
+        data_property_struct: dict
+            Dictionary containing data property information.
+        
+        Returns
+        -------
+        instance: DataProperty
+            Data property instance.
 
     `create_from_list(param: list[dict]) ‑> list['DataProperty']`
-    :
+    :   Create data property list from dictionary list.
+        
+        Parameters
+        ----------
+        param: list[dict]
+            List of dictionaries containing data property information.
+        
+        Returns
+        -------
+        instances: list[DataProperty]
+            List of data property instances.
 
     ### Instance variables
 
@@ -241,7 +279,16 @@ Classes
     ### Static methods
 
     `from_dict(entity: dict[str, typing.Any]) ‑> knowledge.base.ontology.InflectionSetting`
-    :
+    :   Create inflection setting from dictionary.
+        Parameters
+        ----------
+        entity: dict[str, Any]
+            Entity dictionary
+        
+        Returns
+        -------
+        instance: InflectionSetting
+            Inflection setting instance
 
     ### Instance variables
 
@@ -276,10 +323,29 @@ Classes
     ### Static methods
 
     `create_from_dict(relation_struct: dict[str, typing.Any]) ‑> tuple[knowledge.base.ontology.OntologyPropertyReference, 'ObjectProperty']`
-    :
+    :   Create object property from dictionary.
+        
+        Parameters
+        ----------
+        relation_struct: dict[str, Any]
+            Dictionary containing object property information.
+        
+        Returns
+        -------
+        relation_type: OntologyPropertyReference
+            OntologyPropertyReference type
 
     `create_from_list(param: list[dict]) ‑> dict[knowledge.base.ontology.OntologyPropertyReference, 'ObjectProperty']`
-    :
+    :   Create object property list from dictionary list.
+        Parameters
+        ----------
+        param: list[dict]
+            List of dictionaries containing object property information.
+        
+        Returns
+        -------
+        instances: dict[OntologyPropertyReference, ObjectProperty]
+            Dictionary of object property instances.
 
     ### Instance variables
 
@@ -287,7 +353,7 @@ Classes
     :   Incoming relation
 
     `outgoing_relations: list[typing.Union[str, knowledge.base.ontology.ThingObject]]`
-    :
+    :   Outgoing relation
 
     `relation: knowledge.base.ontology.OntologyPropertyReference`
     :   Reference from the ontology.
@@ -421,10 +487,25 @@ Classes
     ### Static methods
 
     `from_dict(concept_dict: dict[str, typing.Any])`
-    :
+    :   Create OntologyClass from dictionary.
+        
+        Parameters
+        ----------
+        concept_dict: dict[str, Any]
+            Dictionary containing the concept data.
+        
+        Returns
+        -------
+        instance: OntologyClass
+            Instance of OntologyClass object.
 
     `new() ‑> knowledge.base.ontology.OntologyClass`
-    :
+    :   Create new ontology class.
+        
+        Returns
+        -------
+        instance: OntologyClass
+            New ontology class.
 
     ### Instance variables
 
@@ -456,7 +537,17 @@ Classes
     ### Static methods
 
     `parse(iri: str) ‑> knowledge.base.ontology.OntologyClassReference`
-    :
+    :   Parse IRI to create an ontology class reference.
+        
+        Parameters
+        ----------
+        iri: str
+            IRI of ontology class reference
+        
+        Returns
+        -------
+        instance: OntologyClassReference
+            Instance of ontology class reference
 
     ### Instance variables
 
@@ -499,7 +590,17 @@ Classes
     ### Static methods
 
     `from_dict(context_dict: dict[str, typing.Any])`
-    :
+    :   Create OntologyContext from dictionary.
+        
+        Parameters
+        ----------
+        context_dict: dict[str, Any]
+            Dictionary containing the context data.
+        
+        Returns
+        -------
+        instance: OntologyContext
+            Instance of OntologyContext object.
 
     ### Instance variables
 
@@ -582,10 +683,33 @@ Classes
     ### Static methods
 
     `create_from_dict(dict_label: dict[str, typing.Any], tag_name: str = 'value', locale_name: str = 'locale') ‑> knowledge.base.ontology.OntologyLabel`
-    :
+    :   Create a label from a dictionary.
+        
+        Parameters
+        ----------
+        dict_label: dict[str, Any]
+            Dictionary with the label information
+        tag_name: str
+            Tag name of the content
+        locale_name: str
+            Tag name of the language code
+        
+        Returns
+        -------
+        instance: OntologyLabel
+            Instance of the label
 
     `create_from_list(param: list[dict]) ‑> list['LocalizedContent']`
-    :
+    :   Create a list of labels from a list of dictionaries.
+        Parameters
+        ----------
+        param: list[dict]
+            List of dictionaries with the label information
+        
+        Returns
+        -------
+        instances: list[OntologyLabel]
+            List of label instances
 
     ### Instance variables
 
@@ -636,7 +760,7 @@ Classes
     :   IRI
 
     `labels: list[knowledge.base.ontology.OntologyLabel]`
-    :
+    :   Labels related to ontology object.
 
     `tenant_id: str`
     :   Tenant id.
@@ -644,10 +768,28 @@ Classes
     ### Methods
 
     `comment_for_lang(self, language_code: knowledge.base.entity.LanguageCode) ‑> Optional[knowledge.base.ontology.Comment]`
-    :
+    :   Get comment for language_code.
+        Parameters
+        ----------
+        language_code: LanguageCode
+            Language code
+        
+        Returns
+        -------
+        comment: Optional[Comment]
+            Comment for language_code
 
     `label_for_lang(self, language_code: knowledge.base.entity.LanguageCode) ‑> Optional[knowledge.base.ontology.OntologyLabel]`
-    :
+    :   Get label for language_code.
+        Parameters
+        ----------
+        language_code: LanguageCode
+            Language code
+        
+        Returns
+        -------
+        label: Optional[OntologyLabel]
+            Label for language_code
 
 `OntologyObjectReference(scheme: str, context: str, name: str)`
 :   Ontology class type
@@ -675,7 +817,17 @@ Classes
     ### Static methods
 
     `parse_iri(iri: str) ‑> tuple[str, str, str]`
-    :
+    :   Parse an IRI into its components.
+        
+        Parameters
+        ----------
+        iri: str
+            IRI to parse
+        
+        Returns
+        -------
+        tuple[str, str, str]
+            Scheme, context and name of the IRI
 
     ### Instance variables
 
@@ -729,10 +881,28 @@ Classes
     ### Static methods
 
     `from_dict(property_dict: dict[str, typing.Any])`
-    :
+    :   Create ontology property from dictionary.
+        Parameters
+        ----------
+        property_dict: dict[str, Any]
+            Dictionary containing property information.
+        
+        Returns
+        -------
+        instance: OntologyProperty
+            Ontology property instance.
 
     `new(kind: knowledge.base.ontology.PropertyType) ‑> knowledge.base.ontology.OntologyProperty`
-    :
+    :   Create new ontology property.
+        Parameters
+        ----------
+        kind: PropertyType
+            Kind of property.
+        
+        Returns
+        -------
+        instance: OntologyProperty
+            New ontology property.
 
     ### Instance variables
 
@@ -743,7 +913,12 @@ Classes
     :   Reference to the inverse property
 
     `is_data_property: bool`
-    :
+    :   Check if property is data property.
+        
+        Returns
+        -------
+        is_data_property: bool
+            True if property is data property, False otherwise.
 
     `kind: knowledge.base.ontology.PropertyType`
     :   Kind of the property.
@@ -779,7 +954,17 @@ Classes
     ### Static methods
 
     `parse(iri: str) ‑> knowledge.base.ontology.OntologyPropertyReference`
-    :
+    :   Parses an IRI into an OntologyPropertyReference.
+        
+        Parameters
+        ----------
+        iri: str
+            IRI to parse
+        
+        Returns
+        -------
+        instance: OntologyPropertyReference
+            Instance of OntologyPropertyReference
 
     ### Instance variables
 
@@ -804,32 +989,9 @@ Classes
     :
 
 `ThingEncoder(*, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True, sort_keys=False, indent=None, separators=None, default=None)`
-:   Extensible JSON <https://json.org> encoder for Python data structures.
-    
-    Supports the following objects and types by default:
-    
-    +-------------------+---------------+
-    | Python            | JSON          |
-    +===================+===============+
-    | dict              | object        |
-    +-------------------+---------------+
-    | list, tuple       | array         |
-    +-------------------+---------------+
-    | str               | string        |
-    +-------------------+---------------+
-    | int, float        | number        |
-    +-------------------+---------------+
-    | True              | true          |
-    +-------------------+---------------+
-    | False             | false         |
-    +-------------------+---------------+
-    | None              | null          |
-    +-------------------+---------------+
-    
-    To extend this to recognize other objects, subclass and implement a
-    ``.default()`` method with another method that returns a serializable
-    object for ``o`` if possible, otherwise it should call the superclass
-    implementation (to raise ``TypeError``).
+:   Thing encoder
+    -------------
+    Encoder for ThingObject, Label and Description objects.
     
     Constructor for JSONEncoder, with sensible defaults.
     
@@ -932,10 +1094,30 @@ Classes
     ### Static methods
 
     `from_dict(entity: dict[str, typing.Any]) ‑> knowledge.base.ontology.ThingObject`
-    :
+    :   Creates a ThingObject from a dict.
+        
+        Parameters
+        ----------
+        entity: dict[str, Any]
+            Dictionary that contains the data of the entity
+        
+        Returns
+        -------
+        instance: ThingObject
+            ThingObject that is created from the dict
 
     `from_import_dict(entity: dict[str, typing.Any]) ‑> knowledge.base.ontology.ThingObject`
-    :
+    :   Creates a ThingObject from a dict.
+        
+        Parameters
+        ----------
+        entity: dict[str, Any]
+            Dictionary that contains the data of the entity
+        
+        Returns
+        -------
+        instance: ThingObject
+            ThingObject that is created from the dict
 
     ### Instance variables
 

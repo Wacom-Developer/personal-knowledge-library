@@ -63,4 +63,13 @@ Functions
 
     
 `qid_in_cache(ref_qid: str) ‑> bool`
-:
+:   Checks if a QID is in the cache.
+    Parameters
+    ----------
+    ref_qid: str
+        The QID to check.
+    
+    Returns
+    -------
+    in_cache: bool
+        True if the QID is in the cache, otherwise False.

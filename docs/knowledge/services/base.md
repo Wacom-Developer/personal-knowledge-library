@@ -112,7 +112,17 @@ Classes
             Seconds until token is expired
 
     `unpack_token(auth_token: str) ‑> dict[str, typing.Any]`
-    :
+    :   Unpacks the token.
+        
+        Parameters
+        ----------
+        auth_token: str
+            Authentication token
+        
+        Returns
+        -------
+        token_dict: dict[str, Any]
+            Token dictionary
 
     ### Instance variables
 

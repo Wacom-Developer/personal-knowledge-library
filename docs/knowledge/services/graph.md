@@ -16,28 +16,31 @@ Classes
     ### Class variables
 
     `EQ`
-    :
+    :   Equal search pattern.
 
     `GT`
-    :
+    :   Greater than search pattern.
 
     `GTE`
-    :
+    :   Greater than or equal search pattern.
 
     `LT`
-    :
+    :   Less than search pattern.
 
     `LTE`
-    :
+    :   Less than or equal search pattern.
 
     `RANGE`
-    :
+    :   Range search pattern.
 
     `REGEX`
-    :
+    :   Regular expression search pattern.
 
 `Visibility(value, names=None, *, module=None, qualname=None, type=None, start=1)`
-:   An enumeration.
+:   Visibility
+    ----------
+    Visibility of an entity.
+    The visibility of an entity determines who can see the entity.
 
     ### Ancestors (in MRO)
 
@@ -46,13 +49,13 @@ Classes
     ### Class variables
 
     `PRIVATE`
-    :
+    :   Only the owner of the entity can see the entity.
 
     `PUBLIC`
-    :
+    :   Everyone in the tenant can see the entity.
 
     `SHARED`
-    :
+    :   Everyone who joined the group can see the entity.
 
 `WacomKnowledgeService(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
 :   WacomKnowledgeService

@@ -31,7 +31,17 @@ Classes
     ### Static methods
 
     `parse(param: dict[str, typing.Any]) ‑> knowledge.services.group.Group`
-    :
+    :   Parse group from dictionary.
+        
+        Arguments
+        ---------
+        param: dict[str, Any]
+            Dictionary containing group information.
+        
+        Returns
+        -------
+        instance: Group
+            Group object
 
     ### Instance variables
 
@@ -62,11 +72,6 @@ Classes
     ### Ancestors (in MRO)
 
     * knowledge.services.group.Group
-
-    ### Static methods
-
-    `parse(param: dict[str, typing.Any]) ‑> knowledge.services.group.GroupInfo`
-    :
 
     ### Instance variables
 

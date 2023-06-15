@@ -24,10 +24,34 @@ Classes
     ### Static methods
 
     `create_from_dict(dict_description: dict[str, typing.Any], tag_name: str = 'description', locale_name: str = 'locale') ‑> knowledge.base.entity.Description`
-    :
+    :   Create a description from a dictionary.
+        
+        Parameters
+        ----------
+        dict_description: dict[str, Any]
+            Dictionary containing the description information.
+        tag_name: str
+            Tag name of the content.
+        locale_name:
+            Tag name of the language code.
+        
+        Returns
+        -------
+        instance: Description
+            Description instance.
 
     `create_from_list(param: list[dict[str, typing.Any]]) ‑> list['Description']`
-    :
+    :   Create a list of descriptions from a list of dictionaries.
+        
+        Parameters
+        ----------
+        param: list[dict[str, Any]]
+            List of dictionaries containing the description information.
+        
+        Returns
+        -------
+        instance: list[Description]
+            List of description instances.
 
 `EntityStatus(value, names=None, *, module=None, qualname=None, type=None, start=1)`
 :   Entity Status
@@ -98,7 +122,17 @@ Classes
             Label instance.
 
     `create_from_list(param: list[dict]) ‑> list['LocalizedContent']`
-    :
+    :   Create a list of labels from a list of dictionaries.
+        
+        Parameters
+        ----------
+        param: list[dict]
+            List of dictionaries containing the label information.
+        
+        Returns
+        -------
+        instance: list[Label]
+            List of label instances.
 
     ### Instance variables
 

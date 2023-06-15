@@ -88,13 +88,13 @@ Classes
     ### Instance variables
 
     `concept_type: knowledge.base.ontology.OntologyClassReference`
-    :
+    :   Concept type.
 
     `dbpedia_classes: list[str]`
     :   DBpedia classes.
 
     `ontology_class: str`
-    :
+    :   Ontology class.
 
     `wikidata_classes: list[str]`
     :   Wikidata classes.
@@ -249,7 +249,7 @@ Classes
     :   List of ranges.
 
     `type: knowledge.ontomapping.PropertyType`
-    :
+    :   Property type.
 
 `PropertyType(value, names=None, *, module=None, qualname=None, type=None, start=1)`
 :   Property type

@@ -353,7 +353,21 @@ Classes
             Ontology as RDFS / OWL  ontology
 
     `remove_context(self, auth_key: str, name: str, force: bool = False)`
-    :
+    :   Remove context.
+        
+        Parameters
+        ----------
+        auth_key: str
+            Auth key from user.
+        name: str
+            Name of the context
+        force: bool (default:= False)
+            Force removal of context
+        
+        Returns
+        -------
+        result: dict[str, str]
+            Result from the service
 
     `update_concept(self, auth_key: str, context: str, name: str, subclass_of: Optional[str], icon: Optional[str] = None, labels: Optional[list[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[list[knowledge.base.ontology.Comment]] = None) ‑> dict[str, str]`
     :   Update concept class.
