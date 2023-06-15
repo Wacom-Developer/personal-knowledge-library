@@ -1,3 +1,7 @@
+2023/6/15 - RELEASE 1.0.2
+==========================
+- Minor fix: Update entity did ignore the sendToNEL flag
+
 2023/6/15 - RELEASE 1.0.1
 ==========================
 - Improve the wikidata scrapping 
