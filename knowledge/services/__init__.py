@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2023 Wacom. All rights reserved.
+from knowledge import __version__
 
-USER_AGENT_STR: str = "Personal Knowledge Library/0.3.0 " \
+USER_AGENT_STR: str = f"Personal Knowledge Library/{__version__}" \
                       "(+https://github.com/Wacom-Developer/personal-knowledge-library)"
 
 __all__ = ['base', 'graph', 'ontology', 'tenant', 'users', 'USER_AGENT_STR']

@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 import pathlib
+import sys
 from setuptools import setup, find_packages
 
-import sys
 CURRENT_PYTHON = sys.version_info[:2]
 REQUIRED_PYTHON = (3, 7)
 
 if CURRENT_PYTHON < REQUIRED_PYTHON:
-    sys.stderr.write("""
+    sys.stderr.write(f"""
 ==========================
 Unsupported Python version
 ==========================
-This version of personal knowledge lib requires Python {}.{}, but you're trying to
-install it on Python {}.{}.
+This version of personal knowledge lib requires Python {REQUIRED_PYTHON}.
+
 This may be because you are using a version of pip that doesn't
 understand the python_requires classifier. Make sure you
 have pip >= 9.0 and setuptools >= 24.2, then try again:
@@ -21,12 +21,12 @@ This will install the latest version of personal-knowledge-library which works o
 version of Python. If you can't upgrade your pip (or Python), request
 an older version of knowledge-service-lib :
     $ python -m pip install personal-knowledge-library
-""".format(*(REQUIRED_PYTHON + CURRENT_PYTHON)))
+""")
     sys.exit(1)
 
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
-__version__ = "0.9.6"
+__version__ = "1.0.0"
 
 # The text of the README file
 README = (HERE / "README.md").read_text()
@@ -51,13 +51,17 @@ setup(
         "PyJWT>=2.6.0",
         "tqdm>=4.62.0",
         "ndjson>=0.3.1",
-        "rdflib>=6.3.2"
+        "rdflib>=6.3.2",
+        "python-dateutil"
     ],
     extras_require={
     },
     tests_require=(
         'pytest',
-        'pytest-cov'
+        'pytest-cov',
+        'faker',
+        'ontospy',
+        'pytest-env'
     ),
     classifiers=[
         "Programming Language :: Python",
