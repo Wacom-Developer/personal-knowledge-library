@@ -71,6 +71,17 @@ Classes
 
     * knowledge.base.access.AccessRight
 
+    ### Class variables
+
+    `DELETE: str`
+    :
+
+    `READ: str`
+    :
+
+    `WRITE: str`
+    :
+
     ### Static methods
 
     `parse(param: List[str]) ‑> knowledge.base.access.GroupAccessRight`
@@ -103,6 +114,17 @@ Classes
     ### Ancestors (in MRO)
 
     * knowledge.base.access.AccessRight
+
+    ### Class variables
+
+    `DELETE: str`
+    :
+
+    `READ: str`
+    :
+
+    `WRITE: str`
+    :
 
     ### Static methods
 

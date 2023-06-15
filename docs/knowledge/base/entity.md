@@ -4,7 +4,7 @@ Module knowledge.base.entity
 Classes
 -------
 
-`Description(description: str, language_code: knowledge.base.entity.LanguageCode = 'en_US')`
+`Description(description: str, language_code: LanguageCode = 'en_US')`
 :   Description
     -----------
     Description that is multi-lingual.
@@ -84,7 +84,7 @@ Classes
     * builtins.Exception
     * builtins.BaseException
 
-`Label(content: str, language_code: knowledge.base.entity.LanguageCode = 'en_US', main: bool = False)`
+`Label(content: str, language_code: LanguageCode = 'en_US', main: bool = False)`
 :   Label
     -----
     Label that is multi-lingual.
@@ -139,7 +139,7 @@ Classes
     `main: bool`
     :   Flag if the content is the  main content or an alias.
 
-`LocalizedContent(content: str, language_code: knowledge.base.entity.LanguageCode = 'en_US')`
+`LocalizedContent(content: str, language_code: LanguageCode = 'en_US')`
 :   Localized content
     -----------------
     Content that is multi-lingual.
@@ -167,7 +167,7 @@ Classes
     `content: str`
     :   String representation of the content.
 
-    `language_code: knowledge.base.entity.LanguageCode`
+    `language_code: LanguageCode`
     :   Language code of the content.
 
 `ServiceException(*args, **kwargs)`

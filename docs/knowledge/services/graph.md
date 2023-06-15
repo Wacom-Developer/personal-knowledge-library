@@ -325,7 +325,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `listing(self, auth_key: str, filter_type: knowledge.base.ontology.OntologyClassReference, page_id: Optional[str] = None, limit: int = 30, locale: Optional[knowledge.base.entity.LanguageCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None, estimate_count: bool = False, max_retries: int = 3, backoff_factor: float = 0.1) ‑> Tuple[List[knowledge.base.ontology.ThingObject], int, str]`
+    `listing(self, auth_key: str, filter_type: knowledge.base.ontology.OntologyClassReference, page_id: Optional[str] = None, limit: int = 30, locale: Optional[LanguageCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None, estimate_count: bool = False, max_retries: int = 3, backoff_factor: float = 0.1) ‑> Tuple[List[knowledge.base.ontology.ThingObject], int, str]`
     :   List all entities visible to users.
         
         Parameters
@@ -441,7 +441,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `search_all(self, auth_key: str, search_term: str, language_code: knowledge.base.entity.LanguageCode, types: List[knowledge.base.ontology.OntologyClassReference], limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_all(self, auth_key: str, search_term: str, language_code: LanguageCode, types: List[knowledge.base.ontology.OntologyClassReference], limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search term in labels, literals and description.
         
         Parameters
@@ -471,7 +471,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_description(self, auth_key: str, search_term: str, language_code: knowledge.base.entity.LanguageCode, limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_description(self, auth_key: str, search_term: str, language_code: LanguageCode, limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in description.
         
         Parameters
@@ -499,7 +499,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_labels(self, auth_key: str, search_term: str, language_code: knowledge.base.entity.LanguageCode, limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_labels(self, auth_key: str, search_term: str, language_code: LanguageCode, limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in labels.
         
         Parameters
@@ -527,7 +527,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_literal(self, auth_key: str, search_term: str, literal: knowledge.base.ontology.OntologyPropertyReference, pattern: knowledge.services.graph.SearchPattern = SearchPattern.REGEX, language_code: knowledge.base.entity.LanguageCode = 'en_US', limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_literal(self, auth_key: str, search_term: str, literal: knowledge.base.ontology.OntologyPropertyReference, pattern: knowledge.services.graph.SearchPattern = SearchPattern.REGEX, language_code: LanguageCode = 'en_US', limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in literals.
         
          Parameters
@@ -559,7 +559,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_relation(self, auth_key: str, relation: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.entity.LanguageCode, subject_uri: str = None, object_uri: str = None, limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_relation(self, auth_key: str, relation: knowledge.base.ontology.OntologyPropertyReference, language_code: LanguageCode, subject_uri: str = None, object_uri: str = None, limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in literals.
         
          Parameters
