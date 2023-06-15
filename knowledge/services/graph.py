@@ -479,7 +479,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                     f'Response code:={response.status_code}, exception:= {response.content}. '
                                     f'Payload: \n{json.dumps(payload, indent=4)}')
 
-    def update_entity(self, auth_key: str, entity: ThingObject):
+    def update_entity(self, auth_key: str, entity: ThingObject, max_retries: int = 3, backoff_factor: float = 0.1):
         """
         Updates entity in graph.
 
@@ -489,6 +489,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Auth key from user
         entity: ThingObject
             entity object
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Raises
         ------
@@ -497,71 +502,25 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         uri: str = entity.uri
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
-        # Different localized content
-        labels: List[dict] = []
-        descriptions: List[dict] = []
-        literals: List[dict] = []
         # Header info
         headers: dict = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        # Add description in different languages
-        for desc in entity.description:
-            if len(desc.content) > 0 and not desc.content == ' ':
-                descriptions.append({
-                    DESCRIPTION_TAG: desc.content,
-                    LOCALE_TAG: desc.language_code
-                })
-        if len(descriptions) == 0:
-            #  Adding an empty description
-            for label in entity.label:
-                if len(label.content) > 0 and not label.content == ' ':
-                    descriptions.append({
-                        DESCRIPTION_TAG: f'Description of {label.content}',
-                        LOCALE_TAG: label.language_code
-                    })
-
-        # Labels are tagged as main label
-        for label in entity.label:
-            if len(label.content) > 0 and label.content != " ":
-                labels.append({
-                    'value': label.content,
-                    LOCALE_TAG: label.language_code,
-                    'isMain': True
-                })
-        # Alias are no main labels
-        for label in entity.alias:
-            if len(label.content) > 0 and label.content != " ":
-                labels.append({
-                    'value': label.content,
-                    LOCALE_TAG: label.language_code,
-                    'isMain': False
-                })
-        # Labels are tagged as main label
-        for list_literals in entity.data_properties.values():
-            for li in list_literals:
-                if li.data_property_type:
-                    literals.append({
-                        'value': li.value,
-                        LOCALE_TAG: li.language_code,
-                        DATA_PROPERTY_TAG: li.data_property_type.iri
-                    })
-        payload: dict = {
-            TYPE_TAG: entity.concept_type.iri,
-            DESCRIPTIONS_TAG: descriptions,
-            LABELS_TAG: labels,
-            DATA_PROPERTIES_TAG: literals
-        }
-        if entity.tenant_access_right:
-            payload[TENANT_RIGHTS_TAG] = entity.tenant_access_right.to_list()
-        response: Response = requests.patch(url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT,
-                                            verify=self.verify_calls)
-        if not response.ok:
-            raise WacomServiceException(f'Pushing entity failed. '
-                                        f'Response code:={response.status_code}, exception:= {response.content}. '
-                                        f'Payload: \n{json.dumps(payload, indent=4)}')
+        payload: Dict[str, Any] = WacomKnowledgeService.__entity__(entity)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=[502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.patch(url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT,
+                                               verify=self.verify_calls)
+            if not response.ok:
+                raise WacomServiceException(f'Pushing entity failed. '
+                                            f'Response code:={response.status_code}, exception:= {response.content}. '
+                                            f'Payload: \n{json.dumps(payload, indent=4)}')
 
     def relations(self, auth_key: str, uri: str) -> Dict[OntologyPropertyReference, ObjectProperty]:
         """
