@@ -33,7 +33,6 @@ load-plugins=
     pylint.extensions.set_membership,
     pylint.extensions.code_style,
     pylint.extensions.overlapping_exceptions,
-    pylint.extensions.typing,
     pylint.extensions.redefined_variable_type,
     pylint.extensions.comparison_placement,
     pylint.extensions.mccabe,
@@ -84,7 +83,7 @@ fail-on=
 # it should appear only once). See also the "--disable" option for examples.
 enable=
     use-symbolic-message-instead,
-    useless-suppression,
+    useless-suppression
 
 # Disable the message, report, category or checker with the given id(s). You
 # can either give multiple identifiers separated by comma (,) or put this
@@ -99,7 +98,6 @@ enable=
 disable=
     attribute-defined-outside-init,
     invalid-name,
-    missing-docstring,
     protected-access,
     too-few-public-methods,
     # handled by black
@@ -108,6 +106,8 @@ disable=
     fixme,
     cyclic-import,
     import-error,
+    logging-fstring-interpolation,
+    missing-module-docstring
 
 
 [REPORTS]
@@ -530,8 +530,6 @@ overgeneral-exceptions=builtins.Exception
 # For libraries, evaluate if some users what to access the type hints at
 # runtime first, e.g., through ``typing.get_type_hints``. Applies to Python
 # versions 3.7 - 3.9
-runtime-typing = no
-
 
 [DEPRECATED_BUILTINS]
 
