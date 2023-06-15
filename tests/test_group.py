@@ -182,7 +182,7 @@ class GroupFlow(TestCase):
             logging.error(we)
         # Shares the join key with user 2 and user 2 joins
         self.group_management.join_group(self.cache.token_2, self.cache.group_id, self.cache.join_key)
-        groups: List[Group] = self.group_management.listing_groups(self.cache.token_2)
+        groups: list[Group] = self.group_management.listing_groups(self.cache.token_2)
         self.assertEqual(len(groups), 1, "User 2 should only be in 1 group.")
 
     def test_5_add_user(self):
@@ -196,7 +196,7 @@ class GroupFlow(TestCase):
     def test_6_add_entity_to_group(self):
         """ Add entity to group."""
         # Adding entity to group
-        groups: List[Group] = self.group_management.listing_groups(self.cache.token_2)
+        groups: list[Group] = self.group_management.listing_groups(self.cache.token_2)
         self.group_management.add_entity_to_group(self.cache.token, groups[0].id, self.cache.thing_uri)
         entity: ThingObject = self.knowledge_client.entity(self.cache.token, self.cache.thing_uri)
         self.assertEqual(groups[0].id, entity.group_ids[0])
@@ -208,10 +208,10 @@ class GroupFlow(TestCase):
             self.fail("User 2 should not have access to the entity.")
         except WacomServiceException as we:
             pass
-        groups: List[Group] = self.group_management.listing_groups(self.cache.token_2)
+        groups: list[Group] = self.group_management.listing_groups(self.cache.token_2)
         self.assertEqual(len(groups), 0)
         self.group_management.join_group(self.cache.token_2, self.cache.group_id, self.cache.join_key)
-        groups: List[Group] = self.group_management.listing_groups(self.cache.token_2)
+        groups: list[Group] = self.group_management.listing_groups(self.cache.token_2)
         self.assertEqual(groups[0].id, entity.group_ids[0])
         self.knowledge_client.entity(self.cache.token_2, self.cache.thing_uri)
 
@@ -244,7 +244,7 @@ class GroupFlow(TestCase):
 
     def teardown_class(self):
         """ Clean up."""
-        list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=GroupFlow.LIMIT)
+        list_user_all: list[User] = self.user_management.listing_users(self.tenant_api_key, limit=GroupFlow.LIMIT)
         for u_i in list_user_all:
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
                 logging.info(f'Clean user {u_i.external_user_id}')

@@ -10,7 +10,8 @@ import pytest
 from ontospy import Ontospy
 
 from knowledge.base.entity import LanguageCode
-from knowledge.base.ontology import ThingObject, OntologyClassReference, OntologyPropertyReference
+from knowledge.base.ontology import ThingObject, OntologyClassReference, OntologyPropertyReference, \
+    SYSTEM_SOURCE_REFERENCE_ID
 from knowledge.services.graph import WacomKnowledgeService, SearchPattern
 from knowledge.services.group import GroupManagementServiceAPI
 from knowledge.services.ontology import OntologyService
@@ -85,12 +86,9 @@ class SearchFlow(TestCase):
                                                                      external_id=self.cache.external_id,
                                                                      meta_data={'account-type': 'qa-test'},
                                                                      roles=[UserRole.USER])
-        self.group_management.join_group(token, group_id=os.environ.get('GROUP_ID'),
-                                         join_key=os.environ.get('JOIN_KEY'))
         self.cache.token = token
 
     def test_2_search_labels(self):
-        """ Search for labels."""
         res_entities, next_search_page = self.knowledge_client.search_labels(auth_key=self.cache.token,
                                                                              search_term=LEONARDO_DA_VINCI,
                                                                              language_code=LanguageCode('en_US'),
@@ -99,19 +97,16 @@ class SearchFlow(TestCase):
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_3_search_description(self):
-        """ Search for description."""
         res_entities, next_search_page = self.knowledge_client.search_description(self.cache.token,
-                                                                                  'Mona Lisa',
+                                                                                  'Michelangelo\'s Sistine Chapel',
                                                                                   LanguageCode('en_US'), limit=1000)
 
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_4_search_relations(self):
-        """ Search for relations."""
         art_style: Optional[ThingObject] = None
-        results, _, _ = self.knowledge_client.listing(self.cache.token,
-                                                      OntologyClassReference.parse('wacom:creative#ArtStyle'),
-                                                      limit=1)
+        results, _ = self.knowledge_client.search_labels(self.cache.token, "portrait", LanguageCode('en_US'),
+                                                         limit=1)
         for entity in results:
             art_style = entity
         res_entities, next_search_page = self.knowledge_client.search_relation(auth_key=self.cache.token,
@@ -123,21 +118,18 @@ class SearchFlow(TestCase):
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_5_search_literals(self):
-        """" Search for literals."""
         res_entities, next_search_page = self.knowledge_client.search_literal(auth_key=self.cache.token,
-                                                                              search_term="1950-00-00T00:00:00Z",
-                                                                              pattern=SearchPattern.GT,
-                                                                              literal=OntologyPropertyReference
-                                                                              .parse("wacom:education#inception"),
+                                                                              search_term="Q762",
+                                                                              pattern=SearchPattern.REGEX,
+                                                                              literal=SYSTEM_SOURCE_REFERENCE_ID,
                                                                               language_code=LanguageCode('en_US'))
 
         self.assertGreaterEqual(len(res_entities), 1)
 
     def teardown_class(self):
-        """ Clean up the test data."""
-        list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=SearchFlow.LIMIT)
+        list_user_all: list[User] = self.user_management.listing_users(self.tenant_api_key, limit=SearchFlow.LIMIT)
         for u_i in list_user_all:
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
                 logging.info(f'Clean user {u_i.external_user_id}')
                 self.user_management.delete_user(self.tenant_api_key,
-                                                 external_id=u_i.external_user_id, internal_id=u_i.id, force=True)
+                                                 external_id=u_i.external_user_id, internal_id=u_i.id)

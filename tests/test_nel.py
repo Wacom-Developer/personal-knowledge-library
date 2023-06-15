@@ -55,8 +55,8 @@ def random_value(data_type: str, faker_inst: Faker) -> Any:
     return None
 
 
-def create_thing(class_ref: OntoClass) -> Tuple[ThingObject, Dict[OntologyPropertyReference,
-                                                                  List[OntologyClassReference]]]:
+def create_thing(class_ref: OntoClass) -> tuple[ThingObject, dict[OntologyPropertyReference,
+                                                                  list[OntologyClassReference]]]:
     """
     Create a thing object with random data.
     Parameters
@@ -68,11 +68,11 @@ def create_thing(class_ref: OntoClass) -> Tuple[ThingObject, Dict[OntologyProper
     -------
     instance: ThingObject
         Thing object with random data.
-    mapping: Dict[OntologyPropertyReference, List[OntologyClassReference]]
+    mapping: dict[OntologyPropertyReference, list[OntologyClassReference]]
         Mapping of properties to classes.
     """
     thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse(class_ref.uri))
-    relations: Dict[OntologyPropertyReference, List[OntologyClassReference]] = {}
+    relations: dict[OntologyPropertyReference, list[OntologyClassReference]] = {}
     for lang in ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'ru_RU']:
         fake: Faker = Faker(lang)
         thing.add_label(fake.name(), LanguageCode(lang))
@@ -182,7 +182,7 @@ class EntityFlow(TestCase):
             if ent.use_for_nel:
                 text: str = f'{fake.text()} Do not forget about {entities[0].label_lang(en_us).content}.'
                 self.assertTrue(self.nel_client.is_language_supported(en_us))
-                linked_entities: List[KnowledgeGraphEntity] = self.nel_client.link_personal_entities(self.cache.token,
+                linked_entities: list[KnowledgeGraphEntity] = self.nel_client.link_personal_entities(self.cache.token,
                                                                                                      text=text)
                 self.assertGreaterEqual(len(linked_entities), 1)
 
@@ -196,7 +196,7 @@ class EntityFlow(TestCase):
             if ent.use_for_nel:
                 text: str = f'{fake.text()}{entities[0].label_lang(ja_jp).content}'
                 self.assertTrue(self.nel_client.is_language_supported(ja_jp))
-                linked_entities: List[KnowledgeGraphEntity] = self.nel_client.link_personal_entities(self.cache.token,
+                linked_entities: list[KnowledgeGraphEntity] = self.nel_client.link_personal_entities(self.cache.token,
                                                                                                      text=text,
                                                                                                      locale=ja_jp)
                 self.assertGreaterEqual(len(linked_entities), 1)
@@ -211,13 +211,13 @@ class EntityFlow(TestCase):
             if ent.use_for_nel:
                 text: str = f'{fake.text()}. {entities[0].label_lang(de_de).content}.'
                 self.assertTrue(self.nel_client.is_language_supported(de_de))
-                linked_entities: List[KnowledgeGraphEntity] = self.nel_client.link_personal_entities(self.cache.token,
+                linked_entities: list[KnowledgeGraphEntity] = self.nel_client.link_personal_entities(self.cache.token,
                                                                                                      text=text)
                 self.assertGreaterEqual(len(linked_entities), 1)
 
     def teardown_class(self):
         """ Clean up the test environment. """
-        list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=EntityFlow.LIMIT)
+        list_user_all: list[User] = self.user_management.listing_users(self.tenant_api_key, limit=EntityFlow.LIMIT)
         for u_i in list_user_all:
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
                 logging.info(f'Clean user {u_i.external_user_id}')
