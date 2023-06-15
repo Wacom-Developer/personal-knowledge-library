@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-23 Wacom. All rights reserved.
-from datetime import datetime
-from typing import Dict, List, Any, Tuple, Union
 import enum
+from datetime import datetime
+from typing import Any, Union
 
 import requests
 from dateutil.parser import parse, ParserError
@@ -10,7 +10,6 @@ from requests import Response
 
 from knowledge.services import USER_AGENT_STR
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
-
 
 # -------------------------------------- Constant flags ----------------------------------------------------------------
 TENANT_ID: str = 'tenantId'
@@ -39,10 +38,10 @@ class UserRole(enum.Enum):
     """TenantAdmin has access to all entities independent of the access rights."""
 
 
-USER_ROLE_MAPPING: Dict[str, UserRole] = dict([(str(r.value), r) for r in UserRole])
+USER_ROLE_MAPPING: dict[str, UserRole] = dict([(str(r.value), r) for r in UserRole])
 
 
-class User(object):
+class User:
     """
     User
     -----
@@ -56,19 +55,19 @@ class User(object):
         User id
     external_user_id: str
         External user id, referencing the user to authentication system.
-    meta_data: Dict[str, Any]
+    meta_data: dict[str, Any]
         Metadata associated with user.
-    user_roles: List[UserRole]
+    user_roles: list[UserRole]
         List of user roles.
     """
 
-    def __init__(self, tenant_id: str, user_id: str, external_user_id: str, meta_data: Dict[str, Any],
-                 user_roles: List[UserRole]):
+    def __init__(self, tenant_id: str, user_id: str, external_user_id: str, meta_data: dict[str, Any],
+                 user_roles: list[UserRole]):
         self.__tenant_id: str = tenant_id
         self.__user_id: str = user_id
         self.__external_user_id: str = external_user_id
-        self.__meta_data: Dict[str, Any] = meta_data
-        self.__user_roles: List[UserRole] = user_roles
+        self.__meta_data: dict[str, Any] = meta_data
+        self.__user_roles: list[UserRole] = user_roles
 
     @property
     def id(self) -> str:
@@ -86,26 +85,26 @@ class User(object):
         return self.__external_user_id
 
     @property
-    def meta_data(self) -> Dict[str, Any]:
+    def meta_data(self) -> dict[str, Any]:
         """Meta data for user."""
         return self.__meta_data
 
     @meta_data.setter
-    def meta_data(self, value: Dict[str, Any]):
+    def meta_data(self, value: dict[str, Any]):
         self.__meta_data = value
 
     @property
-    def user_roles(self) -> List[UserRole]:
+    def user_roles(self) -> list[UserRole]:
         """List of user roles"""
         return self.__user_roles
 
     @classmethod
-    def parse(cls, param: Dict[str, Any]) -> 'User':
+    def parse(cls, param: dict[str, Any]) -> 'User':
         """
         Parse user from dictionary.
         Parameters
         ----------
-        param: Dict[str, Any]
+        param: dict[str, Any]
             Dictionary containing user information.
 
         Returns
@@ -116,13 +115,13 @@ class User(object):
         user_id: str = param['id']
         tenant_id: str = param[TENANT_ID]
         external_user_id: str = param['externalUserId']
-        meta_data: Dict[str, Any] = {}
-        if META_DATA_TAG in param:
+        meta_data: dict[str, Any] = {}
+        if META_DATA_TAG in param and param[META_DATA_TAG] is not None:
             meta_data = param[META_DATA_TAG]
         # Support the old version of the user management service
         elif 'metaData' in param:
             meta_data = param['metaData']
-        user_roles: List[UserRole] = [USER_ROLE_MAPPING[r] for r in param['roles']]
+        user_roles: list[UserRole] = [USER_ROLE_MAPPING[r] for r in param['roles']]
         return User(tenant_id=tenant_id, user_id=user_id, external_user_id=external_user_id, meta_data=meta_data,
                     user_roles=user_roles)
 
@@ -154,8 +153,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
 
     # ------------------------------------------ Users handling --------------------------------------------------------
 
-    def create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None,
-                    roles: List[UserRole] = None) -> Tuple[User, str, str, datetime]:
+    def create_user(self, tenant_key: str, external_id: str, meta_data: dict[str, str] = None,
+                    roles: list[UserRole] = None) -> tuple[User, str, str, datetime]:
         """
         Creates user for a tenant.
 
@@ -165,9 +164,9 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             API key for tenant
         external_id: str -
             External id of user identification service.
-        meta_data: Dict[str, str]
+        meta_data: dict[str, str]
             Meta-data dictionary.
-        roles: List[UserRole]
+        roles: list[UserRole]
             List of roles.
 
         Returns
@@ -198,7 +197,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         }
         response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
         if response.ok:
-            results: Dict[str, Union[str, Dict[str, str], List[str]]] = response.json()
+            results: dict[str, Union[str, dict[str, str], list[str]]] = response.json()
 
             try:
                 date_object: datetime = parse(results['token']['expirationDate'])
@@ -210,8 +209,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
 
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: Dict[str, str] = None,
-                    roles: List[UserRole] = None):
+    def update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: dict[str, str] = None,
+                    roles: list[UserRole] = None):
         """Updates user for a tenant.
 
         Parameters
@@ -222,9 +221,9 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             Internal id of semantic service.
         external_id: str
             External id of user identification service.
-        meta_data: Dict[str, str]
+        meta_data: dict[str, str]
             Meta-data dictionary.
-        roles: List[UserRole]
+        roles: list[UserRole]
             List of roles.
 
         Raises
@@ -233,16 +232,16 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f'{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}'
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             TENANT_API_KEY_FLAG: tenant_key,
             CONTENT_TYPE_FLAG: 'application/json'
         }
-        payload: Dict[str, str] = {
+        payload: dict[str, str] = {
             META_DATA_TAG: meta_data if meta_data is not None else {},
             ROLES_TAG: [r.value for r in roles] if roles is not None else [UserRole.USER.value]
         }
-        params: Dict[str, str] = {
+        params: dict[str, str] = {
             USER_ID_TAG: internal_id,
             EXTERNAL_USER_ID_TAG: external_id
         }
@@ -271,11 +270,11 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f'{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}'
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             TENANT_API_KEY_FLAG: tenant_key
         }
-        params: Dict[str, str] = {
+        params: dict[str, str] = {
             USER_ID_TAG: internal_id,
             EXTERNAL_USER_ID_TAG: external_id,
             FORCE_TAG: force
@@ -309,16 +308,16 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             USER_AGENT_TAG: USER_AGENT_STR,
             TENANT_API_KEY_FLAG: tenant_key
         }
-        parameters: Dict[str, str] = {
+        parameters: dict[str, str] = {
             EXTERNAL_USER_ID_TAG:  external_id
         }
         response: Response = requests.get(url, headers=headers, params=parameters, verify=self.verify_calls)
         if response.ok:
-            response_dict: Dict[str, Any] = response.json()
+            response_dict: dict[str, Any] = response.json()
             return response_dict[INTERNAL_USER_ID_TAG]
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def listing_users(self, tenant_key: str, offset: int = 0, limit: int = 20) -> List[User]:
+    def listing_users(self, tenant_key: str, offset: int = 0, limit: int = 20) -> list[User]:
         """
         Listing all users configured for this instance.
 
@@ -333,22 +332,22 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
 
         Returns
         -------
-        user: List[User]
+        user: list[User]
             List of users.
         """
         url: str = f'{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}'
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             TENANT_API_KEY_FLAG: tenant_key
         }
-        params: Dict[str, str] = {
+        params: dict[str, str] = {
             OFFSET_TAG: offset,
             LIMIT_TAG: limit
         }
         response: Response = requests.get(url, headers=headers, params=params, verify=self.verify_calls)
         if response.ok:
-            users: List[Dict[str, Any]] = response.json()
-            results: List[User] = []
+            users: list[dict[str, Any]] = response.json()
+            results: list[User] = []
             for u in users:
                 results.append(User.parse(u))
             return results

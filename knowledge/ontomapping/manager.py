@@ -2,18 +2,19 @@
 # Copyright © 2023 Wacom. All rights reserved.
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 
 from knowledge.base.entity import Label, LanguageCode, Description
 from knowledge.base.ontology import ThingObject, DataProperty, SYSTEM_SOURCE_SYSTEM, SYSTEM_SOURCE_REFERENCE_ID, \
-    OntologyClassReference, OntologyPropertyReference, ObjectProperty, LANGUAGE_LOCALE_MAPPING
-from knowledge.ontomapping import ClassConfiguration, mapping_configuration, TOPIC_CLASS, taxonomy_cache, IS_RELATED, \
-    PropertyConfiguration, PropertyType
-from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient, WikidataClass
+    OntologyClassReference, OntologyPropertyReference, ObjectProperty, LANGUAGE_LOCALE_MAPPING, LOCALE_LANGUAGE_MAPPING
+from knowledge.ontomapping import ClassConfiguration, TOPIC_CLASS, taxonomy_cache, \
+    PropertyConfiguration, PropertyType, get_mapping_configuration
+from knowledge.public.cache import pull_wikidata_object
+from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient, WikidataClass, WikidataProperty
 from knowledge.utils.wikipedia import get_wikipedia_summary
 
 
-def flatten(hierarchy: WikidataClass, use_names: bool = False) -> List[str]:
+def flatten(hierarchy: WikidataClass, use_names: bool = False) -> list[str]:
     """
     Flattens the hierarchy.
 
@@ -26,12 +27,12 @@ def flatten(hierarchy: WikidataClass, use_names: bool = False) -> List[str]:
 
     Returns
     -------
-    hierarchy: List[str]
+    hierarchy: list[str]
         Hierarchy
 
     """
-    hierarchy_list: List[str] = [hierarchy.qid]
-    jobs: List[WikidataClass] = [hierarchy]
+    hierarchy_list: list[str] = [hierarchy.qid]
+    jobs: list[WikidataClass] = [hierarchy]
     while len(jobs) > 0:
         job: WikidataClass = jobs.pop()
         if use_names:
@@ -70,13 +71,15 @@ def wikidata_taxonomy(qid: str) -> Optional[WikidataClass]:
     return hierarchy
 
 
-def convert_dict(structure: Dict[str, Any]) -> str:
+def convert_dict(structure: dict[str, Any], locale: str) -> Optional[str]:
     """
     Converts a dictionary to a string.
     Parameters
     ----------
-    structure:  Dict[str, Any]
+    structure:  dict[str, Any]
         Dictionary to convert.
+    locale: str
+        Locale.
 
     Returns
     -------
@@ -86,21 +89,34 @@ def convert_dict(structure: Dict[str, Any]) -> str:
     if 'type' in structure and 'value' in structure:
         structure_type: str = structure['type']
         value: Any = structure['value']
-        if structure_type == 'time' and isinstance(value, dict):
+        if structure_type == 'time' and isinstance(value, dict) and 'iso' in value and value['iso']:
+            return value['iso']
+        elif structure_type == 'time' and isinstance(value, dict):
             return value['time']
         elif structure_type == 'quantity' and isinstance(value, dict):
             return value['amount']
         elif structure_type == 'wikibase-item' and isinstance(value, dict):
-            return value['id']
+            wikidata_data: WikidataThing = pull_wikidata_object(value['id'])
+            if locale in wikidata_data.label:
+                return wikidata_data.label[locale].content
+            return None
         elif structure_type == 'external-id':
             return value
         elif structure_type == 'string':
             return value
+        elif structure_type == 'monolingualtext' and isinstance(value, dict):
+            if LOCALE_LANGUAGE_MAPPING.get(locale) == value['language']:
+                return value['text']
+            return None
+        elif structure_type == 'globe-coordinate' and isinstance(value, dict):
+            return f'{value["latitude"]},{value["longitude"]}'
+    print(f'Failed to convert {structure}')
     raise NotImplementedError()
 
 
-def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, Any], supported_locales: List[str],
-                      pull_wikipedia: bool = False) -> ThingObject:
+def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: dict[str, Any], supported_locales: list[str],
+                      all_wikidata_objects: dict[str, WikidataThing], pull_wikipedia: bool = False)\
+        -> tuple[ThingObject, list[dict[str, Any]]]:
     """
     Converts a Wikidata thing to a ThingObject.
 
@@ -109,11 +125,14 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
     wikidata_thing: WikidataThing
         Wikidata thing
 
-    all_relations: Dict[str, Any]
+    all_relations: dict[str, Any]
         All relations.
 
-    supported_locales: List[str]
+    supported_locales: list[str]
         Supported locales.
+
+    all_wikidata_objects: dict[str, WikidataThing]
+        All Wikidata objects.
 
     pull_wikipedia: bool
         Pull Wikipedia summary.
@@ -122,14 +141,17 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
     -------
     thing: ThingObject
         Thing object
+    import_warnings: list[dict[str, Any]]
+        Errors
 
     """
+    import_warnings: list[dict[str, Any]] = []
     qid: str = wikidata_thing.qid
-    labels: List[Label] = [l for l in wikidata_thing.label.values() if str(l.language_code) in supported_locales]
+    labels: list[Label] = [la for la in wikidata_thing.label.values() if str(la.language_code) in supported_locales]
     for lang, aliases in wikidata_thing.aliases.items():
         if str(lang) in supported_locales:
             labels.extend([a for a in aliases])
-    descriptions: List[Description] = []
+    descriptions: list[Description] = []
     if 'wiki' in wikidata_thing.sitelinks and pull_wikipedia:
         for lang, title in wikidata_thing.sitelinks['wiki'].titles.items():
             locale: str = LANGUAGE_LOCALE_MAPPING.get(lang, "NOT_SUPPORTED")
@@ -140,7 +162,7 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
                 except Exception as e:
                     logging.error(f'Failed to get Wikipedia summary for {title} ({lang}): {e}')
     if len(descriptions) == 0:
-        descriptions = [l for l in wikidata_thing.description.values()]
+        descriptions = [de for de in wikidata_thing.description.values()]
     # Create the thing
     thing: ThingObject = ThingObject(label=labels,
                                      description=descriptions,
@@ -151,42 +173,65 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
                                                language_code=LanguageCode('en_US')))
     thing.add_data_property(DataProperty(content=datetime.utcnow().isoformat(),
                                          property_ref=OntologyPropertyReference.parse('wacom:core#lastUpdate')))
-    class_configuration: Optional[ClassConfiguration] = None
-    class_types: List[str] = wikidata_thing.ontology_types
+    class_types: list[str] = wikidata_thing.ontology_types
     for cls in wikidata_thing.instance_of:
         hierarchy: WikidataClass = wikidata_taxonomy(cls.qid)
         if hierarchy:
             class_types.extend(flatten(hierarchy))
-    if mapping_configuration:
-        class_configuration = mapping_configuration.guess_classed(class_types)
+    class_configuration: Optional[ClassConfiguration] = get_mapping_configuration().guess_classed(class_types)
     if class_configuration:
         thing.concept_type = class_configuration.concept_type
     else:
         thing.concept_type = OntologyClassReference.parse(TOPIC_CLASS)
-    relation_props: Dict[OntologyPropertyReference, List[str]] = {}
+    relation_props: dict[OntologyPropertyReference, list[str]] = {}
     for pid, cl in wikidata_thing.claims.items():
-        prop: Optional[PropertyConfiguration] = mapping_configuration.guess_property(pid, thing.concept_type)
+        prop: Optional[PropertyConfiguration] = get_mapping_configuration().guess_property(pid, thing.concept_type)
         if prop and prop.type == PropertyType.DATA_PROPERTY:
             property_type: OntologyPropertyReference = OntologyPropertyReference.parse(prop.iri)
-            for c in cl.literals:
-                if isinstance(c, dict):
-                    thing.add_data_property(DataProperty(content=convert_dict(c), property_ref=property_type))
-                elif isinstance(c, (str, float, int)):
-                    thing.add_data_property(DataProperty(content=c, property_ref=property_type))
+            for locale in supported_locales:
+                for c in cl.literals:
+                    if isinstance(c, dict):
+                        content: Optional[str] = convert_dict(c, locale)
+                        if get_mapping_configuration().check_data_property_range(property_type, content):
+                            thing.add_data_property(DataProperty(content=content,
+                                                                 property_ref=property_type,
+                                                                 language_code=LanguageCode(locale)))
+                    elif isinstance(c, (str, float, int)):
+                        thing.add_data_property(DataProperty(content=c, property_ref=property_type,
+                                                             language_code=LanguageCode(locale)))
     for relation in all_relations.get(qid, []):
-        prop: Optional[PropertyConfiguration] = mapping_configuration.guess_property(relation['predicate']['pid'],
-                                                                                     thing.concept_type)
-        if prop and prop.type == PropertyType.OBJECT_PROPERTY:
-            property_type: OntologyPropertyReference = OntologyPropertyReference.parse(prop.iri)
-            if property_type not in relation_props:
-                relation_props[property_type] = []
-            relation_props[property_type].append(relation['target']['qid'])
-        else:
-            if IS_RELATED not in relation_props:
-                relation_props[IS_RELATED] = []
-            relation_props[IS_RELATED].append(relation['target']['qid'])
-
+        prop: Optional[PropertyConfiguration] = get_mapping_configuration().guess_property(relation['predicate']['pid'],
+                                                                                           thing.concept_type)
+        target_thing: Optional[WikidataThing] = all_wikidata_objects.get(relation['target']['qid'])
+        if target_thing:
+            if prop and prop.type == PropertyType.OBJECT_PROPERTY:
+                class_types: list[str] = [c.qid for c in target_thing.instance_of]
+                class_types.extend(target_thing.ontology_types)
+                target_config: Optional[ClassConfiguration] = get_mapping_configuration().guess_classed(class_types)
+                if target_config:
+                    if get_mapping_configuration().check_object_property_range(prop, thing.concept_type,
+                                                                               target_config.concept_type):
+                        property_type: OntologyPropertyReference = OntologyPropertyReference.parse(prop.iri)
+                        if property_type not in relation_props:
+                            relation_props[property_type] = []
+                        relation_props[property_type].append(relation['target']['qid'])
+                    else:
+                        prop_missing: WikidataProperty = WikidataProperty(pid=relation['predicate']['pid'])
+                        import_warnings.append({'source_qid': qid,
+                                                'source_concept': thing.concept_type,
+                                                'source_classes': class_types,
+                                                'property': prop_missing.pid, 'property_label': prop_missing.label,
+                                                'target_qid': target_thing.qid,
+                                                'target_classes': target_thing.ontology_types})
+            else:
+                prop_missing: WikidataProperty = WikidataProperty(pid=relation['predicate']['pid'])
+                import_warnings.append({'source_qid': qid,
+                                        'source_concept': thing.concept_type,
+                                        'source_classes': class_types,
+                                        'property': prop_missing.pid, 'property_label': prop_missing.label,
+                                        'target_qid': target_thing.qid,
+                                        'target_classes': target_thing.ontology_types})
     for p, lst in relation_props.items():
         thing.add_relation(ObjectProperty(p, outgoing=lst))
 
-    return thing
+    return thing, import_warnings

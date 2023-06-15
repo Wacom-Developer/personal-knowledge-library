@@ -13,7 +13,7 @@
 #  See the License for the specific language_code governing permissions and
 #  limitations under the License.
 import argparse
-from typing import List
+
 from knowledge.base.entity import LanguageCode, Label, Description
 from knowledge.base.ontology import OntologyClassReference, ThingObject
 from knowledge.services.base import WacomServiceException
@@ -27,14 +27,14 @@ TOPIC_CLASS: OntologyClassReference = OntologyClassReference('wacom', 'core', 'T
 
 def create_entity() -> ThingObject:
     # Main labels for entity
-    topic_labels: List[Label] = [
+    topic_labels: list[Label] = [
         Label('Hidden', LanguageCode('en_US')),
         Label('Versteckt', LanguageCode('de_DE')),
         Label('隠れた', LanguageCode('ja_JP'))
     ]
 
     # Topic description
-    topic_description: List[Description] = [
+    topic_description: list[Description] = [
         Description('Hidden entity to explain access management.', LanguageCode('en_US')),
         Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
     ]

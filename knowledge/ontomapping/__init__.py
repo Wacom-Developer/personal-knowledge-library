@@ -2,12 +2,13 @@
 # Copyright © 2023 Wacom. All rights reserved.
 import enum
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from rdflib import Graph, RDFS, URIRef
 
-from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference
+from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, DataPropertyType
 from knowledge.public.wikidata import WikidataClass
 
 # Classes
@@ -27,12 +28,44 @@ TAXONOMY_FILE: Path = CWD / '../../pkl-cache/taxonomy_cache.json'
 ontology_graph: Graph = Graph()
 
 
-def subclasses_of(iri: str) -> List[str]:
+def subclasses_of(iri: str) -> list[str]:
+    """
+    Returns the subclasses of an ontology class.
+    Parameters
+    ----------
+    iri: str
+        Ontology class IRI.
+
+    Returns
+    -------
+    subclasses: list[str]
+        Subclasses of the ontology class.
+    """
     global ontology_graph
-    sub_classes: List[str] = [str(s) for s, p, o in ontology_graph.triples((None, RDFS.subClassOf, URIRef(iri)))]
+    sub_classes: list[str] = [str(s) for s, p, o in ontology_graph.triples((None, RDFS.subClassOf, URIRef(iri)))]
     for sub_class in sub_classes:
         sub_classes.extend(subclasses_of(sub_class))
     return sub_classes
+
+
+def is_iso_date(date_string: str) -> bool:
+    """
+    Checks if a date string is an ISO date.
+    Parameters
+    ----------
+    date_string: str
+        Date string.
+
+    Returns
+    -------
+    is_iso_date: bool
+        True if the date string is an ISO date, otherwise False.
+    """
+    try:
+        datetime.fromisoformat(date_string)
+        return True
+    except ValueError as _:
+        return False
 
 
 class WikidataClassEncoder(json.JSONEncoder):
@@ -47,7 +80,7 @@ class WikidataClassEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
-class ClassConfiguration(object):
+class ClassConfiguration:
     """
     Class configuration
     -------------------
@@ -56,29 +89,29 @@ class ClassConfiguration(object):
     """
     def __init__(self, ontology_class: str):
         self.__ontology_class: str = ontology_class
-        self.__wikidata_classes: List[str] = []
-        self.__dbpedia_classes: List[str] = []
+        self.__wikidata_classes: list[str] = []
+        self.__dbpedia_classes: list[str] = []
 
     @property
     def ontology_class(self) -> str:
         return self.__ontology_class
 
     @property
-    def wikidata_classes(self) -> List[str]:
+    def wikidata_classes(self) -> list[str]:
         """Wikidata classes."""
         return self.__wikidata_classes
 
     @wikidata_classes.setter
-    def wikidata_classes(self, value: List[str]):
+    def wikidata_classes(self, value: list[str]):
         self.__wikidata_classes = value
 
     @property
-    def dbpedia_classes(self) -> List[str]:
+    def dbpedia_classes(self) -> list[str]:
         """DBpedia classes."""
         return self.__dbpedia_classes
 
     @dbpedia_classes.setter
-    def dbpedia_classes(self, value: List[str]):
+    def dbpedia_classes(self, value: list[str]):
         self.__dbpedia_classes = value
 
     @property
@@ -98,7 +131,7 @@ class PropertyType(enum.Enum):
     OBJECT_PROPERTY = 1
 
 
-class PropertyConfiguration(object):
+class PropertyConfiguration:
     """
     Property configuration.
     -----------------------
@@ -110,17 +143,17 @@ class PropertyConfiguration(object):
         The IRI of the property.
     property_type: PropertyType
         The property type.
-    pids: Optional[List[str]]
+    pids: Optional[list[str]]
         The list of property PIDs.
     """
 
-    def __init__(self, iri: str, property_type: PropertyType, pids: Optional[List[str]] = None):
+    def __init__(self, iri: str, property_type: PropertyType, pids: Optional[list[str]] = None):
         self.__iri: str = iri
-        self.__pids: List[str] = pids if pids else []
+        self.__pids: list[str] = pids if pids else []
         self.__property: PropertyType = property_type
         self.__inverse: Optional[str] = None
-        self.__ranges: List[str] = []
-        self.__domains: List[str] = []
+        self.__ranges: list[str] = []
+        self.__domains: list[str] = []
 
     @property
     def iri(self) -> str:
@@ -145,17 +178,17 @@ class PropertyConfiguration(object):
         return self.__property
 
     @property
-    def pids(self) -> List[str]:
+    def pids(self) -> list[str]:
         """List of property PIDs."""
         return self.__pids
 
     @property
-    def ranges(self) -> List[str]:
+    def ranges(self) -> list[str]:
         """List of ranges."""
         return self.__ranges
 
     @property
-    def domains(self) -> List[str]:
+    def domains(self) -> list[str]:
         """List of domains."""
         return self.__domains
 
@@ -163,7 +196,7 @@ class PropertyConfiguration(object):
         return f'PropertyConfiguration(ontology_property={self.iri})'
 
 
-class MappingConfiguration(object):
+class MappingConfiguration:
     """
     Mapping configuration
     ---------------------
@@ -172,27 +205,28 @@ class MappingConfiguration(object):
     """
 
     def __init__(self):
-        self.__classes: List[ClassConfiguration] = []
-        self.__properties: List[PropertyConfiguration] = []
-        self.__index: Dict[str, int] = {}
-        self.__index_properties: Dict[str, int] = {}
+        self.__classes: list[ClassConfiguration] = []
+        self.__properties: list[PropertyConfiguration] = []
+        self.__index: dict[str, int] = {}
+        self.__index_properties: dict[str, list[int]] = {}
+        self.__index_iri: dict[str, int] = {}
 
     @property
-    def classes(self) -> List[ClassConfiguration]:
+    def classes(self) -> list[ClassConfiguration]:
         """List of classes."""
         return self.__classes
 
     @property
-    def properties(self) -> List[PropertyConfiguration]:
+    def properties(self) -> list[PropertyConfiguration]:
         """List of properties."""
         return self.__properties
 
-    def guess_classed(self, classes: List[str]) -> Optional[ClassConfiguration]:
+    def guess_classed(self, classes: list[str]) -> Optional[ClassConfiguration]:
         """
         Guesses the class from the label.
         Parameters
         ----------
-        classes: List[str]
+        classes: list[str]
             The list of classes
 
         Returns
@@ -217,17 +251,18 @@ class MappingConfiguration(object):
             The concept type.
         Returns
         -------
-        property: Optional[PropertyConfiguration]
+        property_config: Optional[PropertyConfiguration]
             If a mapping exists, the property configuration, otherwise None.
         """
         if property_pid in self.__index_properties:
-            prop_conf: PropertyConfiguration = self.__properties[self.__index_properties[property_pid]]
-            if concept_type.iri in prop_conf.domains or 'wacom:core#Thing' in prop_conf.domains:
-                return prop_conf
+            for pid_idx in self.__index_properties[property_pid]:
+                prop_conf: PropertyConfiguration = self.__properties[pid_idx]
+                if concept_type.iri in prop_conf.domains:
+                    return prop_conf
         return None
 
     def property_for(self, class_ref: OntologyClassReference, property_type: Optional[PropertyType]) \
-            -> List[PropertyConfiguration]:
+            -> list[PropertyConfiguration]:
         """
         Returns the properties for a class.
         Parameters
@@ -238,14 +273,13 @@ class MappingConfiguration(object):
             The property type, if None, all properties are returned.
         Returns
         -------
-        properties: List[PropertyConfiguration]
+        properties: list[PropertyConfiguration]
             The list of properties.
         """
-        global ontology_graph
-        domain_classes: List[str] = [class_ref.iri]
+        domain_classes: list[str] = [class_ref.iri]
         domain_classes += subclasses_of(class_ref.iri)
-        domain_subclasses: Dict[str, List[str]] = {}
-        properties: List[PropertyConfiguration] = []
+        domain_subclasses: dict[str, list[str]] = {}
+        properties: list[PropertyConfiguration] = []
         for prop_conf in self.properties:
             for d in prop_conf.domains:
                 if d not in domain_subclasses:
@@ -281,19 +315,108 @@ class MappingConfiguration(object):
         """
         self.__properties.append(property_configuration)
         for pid in property_configuration.pids:
-            self.__index_properties[pid] = len(self.__properties) - 1
+            idx: int = len(self.__properties) - 1
+            if pid not in self.__index_properties:
+                self.__index_properties[pid] = []
+            self.__index_properties[pid].append(idx)
+            self.__index_iri[property_configuration.iri] = idx
+
+    def property_for_iri(self, property_iri: str) -> PropertyConfiguration:
+        """
+        Returns the property configuration for an IRI.
+
+        Parameters
+        ----------
+        property_iri: str
+            The property IRI
+
+        Returns
+        -------
+        property: PropertyConfiguration
+            The property configuration
+
+        Raises
+        ------
+        ValueError
+            If the property is not found.
+        """
+        if property_iri not in self.__index_iri:
+            raise ValueError(f'Property {property_iri} not found.')
+        return self.__properties[self.__index_iri[property_iri]]
+
+    def check_data_property_range(self, property_type: OntologyPropertyReference,
+                                  content: Optional[Any]) -> bool:
+        """
+        Checks if the content is in the range of the property.
+
+        Parameters
+        ----------
+        property_type: OntologyPropertyReference
+            The property type
+        content: Optional[Any]
+            The content
+
+        Returns
+        -------
+        evaluation: bool
+            True if the content is in the range, False otherwise.
+        """
+        if content is None:
+            return False
+        prop_config: Optional[PropertyConfiguration] = self.property_for_iri(property_type.iri)
+        if prop_config:
+            for r in prop_config.ranges:
+                if r == DataPropertyType.STRING.value:
+                    return content is not None and isinstance(content, str)
+                elif r == DataPropertyType.INTEGER.value:
+                    return content is not None and isinstance(content, int)
+                elif r == DataPropertyType.FLOAT.value:
+                    return content is not None and isinstance(content, float)
+                elif r == DataPropertyType.BOOLEAN.value:
+                    return content is not None and isinstance(content, bool)
+                elif r == DataPropertyType.DATE.value or r == DataPropertyType.DATE_TIME.value:
+                    return content is not None and isinstance(content, str) and is_iso_date(content)
+                else:
+                    return True
+
+    def check_object_property_range(self, property_type: OntologyPropertyReference,
+                                    source_type: OntologyClassReference,
+                                    target_type: OntologyClassReference) -> bool:
+        """
+        Checks if the target is in the range of the property.
+        Parameters
+        ----------
+        property_type: OntologyPropertyReference
+            The property
+        source_type: OntologyClassReference
+            The concept type
+        target_type: OntologyClassReference
+            The target type
+
+        Returns
+        -------
+        valid: bool
+            True if the target is in the range, False otherwise.
+        """
+        prop_config: Optional[PropertyConfiguration] = self.property_for_iri(property_type.iri)
+        if prop_config:
+            if prop_config.type == PropertyType.OBJECT_PROPERTY:
+                if source_type.iri in prop_config.domains and target_type.iri in prop_config.ranges:
+                    return True
+                else:
+                    return False
 
     def __str__(self):
         return f"Mapping Configuration(#classes={len(self.__classes)}" \
                f", #properties={len(self.__properties)})"
 
 
-def build_configuration(mapping: Dict[str, Any]) -> MappingConfiguration:
+def build_configuration(mapping: dict[str, Any]) -> MappingConfiguration:
     """
     Builds the configuration from the mapping file.
     Parameters
     ----------
-    mapping: Dict[str, Any]
+    mapping: dict[str, Any]
         The mapping file
 
     Returns
@@ -301,6 +424,7 @@ def build_configuration(mapping: Dict[str, Any]) -> MappingConfiguration:
     conf: MappingConfiguration
         The mapping configuration
     """
+    global ontology_graph
     conf: MappingConfiguration = MappingConfiguration()
     for c, c_conf in mapping['classes'].items():
         class_config: ClassConfiguration = ClassConfiguration(c)
@@ -311,17 +435,26 @@ def build_configuration(mapping: Dict[str, Any]) -> MappingConfiguration:
         property_config: PropertyConfiguration = PropertyConfiguration(p, PropertyType.DATA_PROPERTY,
                                                                        p_conf['wikidata_types'])
         if 'ranges' in p_conf:
-            property_config.ranges.extend(p_conf['ranges'])
+            for ra in p_conf['ranges']:
+                property_config.ranges.append(ra)
+                property_config.ranges.extend(subclasses_of(ra))
         if 'domains' in p_conf:
-            property_config.domains.extend(p_conf['domains'])
+            for do in p_conf['domains']:
+                property_config.domains.append(do)
+                property_config.domains.extend(subclasses_of(do))
+
         conf.add_property(property_config)
     for p, p_conf in mapping['object_properties'].items():
         property_config: PropertyConfiguration = PropertyConfiguration(p, PropertyType.OBJECT_PROPERTY,
                                                                        p_conf['wikidata_types'])
         if 'ranges' in p_conf:
-            property_config.ranges.extend(p_conf['ranges'])
+            for ra in p_conf['ranges']:
+                property_config.ranges.append(ra)
+                property_config.ranges.extend(subclasses_of(ra))
         if 'domains' in p_conf:
-            property_config.domains.extend(p_conf['domains'])
+            for do in p_conf['domains']:
+                property_config.domains.append(do)
+                property_config.domains.extend(subclasses_of(do))
         if 'inverse' in p_conf:
             property_config.inverse = p_conf['inverse']
         conf.add_property(property_config)
@@ -351,11 +484,40 @@ def register_ontology(rdf_str: str):
 
 # Mapping configuration
 mapping_configuration: Optional[MappingConfiguration] = None
-taxonomy_cache: Optional[Dict[str, WikidataClass]] = None
+taxonomy_cache: Optional[dict[str, WikidataClass]] = None
 
-if mapping_configuration is None and CONFIGURATION_FILE.exists():
-    configuration = json.loads(CONFIGURATION_FILE.open('r').read())
-    mapping_configuration = build_configuration(configuration)
+
+def load_configuration():
+    """
+    Loads the configuration.
+
+    Raises
+    ------
+    ValueError
+        If the configuration file is not found.
+    """
+    global mapping_configuration, taxonomy_cache
+    if CONFIGURATION_FILE.exists():
+        configuration = json.loads(CONFIGURATION_FILE.open('r').read())
+        mapping_configuration = build_configuration(configuration)
+    else:
+        raise ValueError(f'Configuration file {CONFIGURATION_FILE} not found.')
+
+
+def get_mapping_configuration() -> MappingConfiguration:
+    """
+    Returns the mapping configuration.
+
+    Returns
+    -------
+    mapping_configuration: MappingConfiguration
+        The mapping configuration
+    """
+    global mapping_configuration
+    if mapping_configuration is None:
+        load_configuration()
+    return mapping_configuration
+
 
 if taxonomy_cache is None:
     if TAXONOMY_FILE.exists():

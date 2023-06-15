@@ -60,12 +60,12 @@ def pull_wikidata_object(qid_object: str) -> Optional[WikidataThing]:
         return wikidata_object
 
 
-def cache_wikidata_objects() -> Dict[str, WikidataThing]:
+def cache_wikidata_objects() -> dict[str, WikidataThing]:
     """
     Returns the Wikidata cache.
     Returns
     -------
-    wikidata_cache: Dict[str, WikidataThing]
+    wikidata_cache: dict[str, WikidataThing]
         Wikidata cache.
     """
     global wikidata_cache
@@ -106,5 +106,5 @@ def qid_in_cache(ref_qid: str) -> bool:
     return ref_qid in wikidata_cache
 
 
-wikidata_cache: Dict[str, WikidataThing] = {}
+wikidata_cache: dict[str, WikidataThing] = {}
 # Wikidata cache

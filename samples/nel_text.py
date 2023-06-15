@@ -13,7 +13,6 @@
 #  See the License for the specific language_code governing permissions and
 #  limitations under the License.
 import argparse
-from typing import List, Dict
 
 import urllib3
 
@@ -57,7 +56,7 @@ def print_entity(entity: KnowledgeGraphEntity, list_idx: int, auth_key: str, cli
         for la in thing.alias:
             print(f'    |     |- "{la.content}"@{la.language_code}')
         print('    |')
-    relations: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key, uri=thing.uri)
+    relations: dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key, uri=thing.uri)
     if len(thing.data_properties) > 0:
         print('    | [Attributes]')
         for data_property, labels in thing.data_properties.items():
@@ -95,7 +94,7 @@ if __name__ == '__main__':
     )
     # Use special tenant for testing:  Unit-test tenant
     user_token, refresh_token, expiration_time = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
-    entities: List[KnowledgeGraphEntity] = nel_client.\
+    entities: list[KnowledgeGraphEntity] = nel_client.\
         link_personal_entities(auth_key=user_token, text=TEXT,
                                locale=LANGUAGE_CODE)
     idx: int = 1

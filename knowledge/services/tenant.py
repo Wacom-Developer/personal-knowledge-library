@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-23 Wacom. All rights reserved.
-from typing import List, Dict
 
 import requests
 from requests import Response
@@ -19,7 +18,9 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
     Functionality:
         - List all tenants
         - Create tenants
-        - Create users
+
+    This is service is used to manage tenants. Only admins can use this service, as it requires the secret key for
+    tenant administration.
 
     Parameters
     ----------
@@ -50,7 +51,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
 
     # ------------------------------------------ Tenants handling ------------------------------------------------------
 
-    def create_tenant(self, name: str) -> Dict[str, str]:
+    def create_tenant(self, name: str) -> dict[str, str]:
         """
         Creates a tenant.
 
@@ -61,7 +62,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
 
         Returns
         -------
-        tenant_dict: Dict[str, str]
+        tenant_dict: dict[str, str]
 
         Newly created tenant structure.
         >>>     {
@@ -88,13 +89,13 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         if response.ok:
             return response.json()
 
-    def listing_tenant(self) -> List[Dict[str, str]]:
+    def listing_tenant(self) -> list[dict[str, str]]:
         """
         Listing all tenants configured for this instance.
 
         Returns
         -------
-        tenants:  List[Dict[str, str]]
+        tenants:  list[dict[str, str]]
             List of tenants:
             >>> [
             >>>     {
@@ -120,4 +121,3 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         if response.ok:
             return response.json()
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
-

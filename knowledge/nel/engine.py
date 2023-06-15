@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
-from typing import List, Optional, Dict
+# Copyright © 2021-2023 Wacom. All rights reserved.
+from typing import Optional
 
 import requests
 from requests import Response
@@ -27,7 +27,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
     """
     SERVICE_ENDPOINT: str = 'graph/v1/nel/text'
     SERVICE_URL: str = 'https://private-knowledge.wacom.com'
-    LANGUAGES: List[LanguageCode] = [
+    LANGUAGES: list[LanguageCode] = [
         LanguageCode('de_DE'),
         LanguageCode('en_US'),
         LanguageCode('ja_JP')
@@ -38,7 +38,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
         super().__init__(supported_languages=WacomEntityLinkingEngine.LANGUAGES, service_url=service_url)
 
     def link_personal_entities(self, auth_key: str, text: str, locale: str = 'en_US', max_retries: int = 5) \
-            -> List[KnowledgeGraphEntity]:
+            -> list[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
@@ -56,7 +56,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
 
         Returns
         -------
-        entities: List[KnowledgeGraphEntity]
+        entities: list[KnowledgeGraphEntity]
             List of knowledge graph entities.
 
         Raises
@@ -64,13 +64,13 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
         WacomServiceException
             If the Named Entity Linking service returns an error code.
         """
-        named_entities: List[KnowledgeGraphEntity] = []
+        named_entities: list[KnowledgeGraphEntity] = []
         url: str = f'{self.service_url}/{self.__service_endpoint}'
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
-        payload: Dict[str, str] = {
+        payload: dict[str, str] = {
             LOCALE_TAG: locale,
             TEXT_TAG: text
         }
@@ -79,7 +79,6 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
             total=max_retries,  # maximum number of retries
             backoff_factor=0.5,  # factor by which to multiply the delay between retries
             status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
-            method_whitelist=["POST"],  # HTTP methods to retry on
             respect_retry_after_header=True  # respect the Retry-After header
         )
 
@@ -91,7 +90,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
             if response.ok:
                 results: dict = response.json()
                 for e in results:
-                    entity_types: List[str] = []
+                    entity_types: list[str] = []
                     # --------------------------- Entity content -------------------------------------------------------
                     source: Optional[EntitySource] = None
                     if 'uri' in e:
@@ -100,8 +99,10 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
                     if 'type' in e:
                         entity_types.append(e['type'])
                     # --------------------------------------------------------------------------------------------------
-                    ne: KnowledgeGraphEntity = KnowledgeGraphEntity(ref_text=text[e['startPosition']:e['endPosition'] + 1],
-                                                                    start_idx=e['startPosition'], end_idx=e['endPosition'],
+                    start: int = e['startPosition']
+                    end: int = e['endPosition']
+                    ne: KnowledgeGraphEntity = KnowledgeGraphEntity(ref_text=text[start:end + 1],
+                                                                    start_idx=start, end_idx=end,
                                                                     label=e['value'], confidence=0.,
                                                                     source=source, content_link='',
                                                                     ontology_types=entity_types,

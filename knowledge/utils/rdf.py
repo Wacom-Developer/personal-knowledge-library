@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2022-23 Wacom Authors. All Rights Reserved.
-from typing import Optional, List
+from typing import Optional
 
 from rdflib import Graph, RDF, RDFS, OWL, URIRef, Literal
 
-from knowledge.base.entity import Comment, LanguageCode, OntologyLabel
-from knowledge.base.ontology import Ontology, OntologyClass, OntologyClassReference, OntologyPropertyReference, \
+from knowledge.base.entity import LanguageCode
+from knowledge.base.ontology import Comment, OntologyLabel, Ontology, OntologyClass, OntologyClassReference, \
+    OntologyPropertyReference, \
     OntologyProperty, PropertyType, INVERSE_DATA_PROPERTY_TYPE_MAPPING, DataPropertyType
 
 PREFERRED_LABEL: URIRef = URIRef('wacom:core#prefLabel')
@@ -33,8 +34,8 @@ def ontology_import(rdf_content: str, tenant_id: str = '', context: str = '') ->
     # Parse classes
     for cls_iri in [s for s, p, o in rdf_graph.triples((None, RDF.type, OWL.Class))]:
         subclass_of: Optional[OntologyClassReference] = None
-        comments: List[Comment] = []
-        labels: List[OntologyLabel] = []
+        comments: list[Comment] = []
+        labels: list[OntologyLabel] = []
         for _, _, o in rdf_graph.triples((cls_iri, RDFS.comment, None)):
             if isinstance(o, Literal):
                 comments.append(Comment(str(o), LanguageCode(o.language)))
@@ -50,10 +51,10 @@ def ontology_import(rdf_content: str, tenant_id: str = '', context: str = '') ->
     # Parse data properties
     for data_property_iri in [s for s, p, o in rdf_graph.triples((None, RDF.type, OWL.DatatypeProperty))]:
         subproperty_of: Optional[OntologyPropertyReference] = None
-        range_prop: List[DataPropertyType] = []
-        domain_prop: List[OntologyClassReference] = []
-        comments: List[Comment] = []
-        labels: List[OntologyLabel] = []
+        range_prop: list[DataPropertyType] = []
+        domain_prop: list[OntologyClassReference] = []
+        comments: list[Comment] = []
+        labels: list[OntologyLabel] = []
         inverse_prop: Optional[OntologyPropertyReference] = None
         for _, _, obj in rdf_graph.triples((data_property_iri, RDFS.range, None)):
             range_prop.append(INVERSE_DATA_PROPERTY_TYPE_MAPPING[str(obj)])
@@ -77,11 +78,11 @@ def ontology_import(rdf_content: str, tenant_id: str = '', context: str = '') ->
     # Parse object properties
     for object_property_iri in [s for s, p, o in rdf_graph.triples((None, RDF.type, OWL.ObjectProperty))]:
         subproperty_of: Optional[OntologyPropertyReference] = None
-        obj_range_prop: List[OntologyClassReference] = []
-        domain_prop: List[OntologyClassReference] = []
+        obj_range_prop: list[OntologyClassReference] = []
+        domain_prop: list[OntologyClassReference] = []
         inverse_prop: Optional[OntologyPropertyReference] = None
-        comments: List[Comment] = []
-        labels: List[OntologyLabel] = []
+        comments: list[Comment] = []
+        labels: list[OntologyLabel] = []
         for _, _, o in rdf_graph.triples((object_property_iri, RDFS.range, None)):
             obj_range_prop.append(OntologyClassReference.parse(o))
         for _, _, o in rdf_graph.triples((object_property_iri, RDFS.domain, None)):
@@ -100,5 +101,5 @@ def ontology_import(rdf_content: str, tenant_id: str = '', context: str = '') ->
                                                  context=context,
                                                  name=OntologyPropertyReference.parse(object_property_iri),
                                                  property_range=obj_range_prop, property_domain=domain_prop,
-                                                 subproperty_of=subproperty_of, inverse_property_of=inverse_prop))
+                                                 sub_property_of=subproperty_of, inverse_property_of=inverse_prop))
     return ontology

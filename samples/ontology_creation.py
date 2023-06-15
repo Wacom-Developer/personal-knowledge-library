@@ -13,11 +13,11 @@
 #  See the License for the specific language_code governing permissions and
 #  limitations under the License.
 import argparse
-from typing import List, Optional
+from typing import Optional
 
-from knowledge.base.entity import OntologyContext, Label, LanguageCode, Description
+from knowledge.base.entity import Label, LanguageCode, Description
 from knowledge.base.ontology import DataPropertyType, OntologyClassReference, OntologyPropertyReference, ThingObject, \
-    DataProperty
+    DataProperty, OntologyContext
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
 
@@ -43,12 +43,12 @@ def create_artist() -> ThingObject:
         Artist entity
     """
     # Main labels for entity
-    topic_labels: List[Label] = [
+    topic_labels: list[Label] = [
         Label('Gian Giacomo Caprotti', LanguageCode('en_US'))
     ]
 
     # Topic description
-    topic_description: List[Description] = [
+    topic_description: list[Description] = [
         Description('Hidden entity to explain access management.', LanguageCode('en_US')),
         Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
     ]
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     EXTERNAL_USER_ID: str = args.user
     # Wacom Ontology REST API Client
     ontology_client: OntologyService = OntologyService(service_url=args.instance)
-    admin_token, refresh_token, expiration_time  = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    admin_token, refresh_token, expiration_time = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Ontology Creation Demo",
         service_url=args.instance)
@@ -98,7 +98,6 @@ if __name__ == '__main__':
                                          domains_cls=[ARTIST_TYPE],
                                          ranges_cls=[DataPropertyType.STRING],
                                          subproperty_of=None)
-
     # Commit the changes of the ontology. This is very important to confirm changes.
     ontology_client.commit(admin_token, context_name)
     # Trigger graph service. After the update the ontology is available and the new entities can be created

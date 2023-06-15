@@ -13,7 +13,7 @@
 #  See the License for the specific language_code governing permissions and
 #  limitations under the License.
 import argparse
-from typing import Optional, List, Dict
+from typing import Optional
 
 from knowledge.base.entity import LanguageCode, Description, Label
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, ThingObject, ObjectProperty
@@ -38,14 +38,14 @@ CREATED: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:core
 HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:creative#hasArtstyle')
 
 
-def print_entity(print_entity: ThingObject, list_idx: int, auth_key: str, client: WacomKnowledgeService,
+def print_entity(entity: ThingObject, list_idx: int, auth_key: str, client: WacomKnowledgeService,
                  short: bool = False):
     """
     Printing entity details.
 
     Parameters
     ----------
-    print_entity: ThingObject
+    entity: ThingObject
         Entity with properties
     list_idx: int
         Index with a list
@@ -56,28 +56,28 @@ def print_entity(print_entity: ThingObject, list_idx: int, auth_key: str, client
     short: bool
         Short summary
     """
-    print(f'[{list_idx}] : {print_entity.uri} <{print_entity.concept_type.iri}>')
-    if len(print_entity.label) > 0:
+    print(f'[{list_idx}] : {print_entity.uri} <{entity.concept_type.iri}>')
+    if len(entity.label) > 0:
         print('    | [Labels]')
-        for la in print_entity.label:
+        for la in entity.label:
             print(f'    |     |- "{la.content}"@{la.language_code}')
         print('    |')
     if not short:
-        if len(print_entity.alias) > 0:
+        if len(entity.alias) > 0:
             print('    | [Alias]')
-            for la in print_entity.alias:
+            for la in entity.alias:
                 print(f'    |     |- "{la.content}"@{la.language_code}')
             print('    |')
-        if len(print_entity.data_properties) > 0:
+        if len(entity.data_properties) > 0:
             print('    | [Attributes]')
-            for data_property, labels in print_entity.data_properties.items():
+            for data_property, labels in entity.data_properties.items():
                 print(f'    |    |- {data_property.iri}:')
                 for li in labels:
                     print(f'    |    |-- "{li.value}"@{li.language_code}')
             print('    |')
 
-        relations_obj: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key,
-                                                                                          uri=print_entity.uri)
+        relations_obj: dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key,
+                                                                                          uri=entity.uri)
         if len(relations_obj) > 0:
             print('    | [Relations]')
             for re in relations_obj.values():
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     print('-----------------------------------------------------------------------------------------------------------')
     print(' What artwork exists in the knowledge graph.')
     print('-----------------------------------------------------------------------------------------------------------')
-    relations_dict: Dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(auth_key=user_token,
+    relations_dict: dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(auth_key=user_token,
                                                                                                  uri=leo.uri)
     print(f' Artwork of {leo.label}')
     print('-----------------------------------------------------------------------------------------------------------')
@@ -136,17 +136,17 @@ if __name__ == '__main__':
     print('-----------------------------------------------------------------------------------------------------------')
 
     # Main labels for entity
-    artwork_labels: List[Label] = [
+    artwork_labels: list[Label] = [
         Label('Ginevra Gherardini', LanguageCode('en_US')),
         Label('Ginevra Gherardini', LanguageCode('de_DE'))
     ]
     # Alias labels for entity
-    artwork_alias: List[Label] = [
+    artwork_alias: list[Label] = [
         Label("Ginevra", LanguageCode('en_US')),
         Label("Ginevra", LanguageCode('de_DE'))
     ]
     # Topic description
-    artwork_description: List[Description] = [
+    artwork_description: list[Description] = [
         Description('Oil painting of Mona Lisa\' sister', LanguageCode('en_US')),
         Description('Ölgemälde von Mona Lisa\' Schwester', LanguageCode('de_DE'))
     ]
@@ -249,7 +249,7 @@ if __name__ == '__main__':
         pulled_entities: int = len(entities)
         if pulled_entities == 0:
             break
-        delete_uris: List[str] = [e.uri for e in entities]
+        delete_uris: list[str] = [e.uri for e in entities]
         print(f'Cleanup. Delete entities: {delete_uris}')
         knowledge_client.delete_entities(auth_key=user_token, uris=delete_uris, force=True)
         page_number += 1

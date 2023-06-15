@@ -5,7 +5,8 @@ import json
 import os
 import urllib
 from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional
+from typing import Any, Optional
+from urllib.parse import urlparse
 
 import requests
 from requests import Response
@@ -51,13 +52,13 @@ ESTIMATE_COUNT: str = 'estimateCount'
 RELATION_TAG: str = 'relation'
 APPLICATION_JSON_HEADER: str = 'application/json'
 
-MIME_TYPE: Dict[str, str] = {
+MIME_TYPE: dict[str, str] = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.png': 'image/png'
 }
 
-SUPPORTED_LANGUAGES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'ru_RU']
+SUPPORTED_LANGUAGES: list[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'ru_RU']
 
 
 # ------------------------------- Enum ---------------------------------------------------------------------------------
@@ -147,15 +148,15 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the graph service returns an error code or the entity is not found in the knowledge graph
         """
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
         if response.ok:
-            e: Dict[str, Any] = response.json()
-            pref_label: List[Label] = []
-            aliases: List[Label] = []
+            e: dict[str, Any] = response.json()
+            pref_label: list[Label] = []
+            aliases: list[Label] = []
             # Extract labels and alias
             for label in e[LABELS_TAG]:
                 if label[IS_MAIN_TAG]:  # Labels
@@ -188,7 +189,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         raise WacomServiceException(f'Retrieving of entity content failed. URI:={uri}. '
                                     f'Response code:={response.status_code}, exception:= {response.content}')
 
-    def delete_entities(self, auth_key: str, uris: List[str], force: bool = False, max_retries: int = 3,
+    def delete_entities(self, auth_key: str, uris: list[str], force: bool = False, max_retries: int = 3,
                         backoff_factor: float = 0.1):
         """
         Delete a list of entities.
@@ -197,7 +198,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ----------
         auth_key: str
             Auth key from user
-        uris: List[str]
+        uris: list[str]
             List of URI of entities. **Remark:** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
@@ -215,11 +216,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         if len(uris) > 100:
             raise WacomServiceException("Please delete less than 100 entities.")
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}'
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        params: Dict[str, Any] = {
+        params: dict[str, Any] = {
             URIS_TAG: uris,
             FORCE_TAG: force
         }
@@ -259,7 +260,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the graph service returns an error code
         """
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -300,9 +301,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
     @staticmethod
     def __entity__(entity: ThingObject):
         # Different localized content
-        labels: List[dict] = []
-        descriptions: List[dict] = []
-        literals: List[dict] = []
+        labels: list[dict] = []
+        descriptions: list[dict] = []
+        literals: list[dict] = []
         # Add description in different languages
         for desc in entity.description:
             if len(desc.content) > 0 and not desc.content == ' ':
@@ -345,7 +346,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                         if li.language_code and li.language_code in SUPPORTED_LANGUAGES else "en_US",
                         DATA_PROPERTY_TAG: li.data_property_type.iri
                     })
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             TYPE_TAG: entity.concept_type.iri,
             DESCRIPTIONS_TAG: descriptions,
             LABELS_TAG: labels,
@@ -356,7 +357,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             payload[TENANT_RIGHTS_TAG] = entity.tenant_access_right.to_list()
         return payload
 
-    def create_entity_bulk(self, auth_key: str, entities: List[ThingObject], batch_size: int = 10) -> List[ThingObject]:
+    def create_entity_bulk(self, auth_key: str, entities: list[ThingObject], batch_size: int = 10) -> list[ThingObject]:
         """
         Creates entity in graph.
 
@@ -364,7 +365,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ----------
         auth_key: str
             Auth key from user
-        entities: List[ThingObject]
+        entities: list[ThingObject]
             Entities
         batch_size: int
             Batch size
@@ -381,19 +382,19 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_BULK_ENDPOINT}'
         # Header info
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        payload: List[Dict[str, Any]] = [WacomKnowledgeService.__entity__(e) for e in entities]
+        payload: list[dict[str, Any]] = [WacomKnowledgeService.__entity__(e) for e in entities]
         for bulk_idx in range(0, len(entities), batch_size):
             bulk = payload[bulk_idx:bulk_idx + batch_size]
 
             response: Response = requests.post(url, json=bulk, headers=headers,
                                                verify=self.verify_calls)
             if response.ok:
-                response_dict: Dict[str, Any] = response.json()
+                response_dict: dict[str, Any] = response.json()
                 for idx, uri in enumerate(response_dict[URIS_TAG]):
                     if entities[bulk_idx + idx].image is not None and entities[bulk_idx + idx].image != '':
                         self.set_entity_image_url(auth_key, uri, entities[bulk_idx + idx].image)
@@ -434,12 +435,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}'
         # Header info
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        payload: Dict[str, Any] = WacomKnowledgeService.__entity__(entity)
+        payload: dict[str, Any] = WacomKnowledgeService.__entity__(entity)
         mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
@@ -452,7 +453,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 uri: str = response.json()[URI_TAG]
                 # Set image
                 if entity.image is not None and entity.image.startswith('file:'):
-                    from urllib.parse import urlparse
                     p = urlparse(entity.image)
                     self.set_entity_image_local(auth_key, uri, Path(p.path))
                 elif entity.image is not None and entity.image != '':
@@ -473,11 +473,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         entity: ThingObject
             entity object
 
-        Returns
-        -------
-        uri: str
-            URI of entity
-
         Raises
         ------
         WacomServiceException
@@ -486,9 +481,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         uri: str = entity.uri
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
         # Different localized content
-        labels: List[dict] = []
-        descriptions: List[dict] = []
-        literals: List[dict] = []
+        labels: list[dict] = []
+        descriptions: list[dict] = []
+        literals: list[dict] = []
         # Header info
         headers: dict = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
@@ -550,7 +545,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                         f'Response code:={response.status_code}, exception:= {response.content}. '
                                         f'Payload: \n{json.dumps(payload, indent=4)}')
 
-    def relations(self, auth_key: str, uri: str) -> Dict[OntologyPropertyReference, ObjectProperty]:
+    def relations(self, auth_key: str, uri: str) -> dict[OntologyPropertyReference, ObjectProperty]:
         """
         Retrieve the relations (object properties) of an entity.
 
@@ -563,7 +558,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Returns
         -------
-        relations: Dict[OntologyPropertyReference, ObjectProperty]
+        relations: dict[OntologyPropertyReference, ObjectProperty]
             All relations a dict
 
         Raises
@@ -589,7 +584,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         raise WacomServiceException(f'Failed to pull relations. '
                                     f'Response code:={response.status_code}, exception:= {response.content}')
 
-    def labels(self, auth_key: str, uri: str, locale: str = 'en_US') -> List[Label]:
+    def labels(self, auth_key: str, uri: str, locale: str = 'en_US') -> list[Label]:
         """
         Extract list labels of entity.
 
@@ -604,7 +599,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Returns
         -------
-        labels: List[Label]
+        labels: list[Label]
             List of labels of an entity.
 
         Raises
@@ -628,7 +623,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         raise WacomServiceException('Failed to pull literals. Response code:={}, exception:= {}'
                                     .format(response.status_code, response.content))
 
-    def literals(self, auth_key: str, uri: str, locale: str = 'en_US') -> List[DataProperty]:
+    def literals(self, auth_key: str, uri: str, locale: str = 'en_US') -> list[DataProperty]:
         """
         Collect all literals of entity.
 
@@ -643,7 +638,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Returns
         -------
-        labels: List[DataProperty]
+        labels: list[DataProperty]
             List of data properties of an entity.
 
         Raises
@@ -729,11 +724,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the graph service returns an error code
         """
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation'
-        params: Dict[str, str] = {
+        params: dict[str, str] = {
             RELATION_TAG: relation.iri,
             TARGET: target
         }
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -743,8 +738,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             raise WacomServiceException(f'Deletion of relation failed. '
                                         f'Response code:={response.status_code}, exception:= {response.content}')
 
-    def activations(self, auth_key: str, uris: List[str], depth: int) \
-            -> Tuple[Dict[str, ThingObject], List[Tuple[str, OntologyPropertyReference, str]]]:
+    def activations(self, auth_key: str, uris: list[str], depth: int) \
+            -> tuple[dict[str, ThingObject], list[tuple[str, OntologyPropertyReference, str]]]:
         """
         Spreading activation, retrieving the entities related to an entity.
 
@@ -752,16 +747,16 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ----------
         auth_key: str
             Auth key for user
-        uris: List[str]
+        uris: list[str]
             List of URIS for entity.
         depth: int
             Depth of activations
 
         Returns
         -------
-        entity_map: Dict[str, ThingObject]
+        entity_map: dict[str, ThingObject]
             Map with entity and its URI as key.
-        relations: List[Tuple[str, OntologyPropertyReference, str]]
+        relations: list[tuple[str, OntologyPropertyReference, str]]
             List of relations with subject predicate, (Property), and subject
 
         Raises
@@ -771,7 +766,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ACTIVATIONS_ENDPOINT}'
 
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -782,10 +777,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         response: Response = requests.get(url, headers=headers, params=params, verify=self.verify_calls)
         if response.ok:
-            entities: Dict[str, Any] = response.json()
-            things: Dict[str, ThingObject] = dict([(e[URI_TAG], ThingObject.from_dict(e))
+            entities: dict[str, Any] = response.json()
+            things: dict[str, ThingObject] = dict([(e[URI_TAG], ThingObject.from_dict(e))
                                                    for e in entities['entities']])
-            relations: List[Tuple[str, OntologyPropertyReference, str]] = []
+            relations: list[tuple[str, OntologyPropertyReference, str]] = []
             for r in entities[RELATIONS_TAG]:
                 relation: OntologyPropertyReference = OntologyPropertyReference.parse(r[PREDICATE])
                 relations.append((r[SUBJECT], relation, r[OBJECT]))
@@ -798,7 +793,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
     def listing(self, auth_key: str, filter_type: OntologyClassReference, page_id: Optional[str] = None,
                 limit: int = 30, locale: Optional[LanguageCode] = None, visibility: Optional[Visibility] = None,
                 estimate_count: bool = False, max_retries: int = 3, backoff_factor: float = 0.1) \
-            -> Tuple[List[ThingObject], int, str]:
+            -> tuple[list[ThingObject], int, str]:
         """
         List all entities visible to users.
 
@@ -826,7 +821,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Returns
         -------
-        entities: List[ThingObject]
+        entities: list[ThingObject]
             List of entities
         estimated_total_number: int
             Number of all entities
@@ -840,12 +835,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{WacomKnowledgeService.LISTING_ENDPOINT}'
         # Header with auth token
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         # Parameter with filtering and limit
-        parameters: Dict[str, str] = {
+        parameters: dict[str, str] = {
             TYPE_TAG: filter_type.iri,
             LIMIT_PARAMETER: limit,
             ESTIMATE_COUNT: estimate_count
@@ -863,20 +858,20 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                    backoff_factor=backoff_factor,
                                    status_forcelist=[502, 503, 504])
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
-        # Send request
-        response: Response = requests.get(url, params=parameters, headers=headers, verify=self.verify_calls)
-        # If response is successful
-        if response.ok:
-            entities_resp: dict = response.json()
-            next_page_id: str = entities_resp[NEXT_PAGE_ID_TAG]
-            estimated_total_number: int = entities_resp.get(TOTAL_COUNT, 0)
-            entities: List[ThingObject] = []
-            if LISTING in entities_resp:
-                for e in entities_resp[LISTING]:
-                    thing: ThingObject = ThingObject.from_dict(e)
-                    thing.status_flag = EntityStatus.SYNCED
-                    entities.append(thing)
-            return entities, estimated_total_number, next_page_id
+            # Send request
+            response: Response = session.get(url, params=parameters, headers=headers, verify=self.verify_calls)
+            # If response is successful
+            if response.ok:
+                entities_resp: dict = response.json()
+                next_page_id: str = entities_resp[NEXT_PAGE_ID_TAG]
+                estimated_total_number: int = entities_resp.get(TOTAL_COUNT, 0)
+                entities: list[ThingObject] = []
+                if LISTING in entities_resp:
+                    for e in entities_resp[LISTING]:
+                        thing: ThingObject = ThingObject.from_dict(e)
+                        thing.status_flag = EntityStatus.SYNCED
+                        entities.append(thing)
+                return entities, estimated_total_number, next_page_id
 
         raise WacomServiceException(f'Failed to list the entities (since:= {page_id}, limit:={limit}). '
                                     f'Response code:={response.status_code}, exception:= {response.content}')
@@ -910,8 +905,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                         f'Response code:={response.status_code}, exception:= {response.content}')
 
     def search_all(self, auth_key: str, search_term: str, language_code: LanguageCode,
-                   types: List[OntologyClassReference], limit: int = 30, next_page_id: str = None) \
-            -> Tuple[List[ThingObject], str]:
+                   types: list[OntologyClassReference], limit: int = 30, next_page_id: str = None) \
+            -> tuple[list[ThingObject], str]:
         """Search term in labels, literals and description.
 
         Parameters
@@ -922,7 +917,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Search term.
         language_code: LanguageCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
-        types: List[OntologyClassReference]
+        types: list[OntologyClassReference]
             Limits the types for search.
         limit: int  (default:= 30)
             Size of the page for pagination.
@@ -931,7 +926,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Returns
         -------
-        results: List[ThingObject]
+        results: list[ThingObject]
             List of things matching the search term
         next_page_id: str
             ID of the next page.
@@ -941,11 +936,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        parameters: Dict[str, Any] = {
+        parameters: dict[str, Any] = {
             SEARCH_TERM: search_term,
             LANGUAGE_PARAMETER: language_code,
             TYPES_PARAMETER: [ot.iri for ot in types],
@@ -961,7 +956,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                     f'Response code:={response.status_code}, exception:= {response.content}')
 
     def search_labels(self, auth_key: str, search_term: str, language_code: LanguageCode, limit: int = 30,
-                      next_page_id: str = None) -> Tuple[List[ThingObject], str]:
+                      next_page_id: str = None) -> tuple[list[ThingObject], str]:
         """Search for matches in labels.
 
         Parameters
@@ -979,7 +974,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Returns
         -------
-        results: List[ThingObject]
+        results: list[ThingObject]
             List of things matching the search term
         next_page_id: str
             ID of the next page.
@@ -989,11 +984,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        parameters: Dict[str, Any] = {
+        parameters: dict[str, Any] = {
             SEARCH_TERM: search_term,
             LOCALE_TAG: language_code,
             LIMIT: limit,
@@ -1009,7 +1004,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
     def search_literal(self, auth_key: str, search_term: str, literal: OntologyPropertyReference,
                        pattern: SearchPattern = SearchPattern.REGEX,
                        language_code: LanguageCode = LanguageCode('en_US'),
-                       limit: int = 30, next_page_id: str = None) -> Tuple[List[ThingObject], str]:
+                       limit: int = 30, next_page_id: str = None) -> tuple[list[ThingObject], str]:
         """
         Search for matches in literals.
 
@@ -1032,7 +1027,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Returns
         -------
-        results: List[ThingObject]
+        results: list[ThingObject]
            List of things matching the search term
        next_page_id: str
            ID of the next page.
@@ -1043,7 +1038,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
            If the graph service returns an error code.
        """
         url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_LITERALS_ENDPOINT}'
-        parameters: Dict[str, Any] = {
+        parameters: dict[str, Any] = {
             VALUE: search_term,
             LITERAL_PARAMETER: literal.iri,
             LANGUAGE_PARAMETER: language_code,
@@ -1051,7 +1046,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             SEARCH_PATTERN_PARAMETER: pattern.value,
             NEXT_PAGE_ID_TAG: next_page_id
         }
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         response: Response = requests.get(url, headers=headers, params=parameters, verify=self.verify_calls)
@@ -1062,7 +1057,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
     def search_relation(self, auth_key: str, relation: OntologyPropertyReference,
                         language_code: LanguageCode, subject_uri: str = None, object_uri: str = None,
-                        limit: int = 30, next_page_id: str = None) -> Tuple[List[ThingObject], str]:
+                        limit: int = 30, next_page_id: str = None) -> tuple[list[ThingObject], str]:
         """
         Search for matches in literals.
 
@@ -1085,7 +1080,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Returns
         -------
-        results: List[ThingObject]
+        results: list[ThingObject]
            List of things matching the search term
         next_page_id: str
            ID of the next page.
@@ -1096,7 +1091,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
            If the graph service returns an error code.
        """
         url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_RELATION_ENDPOINT}'
-        parameters: Dict[str, Any] = {
+        parameters: dict[str, Any] = {
             SUBJECT_URI: subject_uri,
             RELATION_URI: relation.iri,
             OBJECT_URI: object_uri,
@@ -1116,7 +1111,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                     f'Response code:={response.status_code}, exception:= {response.content}')
 
     def search_description(self, auth_key: str, search_term: str, language_code: LanguageCode, limit: int = 30,
-                           next_page_id: str = None) -> Tuple[List[ThingObject], str]:
+                           next_page_id: str = None) -> tuple[list[ThingObject], str]:
         """Search for matches in description.
 
         Parameters
@@ -1134,7 +1129,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Returns
         -------
-        results: List[ThingObject]
+        results: list[ThingObject]
             List of things matching the search term
         next_page_id: str
             ID of the next page.
@@ -1145,7 +1140,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the graph service returns an error code.
         """
         url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_DESCRIPTION_ENDPOINT}'
-        parameters: Dict[str, Any] = {
+        parameters: dict[str, Any] = {
             SEARCH_TERM: search_term,
             LOCALE_TAG: language_code,
             LIMIT: limit,
@@ -1162,8 +1157,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                     f'Response code:={response.status_code}, exception:= {response.content}')
 
     @staticmethod
-    def __search_results__(response: Dict[str, Any]) -> Tuple[List[ThingObject], str]:
-        results: List[ThingObject] = []
+    def __search_results__(response: dict[str, Any]) -> tuple[list[ThingObject], str]:
+        results: list[ThingObject] = []
         for elem in response['result']:
             results.append(ThingObject.from_dict(elem))
         return results, response[NEXT_PAGE_ID_TAG]
@@ -1228,7 +1223,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the graph service returns an error code.
         """
         with requests.session() as session:
-            headers: Dict[str, str] = {
+            headers: dict[str, str] = {
                 USER_AGENT_HEADER_FLAG:
                     f'ImageFetcher/0.1 (https://github.com/Wacom-Developer/personal-knowledge-library)'
                     f' personal-knowledge-library/0.9.5'
@@ -1282,7 +1277,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         headers: dict = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        files: List[Tuple[str, Tuple[str, bytes, str]]] = [
+        files: list[tuple[str, tuple[str, bytes, str]]] = [
             ('file', (file_name, image_byte, mime_type))
         ]
         url: str = f'{self.service_base_url}{self.ENTITY_IMAGE_ENDPOINT}{urllib.parse.quote(entity_uri)}'
