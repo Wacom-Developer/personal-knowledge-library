@@ -1,4 +1,4 @@
-2023/6/15 - RELEASE 1.0.0
+2023/6/15 - RELEASE 1.0.1
 ==========================
 - Improve the wikidata scrapping 
 - Refactoring typing
