@@ -26,6 +26,13 @@ TOPIC_CLASS: OntologyClassReference = OntologyClassReference('wacom', 'core', 'T
 
 
 def create_entity() -> ThingObject:
+    """Create a new entity.
+
+    Returns
+    -------
+    entity: ThingObject
+        Entity object
+    """
     # Main labels for entity
     topic_labels: list[Label] = [
         Label('Hidden', LanguageCode('en_US')),

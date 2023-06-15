@@ -73,7 +73,7 @@ def ontology_import(rdf_content: str, tenant_id: str = '', context: str = '') ->
         ontology.add_properties(OntologyProperty(kind=PropertyType.DATA_PROPERTY, tenant_id=tenant_id, context=context,
                                                  name=OntologyPropertyReference.parse(str(data_property_iri)),
                                                  property_range=range_prop, property_domain=domain_prop,
-                                                 subproperty_of=subproperty_of, inverse_property_of=inverse_prop,
+                                                 sub_property_of=subproperty_of, inverse_property_of=inverse_prop,
                                                  labels=labels, comments=comments))
     # Parse object properties
     for object_property_iri in [s for s, p, o in rdf_graph.triples((None, RDF.type, OWL.ObjectProperty))]:

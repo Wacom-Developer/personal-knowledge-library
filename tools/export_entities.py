@@ -2,7 +2,7 @@
 # Copyright © 2023 Wacom. All rights reserved.
 import argparse
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import ndjson
 import requests

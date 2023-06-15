@@ -24,6 +24,7 @@ FORCE_TAG: str = 'force'
 CONTENT_TYPE_FLAG: str = 'Content-Type'
 TENANT_API_KEY_FLAG: str = 'x-tenant-api-key'
 USER_AGENT_TAG: str = "User-Agent"
+DEFAULT_TIMEOUT: int = 60
 
 
 class UserRole(enum.Enum):
@@ -195,7 +196,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             META_DATA_TAG: meta_data if meta_data is not None else {},
             ROLES_TAG: [r.value for r in roles] if roles is not None else [UserRole.USER.value]
         }
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT,
+                                           verify=self.verify_calls)
         if response.ok:
             results: dict[str, Union[str, dict[str, str], list[str]]] = response.json()
 
@@ -245,7 +247,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             USER_ID_TAG: internal_id,
             EXTERNAL_USER_ID_TAG: external_id
         }
-        response: Response = requests.patch(url, headers=headers, json=payload, params=params, verify=self.verify_calls)
+        response: Response = requests.patch(url, headers=headers, json=payload, params=params, timeout=DEFAULT_TIMEOUT,
+                                            verify=self.verify_calls)
         if not response.ok:
             raise WacomServiceException(f'Updating user failed. '
                                         f'Response code:={response.status_code}, exception:= {response.text}')
@@ -279,7 +282,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             EXTERNAL_USER_ID_TAG: external_id,
             FORCE_TAG: force
         }
-        response: Response = requests.delete(url, headers=headers, params=params, verify=self.verify_calls)
+        response: Response = requests.delete(url, headers=headers, params=params, timeout=DEFAULT_TIMEOUT,
+                                             verify=self.verify_calls)
         if not response.ok:
             raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
@@ -311,7 +315,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         parameters: dict[str, str] = {
             EXTERNAL_USER_ID_TAG:  external_id
         }
-        response: Response = requests.get(url, headers=headers, params=parameters, verify=self.verify_calls)
+        response: Response = requests.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
+                                          verify=self.verify_calls)
         if response.ok:
             response_dict: dict[str, Any] = response.json()
             return response_dict[INTERNAL_USER_ID_TAG]
@@ -344,7 +349,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             OFFSET_TAG: offset,
             LIMIT_TAG: limit
         }
-        response: Response = requests.get(url, headers=headers, params=params, verify=self.verify_calls)
+        response: Response = requests.get(url, headers=headers, params=params,  timeout=DEFAULT_TIMEOUT,
+                                          verify=self.verify_calls)
         if response.ok:
             users: list[dict[str, Any]] = response.json()
             results: list[User] = []

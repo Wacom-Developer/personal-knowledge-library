@@ -196,9 +196,8 @@ class EntityFlow(TestCase):
             if ent.use_for_nel:
                 text: str = f'{fake.text()}{entities[0].label_lang(ja_jp).content}'
                 self.assertTrue(self.nel_client.is_language_supported(ja_jp))
-                linked_entities: list[KnowledgeGraphEntity] = self.nel_client.link_personal_entities(self.cache.token,
-                                                                                                     text=text,
-                                                                                                     locale=ja_jp)
+                linked_entities: list[KnowledgeGraphEntity] = self.nel_client.\
+                    link_personal_entities(self.cache.token, text=text, language_code=ja_jp)
                 self.assertGreaterEqual(len(linked_entities), 1)
 
     def test_4_nel_de(self):

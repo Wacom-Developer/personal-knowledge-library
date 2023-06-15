@@ -7,9 +7,6 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from knowledge import logger
-from knowledge.base.entity import LanguageCode
-
 
 class ExtractionException(Exception):
     """
@@ -68,7 +65,7 @@ def __extract_thumb__(title: str, language: str = 'en', max_retries: int = 5, ba
     ----------
     title: str
         Title of wikipedia article
-    language: LanguageCode
+    language: str
         Language code of Wikipedia
     max_retries: int
         Maximum number of retries
@@ -99,15 +96,13 @@ def __extract_thumb__(title: str, language: str = 'en', max_retries: int = 5, ba
         response: Response = session.get(url, params=params)
         if response.ok:
             result: dict = response.json()
-            try:
-                if 'query' in result:
-                    pages: dict = result['query']['pages']
-                    if len(pages) == 1:
-                        for v in pages.values():
-                            if 'thumbnail' in v:
-                                return v['thumbnail']['source']
-            except Exception as e:
-                logger.error(e)
+            if 'query' in result:
+                pages: dict = result['query']['pages']
+                if len(pages) == 1:
+                    for v in pages.values():
+                        if 'thumbnail' in v:
+                            return v['thumbnail']['source']
+
     raise ExtractionException(f"Thumbnail for article with {title} in language_code {language} cannot be extracted.")
 
 

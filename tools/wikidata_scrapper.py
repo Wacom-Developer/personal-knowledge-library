@@ -195,11 +195,11 @@ def build_query(params: dict[str, Any]) -> list[str]:
     filter_string: str = ''
     queries: list[str] = []
     for f in filters:
-        filter_string += "?item wdt:{}  wd:{}.\n".format(f['property'], f['target'])
+        filter_string += f"?item wdt:{f['property']}  wd:{f['target']}.\n"
     if dynamics:
         property_str: str = dynamics["property"]
         for v in dynamics["targets"]:
-            dyn: str = filter_string + "?item wdt:{}  wd:{}.\n".format(property_str, v)
+            dyn: str = filter_string + f"?item wdt:{property_str}  wd:{v}.\n"
             query: str = f"""SELECT DISTINCT ?item ?itemLabel WHERE {{
               {dyn}SERVICE wikibase:label {{ bd:serviceParam wikibase:language \"[AUTO_LANGUAGE],{lang_code}\". }}
             }}

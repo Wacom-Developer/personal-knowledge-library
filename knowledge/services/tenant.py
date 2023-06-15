@@ -9,6 +9,7 @@ from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
     CONTENT_TYPE_HEADER_FLAG
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG
 
+DEFAULT_TIMEOUT: int = 60
 
 class TenantManagementServiceAPI(WacomServiceAPIClient):
     """
@@ -85,9 +86,11 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         payload: dict = {
             'name': name
         }
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT,
+                                           verify=self.verify_calls)
         if response.ok:
             return response.json()
+        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
     def listing_tenant(self) -> list[dict[str, str]]:
         """
@@ -117,7 +120,8 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {self.__tenant_management_token}'
         }
-        response: Response = requests.get(url, headers=headers, data={}, verify=self.verify_calls)
+        response: Response = requests.get(url, headers=headers, data={}, timeout=DEFAULT_TIMEOUT,
+                                          verify=self.verify_calls)
         if response.ok:
             return response.json()
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')

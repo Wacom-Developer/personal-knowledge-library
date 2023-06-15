@@ -113,8 +113,7 @@ def cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[s
             with index_path.open('w') as fp:
                 fp.write(json.dumps(cache))
             return image_bytes, mime_type, file_name
-        else:
-            return None, None, None
+        return None, None, None
 
 
 def check_cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[str], Optional[str]]:
@@ -191,6 +190,27 @@ def imported_uris_own(client: WacomKnowledgeService, auth_key: str, refresh_toke
 
 def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, auth_key: str, refresh_token: str,
          cache_file: Path, user: str, public: bool, group_name: Optional[str]):
+    """
+    Main function to import the things.
+    Parameters
+    ----------
+    client: WacomKnowledgeService
+        The client to use.
+    management: GroupManagementServiceAPI
+        The management client to use.
+    auth_key: str
+        The user auth key.
+    refresh_token:
+        The refresh token.
+    cache_file: Path
+        The cache file.
+    user: str
+        The user name.
+    public: bool
+        If the things should be public.
+    group_name: Optional[str]
+        The group name.
+    """
     cache_path_dir: Path = cache_file.parent
     error_path: Path = Path(f'{str(cache_file)}.{user}.errors')
     failed_path: Path = Path(f'{str(cache_file)}.{user}.failed.ndjson')

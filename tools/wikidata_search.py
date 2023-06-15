@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2023 Wacom. All rights reserved.
 import argparse
-from typing import List
 
 from knowledge.public.wikidata import WikiDataAPIClient, WikidataSearchResult
 

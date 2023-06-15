@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2023 Wacom. All rights reserved.
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import ndjson
 
@@ -16,7 +16,6 @@ def cache_wikidata_object(wikidata_object: WikidataThing):
     wikidata_object: WikidataObject
         The Wikidata object
     """
-    global wikidata_cache
     wikidata_cache[wikidata_object.qid] = wikidata_object
 
 
@@ -33,7 +32,6 @@ def get_wikidata_object(qid_object: str) -> WikidataThing:
     wikidata_object: WikidataThing
         The Wikidata object.
     """
-    global wikidata_cache
     if qid_object not in wikidata_cache:
         raise ValueError(f'Wikidata object {qid_object} not in cache.')
     return wikidata_cache[qid_object]
@@ -51,13 +49,11 @@ def pull_wikidata_object(qid_object: str) -> Optional[WikidataThing]:
     wikidata_object: Optional[WikidataThing]
         The Wikidata object, if it exists, otherwise None.
     """
-    global wikidata_cache
     if qid_object in wikidata_cache:
         return wikidata_cache[qid_object]
-    else:
-        wikidata_object: Optional[WikidataThing] = WikiDataAPIClient.retrieve_entity(qid_object)
-        cache_wikidata_object(wikidata_object)
-        return wikidata_object
+    wikidata_object: Optional[WikidataThing] = WikiDataAPIClient.retrieve_entity(qid_object)
+    cache_wikidata_object(wikidata_object)
+    return wikidata_object
 
 
 def cache_wikidata_objects() -> dict[str, WikidataThing]:
@@ -68,7 +64,6 @@ def cache_wikidata_objects() -> dict[str, WikidataThing]:
     wikidata_cache: dict[str, WikidataThing]
         Wikidata cache.
     """
-    global wikidata_cache
     return wikidata_cache
 
 
@@ -80,7 +75,6 @@ def number_of_cached_objects() -> int:
     number_of_cached_objects: int
         Number of cached objects.
     """
-    global wikidata_cache
     return len(wikidata_cache)
 
 
@@ -102,7 +96,18 @@ def load_cache(cache: Path):
 
 
 def qid_in_cache(ref_qid: str) -> bool:
-    global wikidata_cache
+    """
+    Checks if a QID is in the cache.
+    Parameters
+    ----------
+    ref_qid: str
+        The QID to check.
+
+    Returns
+    -------
+    in_cache: bool
+        True if the QID is in the cache, otherwise False.
+    """
     return ref_qid in wikidata_cache
 
 

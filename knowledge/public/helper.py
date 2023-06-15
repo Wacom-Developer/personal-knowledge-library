@@ -39,7 +39,6 @@ class WikiDataAPIException(Exception):
     --------------------
     Exception thrown when accessing WikiData fails.
     """
-    pass
 
 
 # --------------------------------------- Tags -------------------------------------------------------------------------
@@ -143,7 +142,7 @@ def parse_date(date_string: str) -> Optional[datetime]:
         parsed_date = parser.parse(timestr=date_string)
         return parsed_date
     except parser.ParserError:
-        date_part, time_part = date_string.split('T')
+        date_part, _ = date_string.split('T')
         year, month, day = date_part.split('-')
         if month == '00':
             month = '01'

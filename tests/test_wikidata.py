@@ -137,6 +137,7 @@ class WikidataFlow(TestCase):
         for qid, wiki_thing in self.cache.wikidata_things.items():
             for source, item in wiki_thing.sitelinks.items():
                 if source == "wiki":
+                    print(item)
                     for lang, title in item.titles.items():
                         if lang in SUPPORTED_LANGUAGES:
                             # Get summary

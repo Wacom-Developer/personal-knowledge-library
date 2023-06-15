@@ -2,7 +2,7 @@
 # Copyright © 2021-23 Wacom. All rights reserved.
 import abc
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from knowledge.base.entity import LanguageCode
 from knowledge.base.ontology import THING_CLASS, OntologyClassReference
@@ -307,7 +307,7 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
         entities: list[KnowledgeGraphEntity]
             List of knowledge graph entities.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     @property
     def supported_language(self) -> list[str]:
@@ -372,7 +372,7 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
         entities: list[NamedEntity]
             List of knowledge named entities.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     @property
     def supported_language(self) -> list[LanguageCode]:
@@ -435,7 +435,7 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
         entities: list[KnowledgeGraphEntity]
             List of knowledge public knowledge entities.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     @property
     def supported_language(self) -> list[str]:

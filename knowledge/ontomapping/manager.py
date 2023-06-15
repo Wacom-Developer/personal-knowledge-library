@@ -2,7 +2,7 @@
 # Copyright © 2023 Wacom. All rights reserved.
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Optional, Any
 
 from knowledge.base.entity import Label, LanguageCode, Description
 from knowledge.base.ontology import ThingObject, DataProperty, SYSTEM_SOURCE_SYSTEM, SYSTEM_SOURCE_REFERENCE_ID, \
@@ -43,9 +43,8 @@ def flatten(hierarchy: WikidataClass, use_names: bool = False) -> list[str]:
             if use_names:
                 if f'{job.qid} ({job.label})' not in hierarchy_list:
                     jobs.append(c)
-            else:
-                if c.qid not in hierarchy_list:
-                    jobs.append(c)
+            elif c.qid not in hierarchy_list:
+                jobs.append(c)
     return hierarchy_list
 
 
@@ -110,7 +109,6 @@ def convert_dict(structure: dict[str, Any], locale: str) -> Optional[str]:
             return None
         elif structure_type == 'globe-coordinate' and isinstance(value, dict):
             return f'{value["latitude"]},{value["longitude"]}'
-    print(f'Failed to convert {structure}')
     raise NotImplementedError()
 
 

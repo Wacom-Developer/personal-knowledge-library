@@ -38,14 +38,14 @@ CREATED: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:core
 HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:creative#hasArtstyle')
 
 
-def print_entity(entity: ThingObject, list_idx: int, auth_key: str, client: WacomKnowledgeService,
+def print_entity(display_entity: ThingObject, list_idx: int, auth_key: str, client: WacomKnowledgeService,
                  short: bool = False):
     """
     Printing entity details.
 
     Parameters
     ----------
-    entity: ThingObject
+    display_entity: ThingObject
         Entity with properties
     list_idx: int
         Index with a list
@@ -56,19 +56,19 @@ def print_entity(entity: ThingObject, list_idx: int, auth_key: str, client: Waco
     short: bool
         Short summary
     """
-    print(f'[{list_idx}] : {print_entity.uri} <{entity.concept_type.iri}>')
-    if len(entity.label) > 0:
+    print(f'[{list_idx}] : {display_entity.uri} <{display_entity.concept_type.iri}>')
+    if len(display_entity.label) > 0:
         print('    | [Labels]')
-        for la in entity.label:
+        for la in display_entity.label:
             print(f'    |     |- "{la.content}"@{la.language_code}')
         print('    |')
     if not short:
-        if len(entity.alias) > 0:
+        if len(display_entity.alias) > 0:
             print('    | [Alias]')
-            for la in entity.alias:
+            for la in display_entity.alias:
                 print(f'    |     |- "{la.content}"@{la.language_code}')
             print('    |')
-        if len(entity.data_properties) > 0:
+        if len(display_entity.data_properties) > 0:
             print('    | [Attributes]')
             for data_property, labels in entity.data_properties.items():
                 print(f'    |    |- {data_property.iri}:')
@@ -113,10 +113,10 @@ if __name__ == '__main__':
                                                                     language_code=LanguageCode('en_US'), limit=1000)
     leo: Optional[ThingObject] = None
     s_idx: int = 1
-    for entity in res_entities:
+    for res_entity in res_entities:
         #  Entity must be a person and the label match with full string
-        if entity.concept_type == PERSON_CLASS and LEONARDO_DA_VINCI in [l.content for l in entity.label]:
-            leo = entity
+        if res_entity.concept_type == PERSON_CLASS and LEONARDO_DA_VINCI in [la.content for la in res_entity.label]:
+            leo = res_entity
             break
 
     print('-----------------------------------------------------------------------------------------------------------')

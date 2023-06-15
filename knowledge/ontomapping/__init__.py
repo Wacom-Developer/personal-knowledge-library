@@ -41,7 +41,6 @@ def subclasses_of(iri: str) -> list[str]:
     subclasses: list[str]
         Subclasses of the ontology class.
     """
-    global ontology_graph
     sub_classes: list[str] = [str(s) for s, p, o in ontology_graph.triples((None, RDFS.subClassOf, URIRef(iri)))]
     for sub_class in sub_classes:
         sub_classes.extend(subclasses_of(sub_class))
@@ -94,6 +93,7 @@ class ClassConfiguration:
 
     @property
     def ontology_class(self) -> str:
+        """Ontology class."""
         return self.__ontology_class
 
     @property
@@ -116,6 +116,7 @@ class ClassConfiguration:
 
     @property
     def concept_type(self) -> OntologyClassReference:
+        """Concept type."""
         return OntologyClassReference.parse(self.__ontology_class)
 
     def __str__(self):
@@ -175,6 +176,7 @@ class PropertyConfiguration:
 
     @property
     def type(self) -> PropertyType:
+        """Property type."""
         return self.__property
 
     @property
@@ -374,10 +376,10 @@ class MappingConfiguration:
                     return content is not None and isinstance(content, float)
                 elif r == DataPropertyType.BOOLEAN.value:
                     return content is not None and isinstance(content, bool)
-                elif r == DataPropertyType.DATE.value or r == DataPropertyType.DATE_TIME.value:
+                elif r in {DataPropertyType.DATE.value, DataPropertyType.DATE_TIME.value}:
                     return content is not None and isinstance(content, str) and is_iso_date(content)
-                else:
-                    return True
+                return True
+        return False
 
     def check_object_property_range(self, property_type: OntologyPropertyReference,
                                     source_type: OntologyClassReference,
@@ -403,8 +405,8 @@ class MappingConfiguration:
             if prop_config.type == PropertyType.OBJECT_PROPERTY:
                 if source_type.iri in prop_config.domains and target_type.iri in prop_config.ranges:
                     return True
-                else:
-                    return False
+                return False
+        return False
 
     def __str__(self):
         return f"Mapping Configuration(#classes={len(self.__classes)}" \
@@ -424,7 +426,6 @@ def build_configuration(mapping: dict[str, Any]) -> MappingConfiguration:
     conf: MappingConfiguration
         The mapping configuration
     """
-    global ontology_graph
     conf: MappingConfiguration = MappingConfiguration()
     for c, c_conf in mapping['classes'].items():
         class_config: ClassConfiguration = ClassConfiguration(c)
@@ -465,9 +466,8 @@ def update_taxonomy_cache():
     """
     Updates the taxonomy cache.
     """
-    global taxonomy_cache
-    with open(TAXONOMY_FILE, 'w') as f:
-        f.write(json.dumps(taxonomy_cache, indent=2, cls=WikidataClassEncoder))
+    with open(TAXONOMY_FILE, 'w', encoding='uft-8') as fp_taxonomy:
+        fp_taxonomy.write(json.dumps(taxonomy_cache, indent=2, cls=WikidataClassEncoder))
 
 
 def register_ontology(rdf_str: str):
@@ -478,7 +478,6 @@ def register_ontology(rdf_str: str):
     rdf_str: str
         The ontology in RDF/XML format.
     """
-    global ontology_graph
     ontology_graph.parse(data=rdf_str, format='xml')
 
 

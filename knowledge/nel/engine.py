@@ -37,8 +37,8 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
         self.__service_endpoint: str = service_endpoint
         super().__init__(supported_languages=WacomEntityLinkingEngine.LANGUAGES, service_url=service_url)
 
-    def link_personal_entities(self, auth_key: str, text: str, locale: str = 'en_US', max_retries: int = 5) \
-            -> list[KnowledgeGraphEntity]:
+    def link_personal_entities(self, auth_key: str, text: str, language_code: LanguageCode = 'en_US',
+                               max_retries: int = 5) -> list[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
@@ -49,8 +49,8 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
             Auth key identifying a user within the Wacom personal knowledge service.
         text: str
             Text where the entities shall be tagged in.
-        locale: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
+        language_code: LanguageCode
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         max_retries: int
             Maximum number of retries, if the service is not available.
 
@@ -71,7 +71,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
             CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
         payload: dict[str, str] = {
-            LOCALE_TAG: locale,
+            LOCALE_TAG: language_code,
             TEXT_TAG: text
         }
         # Define the retry policy
@@ -110,5 +110,5 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
                     ne.relevant_type = OntologyClassReference.parse(e['type'])
                     named_entities.append(ne)
                 return named_entities
-        raise WacomServiceException(f'Named entity linking for text:={text}@{locale}. '
+        raise WacomServiceException(f'Named entity linking for text:={text}@{language_code}. '
                                     f'Response code:={response.status_code}, exception:= {response.content}')
