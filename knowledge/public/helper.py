@@ -5,11 +5,10 @@ import math
 import urllib
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Any, List, Optional
+from typing import Any, Optional
 
-import dateutil
 import requests
-from dateutil.parser import parse
+from dateutil import parser
 from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
@@ -127,17 +126,48 @@ def image_url(img: str, dpi: int = 500):
            f'{hash_img[0]}/{hash_img[:2]}/{url_img_part}/{dpi}px-{conversion + url_img_part + extension}'
 
 
-def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
+def parse_date(date_string: str) -> Optional[datetime]:
+    """
+    Parse date string to datetime object.
+    Parameters
+    ----------
+    date_string: str
+        Date string
+
+    Returns
+    -------
+    parsed_date: datetime
+        Parsed date
+    """
+    try:
+        parsed_date = parser.parse(timestr=date_string)
+        return parsed_date
+    except parser.ParserError:
+        date_part, time_part = date_string.split('T')
+        year, month, day = date_part.split('-')
+        if month == '00':
+            month = '01'
+        if day == '00':
+            day = '01'
+        iso_date = f'{year}-{month.zfill(2)}-{day.zfill(2)}'
+        try:
+            parsed_date = parser.parse(timestr=iso_date)
+            return parsed_date
+        except parser.ParserError:
+            return None
+
+
+def wikidate(param: dict[str, Any]) -> dict[str, Any]:
     """
     Parse and extract wikidata structure.
     Parameters
     ----------
-    param: Dict[str, Any]
+    param: dict[str, Any]
         Entity wikidata
 
     Returns
     -------
-    result: Dict[str, Any]
+    result: dict[str, Any]
         Dict with pretty print of date
     """
     time: str = param['time']
@@ -150,6 +180,18 @@ def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
     after_christ: bool = True
     pretty: str = ''
     if calendar_model != 'https://www.wikidata.org/wiki/Q1985727':
+        if time.startswith('+'):
+            time = time[1:]
+        elif time.startswith('-'):
+            time = time[1:]
+            after_christ = False
+        date_obj: Optional[datetime] = parse_date(date_string=time)
+        if date_obj:
+            if date_obj.day == 0:
+                # Set the day component to 1
+                date_obj = date_obj.replace(day=1)
+            iso_encoded = date_obj.isoformat()
+            pretty = date_obj.strftime('%Y-%m-%d')
         return {
             'time': time,
             'timezone': timezone,
@@ -158,6 +200,7 @@ def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
             'precision': precision,
             'calendar-model': calendar_model,
             'pretty': pretty,
+            'after-christ': after_christ,
             'iso': iso_encoded
         }
     if time.startswith('+'):
@@ -185,19 +228,24 @@ def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
         elif Precision.TEN_THOUSAND_YEARS.value == precision:
             pretty = date_str
         else:
-            dt_obj: datetime = dateutil.parser.parse(date_str)
-            if Precision.CENTURY.value == precision:
-                century: int = int(math.ceil(dt_obj.year / 100))
-                pretty = f'{century}th century'
-            elif Precision.DECADE.value == precision:
-                pretty = f"{dt_obj.year}s{'' if after_christ else ' BC'}"
-            elif Precision.YEAR.value == precision:
-                pretty = f"{dt_obj.year}{'' if after_christ else ' BC'}"
-            elif Precision.MONTH.value == precision:
-                pretty = dt_obj.strftime("%B %Y")
-            elif Precision.DAY.value == precision:
-                pretty = dt_obj.strftime("%-d %B %Y")
-            iso_encoded = dt_obj.isoformat()
+            dt_obj: Optional[datetime] = parse_date(date_str)
+            if dt_obj:
+                if Precision.CENTURY.value == precision:
+                    century: int = int(math.ceil(dt_obj.year / 100))
+                    pretty = f'{century}th century'
+                elif Precision.DECADE.value == precision:
+                    pretty = f"{dt_obj.year}s{'' if after_christ else ' BC'}"
+                elif Precision.YEAR.value == precision:
+                    pretty = f"{dt_obj.year}{'' if after_christ else ' BC'}"
+                elif Precision.MONTH.value == precision:
+                    pretty = dt_obj.strftime("%B %Y")
+                elif Precision.DAY.value == precision:
+                    pretty = dt_obj.strftime("%-d %B %Y")
+                iso_encoded = dt_obj.isoformat()
+                try:
+                    parse_date(iso_encoded)
+                except parser.ParserError:
+                    iso_encoded = None
     except Exception as pe:
         logger.error(param)
         logger.exception(pe)
@@ -210,13 +258,14 @@ def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
         'precision': precision,
         'calendar-model': calendar_model,
         'pretty': pretty,
+        'after_christ': after_christ,
         'iso': iso_encoded
     }
 
 
 def __waiting_request__(
         entity_id: str, base_url: str = WIKIDATA_LDI_URL
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Sena a request with retry policy.
 
@@ -228,7 +277,7 @@ def __waiting_request__(
         Base URL
     Returns
     -------
-    result_dict: Dict[str, Any]
+    result_dict: dict[str, Any]
         Result dict
     """
     url: str = f"{base_url}/{entity_id}.json"
@@ -238,7 +287,6 @@ def __waiting_request__(
         total=3,  # maximum number of retries
         backoff_factor=1,  # factor by which to multiply the delay between retries
         status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
-        method_whitelist=["GET"],  # HTTP methods to retry on
         respect_retry_after_header=True  # respect the Retry-After header
     )
 
@@ -253,7 +301,7 @@ def __waiting_request__(
         # Check the response status code
         if not response.ok:
             raise WikiDataAPIException(f"Request failed with status code : {response.status_code}. URL:= {url}")
-        entity_dict_full: Dict[str, Any] = response.json()
+        entity_dict_full: dict[str, Any] = response.json()
         # remove redundant top level keys
         returned_entity_id: str = next(iter(entity_dict_full["entities"]))
         entity_dict = entity_dict_full["entities"][returned_entity_id]
@@ -267,20 +315,20 @@ def __waiting_request__(
 
 
 def __waiting_multi_request__(
-        entity_ids: List[str], base_url: str = MULTIPLE_ENTITIES_API
-) -> List[Dict[str, Any]]:
+        entity_ids: list[str], base_url: str = MULTIPLE_ENTITIES_API
+) -> list[dict[str, Any]]:
     """
     Sena a request to retrieve multiple entities with retry policy.
 
     Parameters
     ----------
-    entity_ids: List[str]
+    entity_ids: list[str]
         Entity QID
     base_url: Base URL
         Base URL
     Returns
     -------
-    result_dict: Dict[str, Any]
+    result_dict: dict[str, Any]
         Result dict
     Raises
     ------
@@ -296,7 +344,6 @@ def __waiting_multi_request__(
         total=3,  # maximum number of retries
         backoff_factor=1,  # factor by which to multiply the delay between retries
         status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
-        method_whitelist=["GET"],  # HTTP methods to retry on
         respect_retry_after_header=True  # respect the Retry-After header
     )
 
@@ -311,8 +358,8 @@ def __waiting_multi_request__(
         # Check the response status code
         if not response.ok:
             raise WikiDataAPIException(f"Request failed with status code : {response.status_code}. URL:= {url}")
-        entity_dict_full: Dict[str, Any] = response.json()
-        results: List[Dict[str, Any]] = []
+        entity_dict_full: dict[str, Any] = response.json()
+        results: list[dict[str, Any]] = []
         for qid, e in entity_dict_full["entities"].items():
             if qid not in entity_ids:
                 logger.warning(f"Wikidata redirect detected. "
