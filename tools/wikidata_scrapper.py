@@ -3,19 +3,18 @@
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Set
+from typing import Optional, Any
 
 import ndjson
 from tqdm import tqdm
 
 from knowledge import logger
-from knowledge.base.entity import LanguageCode, IMAGE_TAG, STATUS_FLAG_TAG, Description, Label, \
-    OntologyContext
-from knowledge.base.ontology import ThingObject, \
-    OntologyClassReference, LANGUAGE_LOCALE_MAPPING
-from knowledge.ontomapping import mapping_configuration, register_ontology, PropertyConfiguration, PropertyType, \
-    update_taxonomy_cache
+from knowledge.base.entity import LanguageCode, IMAGE_TAG, STATUS_FLAG_TAG, Description, Label
+from knowledge.base.ontology import ThingObject, OntologyContext, OntologyClassReference, LANGUAGE_LOCALE_MAPPING
+from knowledge.ontomapping import get_mapping_configuration, register_ontology, PropertyConfiguration, PropertyType, \
+    update_taxonomy_cache, load_configuration
 from knowledge.ontomapping.manager import wikidata_to_thing, wikidata_taxonomy
 from knowledge.public.relations import wikidata_relations_extractor
 from knowledge.public.wikidata import WikiDataAPIClient, WikidataThing, WikidataClass
@@ -25,7 +24,9 @@ from knowledge.services.ontology import OntologyService
 
 # -------------------------------------------------- Structures --------------------------------------------------------
 class WikidataSyncException(Exception):
-    pass
+    """
+    Exception class for Wikidata synchronization.
+    """
 
 
 # -------------------------------------------------- Structures --------------------------------------------------------
@@ -37,7 +38,7 @@ SPARQL_QUERY_MODE: str = 'query'
 CLASS_MAPPING: str = 'class-mapping'
 
 # Mapping to map the simple language_code code to a default language_code / country code
-language_code_mapping: Dict[str, LanguageCode] = {
+language_code_mapping: dict[str, LanguageCode] = {
     'en': LanguageCode('en_US'),
     'ja': LanguageCode('ja_JP'),
     'de': LanguageCode('de_DE'),
@@ -49,32 +50,75 @@ language_code_mapping: Dict[str, LanguageCode] = {
 
 
 # ----------------------------------------------- Helper functions -----------------------------------------------------
-def update_language_code(lang: str):
-    return language_code_mapping.get(lang, lang)
-
-
-def localized_list_description(entity_dict: Dict[str, str]) -> List[Description]:
-    return [Description(cont, update_language_code(lang)) for lang, cont in entity_dict.items()]
-
-
-def localized_list_label(entity_dict: Dict[str, str]) -> List[Label]:
-    return [Label(cont, update_language_code(lang), main=True) for lang, cont in entity_dict.items() if cont != '']
-
-
-def localized_flatten_alias_list(entity_dict: Dict[str, List[str]]) -> List[Label]:
-    """
-    Flattens the alias list.
+def update_language_code(lang: str) -> LanguageCode:
+    """ Update the language_code code to a default language_code / country code
     Parameters
     ----------
-    entity_dict: Dict[str, List[str]]
+    lang: str
+        Language code.
+
+    Returns
+    -------
+    language_code: LanguageCode
+        Language code.
+
+    Raises
+    ------
+    ValueError
+        If the language_code code is not supported.
+    """
+    if lang not in language_code_mapping:
+        raise ValueError(f'Language code {lang} not supported.')
+    return language_code_mapping[lang]
+
+
+def localized_list_description(entity_dict: dict[str, str]) -> list[Description]:
+    """
+    Creates a list of descriptions for the given entity dictionary.
+    Parameters
+    ----------
+    entity_dict: dict[str, str]
         Entity dictionary.
 
     Returns
     -------
-    flatten: List[Label]
+    descriptions: list[Description]
+        List of descriptions.
+    """
+    return [Description(cont, update_language_code(lang)) for lang, cont in entity_dict.items()]
+
+
+def localized_list_label(entity_dict: dict[str, str]) -> list[Label]:
+    """
+    Creates a list of labels for the given entity dictionary.
+
+    Parameters
+    ----------
+    entity_dict: dict[str, str]
+        Entity dictionary.
+
+    Returns
+    -------
+    labels: list[Label]
+        List of labels.
+    """
+    return [Label(cont, update_language_code(lang), main=True) for lang, cont in entity_dict.items() if cont != '']
+
+
+def localized_flatten_alias_list(entity_dict: dict[str, list[str]]) -> list[Label]:
+    """
+    Flattens the alias list.
+    Parameters
+    ----------
+    entity_dict: dict[str, list[str]]
+        Entity dictionary.
+
+    Returns
+    -------
+    flatten: list[Label]
         Flattened list of labels.
     """
-    flatten: List[Label] = []
+    flatten: list[Label] = []
     for language, items in entity_dict.items():
         for i in items:
             if i != '':
@@ -82,12 +126,12 @@ def localized_flatten_alias_list(entity_dict: Dict[str, List[str]]) -> List[Labe
     return flatten
 
 
-def from_dict(entity: Dict[str, Any], concept_type: OntologyClassReference) -> ThingObject:
+def from_dict(entity: dict[str, Any], concept_type: OntologyClassReference) -> ThingObject:
     """
     Create a thing object from a dictionary.
     Parameters
     ----------
-    entity: Dict[str, Any]
+    entity: dict[str, Any]
         Entity dictionary.
     concept_type: OntologyClassReference
         Concept type.
@@ -97,9 +141,9 @@ def from_dict(entity: Dict[str, Any], concept_type: OntologyClassReference) -> T
     thing: ThingObject
         Thing object.
     """
-    labels: List[Label] = localized_list_label(entity['label'])
-    description: List[Description] = localized_list_description(entity['description'])
-    alias: List[Label] = localized_flatten_alias_list(entity['alias'])
+    labels: list[Label] = localized_list_label(entity['label'])
+    description: list[Description] = localized_list_description(entity['description'])
+    alias: list[Label] = localized_flatten_alias_list(entity['alias'])
     if IMAGE_TAG in entity:
         icon: str = entity[IMAGE_TAG]
     else:
@@ -130,7 +174,7 @@ def strip(url: str) -> str:
     return parts[-1]
 
 
-def build_query(params: Dict[str, Any]) -> List[str]:
+def build_query(params: dict[str, Any]) -> list[str]:
     """
     Build of query.
 
@@ -141,15 +185,15 @@ def build_query(params: Dict[str, Any]) -> List[str]:
 
     Returns
     -------
-    queries: List[str]
+    queries: list[str]
         SPARQL query string
     """
-    filters: List[Dict[str, Any]] = params.get('filters')
-    dynamics: Dict[str, Any] = params.get('dynamic-filters')
+    filters: list[dict[str, Any]] = params.get('filters')
+    dynamics: dict[str, Any] = params.get('dynamic-filters')
     limit: int = params.get('limit', 1000)
     lang_code: str = params.get('language_code', 'en')
     filter_string: str = ''
-    queries: List[str] = []
+    queries: list[str] = []
     for f in filters:
         filter_string += "?item wdt:{}  wd:{}.\n".format(f['property'], f['target'])
     if dynamics:
@@ -172,7 +216,7 @@ def build_query(params: Dict[str, Any]) -> List[str]:
     return queries
 
 
-def load_cache(cache: Path) -> Dict[str, WikidataThing]:
+def load_cache(cache: Path) -> dict[str, WikidataThing]:
     """
     Load the cache from the file.
     Parameters
@@ -182,25 +226,26 @@ def load_cache(cache: Path) -> Dict[str, WikidataThing]:
 
     Returns
     -------
-    wikidata_things: Dict[str, WikidataThing]
+    wikidata_things: dict[str, WikidataThing]
         Dictionary of Wikidata things.
     """
-    wikidata_things: Dict[str, WikidataThing] = {}
-    with cache.open('r') as r:
-        reader = ndjson.reader(r)
-        for line in reader:
-            wikidata_things[line['qid']] = WikidataThing.create_from_dict(line)
+    wikidata_things: dict[str, WikidataThing] = {}
+    if cache.exists():
+        with cache.open('r') as r:
+            reader = ndjson.reader(r)
+            for line in reader:
+                wikidata_things[line['qid']] = WikidataThing.create_from_dict(line)
     return wikidata_things
 
 
-def count_type(concept_type: str, types_mapping: Dict[str, int]):
+def count_type(concept_type: str, types_mapping: dict[str, int]):
     """
     Count the number of types.
     Parameters
     ----------
     concept_type: str
         Concept type.
-    types_mapping: Dict[str, int]
+    types_mapping: dict[str, int]
         Dictionary of types.
     """
     if concept_type not in types_mapping:
@@ -208,30 +253,30 @@ def count_type(concept_type: str, types_mapping: Dict[str, int]):
     types_mapping[concept_type] += 1
 
 
-def check_missing_qids(entities: List[WikidataThing]) -> Set[str]:
+def check_missing_qids(entities: list[WikidataThing]) -> set[str]:
     """
     Check if there are missing qids in the retrieved entities.
     Parameters
     ----------
-    entities: List[WikidataThing]
+    entities: list[WikidataThing]
         List of entities.
 
     Returns
     -------
-    missing: Set[str]
+    missing: set[str]
         Set of missing qids.
     """
-    missing: Set[str] = set()
+    missing: set[str] = set()
     for entity in tqdm(entities, desc="Checking missing qid references."):
-        wiki_classes: Set[str] = set()
+        wiki_classes: set[str] = set()
         for cls in entity.instance_of:
             hierarchy: WikidataClass = wikidata_taxonomy(cls.qid)
             if hierarchy:
                 wiki_classes.update([c.qid for c in hierarchy.superclasses])
                 wiki_classes.add(hierarchy.qid)
-        class_conf = mapping_configuration.guess_classed(list(wiki_classes))
+        class_conf = get_mapping_configuration().guess_classed(list(wiki_classes))
         if class_conf:
-            properties: List[PropertyConfiguration] = mapping_configuration.\
+            properties: list[PropertyConfiguration] = get_mapping_configuration(). \
                 property_for(class_conf.concept_type, PropertyType.OBJECT_PROPERTY)
             for prop in properties:
                 for pid in prop.pids:
@@ -243,7 +288,24 @@ def check_missing_qids(entities: List[WikidataThing]) -> Set[str]:
     return missing
 
 
-def main(mapping: Path, cache: Path, languages: List[str] = None, max_depth: int = -1):
+def extract_qid(url: str) -> str:
+    """
+    Extract qid from url.
+    Parameters
+    ----------
+    url: str
+        URL
+
+    Returns
+    -------
+    qid: str
+        QID
+    """
+    parts: list[str] = url.split('/')
+    return parts[-1]
+
+
+def main(mapping: Path, cache: Path, languages: list[str] = None, max_depth: int = -1):
     """
     Main.
 
@@ -253,7 +315,7 @@ def main(mapping: Path, cache: Path, languages: List[str] = None, max_depth: int
         Path to mapping file
     cache: Path
         Path to cache file with ThingObjects
-    languages: List[str]
+    languages: list[str]
         List of languages
     max_depth: int
         Maximum depth of the crawling
@@ -261,31 +323,41 @@ def main(mapping: Path, cache: Path, languages: List[str] = None, max_depth: int
     # All failed jobs
     cache.mkdir(parents=True, exist_ok=True)
     wikidata_path: Path = cache / 'wikidata.ndjson'
-    all_wikidata_things: Dict[str, WikidataThing] = load_cache(wikidata_path)
+    thing_path: Path = cache / 'things.ndjson'
+    warnings_path: Path = cache / 'warnings.json'
+
+    all_wikidata_things: dict[str, WikidataThing] = load_cache(wikidata_path)
     # Load mapping
     with mapping.open('r') as json_file:
-        configuration: Dict[str, Any] = json.load(json_file)
+        configuration: dict[str, Any] = json.load(json_file)
+
+    imported_qids: set[str] = set()
+    if thing_path.exists():
+        with thing_path.open('r') as r:
+            reader = ndjson.reader(r)
+            for line in reader:
+                thing: ThingObject = ThingObject.from_import_dict(line)
+                imported_qids.add(thing.reference_id)
 
     # List of qids
-    qid_references: Set[str] = set()
+    qid_references: set[str] = set()
 
     # First query the entry entities
     if SPARQL_QUERY_MODE in configuration:
         queries: list = build_query(configuration[SPARQL_QUERY_MODE])
         for query in queries:
             results: dict = WikiDataAPIClient.sparql_query(query)
-            qid_references.update([item['item']['value'] for item in results['results']['bindings']])
+            qid_references.update([extract_qid(item['item']['value']) for item in results['results']['bindings']])
     # Or use a list of qids
     elif ENTITY_LIST_MODE in configuration:
         qid_references = set(configuration[ENTITY_LIST_MODE])
     else:
         logger.error("No jobs defined.")
-        import sys
         sys.exit(0)
     depth: int = 0
     while len(qid_references) > 0 and (depth == -1 or depth < max_depth):
-        entities: List[WikidataThing] = []
-        qids_to_remove: Set[str] = set()
+        entities: list[WikidataThing] = []
+        qids_to_remove: set[str] = set()
         # Check for existing entities
         for ref_qid in qid_references:
             if ref_qid in all_wikidata_things:
@@ -296,9 +368,9 @@ def main(mapping: Path, cache: Path, languages: List[str] = None, max_depth: int
             qid_references.remove(item)
         # Retrieve entities
         if len(qid_references) > 0:
-            pull_entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(qid_references)
+            pull_entities: list[WikidataThing] = WikiDataAPIClient.retrieve_entities(qid_references)
         else:
-            pull_entities: List[WikidataThing] = []
+            pull_entities: list[WikidataThing] = []
         # Merge entities
         entities.extend(pull_entities)
         # Cache entities
@@ -315,19 +387,46 @@ def main(mapping: Path, cache: Path, languages: List[str] = None, max_depth: int
         # Cache more taxonomy
         update_taxonomy_cache()
         depth += 1
-    relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(all_wikidata_things)
+    relations: dict[str, list[dict[str, Any]]] = wikidata_relations_extractor(all_wikidata_things)
     logger.info(f"{len(all_wikidata_things)} entities are imported.")
 
-    thing_objects: List[ThingObject] = []
-    for _, w_thing in tqdm(all_wikidata_things.items(),
-                             desc=f"Processing {len(all_wikidata_things)} Wikidata entities."):
-        thing = wikidata_to_thing(w_thing, relations, [LANGUAGE_LOCALE_MAPPING[l] for l in languages
-                                                       if l in LANGUAGE_LOCALE_MAPPING])
-        thing_objects.append(thing)
+    thing_objects: list[ThingObject] = []
+    # process warnings
+    import_warnings_property: dict[str, dict[str, Any]] = {}
+    with thing_path.open('w', encoding='utf-8') as fp_thing:
+        for _, w_thing in tqdm(all_wikidata_things.items(),
+                               desc=f"Processing {len(all_wikidata_things)} Wikidata entities."):
+            thing, import_warnings = wikidata_to_thing(w_thing, relations,
+                                                       [LANGUAGE_LOCALE_MAPPING[la] for la in languages
+                                                        if la in LANGUAGE_LOCALE_MAPPING], all_wikidata_things,
+                                                       pull_wikipedia=True)
+            thing_objects.append(thing)
+            fp_thing.write(f"{json.dumps(thing.__import_format_dict__(), ensure_ascii=False)}\n")
 
-    with Path(cache / 'things.ndjson').open('w', encoding='utf-8') as fp:
-        for item in thing_objects:
-            fp.write(f"{json.dumps(item.__import_format_dict__(), ensure_ascii=False)}\n")
+            for warning in import_warnings:
+                pid: str = warning['property']
+                if warning['property'] not in import_warnings_property:
+                    import_warnings_property[pid] = {
+                        'label': warning['property_label'],
+                        'property': pid,
+                        'source_qids': [],
+                        'target_qids': [],
+                        'source_classes': [],
+                        'target_classes': [],
+                    }
+                for source_class in warning['source_classes']:
+                    if source_class not in import_warnings_property[pid]['source_classes']:
+                        import_warnings_property[pid]['source_classes'].append(source_class)
+                for target_class in warning['target_classes']:
+                    if target_class not in import_warnings_property[pid]['target_classes']:
+                        import_warnings_property[pid]['target_classes'].append(target_class)
+
+                if warning['source_qid'] not in import_warnings_property[pid]['source_qids']:
+                    import_warnings_property[pid]['source_qids'].append(warning['source_qid'])
+                if warning['target_qid'] not in import_warnings_property[pid]['target_qids']:
+                    import_warnings_property[pid]['target_qids'].append(warning['target_qid'])
+    with warnings_path.open('w', encoding='utf-8') as fp:
+        fp.write(f"{json.dumps(import_warnings_property, ensure_ascii=False)}")
 
 
 if __name__ == '__main__':
@@ -350,7 +449,6 @@ if __name__ == '__main__':
     admin_token, refresh, expire = knowledge_client.request_user_token(args.tenant, args.user)
     context: Optional[OntologyContext] = ontology_client.context(admin_token)
     if not context:
-        import sys
         sys.exit(0)
     else:
         context_name: str = context.context
@@ -358,15 +456,13 @@ if __name__ == '__main__':
         rdf_export: str = ontology_client.rdf_export(admin_token, context_name)
         # Register ontology
         register_ontology(rdf_export)
+        # Load configuration
+        load_configuration()
     # ------------------------------------------------------------------------------------------------------------------
     cache_path: Path = Path(args.cache)
     if not os.path.exists(cache_path.parent):
         cache_path.parent.mkdir(parents=True, exist_ok=True)
     mapping_path: Path = Path(args.mapping)
     if mapping_path.exists():
-        try:
-            main(mapping_path, cache_path, args.languages, max_depth=args.depth)
-        except Exception as e:
-            logger.error(e)
-            import traceback
-            traceback.print_exc()
+        main(mapping_path, cache_path, args.languages, max_depth=args.depth)
+

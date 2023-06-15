@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-2022 Wacom. All rights reserved.
 import argparse
-from typing import List, Dict, Optional
+from typing import Union
 
 from knowledge.base.ontology import OntologyClassReference, ThingObject
 from knowledge.services.graph import WacomKnowledgeService
@@ -9,7 +9,7 @@ from knowledge.services.graph import WacomKnowledgeService
 THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
 
 
-def print_summary(total: int, types: Dict[str, int], languages: Dict[str, int]):
+def print_summary(total: int, types: dict[str, int], languages: dict[str, int]):
     """
     Print summary of the listing.
 
@@ -17,9 +17,9 @@ def print_summary(total: int, types: Dict[str, int], languages: Dict[str, int]):
     -----------
     total: int
         Total number of entities.
-    types: Dict[str, int]
+    types: dict[str, int]
         Dictionary of types and their counts.
-    languages: Dict[str, int]
+    languages: dict[str, int]
         Dictionary of languages and their counts.
     """
     print('---------------------------------------------------------------------------------------------------')
@@ -50,16 +50,16 @@ if __name__ == '__main__':
     wacom_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
                                                                 service_url=args.instance)
     user_auth_key, refresh_token, expiration_time = wacom_client.request_user_token(args.tenant, args.user)
-    page_id: Optional[str] = None
+    next_page_id: Union[str, None] = None
     page_number: int = 1
     entity_count: int = 0
-    types_count: Dict[str, int] = {}
-    languages_count: Dict[str, int] = {}
-    dump_entities: List[ThingObject] = []
+    types_count: dict[str, int] = {}
+    languages_count: dict[str, int] = {}
+    dump_entities: list[ThingObject] = []
     idx: int = 1
     while True:
         # pull
-        entities, total_number, next_page_id = wacom_client.listing(user_auth_key, THING_OBJECT, page_id=page_id,
+        entities, total_number, next_page_id = wacom_client.listing(user_auth_key, THING_OBJECT, page_id=next_page_id,
                                                                     limit=100, estimate_count=True)
         pulled_entities: int = len(entities)
         entity_count += pulled_entities
@@ -90,4 +90,3 @@ if __name__ == '__main__':
             print_summary(total_number, types_count, languages_count)
             break
         page_number += 1
-        page_id = next_page_id

@@ -2,7 +2,7 @@
 # Copyright © 2023 Wacom. All rights reserved.
 import argparse
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import Optional, Union
 
 import ndjson
 import requests
@@ -36,16 +36,16 @@ def download_file(url: str, user_images_path: Path, uri: str) -> str:
     file_uri: str
         Uri of the downloaded file.
     """
-    with requests.get(url, stream=True) as r:
+    with requests.get(url, stream=True, timeout=60) as r:
         r.raise_for_status()
         img_offline: Path = user_images_path / f'{uri}.png'
-        with img_offline.open('wb') as f:
+        with img_offline.open('wb') as fp_img:
             for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
+                fp_img.write(chunk)
             return img_offline.absolute().as_uri()
 
 
-def print_summary(total: int, types: Dict[str, int], languages: Dict[str, int]):
+def print_summary(total: int, types: dict[str, int], languages: dict[str, int]):
     """
     Print summary of the listing.
 
@@ -53,9 +53,9 @@ def print_summary(total: int, types: Dict[str, int], languages: Dict[str, int]):
     ----------
     total: int
         Total number of entities.
-    types: Dict[str, int]
+    types: dict[str, int]
         Dictionary of types and their counts.
-    languages: Dict[str, int]
+    languages: dict[str, int]
         Dictionary of languages and their counts.
 
     """
@@ -94,26 +94,26 @@ if __name__ == '__main__':
         application_name="Wacom Knowledge Listing",
         service_url=args.instance)
     user_auth_key, _, _ = wacom_client.request_user_token(args.tenant, args.user)
-    page_id: Optional[str] = None
+    next_page_id: Union[str, None] = None
     page_number: int = 1
     entity_count: int = 0
-    types_count: Dict[str, int] = {}
-    languages_count: Dict[str, int] = {}
+    types_count: dict[str, int] = {}
+    languages_count: dict[str, int] = {}
     dump_mode: bool = len(args.dump) > 0
-    dump_entities: List[ThingObject] = []
+    dump_entities: list[ThingObject] = []
     dump_path: Path = Path(args.dump)
     dump_file: Path = dump_path / 'entities.ndjson'
     images_path: Path = dump_path / 'images'
     dump_path.mkdir(parents=True, exist_ok=True)
     images_path.mkdir(parents=True, exist_ok=True)
     # Writing items to a ndjson file
-    with open(dump_file, 'w') as f:
-        writer = ndjson.writer(f, ensure_ascii=False)
+    with open(dump_file, 'w', encoding='utf-8') as fp_dump:
+        writer: ndjson.writer = ndjson.writer(fp_dump, ensure_ascii=False)
         while True:
             # pull
             entities, total_number, next_page_id = wacom_client.listing(user_auth_key,
                                                                         THING_OBJECT,
-                                                                        page_id=page_id, limit=1000,
+                                                                        page_id=next_page_id, limit=1000,
                                                                         estimate_count=True)
             if args.relations:
                 pbar: tqdm = tqdm([e for e in entities if not args.all and not e.owner], desc="Extract relations.")
@@ -150,4 +150,3 @@ if __name__ == '__main__':
                 # Write entity to cache file
                 writer.writerow(e.__dict__())
             page_number += 1
-            page_id = next_page_id

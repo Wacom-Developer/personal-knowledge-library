@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021 Wacom. All rights reserved.
 import argparse
-from typing import Optional, List
+from typing import Union
 
 from knowledge.base.ontology import OntologyClassReference
 from knowledge.services.graph import WacomKnowledgeService
@@ -23,22 +23,21 @@ if __name__ == '__main__':
     wacom_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Flush entities",
                                                                 service_url=args.instance)
     user_auth_key, refresh_token, expiration_time = wacom_client.request_user_token(args.tenant, args.user)
-    page_id: Optional[str] = None
+    next_page_id: Union[str, None] = None
     deleted_uris: int = 0
     filter_type: OntologyClassReference = THING_OBJECT
     if args.type:
         filter_type = OntologyClassReference.parse(args.type)
     while True:
         # pull
-        entities, total_number, next_page_id = wacom_client.listing(user_auth_key, filter_type, page_id, limit=100)
-        page_uris: List[str] = [e.uri for e in entities]
+        entities, total_number, next_page_id = wacom_client.listing(user_auth_key, filter_type, next_page_id, limit=100)
+        page_uris: list[str] = [e.uri for e in entities]
         pulled_entities: int = len(entities)
         if pulled_entities == 0:
             break
         # Not more than 100 entities are recommended
         wacom_client.delete_entities(auth_key=user_auth_key, uris=page_uris, force=True)
         deleted_uris += len(page_uris)
-        page_id = next_page_id
     print('-----------------------------------------------------------------------------------------------------------')
     print(f'Deleted a total number of {deleted_uris} entities.')
     print('-----------------------------------------------------------------------------------------------------------')
