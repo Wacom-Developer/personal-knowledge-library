@@ -23,12 +23,12 @@ Classes
 
     ### Static methods
 
-    `create_from_dict(dict_description: dict[str, typing.Any], tag_name: str = 'description', locale_name: str = 'locale') ‑> knowledge.base.entity.Description`
+    `create_from_dict(dict_description: Dict[str, Any], tag_name: str = 'description', locale_name: str = 'locale') ‑> knowledge.base.entity.Description`
     :   Create a description from a dictionary.
         
         Parameters
         ----------
-        dict_description: dict[str, Any]
+        dict_description: Dict[str, Any]
             Dictionary containing the description information.
         tag_name: str
             Tag name of the content.
@@ -40,17 +40,17 @@ Classes
         instance: Description
             Description instance.
 
-    `create_from_list(param: list[dict[str, typing.Any]]) ‑> list['Description']`
+    `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.entity.Description]`
     :   Create a list of descriptions from a list of dictionaries.
         
         Parameters
         ----------
-        param: list[dict[str, Any]]
+        param: List[Dict[str, Any]]
             List of dictionaries containing the description information.
         
         Returns
         -------
-        instance: list[Description]
+        instance: List[Description]
             List of description instances.
 
 `EntityStatus(value, names=None, *, module=None, qualname=None, type=None, start=1)`
@@ -105,11 +105,11 @@ Classes
 
     ### Static methods
 
-    `create_from_dict(dict_label: dict[str, typing.Any], tag_name: str = 'value', locale_name: str = 'locale') ‑> knowledge.base.entity.Label`
+    `create_from_dict(dict_label: Dict[str, Any], tag_name: str = 'value', locale_name: str = 'locale') ‑> knowledge.base.entity.Label`
     :   Create a label from a dictionary.
         Parameters
         ----------
-        dict_label: dict[str, Any]
+        dict_label: Dict[str, Any]
             Dictionary containing the label information.
         tag_name: str
             Tag name of the content.
@@ -121,17 +121,17 @@ Classes
         instance: Label
             Label instance.
 
-    `create_from_list(param: list[dict]) ‑> list['LocalizedContent']`
+    `create_from_list(param: List[dict]) ‑> List[knowledge.base.entity.LocalizedContent]`
     :   Create a list of labels from a list of dictionaries.
         
         Parameters
         ----------
-        param: list[dict]
+        param: List[dict]
             List of dictionaries containing the label information.
         
         Returns
         -------
-        instance: list[Label]
+        instance: List[Label]
             List of label instances.
 
     ### Instance variables

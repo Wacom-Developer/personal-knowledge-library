@@ -102,7 +102,7 @@ Classes
     `PUBLIC_ENTITY`
     :   Public entity - Entity from a public knowledge graph
 
-`KnowledgeGraphEntity(ref_text: str, start_idx: int, end_idx: int, label: str, confidence: float, source: knowledge.nel.base.EntitySource, content_link: str, ontology_types: list[str], entity_type: knowledge.nel.base.EntityType = EntityType.PUBLIC_ENTITY)`
+`KnowledgeGraphEntity(ref_text: str, start_idx: int, end_idx: int, label: str, confidence: float, source: knowledge.nel.base.EntitySource, content_link: str, ontology_types: List[str], entity_type: knowledge.nel.base.EntityType = EntityType.PUBLIC_ENTITY)`
 :   Knowledge graph entity
     ----------------------
     Entity from a knowledge graph.
@@ -123,7 +123,7 @@ Classes
         Source of the entity
     content_link: str
         Link to side with content
-    ontology_types: list[str]
+    ontology_types: List[str]
         List of ontology types (class names)
     entity_type: EntityType
         Type of the entity.
@@ -150,7 +150,7 @@ Classes
     `label: str`
     :   Label of the entity from the knowledge graph.
 
-    `ontology_types: list[str]`
+    `ontology_types: List[str]`
     :   List of ontology types.
 
     `relevant_type: knowledge.base.ontology.OntologyClassReference`
@@ -219,7 +219,7 @@ Classes
     `start_idx: int`
     :   Start index within the text handed to the named entity recognition.
 
-`NamedEntityRecognitionProcessor(service_url: str, supported_languages: list[knowledge.base.entity.LanguageCode] = None, verify_calls: bool = False)`
+`NamedEntityRecognitionProcessor(service_url: str, supported_languages: List[knowledge.base.entity.LanguageCode] = None, verify_calls: bool = False)`
 :   NamedEntityRecognitionProcessor
     -------------------------------
     Service that recognizes entities.
@@ -228,7 +228,7 @@ Classes
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: list[str] = None
+    supported_languages: List[str] = None
         List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
@@ -241,7 +241,7 @@ Classes
 
     ### Instance variables
 
-    `supported_language: list[knowledge.base.entity.LanguageCode]`
+    `supported_language: List[knowledge.base.entity.LanguageCode]`
     :   List of supported languages.
 
     ### Methods
@@ -259,7 +259,7 @@ Classes
         flag: bool
             Flag if this language_code code is supported
 
-    `named_entities(self, text: str, language_code: knowledge.base.entity.LanguageCode = 'en_US') ‑> list[knowledge.nel.base.NamedEntity]`
+    `named_entities(self, text: str, language_code: knowledge.base.entity.LanguageCode = 'en_US') ‑> List[knowledge.nel.base.NamedEntity]`
     :   Performs Named Entity Recognition on a text.
         
         Parameters
@@ -271,10 +271,10 @@ Classes
         
         Returns
         -------
-        entities: list[NamedEntity]
+        entities: List[NamedEntity]
             List of knowledge named entities.
 
-`PersonalEntityLinkingProcessor(service_url: str = builtins.str, supported_languages: list[str] = None, verify_calls: bool = True)`
+`PersonalEntityLinkingProcessor(service_url: str = builtins.str, supported_languages: List[str] = None, verify_calls: bool = True)`
 :   PersonalEntityLinkingProcessor
     ------------------------------
     Service that links entities to a entities in a personal knowledge graph.
@@ -283,7 +283,7 @@ Classes
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: list[str] = None
+    supported_languages: List[str] = None
         List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
@@ -300,7 +300,7 @@ Classes
 
     ### Instance variables
 
-    `supported_language: list[str]`
+    `supported_language: List[str]`
     :   List of supported languages.
 
     ### Methods
@@ -318,7 +318,7 @@ Classes
         flag: bool
             Flag if this language_code code is supported.
 
-    `link_personal_entities(self, auth_key: str, text: str, language_code: knowledge.base.entity.LanguageCode = 'en_US') ‑> list[knowledge.nel.base.KnowledgeGraphEntity]`
+    `link_personal_entities(self, auth_key: str, text: str, language_code: knowledge.base.entity.LanguageCode = 'en_US') ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
     :   Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
         
@@ -333,10 +333,10 @@ Classes
         
         Returns
         -------
-        entities: list[KnowledgeGraphEntity]
+        entities: List[KnowledgeGraphEntity]
             List of knowledge graph entities.
 
-`PublicEntityLinkingProcessor(service_url: str = builtins.str, supported_languages: list[str] = None, verify_calls: bool = False)`
+`PublicEntityLinkingProcessor(service_url: str = builtins.str, supported_languages: List[str] = None, verify_calls: bool = False)`
 :   Public Entity Linking
     ---------------------
     Service that links entities to a public entities in a knowledge graph.
@@ -345,7 +345,7 @@ Classes
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: list[str] = None
+    supported_languages: List[str] = None
         List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
@@ -357,7 +357,7 @@ Classes
 
     ### Instance variables
 
-    `supported_language: list[str]`
+    `supported_language: List[str]`
     :   List of supported languages.
 
     ### Methods
@@ -375,7 +375,7 @@ Classes
         flag: bool
             Flag if this language_code code is supported
 
-    `link_public_entities(self, text: str, language_code: knowledge.base.entity.LanguageCode = 'en_US') ‑> list[knowledge.nel.base.KnowledgeGraphEntity]`
+    `link_public_entities(self, text: str, language_code: knowledge.base.entity.LanguageCode = 'en_US') ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
     :   Performs Named Entity Linking on a text. It only finds entities within a large public knowledge graph.
         
         Parameters
@@ -387,5 +387,5 @@ Classes
         
         Returns
         -------
-        entities: list[KnowledgeGraphEntity]
+        entities: List[KnowledgeGraphEntity]
             List of knowledge public knowledge entities.

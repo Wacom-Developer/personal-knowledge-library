@@ -260,7 +260,7 @@ def print_entity(display_entity: ThingObject, list_idx: int, auth_key: str, clie
                     print(f'    |    |-- "{li.value}"@{li.language_code}')
             print('    |')
 
-        relations_obj: dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key,
+        relations_obj: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key,
                                                                                           uri=entity.uri)
         if len(relations_obj) > 0:
             print('    | [Relations]')
@@ -306,13 +306,13 @@ if __name__ == '__main__':
     print('-----------------------------------------------------------------------------------------------------------')
     print(' What artwork exists in the knowledge graph.')
     print('-----------------------------------------------------------------------------------------------------------')
-    relations_dict: dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(auth_key=user_token,
+    relations_dict: Dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(auth_key=user_token,
                                                                                                  uri=leo.uri)
     print(f' Artwork of {leo.label}')
     print('-----------------------------------------------------------------------------------------------------------')
     idx: int = 1
     if CREATED in relations_dict:
-        for e in relations_dict[CREATED].outgoing_relations:
+        for e in relations_Dict[CREATED].outgoing_relations:
             print(f' [{idx}] {e.uri}: {e.label}')
             idx += 1
     print('-----------------------------------------------------------------------------------------------------------')
@@ -320,17 +320,17 @@ if __name__ == '__main__':
     print('-----------------------------------------------------------------------------------------------------------')
 
     # Main labels for entity
-    artwork_labels: list[Label] = [
+    artwork_labels: List[Label] = [
         Label('Ginevra Gherardini', LanguageCode('en_US')),
         Label('Ginevra Gherardini', LanguageCode('de_DE'))
     ]
     # Alias labels for entity
-    artwork_alias: list[Label] = [
+    artwork_alias: List[Label] = [
         Label("Ginevra", LanguageCode('en_US')),
         Label("Ginevra", LanguageCode('de_DE'))
     ]
     # Topic description
-    artwork_description: list[Description] = [
+    artwork_description: List[Description] = [
         Description('Oil painting of Mona Lisa\' sister', LanguageCode('en_US')),
         Description('Ölgemälde von Mona Lisa\' Schwester', LanguageCode('de_DE'))
     ]
@@ -433,7 +433,7 @@ if __name__ == '__main__':
         pulled_entities: int = len(entities)
         if pulled_entities == 0:
             break
-        delete_uris: list[str] = [e.uri for e in entities]
+        delete_uris: List[str] = [e.uri for e in entities]
         print(f'Cleanup. Delete entities: {delete_uris}')
         knowledge_client.delete_entities(auth_key=user_token, uris=delete_uris, force=True)
         page_number += 1
@@ -490,7 +490,7 @@ def print_entity(entity: KnowledgeGraphEntity, list_idx: int, auth_key: str, cli
         for la in thing.alias:
             print(f'    |     |- "{la.content}"@{la.language_code}')
         print('    |')
-    relations: dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key, uri=thing.uri)
+    relations: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key, uri=thing.uri)
     if len(thing.data_properties) > 0:
         print('    | [Attributes]')
         for data_property, labels in thing.data_properties.items():
@@ -528,7 +528,7 @@ if __name__ == '__main__':
     )
     # Use special tenant for testing:  Unit-test tenant
     user_token, refresh_token, expiration_time = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
-    entities: list[KnowledgeGraphEntity] = nel_client.\
+    entities: List[KnowledgeGraphEntity] = nel_client.\
         link_personal_entities(auth_key=user_token, text=TEXT,
                                language_code=LANGUAGE_CODE)
     idx: int = 1
@@ -568,14 +568,14 @@ def create_entity() -> ThingObject:
         Entity object
     """
     # Main labels for entity
-    topic_labels: list[Label] = [
+    topic_labels: List[Label] = [
         Label('Hidden', LanguageCode('en_US')),
         Label('Versteckt', LanguageCode('de_DE')),
         Label('隠れた', LanguageCode('ja_JP'))
     ]
 
     # Topic description
-    topic_description: list[Description] = [
+    topic_description: List[Description] = [
         Description('Hidden entity to explain access management.', LanguageCode('en_US')),
         Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
     ]
@@ -713,12 +713,12 @@ def create_artist() -> ThingObject:
         Artist entity
     """
     # Main labels for entity
-    topic_labels: list[Label] = [
+    topic_labels: List[Label] = [
         Label('Gian Giacomo Caprotti', LanguageCode('en_US'))
     ]
 
     # Topic description
-    topic_description: list[Description] = [
+    topic_description: List[Description] = [
         Description('Hidden entity to explain access management.', LanguageCode('en_US')),
         Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
     ]

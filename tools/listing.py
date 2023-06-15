@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-2022 Wacom. All rights reserved.
 import argparse
-from typing import Union
+from typing import Union, Dict, List
 
 from knowledge.base.ontology import OntologyClassReference, ThingObject
 from knowledge.services.graph import WacomKnowledgeService
@@ -9,7 +9,7 @@ from knowledge.services.graph import WacomKnowledgeService
 THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
 
 
-def print_summary(total: int, types: dict[str, int], languages: dict[str, int]):
+def print_summary(total: int, types: Dict[str, int], languages: Dict[str, int]):
     """
     Print summary of the listing.
 
@@ -17,9 +17,9 @@ def print_summary(total: int, types: dict[str, int], languages: dict[str, int]):
     -----------
     total: int
         Total number of entities.
-    types: dict[str, int]
+    types: Dict[str, int]
         Dictionary of types and their counts.
-    languages: dict[str, int]
+    languages: Dict[str, int]
         Dictionary of languages and their counts.
     """
     print('---------------------------------------------------------------------------------------------------')
@@ -53,9 +53,9 @@ if __name__ == '__main__':
     next_page_id: Union[str, None] = None
     page_number: int = 1
     entity_count: int = 0
-    types_count: dict[str, int] = {}
-    languages_count: dict[str, int] = {}
-    dump_entities: list[ThingObject] = []
+    types_count: Dict[str, int] = {}
+    languages_count: Dict[str, int] = {}
+    dump_entities: List[ThingObject] = []
     idx: int = 1
     while True:
         # pull

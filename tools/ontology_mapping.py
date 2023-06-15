@@ -26,13 +26,13 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--instance", help="URL of instance", default='https://private-knowledge.wacom.com')
     parser.add_argument("-m", "--mapping", help="Mapping files.", default='../pkl-cache/ontology_mapping.json')
     args = parser.parse_args()
-    datatypes: dict[str, int] = {}
+    datatypes: Dict[str, int] = {}
     mapping_file: Path = Path(args.mapping)
     if mapping_file.exists():
         with mapping_file.open('r') as fp:
-            mapping: dict[str, Any] = json.loads(fp.read())
+            mapping: Dict[str, Any] = json.loads(fp.read())
     else:
-        mapping: dict[str, Any] = {
+        mapping: Dict[str, Any] = {
             CLASSES: {},
             DATA_PROPERTIES: {},
             OBJECT_PROPERTIES: {}
@@ -85,7 +85,7 @@ if __name__ == '__main__':
                 "ranges": [str(r.uri) for r in c.ranges]
             }
     for c in model.all_properties_object:
-        props: list[URIRef] = c.getValuesForProperty('http://www.w3.org/2002/07/owl#inverseOf')
+        props: List[URIRef] = c.getValuesForProperty('http://www.w3.org/2002/07/owl#inverseOf')
         inv: Optional[OntoProperty] = None
         if len(props) > 0:
             inv = model.get_property(uri=props[0])

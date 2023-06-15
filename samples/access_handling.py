@@ -13,6 +13,7 @@
 #  See the License for the specific language_code governing permissions and
 #  limitations under the License.
 import argparse
+from typing import List
 
 from knowledge.base.entity import LanguageCode, Label, Description
 from knowledge.base.ontology import OntologyClassReference, ThingObject
@@ -34,14 +35,14 @@ def create_entity() -> ThingObject:
         Entity object
     """
     # Main labels for entity
-    topic_labels: list[Label] = [
+    topic_labels: List[Label] = [
         Label('Hidden', LanguageCode('en_US')),
         Label('Versteckt', LanguageCode('de_DE')),
         Label('隠れた', LanguageCode('ja_JP'))
     ]
 
     # Topic description
-    topic_description: list[Description] = [
+    topic_description: List[Description] = [
         Description('Hidden entity to explain access management.', LanguageCode('en_US')),
         Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
     ]

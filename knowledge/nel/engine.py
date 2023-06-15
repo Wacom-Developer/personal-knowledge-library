@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-2023 Wacom. All rights reserved.
-from typing import Optional
+from typing import Optional, List, Dict
 
 import requests
 from requests import Response
@@ -27,7 +27,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
     """
     SERVICE_ENDPOINT: str = 'graph/v1/nel/text'
     SERVICE_URL: str = 'https://private-knowledge.wacom.com'
-    LANGUAGES: list[LanguageCode] = [
+    LANGUAGES: List[LanguageCode] = [
         LanguageCode('de_DE'),
         LanguageCode('en_US'),
         LanguageCode('ja_JP')
@@ -38,7 +38,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
         super().__init__(supported_languages=WacomEntityLinkingEngine.LANGUAGES, service_url=service_url)
 
     def link_personal_entities(self, auth_key: str, text: str, language_code: LanguageCode = 'en_US',
-                               max_retries: int = 5) -> list[KnowledgeGraphEntity]:
+                               max_retries: int = 5) -> List[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
@@ -56,7 +56,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
 
         Returns
         -------
-        entities: list[KnowledgeGraphEntity]
+        entities: List[KnowledgeGraphEntity]
             List of knowledge graph entities.
 
         Raises
@@ -64,13 +64,13 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
         WacomServiceException
             If the Named Entity Linking service returns an error code.
         """
-        named_entities: list[KnowledgeGraphEntity] = []
+        named_entities: List[KnowledgeGraphEntity] = []
         url: str = f'{self.service_url}/{self.__service_endpoint}'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
-        payload: dict[str, str] = {
+        payload: Dict[str, str] = {
             LOCALE_TAG: language_code,
             TEXT_TAG: text
         }
@@ -90,7 +90,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
             if response.ok:
                 results: dict = response.json()
                 for e in results:
-                    entity_types: list[str] = []
+                    entity_types: List[str] = []
                     # --------------------------- Entity content -------------------------------------------------------
                     source: Optional[EntitySource] = None
                     if 'uri' in e:

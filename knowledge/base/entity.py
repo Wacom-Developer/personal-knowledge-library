@@ -2,7 +2,7 @@
 # Copyright © 2021 Wacom. All rights reserved.
 import abc
 import enum
-from typing import NewType, Any
+from typing import NewType, Any, List, Dict
 
 #  ---------------------------------------- Type definitions -----------------------------------------------------------
 LanguageCode = NewType("LanguageCode", str)
@@ -146,13 +146,13 @@ class Label(LocalizedContent):
         return self.__main
 
     @staticmethod
-    def create_from_dict(dict_label: dict[str, Any], tag_name: str = CONTENT_TAG, locale_name: str = LOCALE_TAG) \
+    def create_from_dict(dict_label: Dict[str, Any], tag_name: str = CONTENT_TAG, locale_name: str = LOCALE_TAG) \
             -> 'Label':
         """
         Create a label from a dictionary.
         Parameters
         ----------
-        dict_label: dict[str, Any]
+        dict_label: Dict[str, Any]
             Dictionary containing the label information.
         tag_name: str
             Tag name of the content.
@@ -173,18 +173,18 @@ class Label(LocalizedContent):
         return Label(dict_label[tag_name], dict_label[locale_name])
 
     @staticmethod
-    def create_from_list(param: list[dict]) -> list[LOCALIZED_CONTENT_TAG]:
+    def create_from_list(param: List[dict]) -> List[LOCALIZED_CONTENT_TAG]:
         """
         Create a list of labels from a list of dictionaries.
 
         Parameters
         ----------
-        param: list[dict]
+        param: List[dict]
             List of dictionaries containing the label information.
 
         Returns
         -------
-        instance: list[Label]
+        instance: List[Label]
             List of label instances.
         """
         return [Label.create_from_dict(p) for p in param]
@@ -215,14 +215,14 @@ class Description(LocalizedContent):
         super().__init__(description, language_code)
 
     @staticmethod
-    def create_from_dict(dict_description: dict[str, Any], tag_name: str = DESCRIPTION_TAG,
+    def create_from_dict(dict_description: Dict[str, Any], tag_name: str = DESCRIPTION_TAG,
                          locale_name: str = LOCALE_TAG) -> 'Description':
         """
         Create a description from a dictionary.
 
         Parameters
         ----------
-        dict_description: dict[str, Any]
+        dict_description: Dict[str, Any]
             Dictionary containing the description information.
         tag_name: str
             Tag name of the content.
@@ -239,17 +239,17 @@ class Description(LocalizedContent):
         return Description(dict_description[tag_name], dict_description[locale_name])
 
     @staticmethod
-    def create_from_list(param: list[dict[str, Any]]) -> list['Description']:
+    def create_from_list(param: List[Dict[str, Any]]) -> List['Description']:
         """ Create a list of descriptions from a list of dictionaries.
 
         Parameters
         ----------
-        param: list[dict[str, Any]]
+        param: List[Dict[str, Any]]
             List of dictionaries containing the description information.
 
         Returns
         -------
-        instance: list[Description]
+        instance: List[Description]
             List of description instances.
         """
         return [Description.create_from_dict(p) for p in param]

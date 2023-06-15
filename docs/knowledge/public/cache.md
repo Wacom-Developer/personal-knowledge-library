@@ -13,11 +13,11 @@ Functions
         The Wikidata object
 
     
-`cache_wikidata_objects() ‑> dict[str, knowledge.public.wikidata.WikidataThing]`
+`cache_wikidata_objects() ‑> Dict[str, knowledge.public.wikidata.WikidataThing]`
 :   Returns the Wikidata cache.
     Returns
     -------
-    wikidata_cache: dict[str, WikidataThing]
+    wikidata_cache: Dict[str, WikidataThing]
         Wikidata cache.
 
     

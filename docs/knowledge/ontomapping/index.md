@@ -9,11 +9,11 @@ Functions
 ---------
 
     
-`build_configuration(mapping: dict[str, typing.Any]) ‑> knowledge.ontomapping.MappingConfiguration`
+`build_configuration(mapping: Dict[str, Any]) ‑> knowledge.ontomapping.MappingConfiguration`
 :   Builds the configuration from the mapping file.
     Parameters
     ----------
-    mapping: dict[str, Any]
+    mapping: Dict[str, Any]
         The mapping file
     
     Returns
@@ -61,7 +61,7 @@ Functions
         The ontology in RDF/XML format.
 
     
-`subclasses_of(iri: str) ‑> list[str]`
+`subclasses_of(iri: str) ‑> List[str]`
 :   Returns the subclasses of an ontology class.
     Parameters
     ----------
@@ -70,7 +70,7 @@ Functions
     
     Returns
     -------
-    subclasses: list[str]
+    subclasses: List[str]
         Subclasses of the ontology class.
 
     
@@ -90,13 +90,13 @@ Classes
     `concept_type: knowledge.base.ontology.OntologyClassReference`
     :   Concept type.
 
-    `dbpedia_classes: list[str]`
+    `dbpedia_classes: List[str]`
     :   DBpedia classes.
 
     `ontology_class: str`
     :   Ontology class.
 
-    `wikidata_classes: list[str]`
+    `wikidata_classes: List[str]`
     :   Wikidata classes.
 
 `MappingConfiguration()`
@@ -106,10 +106,10 @@ Classes
 
     ### Instance variables
 
-    `classes: list[knowledge.ontomapping.ClassConfiguration]`
+    `classes: List[knowledge.ontomapping.ClassConfiguration]`
     :   List of classes.
 
-    `properties: list[knowledge.ontomapping.PropertyConfiguration]`
+    `properties: List[knowledge.ontomapping.PropertyConfiguration]`
     :   List of properties.
 
     ### Methods
@@ -161,11 +161,11 @@ Classes
         valid: bool
             True if the target is in the range, False otherwise.
 
-    `guess_classed(self, classes: list[str]) ‑> Optional[knowledge.ontomapping.ClassConfiguration]`
+    `guess_classed(self, classes: List[str]) ‑> Optional[knowledge.ontomapping.ClassConfiguration]`
     :   Guesses the class from the label.
         Parameters
         ----------
-        classes: list[str]
+        classes: List[str]
             The list of classes
         
         Returns
@@ -186,7 +186,7 @@ Classes
         property_config: Optional[PropertyConfiguration]
             If a mapping exists, the property configuration, otherwise None.
 
-    `property_for(self, class_ref: knowledge.base.ontology.OntologyClassReference, property_type: Optional[knowledge.ontomapping.PropertyType]) ‑> list[knowledge.ontomapping.PropertyConfiguration]`
+    `property_for(self, class_ref: knowledge.base.ontology.OntologyClassReference, property_type: Optional[knowledge.ontomapping.PropertyType]) ‑> List[knowledge.ontomapping.PropertyConfiguration]`
     :   Returns the properties for a class.
         Parameters
         ----------
@@ -196,7 +196,7 @@ Classes
             The property type, if None, all properties are returned.
         Returns
         -------
-        properties: list[PropertyConfiguration]
+        properties: List[PropertyConfiguration]
             The list of properties.
 
     `property_for_iri(self, property_iri: str) ‑> knowledge.ontomapping.PropertyConfiguration`
@@ -217,7 +217,7 @@ Classes
         ValueError
             If the property is not found.
 
-`PropertyConfiguration(iri: str, property_type: knowledge.ontomapping.PropertyType, pids: Optional[list[str]] = None)`
+`PropertyConfiguration(iri: str, property_type: knowledge.ontomapping.PropertyType, pids: Optional[List[str]] = None)`
 :   Property configuration.
     -----------------------
     This class contains the configuration for a property.
@@ -228,12 +228,12 @@ Classes
         The IRI of the property.
     property_type: PropertyType
         The property type.
-    pids: Optional[list[str]]
+    pids: Optional[List[str]]
         The list of property PIDs.
 
     ### Instance variables
 
-    `domains: list[str]`
+    `domains: List[str]`
     :   List of domains.
 
     `inverse: Optional[str]`
@@ -242,10 +242,10 @@ Classes
     `iri: str`
     :   IRI of the property.
 
-    `pids: list[str]`
+    `pids: List[str]`
     :   List of property PIDs.
 
-    `ranges: list[str]`
+    `ranges: List[str]`
     :   List of ranges.
 
     `type: knowledge.ontomapping.PropertyType`

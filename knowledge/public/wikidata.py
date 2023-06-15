@@ -6,7 +6,7 @@ import urllib
 from abc import ABC
 from datetime import datetime
 from multiprocessing import Pool
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, Dict, List, Tuple, Set
 
 import requests
 from requests import Response
@@ -29,12 +29,12 @@ QUALIFIERS_TAG: str = "QUALIFIERS"
 LITERALS_TAG: str = "LITERALS"
 
 
-def chunks(lst: list[str], chunk_size: int):
+def chunks(lst: List[str], chunk_size: int):
     """
     Yield successive n-sized chunks from lst.Yield successive n-sized chunks from lst.
     Parameters
     ----------
-    lst: list[str]
+    lst: List[str]
         Full length.
     chunk_size: int
         Chunk size.
@@ -94,11 +94,11 @@ class WikidataProperty:
         }
 
     @classmethod
-    def create_from_dict(cls, prop_dict: dict[str, Any]) -> 'WikidataProperty':
+    def create_from_dict(cls, prop_dict: Dict[str, Any]) -> 'WikidataProperty':
         """Create a property from a dictionary.
         Parameters
         ----------
-        prop_dict: dict[str, Any]
+        prop_dict: Dict[str, Any]
             Property dictionary.
 
         Returns
@@ -119,12 +119,12 @@ class WikidataSearchResult:
     Search result from wikidata.
     """
 
-    def __init__(self, qid: str, label: Label, description: Optional[Description], repository: str, aliases: list[str]):
+    def __init__(self, qid: str, label: Label, description: Optional[Description], repository: str, aliases: List[str]):
         self.__qid: str = qid
         self.__label: Label = label
         self.__description: Optional[Description] = description
         self.__repository: str = repository
-        self.__aliases: list[str] = aliases
+        self.__aliases: List[str] = aliases
 
     @property
     def qid(self) -> str:
@@ -147,17 +147,17 @@ class WikidataSearchResult:
         return self.__repository
 
     @property
-    def aliases(self) -> list[str]:
+    def aliases(self) -> List[str]:
         """Aliases of the search result."""
         return self.__aliases
 
     @classmethod
-    def from_dict(cls, search_result: dict[str, Any]) -> 'WikidataSearchResult':
+    def from_dict(cls, search_result: Dict[str, Any]) -> 'WikidataSearchResult':
         """
         Create a search result from a dictionary.
         Parameters
         ----------
-        search_result: dict[str, Any]
+        search_result: Dict[str, Any]
             Search result dictionary.
 
         Returns
@@ -166,7 +166,7 @@ class WikidataSearchResult:
             Instance of WikidataSearchResult.
         """
         qid: str = search_result[ID_TAG]
-        display: dict[str, Any] = search_result[DISPLAY_TAG]
+        display: Dict[str, Any] = search_result[DISPLAY_TAG]
         label: Label = Label(content=display[LABEL_TAG]['value'],
                              language_code=LanguageCode(LANGUAGE_LOCALE_MAPPING.get(display[LABEL_TAG]['language'],
                                                                                     EN_US)))
@@ -174,7 +174,7 @@ class WikidataSearchResult:
         if DESCRIPTION_TAG in display:
             description: Description = Description(description=display[DESCRIPTION_TAG]['value'],
                                                    language_code=display[DESCRIPTION_TAG]['language'])
-        aliases: list[str] = [alias['value'] for alias in display.get(ALIASES_TAG, [])]
+        aliases: List[str] = [alias['value'] for alias in display.get(ALIASES_TAG, [])]
         repository: str = search_result[REPOSITORY_TAG]
         return WikidataSearchResult(
             qid=qid,
@@ -227,7 +227,7 @@ class WikidataClass:
         super().__init__()
         self.__qid: str = qid
         self.__label: Optional[str] = label
-        self.__superclasses: list[WikidataClass] = []
+        self.__superclasses: List[WikidataClass] = []
 
     @property
     def qid(self):
@@ -246,11 +246,11 @@ class WikidataClass:
         return self.__label
 
     @property
-    def superclasses(self) -> list['WikidataClass']:
+    def superclasses(self) -> List['WikidataClass']:
         return self.__superclasses
 
     @classmethod
-    def create_from_dict(cls, class_dict: dict[str, Any]) -> 'WikidataClass':
+    def create_from_dict(cls, class_dict: Dict[str, Any]) -> 'WikidataClass':
         wiki_cls: WikidataClass = cls(class_dict[QID_TAG], class_dict.get(LABEL_TAG))
         for superclass in class_dict.get(SUPERCLASSES_TAG, []):
             wiki_cls.__superclasses.append(WikidataClass.create_from_dict(superclass))
@@ -296,11 +296,11 @@ class Claim:
     be easily queried, analyzed, and visualized.
     """
 
-    def __init__(self, pid: WikidataProperty, literal: list[dict[str, Any]], qualifiers: list[dict[str, Any]]):
+    def __init__(self, pid: WikidataProperty, literal: List[Dict[str, Any]], qualifiers: List[Dict[str, Any]]):
         super().__init__()
         self.__pid: WikidataProperty = pid
-        self.__literals: list[dict[str, Any]] = literal
-        self.__qualifiers: list[dict[str, Any]] = qualifiers
+        self.__literals: List[Dict[str, Any]] = literal
+        self.__qualifiers: List[Dict[str, Any]] = qualifiers
 
     @property
     def pid(self) -> WikidataProperty:
@@ -308,12 +308,12 @@ class Claim:
         return self.__pid
 
     @property
-    def literals(self) -> list[dict[str, Any]]:
+    def literals(self) -> List[Dict[str, Any]]:
         """Literals. Objects of the statement."""
         return self.__literals
 
     @property
-    def qualifiers(self) -> list[dict[str, Any]]:
+    def qualifiers(self) -> List[Dict[str, Any]]:
         """Qualifiers."""
         return self.__qualifiers
 
@@ -367,24 +367,24 @@ class SiteLinks:
     """
 
     def __init__(self, source: str,
-                 urls: Union[dict[str, str], None] = None,
-                 titles: Union[dict[str, str], None] = None):
+                 urls: Union[Dict[str, str], None] = None,
+                 titles: Union[Dict[str, str], None] = None):
         self.__source: str = source
-        self.__urls: dict[str, str] = {} if urls is None else urls
-        self.__title: dict[str, str] = {} if titles is None else titles
+        self.__urls: Dict[str, str] = {} if urls is None else urls
+        self.__title: Dict[str, str] = {} if titles is None else titles
 
     @property
-    def urls(self) -> dict[str, str]:
+    def urls(self) -> Dict[str, str]:
         """URLs for the source."""
         return self.__urls
 
     @property
-    def titles(self) -> dict[str, str]:
+    def titles(self) -> Dict[str, str]:
         """Titles for the source."""
         return self.__title
 
     @property
-    def urls_languages(self) -> list[str]:
+    def urls_languages(self) -> List[str]:
         """List of all supported languages."""
         return list(self.__urls.keys())
 
@@ -394,13 +394,13 @@ class SiteLinks:
         return self.__source
 
     @classmethod
-    def create_from_dict(cls, entity_dict: dict[str, Any]) -> 'SiteLinks':
+    def create_from_dict(cls, entity_dict: Dict[str, Any]) -> 'SiteLinks':
         """
         Create a SiteLinks object from a dictionary.
 
         Parameters
         ----------
-        entity_dict: dict[str, Any]
+        entity_dict: Dict[str, Any]
             dictionary containing the entity information.
 
         Returns
@@ -441,26 +441,26 @@ class WikidataThing:
         QID for entity. For new entities the URI is None, as the knowledge graph backend assigns this.
     modified: datetime
         Last modified date
-    label: list[Label]
+    label: List[Label]
         List of labels
-    description: list[Description] (optional)
+    description: List[Description] (optional)
         List of descriptions
     qid: str
          QID for entity. For new entities the URI is None, as the knowledge graph backend assigns this.
     """
 
     def __init__(self, revision: str, qid: str, modified: datetime,
-                 label: Optional[dict[str, Label]] = None, aliases: Optional[dict[str, list[Label]]] = None,
-                 description: Optional[dict[str, Description]] = None):
+                 label: Optional[Dict[str, Label]] = None, aliases: Optional[Dict[str, List[Label]]] = None,
+                 description: Optional[Dict[str, Description]] = None):
         self.__qid: str = qid
         self.__revision: str = revision
         self.__modified: datetime = modified
-        self.__label: dict[str, Label] = label if label else {}
-        self.__description: dict[str, Description] = description if description else {}
-        self.__aliases: dict[str, list[Label]] = aliases if aliases else {}
-        self.__claims: dict[str, Claim] = {}
-        self.__sitelinks: dict[str, SiteLinks] = {}
-        self.__ontology_types: list[str] = []
+        self.__label: Dict[str, Label] = label if label else {}
+        self.__description: Dict[str, Description] = description if description else {}
+        self.__aliases: Dict[str, List[Label]] = aliases if aliases else {}
+        self.__claims: Dict[str, Claim] = {}
+        self.__sitelinks: Dict[str, SiteLinks] = {}
+        self.__ontology_types: List[str] = []
 
     @property
     def qid(self) -> str:
@@ -478,45 +478,45 @@ class WikidataThing:
         return self.__modified
 
     @property
-    def label(self) -> dict[str, Label]:
+    def label(self) -> Dict[str, Label]:
         """Labels of the entity."""
         return self.__label
 
     @property
-    def ontology_types(self) -> list[str]:
+    def ontology_types(self) -> List[str]:
         """Ontology types of the entity."""
         return self.__ontology_types
 
     @ontology_types.setter
-    def ontology_types(self, ontology_types: list[str]):
+    def ontology_types(self, ontology_types: List[str]):
         self.__ontology_types = ontology_types
 
     @property
-    def label_languages(self) -> list[str]:
+    def label_languages(self) -> List[str]:
         """All available languages for a labels."""
         return list(self.__label.keys())
 
     @property
-    def aliases(self) -> dict[str, list[Label]]:
+    def aliases(self) -> Dict[str, List[Label]]:
         """Alternative labels of the concept."""
         return self.__aliases
 
     @property
-    def alias_languages(self) -> list[str]:
+    def alias_languages(self) -> List[str]:
         """All available languages for a aliaes."""
         return list(self.__aliases.keys())
 
     @property
-    def description(self) -> dict[str, Description]:
+    def description(self) -> Dict[str, Description]:
         """Description of the thing (optional)."""
         return self.__description
 
     @description.setter
-    def description(self, description: dict[str, Description]):
+    def description(self, description: Dict[str, Description]):
         self.__description = description
 
     @property
-    def description_languages(self) -> list[str]:
+    def description_languages(self) -> List[str]:
         """All available languages for a description."""
         return list(self.__description.keys())
 
@@ -575,7 +575,7 @@ class WikidataThing:
         """
         return self.description.get(language_code)
 
-    def alias_lang(self, language_code: LanguageCode) -> list[Label]:
+    def alias_lang(self, language_code: LanguageCode) -> List[Label]:
         """
         Get alias for language_code code.
 
@@ -585,7 +585,7 @@ class WikidataThing:
             Requested language_code code
         Returns
         -------
-        aliases: list[Label]
+        aliases: List[Label]
             Returns a list of aliases for a specific language code
         """
         return self.aliases.get(language_code)
@@ -640,7 +640,7 @@ class WikidataThing:
         return None
 
     @property
-    def instance_of(self) -> list[WikidataClass]:
+    def instance_of(self) -> List[WikidataClass]:
         """Instance of."""
         claim: Optional[Claim] = self.claims.get(INSTANCE_OF_PROPERTY)
         if claim:
@@ -648,7 +648,7 @@ class WikidataThing:
         return []
 
     @property
-    def sitelinks(self) -> dict[str, SiteLinks]:
+    def sitelinks(self) -> Dict[str, SiteLinks]:
         """Different sitelinks assigned to entity."""
         return self.__sitelinks
 
@@ -666,13 +666,13 @@ class WikidataThing:
         }
 
     @classmethod
-    def create_from_dict(cls, entity_dict: dict[str, Any]) -> 'WikidataThing':
+    def create_from_dict(cls, entity_dict: Dict[str, Any]) -> 'WikidataThing':
         """
         Create WikidataThing from dict.
 
         Parameters
         ----------
-        entity_dict: dict[str, Any]
+        entity_dict: Dict[str, Any]
             dictionary with WikidataThing information.
 
         Returns
@@ -680,9 +680,9 @@ class WikidataThing:
         thing: WikidataThing
             Instance of WikidataThing
         """
-        labels: dict[str, Label] = {}
-        aliases: dict[str, list[Label]] = {}
-        descriptions: dict[str, Description] = {}
+        labels: Dict[str, Label] = {}
+        aliases: Dict[str, List[Label]] = {}
+        descriptions: Dict[str, Description] = {}
         for language, la in entity_dict[LABELS_TAG].items():
             labels[language] = Label.create_from_dict(la)
         for language, de in entity_dict[DESCRIPTIONS_TAG].items():
@@ -707,14 +707,14 @@ class WikidataThing:
         return thing
 
     @staticmethod
-    def from_wikidata(entity_dict: dict[str, Any], supported_languages: Optional[list[str]] = None) -> 'WikidataThing':
+    def from_wikidata(entity_dict: Dict[str, Any], supported_languages: Optional[List[str]] = None) -> 'WikidataThing':
         """
         Create WikidataThing from Wikidata JSON response.
         Parameters
         ----------
-        entity_dict: dict[str, Any]
+        entity_dict: Dict[str, Any]
             dictionary with WikidataThing information.
-        supported_languages: Optional[list[str]]
+        supported_languages: Optional[List[str]]
             List of supported languages. If None, all languages are supported.
 
         Returns
@@ -722,9 +722,9 @@ class WikidataThing:
         thing: WikidataThing
             Instance of WikidataThing.
         """
-        labels: dict[str, Label] = {}
-        aliases: dict[str, list[Label]] = {}
-        descriptions: dict[str, Description] = {}
+        labels: Dict[str, Label] = {}
+        aliases: Dict[str, List[Label]] = {}
+        descriptions: Dict[str, Description] = {}
         if LABELS_TAG in entity_dict:
             # Extract the labels
             for label in entity_dict[LABELS_TAG].values():
@@ -767,15 +767,15 @@ class WikidataThing:
 
         # Iterate over the claims
         for pid, claim_group in entity_dict[CLAIMS_TAG].items():
-            literal: list[dict[str, Any]] = []
-            qualifiers: list[dict[str, Any]] = []
+            literal: List[Dict[str, Any]] = []
+            qualifiers: List[Dict[str, Any]] = []
             for claim in claim_group:
                 try:
                     snak_type: str = claim['mainsnak']['snaktype']
                     if snak_type == "value":
-                        data_value: dict[str, Any] = claim['mainsnak']['datavalue']
+                        data_value: Dict[str, Any] = claim['mainsnak']['datavalue']
                         data_type: str = claim['mainsnak']['datatype']
-                        val: dict[str, Any] = {}
+                        val: Dict[str, Any] = {}
                         if data_type == 'monolingualtext':
                             val = data_value['value']
                         elif data_type in {'string', 'external-id', 'url'}:
@@ -858,17 +858,17 @@ class WikidataThing:
         return thing
 
     @property
-    def claims(self) -> dict[str, Claim]:
+    def claims(self) -> Dict[str, Claim]:
         """ Returns the claims. """
         return self.__claims
 
     @property
-    def claims_dict(self) -> dict[str, Claim]:
+    def claims_dict(self) -> Dict[str, Claim]:
         """ Returns the claims as a dictionary. """
         return dict([(p, c) for p, c in self.__claims.items()])
 
     @property
-    def claim_properties(self) -> list[WikidataProperty]:
+    def claim_properties(self) -> List[WikidataProperty]:
         """ Returns the list of properties of the claims. """
         return [p.pid for p in self.__claims.values()]
 
@@ -896,13 +896,13 @@ class WikidataThing:
     def __repr__(self):
         return f'<WikidataThing [QID:={self.qid}]>'
 
-    def __getstate__(self) -> dict[str, Any]:
+    def __getstate__(self) -> Dict[str, Any]:
         return self.__dict__().copy()
 
-    def __setstate__(self, state: dict[str, Any]):
-        labels: dict[str, Label] = {}
-        aliases: dict[str, list[Label]] = {}
-        descriptions: dict[str, Description] = {}
+    def __setstate__(self, state: Dict[str, Any]):
+        labels: Dict[str, Label] = {}
+        aliases: Dict[str, List[Label]] = {}
+        descriptions: Dict[str, Description] = {}
         for language, la in state[LABELS_TAG].items():
             labels[language] = Label.create_from_dict(la)
         for language, de in state[DESCRIPTIONS_TAG].items():
@@ -930,14 +930,14 @@ class WikidataThing:
             self.__sitelinks[wiki_source] = SiteLinks.create_from_dict(site_link)
 
 
-def detect_cycle(super_class_qid: str, cycle_detector: list[tuple[str, str]]) -> bool:
+def detect_cycle(super_class_qid: str, cycle_detector: List[Tuple[str, str]]) -> bool:
     """
     Detects if there is a cycle in the super class hierarchy.
     Parameters
     ----------
     super_class_qid: str
         Super class QID
-    cycle_detector: list[tuple[str, str]]
+    cycle_detector: List[Tuple[str, str]]
         List of tuples of the form (subclass_qid, super_class_qid)
 
     Returns
@@ -1016,9 +1016,9 @@ class WikiDataAPIClient(ABC):
             ?class wdt:P279 ?superclass.
             SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
         }}'''
-        reply: dict[str, Any] = WikiDataAPIClient.sparql_query(query)
-        wikidata_classes: dict[str, WikidataClass] = {}
-        cycle_detector: list[tuple[str, str]] = []
+        reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
+        wikidata_classes: Dict[str, WikidataClass] = {}
+        cycle_detector: List[Tuple[str, str]] = []
         if 'results' in reply:
             for b in reply['results']['bindings']:
                 superclass_qid: str = b['superclass']['value'].split('/')[-1]
@@ -1035,7 +1035,7 @@ class WikiDataAPIClient(ABC):
         return wikidata_classes.get(qid)
 
     @staticmethod
-    def search_term(search_term: str, language: str, url: str = WIKIDATA_SEARCH_URL) -> list[WikidataSearchResult]:
+    def search_term(search_term: str, language: str, url: str = WIKIDATA_SEARCH_URL) -> List[WikidataSearchResult]:
         """
         Search for a term in the WikiData.
         Parameters
@@ -1049,10 +1049,10 @@ class WikiDataAPIClient(ABC):
 
         Returns
         -------
-        search_results_dict: list[WikidataSearchResult]
+        search_results_dict: List[WikidataSearchResult]
             The search results.
         """
-        search_results_dict: list[WikidataSearchResult] = []
+        search_results_dict: List[WikidataSearchResult] = []
         # Define the retry policy
         retry_policy: Retry = Retry(
             total=3,  # maximum number of retries
@@ -1065,7 +1065,7 @@ class WikiDataAPIClient(ABC):
         with requests.Session() as session:
             retry_adapter = HTTPAdapter(max_retries=retry_policy)
             session.mount("https://", retry_adapter)
-            params: dict[str, str] = {
+            params: Dict[str, str] = {
                 "action": "wbsearchentities",
                 "format": "json",
                 "language": language,
@@ -1078,7 +1078,7 @@ class WikiDataAPIClient(ABC):
             if not response.ok:
                 raise WikiDataAPIException(f"Search request failed with status code : {response.status_code}. "
                                            f"URL:= {url}")
-            search_result_dict_full: dict[str, Any] = response.json()
+            search_result_dict_full: Dict[str, Any] = response.json()
             for search_result_dict in search_result_dict_full['search']:
                 search_results_dict.append(WikidataSearchResult.from_dict(search_result_dict))
             return search_results_dict
@@ -1104,17 +1104,17 @@ class WikiDataAPIClient(ABC):
             raise WikiDataAPIException(e)
 
     @staticmethod
-    def __wikidata_multiple_task__(qids: list[str]) -> list[WikidataThing]:
+    def __wikidata_multiple_task__(qids: List[str]) -> List[WikidataThing]:
         """Retrieve multiple Wikidata things.
 
         Parameters
         ----------
-        qids: list[str]
+        qids: List[str]
             QIDs of the entities.
 
         Returns
         -------
-        instances: list[WikidataThing]
+        instances: List[WikidataThing]
             List of wikidata things
         """
         try:
@@ -1141,23 +1141,23 @@ class WikiDataAPIClient(ABC):
         return WikiDataAPIClient.__wikidata_task__(qid)
 
     @staticmethod
-    def retrieve_entities(qids: Union[list[str], set[str]]) -> list[WikidataThing]:
+    def retrieve_entities(qids: Union[List[str], Set[str]]) -> List[WikidataThing]:
         """
         Retrieve multiple Wikidata things.
         Parameters
         ----------
-        qids: list[str]
+        qids: List[str]
             QIDs of the entities.
 
         Returns
         -------
-        instances: list[WikidataThing]
+        instances: List[WikidataThing]
             List of wikidata things.
         """
-        pulled: list[WikidataThing] = []
+        pulled: List[WikidataThing] = []
         if len(qids) == 0:
             return []
-        jobs: list[list[str]] = [ch for ch in chunks(list(qids), API_LIMIT)]
+        jobs: List[List[str]] = [ch for ch in chunks(list(qids), API_LIMIT)]
         num_processes: int = min(len(jobs), multiprocessing.cpu_count())
         if num_processes > 1:
             with Pool(processes=num_processes) as pool:

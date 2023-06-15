@@ -60,7 +60,7 @@ class UserFlow(TestCase):
 
     def test_1_create_user(self):
         """ Create user."""
-        list_user_before: list[User] = self.user_management.listing_users(self.tenant_api_key, limit=UserFlow.LIMIT)
+        list_user_before: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=UserFlow.LIMIT)
         # Create an external user id
         self.cache.external_id = str(uuid.uuid4())
         # Create user
@@ -72,7 +72,7 @@ class UserFlow(TestCase):
             self.user_token = token
             self.user_instance = user
 
-        list_user_after: list[User] = self.user_management.listing_users(self.tenant_api_key, limit=UserFlow.LIMIT)
+        list_user_after: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=UserFlow.LIMIT)
         user_in_list: bool = False
         for u_i in list_user_after:
             if u_i.external_user_id == self.cache.external_id:
@@ -90,7 +90,7 @@ class UserFlow(TestCase):
 
     def test_3_delete_user(self):
         """ Delete user."""
-        list_user_before: list[User] = self.user_management.listing_users(self.tenant_api_key, limit=UserFlow.LIMIT)
+        list_user_before: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=UserFlow.LIMIT)
         user_in_list: bool = False
         for u_i in list_user_before:
             if u_i.external_user_id == self.cache.external_id:
@@ -100,7 +100,7 @@ class UserFlow(TestCase):
 
     def teardown_class(cls):
         """ Clean up the user."""
-        list_user_all: list[User] = cls.user_management.listing_users(cls.tenant_api_key, limit=UserFlow.LIMIT)
+        list_user_all: List[User] = cls.user_management.listing_users(cls.tenant_api_key, limit=UserFlow.LIMIT)
         for u_i in list_user_all:
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
                 logging.info(f'Clean user {u_i.external_user_id}')

@@ -4,7 +4,7 @@ import abc
 import enum
 from datetime import datetime
 from json import JSONEncoder
-from typing import Union, Optional, Any
+from typing import Union, Optional, Any, List, Dict, Tuple, Set
 
 import dateutil
 
@@ -25,11 +25,11 @@ TENANT_ID: str = 'tenantId'
 NAME_TAG: str = "name"
 EN_US: str = "en_US"
 EN: str = "en"
-SUPPORTED_LOCALES: list[str] = ['ja_JP', EN_US, 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES']
-SUPPORTED_LANGUAGES: list[str] = ['ja', EN, 'de', 'bg', 'fr', 'it', 'es']
-LANGUAGE_LOCALE_MAPPING: dict[str, str] = dict([(lang, locale)
+SUPPORTED_LOCALES: List[str] = ['ja_JP', EN_US, 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES']
+SUPPORTED_LANGUAGES: List[str] = ['ja', EN, 'de', 'bg', 'fr', 'it', 'es']
+LANGUAGE_LOCALE_MAPPING: Dict[str, str] = dict([(lang, locale)
                                                 for lang, locale in zip(SUPPORTED_LANGUAGES, SUPPORTED_LOCALES)])
-LOCALE_LANGUAGE_MAPPING: dict[str, str] = dict([(locale, lang)
+LOCALE_LANGUAGE_MAPPING: Dict[str, str] = dict([(locale, lang)
                                                 for locale, lang in zip(SUPPORTED_LOCALES, SUPPORTED_LANGUAGES)])
 
 
@@ -44,7 +44,7 @@ class PropertyType(enum.Enum):
     DATA_PROPERTY = "Literal"
 
 
-INVERSE_PROPERTY_TYPE: dict[str, PropertyType] = dict([(pt.value, pt) for pt in PropertyType])
+INVERSE_PROPERTY_TYPE: Dict[str, PropertyType] = dict([(pt.value, pt) for pt in PropertyType])
 
 
 class DataPropertyType(enum.Enum):
@@ -133,7 +133,7 @@ class DataPropertyType(enum.Enum):
     """XML NCNames"""
 
 
-INVERSE_DATA_PROPERTY_TYPE_MAPPING: dict[str, DataPropertyType] = dict([(str(lit_type.value), lit_type)
+INVERSE_DATA_PROPERTY_TYPE_MAPPING: Dict[str, DataPropertyType] = dict([(str(lit_type.value), lit_type)
                                                                         for lit_type in DataPropertyType])
 """Maps the string representation of the XSD data types to the data types enum constants."""
 
@@ -166,14 +166,14 @@ class OntologyLabel(LocalizedContent):
         return self.__main
 
     @staticmethod
-    def create_from_dict(dict_label: dict[str, Any], tag_name: str = CONTENT_TAG, locale_name: str = LOCALE_TAG) \
+    def create_from_dict(dict_label: Dict[str, Any], tag_name: str = CONTENT_TAG, locale_name: str = LOCALE_TAG) \
             -> 'OntologyLabel':
         """
         Create a label from a dictionary.
 
         Parameters
         ----------
-        dict_label: dict[str, Any]
+        dict_label: Dict[str, Any]
             Dictionary with the label information
         tag_name: str
             Tag name of the content
@@ -194,17 +194,17 @@ class OntologyLabel(LocalizedContent):
         return OntologyLabel(dict_label[tag_name], dict_label[locale_name])
 
     @staticmethod
-    def create_from_list(param: list[dict]) -> list[LOCALIZED_CONTENT_TAG]:
+    def create_from_list(param: List[dict]) -> List[LOCALIZED_CONTENT_TAG]:
         """
         Create a list of labels from a list of dictionaries.
         Parameters
         ----------
-        param: list[dict]
+        param: List[dict]
             List of dictionaries with the label information
 
         Returns
         -------
-        instances: list[OntologyLabel]
+        instances: List[OntologyLabel]
             List of label instances
         """
         return [Label.create_from_dict(p) for p in param]
@@ -262,7 +262,7 @@ class OntologyObjectReference(abc.ABC):
         return self.iri
 
     @classmethod
-    def parse_iri(cls, iri: str) -> tuple[str, str, str]:
+    def parse_iri(cls, iri: str) -> Tuple[str, str, str]:
         """Parse an IRI into its components.
 
         Parameters
@@ -272,7 +272,7 @@ class OntologyObjectReference(abc.ABC):
 
         Returns
         -------
-        tuple[str, str, str]
+        Tuple[str, str, str]
             Scheme, context and name of the IRI
         """
         if iri is None:
@@ -411,12 +411,12 @@ class Comment(LocalizedContent):
         super().__init__(text, language_code)
 
     @staticmethod
-    def create_from_dict(dict_description: dict[str, Any]) -> 'Comment':
+    def create_from_dict(dict_description: Dict[str, Any]) -> 'Comment':
         """
         Create a comment from a dictionary.
         Parameters
         ----------
-        dict_description: dict[str, Any]
+        dict_description: Dict[str, Any]
             Dictionary containing the comment
 
         Returns
@@ -429,17 +429,17 @@ class Comment(LocalizedContent):
         return Comment(dict_description[VALUE_TAG], dict_description[LANGUAGE_TAG])
 
     @staticmethod
-    def create_from_list(param: list[dict[str, Any]]) -> list['Comment']:
+    def create_from_list(param: List[Dict[str, Any]]) -> List['Comment']:
         """
         Create a list of comments from a list of dictionaries.
         Parameters
         ----------
-        param: list[dict[str, Any]]
+        param: List[Dict[str, Any]]
             List of dictionaries containing the comments
 
         Returns
         -------
-        instances: list[Comment]
+        instances: List[Comment]
             List of instances of comments
         """
         return [Comment.create_from_dict(p) for p in param]
@@ -464,19 +464,19 @@ class OntologyObject(abc.ABC):
         IRI of the ontology object
     icon: str
         Icon assigned to object, visually representing it
-    labels: list[Label]
+    labels: List[Label]
         List of multi-language_code labels
-    comments: list[Label]
+    comments: List[Label]
         List of multi-language_code comments
     context: str
         Context
     """
 
-    def __init__(self, tenant_id: str, iri: str, icon: str, labels: list[OntologyLabel],
-                 comments: list[Comment], context: str):
+    def __init__(self, tenant_id: str, iri: str, icon: str, labels: List[OntologyLabel],
+                 comments: List[Comment], context: str):
         self.__tenant_id: str = tenant_id
-        self.__labels: list[OntologyLabel] = labels
-        self.__comments: list[Comment] = comments
+        self.__labels: List[OntologyLabel] = labels
+        self.__comments: List[Comment] = comments
         self.__iri: str = iri
         self.__icon: str = icon
         self.__context: str = context
@@ -506,7 +506,7 @@ class OntologyObject(abc.ABC):
         self.__icon = value
 
     @property
-    def labels(self) -> list[OntologyLabel]:
+    def labels(self) -> List[OntologyLabel]:
         """Labels related to ontology object."""
         return self.__labels
 
@@ -529,7 +529,7 @@ class OntologyObject(abc.ABC):
         return None
 
     @property
-    def comments(self) -> list[Comment]:
+    def comments(self) -> List[Comment]:
         """Comment related to ontology object."""
         return self.__comments
 
@@ -626,31 +626,31 @@ class OntologyContext(OntologyObject):
         Name of the ontology context
     icon: str
         Icon or Base64 encoded
-    labels: list[Label]
+    labels: List[Label]
         List of labels
-    comments: list[Comment]
+    comments: List[Comment]
         List of comments
     context: str
         context name
     base_uri: str
         Base URI
-    concepts: list[str]
+    concepts: List[str]
         List of classes / concepts
-    properties: list[str]
+    properties: List[str]
         List of properties (data and object properties)
     """
 
-    def __init__(self, cid: str, tenant_id: str, name: str, icon: str, labels: list[OntologyLabel],
-                 comments: list[Comment], date_added: datetime, date_modified: datetime, context: str, base_uri: str,
-                 version: int, orphaned: bool, concepts: list[str], properties: list[str]):
+    def __init__(self, cid: str, tenant_id: str, name: str, icon: str, labels: List[OntologyLabel],
+                 comments: List[Comment], date_added: datetime, date_modified: datetime, context: str, base_uri: str,
+                 version: int, orphaned: bool, concepts: List[str], properties: List[str]):
         self.__id = cid
         self.__base_uri: str = base_uri
         self.__version: int = version
         self.__date_added: datetime = date_added
         self.__date_modified: datetime = date_modified
         self.__orphaned: bool = orphaned
-        self.__concepts: list[str] = concepts
-        self.__properties: list[str] = properties
+        self.__concepts: List[str] = concepts
+        self.__properties: List[str] = properties
         super().__init__(tenant_id, name, icon, labels, comments, context)
 
     @property
@@ -684,23 +684,23 @@ class OntologyContext(OntologyObject):
         return self.__date_modified
 
     @property
-    def concepts(self) -> list[str]:
+    def concepts(self) -> List[str]:
         """List of concepts."""
         return self.__concepts
 
     @property
-    def properties(self) -> list[str]:
+    def properties(self) -> List[str]:
         """List of properties."""
         return self.__properties
 
     @classmethod
-    def from_dict(cls, context_dict: dict[str, Any]):
+    def from_dict(cls, context_dict: Dict[str, Any]):
         """
         Create OntologyContext from dictionary.
 
         Parameters
         ----------
-        context_dict: dict[str, Any]
+        context_dict: Dict[str, Any]
             Dictionary containing the context data.
 
         Returns
@@ -708,10 +708,10 @@ class OntologyContext(OntologyObject):
         instance: OntologyContext
             Instance of OntologyContext object.
         """
-        context_data: dict[str, Any] = context_dict['context']
-        labels: list[OntologyLabel] = [] if context_data['labels'] is None else \
+        context_data: Dict[str, Any] = context_dict['context']
+        labels: List[OntologyLabel] = [] if context_data['labels'] is None else \
             [Label(content=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in context_data['labels']]
-        comments: list[Comment] = [] if context_data['comments'] is None else \
+        comments: List[Comment] = [] if context_data['comments'] is None else \
             [Comment(text=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in context_data['comments']]
         added: datetime = dateutil.parser.isoparse(context_data['dateAdded'])
         modified: datetime = dateutil.parser.isoparse(context_data['dateModified'])
@@ -741,9 +741,9 @@ class OntologyClass(OntologyObject):
         Reference for ontology class
     icon: str
         Icon representing concept
-    labels: list[Label]
+    labels: List[Label]
         List of labels
-    comments: list[Comment]
+    comments: List[Comment]
         List of comments
 
     subclass_of: str (default: None)
@@ -752,7 +752,7 @@ class OntologyClass(OntologyObject):
 
     def __init__(self, tenant_id: str, context: str, reference: OntologyClassReference,
                  subclass_of: OntologyClassReference = None, icon: Optional[str] = None,
-                 labels: Optional[list[OntologyLabel]] = None, comments: Optional[list[Comment]] = None):
+                 labels: Optional[List[OntologyLabel]] = None, comments: Optional[List[Comment]] = None):
         self.__subclass_of: OntologyClassReference = subclass_of
         self.__reference: OntologyClassReference = reference
         super().__init__(tenant_id, reference.iri, icon, labels, comments, context)
@@ -775,12 +775,12 @@ class OntologyClass(OntologyObject):
         return f'<OntologyClass> - [reference:={self.reference}, subclass_of:={self.subclass_of}]'
 
     @classmethod
-    def from_dict(cls, concept_dict: dict[str, Any]):
+    def from_dict(cls, concept_dict: Dict[str, Any]):
         """Create OntologyClass from dictionary.
 
         Parameters
         ----------
-        concept_dict: dict[str, Any]
+        concept_dict: Dict[str, Any]
             Dictionary containing the concept data.
 
         Returns
@@ -788,9 +788,9 @@ class OntologyClass(OntologyObject):
         instance: OntologyClass
             Instance of OntologyClass object.
         """
-        labels: list[OntologyLabel] = [] if concept_dict[LABELS_TAG] is None else \
+        labels: List[OntologyLabel] = [] if concept_dict[LABELS_TAG] is None else \
             [OntologyLabel(content=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in concept_dict[LABELS_TAG]]
-        comments: list[Comment] = [] if concept_dict[COMMENTS_TAG] is None else \
+        comments: List[Comment] = [] if concept_dict[COMMENTS_TAG] is None else \
             [Comment(text=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in concept_dict[COMMENTS_TAG]]
         return OntologyClass(tenant_id=concept_dict[TENANT_ID], context=concept_dict['context'],
                              reference=OntologyClassReference.parse(concept_dict[NAME_TAG]),
@@ -832,9 +832,9 @@ class OntologyProperty(OntologyObject):
         Domain for the property
     property_range: OntologyClassReference
         Range for the property
-    labels: list[Label]
+    labels: List[Label]
         List of labels (localized)
-    comments: list[Comment],
+    comments: List[Comment],
         List of comments
     sub_property_of: str (default: = None)
         Sub property of.
@@ -844,17 +844,17 @@ class OntologyProperty(OntologyObject):
 
     def __init__(self, kind: PropertyType, tenant_id: str, context: str, name: OntologyPropertyReference,
                  icon: str = None,
-                 property_domain: Optional[list[OntologyClassReference]] = None,
-                 property_range: Optional[list[Union[OntologyClassReference, DataPropertyType]]] = None,
-                 labels: Optional[list[OntologyLabel]] = None,
-                 comments: Optional[list[Comment]] = None,
+                 property_domain: Optional[List[OntologyClassReference]] = None,
+                 property_range: Optional[List[Union[OntologyClassReference, DataPropertyType]]] = None,
+                 labels: Optional[List[OntologyLabel]] = None,
+                 comments: Optional[List[Comment]] = None,
                  sub_property_of: Optional[OntologyPropertyReference] = None,
                  inverse_property_of: Optional[OntologyPropertyReference] = None):
         self.__kind: PropertyType = kind
         self.__subproperty_of: OntologyPropertyReference = sub_property_of
         self.__inverse_property_of: OntologyPropertyReference = inverse_property_of
-        self.__domains: list[OntologyClassReference] = property_domain if property_domain else []
-        self.__ranges: list[Optional[Union[OntologyClassReference, DataPropertyType]]] = property_range \
+        self.__domains: List[OntologyClassReference] = property_domain if property_domain else []
+        self.__ranges: List[Optional[Union[OntologyClassReference, DataPropertyType]]] = property_range \
             if property_range else []
         self.__reference: OntologyPropertyReference = name
         super().__init__(tenant_id, name.iri, icon, labels, comments, context)
@@ -891,12 +891,12 @@ class OntologyProperty(OntologyObject):
         return self.__inverse_property_of
 
     @property
-    def domains(self) -> list[OntologyClassReference]:
+    def domains(self) -> List[OntologyClassReference]:
         """Domain of the property."""
         return self.__domains
 
     @property
-    def ranges(self) -> list[Union[OntologyClassReference, DataPropertyType]]:
+    def ranges(self) -> List[Union[OntologyClassReference, DataPropertyType]]:
         """Ranges of the property."""
         return self.__ranges
 
@@ -905,12 +905,12 @@ class OntologyProperty(OntologyObject):
                f'sub-property_of:={self.subproperty_of}, type:={self.kind}]'
 
     @classmethod
-    def from_dict(cls, property_dict: dict[str, Any]):
+    def from_dict(cls, property_dict: Dict[str, Any]):
         """
         Create ontology property from dictionary.
         Parameters
         ----------
-        property_dict: dict[str, Any]
+        property_dict: Dict[str, Any]
             Dictionary containing property information.
 
         Returns
@@ -918,9 +918,9 @@ class OntologyProperty(OntologyObject):
         instance: OntologyProperty
             Ontology property instance.
         """
-        labels: list[OntologyLabel] = [] if property_dict[LABELS_TAG] is None else \
+        labels: List[OntologyLabel] = [] if property_dict[LABELS_TAG] is None else \
             [OntologyLabel.create_from_dict(la, locale_name=LANGUAGE_TAG) for la in property_dict[LABELS_TAG]]
-        comments: list[Comment] = [] if property_dict['comments'] is None else \
+        comments: List[Comment] = [] if property_dict['comments'] is None else \
             [Comment.create_from_dict(co) for co in property_dict['comments']]
         return OntologyProperty(INVERSE_PROPERTY_TYPE[property_dict['kind']],
                                 property_dict['tenantId'], property_dict['context'],
@@ -1046,18 +1046,18 @@ class DataProperty(EntityProperty):
         return f'{self.value}@{self.language_code}<{self.data_property_type.name}>'
 
     @staticmethod
-    def create_from_list(param: list[dict]) -> list['DataProperty']:
+    def create_from_list(param: List[dict]) -> List['DataProperty']:
         """
         Create data property list from dictionary list.
 
         Parameters
         ----------
-        param: list[dict]
+        param: List[dict]
             List of dictionaries containing data property information.
 
         Returns
         -------
-        instances: list[DataProperty]
+        instances: List[DataProperty]
             List of data property instances.
         """
         return [DataProperty.create_from_dict(p) for p in param]
@@ -1073,18 +1073,18 @@ class ObjectProperty(EntityProperty):
     ---------
     relation: OntologyPropertyReference
         OntologyPropertyReference type
-    incoming: list[str] (default:= [])
+    incoming: List[str] (default:= [])
         Incoming relations
-    outgoing: list[str] (default:= [])
+    outgoing: List[str] (default:= [])
         Outgoing relations
     """
 
     def __init__(self, relation: OntologyPropertyReference,
-                 incoming: Optional[list[Union[str, 'ThingObject']]] = None,
-                 outgoing: Optional[list[Union[str, 'ThingObject']]] = None):
+                 incoming: Optional[List[Union[str, 'ThingObject']]] = None,
+                 outgoing: Optional[List[Union[str, 'ThingObject']]] = None):
         self.__relation: OntologyPropertyReference = relation
-        self.__incoming: list[Union[str, 'ThingObject']] = incoming if incoming is not None else []
-        self.__outgoing: list[Union[str, 'ThingObject']] = outgoing if outgoing is not None else []
+        self.__incoming: List[Union[str, 'ThingObject']] = incoming if incoming is not None else []
+        self.__outgoing: List[Union[str, 'ThingObject']] = outgoing if outgoing is not None else []
 
     @property
     def relation(self) -> OntologyPropertyReference:
@@ -1092,23 +1092,23 @@ class ObjectProperty(EntityProperty):
         return self.__relation
 
     @property
-    def incoming_relations(self) -> list[Union[str, 'ThingObject']]:
+    def incoming_relations(self) -> List[Union[str, 'ThingObject']]:
         """Incoming relation"""
         return self.__incoming
 
     @property
-    def outgoing_relations(self) -> list[Union[str, 'ThingObject']]:
+    def outgoing_relations(self) -> List[Union[str, 'ThingObject']]:
         """Outgoing relation"""
         return self.__outgoing
 
     @staticmethod
-    def create_from_dict(relation_struct: dict[str, Any]) -> tuple[OntologyPropertyReference, 'ObjectProperty']:
+    def create_from_dict(relation_struct: Dict[str, Any]) -> Tuple[OntologyPropertyReference, 'ObjectProperty']:
         """
         Create object property from dictionary.
 
         Parameters
         ----------
-        relation_struct: dict[str, Any]
+        relation_struct: Dict[str, Any]
             Dictionary containing object property information.
 
         Returns
@@ -1118,7 +1118,7 @@ class ObjectProperty(EntityProperty):
         """
         relation_type: OntologyPropertyReference = \
             OntologyPropertyReference.parse(relation_struct[RELATION_TAG])
-        incoming: list[Union[str, ThingObject]] = []
+        incoming: List[Union[str, ThingObject]] = []
 
         for incoming_relation in relation_struct[INCOMING_TAG]:
             if isinstance(incoming_relation, dict):
@@ -1126,7 +1126,7 @@ class ObjectProperty(EntityProperty):
             elif isinstance(incoming_relation, str):
                 incoming.append(incoming_relation)
 
-        outgoing: list[Union[str, ThingObject]] = []
+        outgoing: List[Union[str, ThingObject]] = []
         for outgoing_relation in relation_struct[OUTGOING_TAG]:
             if isinstance(outgoing_relation, dict):
                 outgoing.append(ThingObject.from_dict(outgoing_relation))
@@ -1135,8 +1135,8 @@ class ObjectProperty(EntityProperty):
         return relation_type, ObjectProperty(relation_type, incoming, outgoing)
 
     def __dict__(self):
-        outgoing_relations: list[str] = []
-        incoming_relations: list[str] = []
+        outgoing_relations: List[str] = []
+        incoming_relations: List[str] = []
         for e in self.incoming_relations:
 
             if isinstance(e, ThingObject):
@@ -1164,17 +1164,17 @@ class ObjectProperty(EntityProperty):
         return f'{self.relation.iri}, in:={self.incoming_relations}, out:={self.outgoing_relations}'
 
     @staticmethod
-    def create_from_list(param: list[dict]) -> dict[OntologyPropertyReference, 'ObjectProperty']:
+    def create_from_list(param: List[dict]) -> Dict[OntologyPropertyReference, 'ObjectProperty']:
         """
         Create object property list from dictionary list.
         Parameters
         ----------
-        param: list[dict]
+        param: List[dict]
             List of dictionaries containing object property information.
 
         Returns
         -------
-        instances: dict[OntologyPropertyReference, ObjectProperty]
+        instances: Dict[OntologyPropertyReference, ObjectProperty]
             Dictionary of object property instances.
         """
         return dict([ObjectProperty.create_from_dict(p) for p in param])
@@ -1188,9 +1188,9 @@ class Ontology:
     """
 
     def __init__(self):
-        self.__classes: dict[OntologyClassReference, OntologyClass] = {}
-        self.__data_properties: dict[str, OntologyProperty] = {}
-        self.__object_properties: dict[str, OntologyProperty] = {}
+        self.__classes: Dict[OntologyClassReference, OntologyClass] = {}
+        self.__data_properties: Dict[str, OntologyProperty] = {}
+        self.__object_properties: Dict[str, OntologyProperty] = {}
 
     def add_class(self, class_obj: OntologyClass):
         """
@@ -1217,17 +1217,17 @@ class Ontology:
             self.__object_properties[prop_obj.reference.iri] = prop_obj
 
     @property
-    def data_properties(self) -> list[OntologyProperty]:
+    def data_properties(self) -> List[OntologyProperty]:
         """All data properties."""
         return list(self.__data_properties.values())
 
     @property
-    def object_properties(self) -> list[OntologyProperty]:
+    def object_properties(self) -> List[OntologyProperty]:
         """All object properties."""
         return list(self.__object_properties.values())
 
     @property
-    def classes(self) -> list[OntologyClass]:
+    def classes(self) -> List[OntologyClass]:
         """All classes."""
         return list(self.__classes.values())
 
@@ -1301,7 +1301,7 @@ class Ontology:
         """
         return self.__data_properties.get(property_reference.iri)
 
-    def data_properties_for(self, cls_reference: OntologyClassReference) -> list[OntologyPropertyReference]:
+    def data_properties_for(self, cls_reference: OntologyClassReference) -> List[OntologyPropertyReference]:
         """
         Retrieve a list of data properties.
 
@@ -1312,10 +1312,10 @@ class Ontology:
 
         Returns
         -------
-        data_properties: list[OntologyPropertyReference]
+        data_properties: List[OntologyPropertyReference]
             List of data properties, where domain fit for the class of one of its super classes.
         """
-        data_properties: list[OntologyPropertyReference] = []
+        data_properties: List[OntologyPropertyReference] = []
         clz: Optional[OntologyClass] = self.get_class(cls_reference)
         if clz is not None:
             for dp in self.data_properties:
@@ -1324,7 +1324,7 @@ class Ontology:
                         data_properties.append(dp.reference)
         return data_properties
 
-    def object_properties_for(self, cls_reference: OntologyClassReference) -> list[OntologyPropertyReference]:
+    def object_properties_for(self, cls_reference: OntologyClassReference) -> List[OntologyPropertyReference]:
         """
         Retrieve a list of object properties.
 
@@ -1335,10 +1335,10 @@ class Ontology:
 
         Returns
         -------
-        object_properties: list[OntologyPropertyReference]
+        object_properties: List[OntologyPropertyReference]
             List of object properties, where domain fit for the class of one of its super classes.
         """
-        object_properties: list[OntologyPropertyReference] = []
+        object_properties: List[OntologyPropertyReference] = []
         clz: Optional[OntologyClass] = self.get_class(cls_reference)
         if clz is not None:
             for dp in self.object_properties:
@@ -1369,11 +1369,11 @@ class ThingObject(abc.ABC):
 
     Parameters
     ----------
-    label: list[Label]
+    label: List[Label]
         List of labels
     icon: str (optional)
         Icon
-    description: list[Description] (optional)
+    description: List[Description] (optional)
         List of descriptions
     concept_type: OntologyClassReference
         Type of the concept
@@ -1385,23 +1385,23 @@ class ThingObject(abc.ABC):
         Is the logged-in user the owner of the entity
     """
 
-    def __init__(self, label: list[Label] = None, concept_type: OntologyClassReference = THING_CLASS,
-                 description: Optional[list[Description]] = None, uri: Optional[str] = None, icon: Optional[str] = None,
+    def __init__(self, label: List[Label] = None, concept_type: OntologyClassReference = THING_CLASS,
+                 description: Optional[List[Description]] = None, uri: Optional[str] = None, icon: Optional[str] = None,
                  tenant_rights: TenantAccessRight = TenantAccessRight(), owner: bool = True, use_for_nel: bool = True):
         self.__uri: str = uri
         self.__icon: Optional[str] = icon
-        self.__label: list[Label] = label if label else []
-        self.__description: list[Description] = description if description else []
-        self.__alias: list[Label] = []
+        self.__label: List[Label] = label if label else []
+        self.__description: List[Description] = description if description else []
+        self.__alias: List[Label] = []
         self.__concept_type: OntologyClassReference = concept_type
-        self.__data_properties: dict[OntologyPropertyReference, list[DataProperty]] = {}
-        self.__object_properties: dict[OntologyPropertyReference, ObjectProperty] = {}
+        self.__data_properties: Dict[OntologyPropertyReference, List[DataProperty]] = {}
+        self.__object_properties: Dict[OntologyPropertyReference, ObjectProperty] = {}
         self.__tenants_rights: TenantAccessRight = tenant_rights
         self.__status_flag: EntityStatus = EntityStatus.UNKNOWN
-        self.__ontology_types: Optional[set[str]] = None
+        self.__ontology_types: Optional[Set[str]] = None
         self.__owner: bool = owner
         self.__owner_id: Optional[str] = None
-        self.__group_ids: list[str] = []
+        self.__group_ids: List[str] = []
         self.__use_for_nel: bool = use_for_nel
         self.__visibility: Optional[str] = None
 
@@ -1447,12 +1447,12 @@ class ThingObject(abc.ABC):
         self.__owner_id = value
 
     @property
-    def group_ids(self) -> list[str]:
+    def group_ids(self) -> List[str]:
         """List of group ids."""
         return self.__group_ids
 
     @group_ids.setter
-    def group_ids(self, value: list[str]):
+    def group_ids(self, value: List[str]):
         self.__group_ids = value
 
     @property
@@ -1465,12 +1465,12 @@ class ThingObject(abc.ABC):
         self.__status_flag = flag
 
     @property
-    def label(self) -> list[Label]:
+    def label(self) -> List[Label]:
         """Labels of the entity."""
         return self.__label
 
     @label.setter
-    def label(self, value: list[Label]):
+    def label(self, value: List[Label]):
         self.__label = value
 
     def add_label(self, label: str, language_code: LanguageCode):
@@ -1569,7 +1569,7 @@ class ThingObject(abc.ABC):
         self.__data_properties[SYSTEM_SOURCE_SYSTEM].append(value)
 
     @property
-    def source_reference_id(self) -> Optional[list[DataProperty]]:
+    def source_reference_id(self) -> Optional[List[DataProperty]]:
         """Reference id for to the source."""
         if SYSTEM_SOURCE_REFERENCE_ID in self.__data_properties:
             return self.__data_properties[SYSTEM_SOURCE_REFERENCE_ID]
@@ -1697,12 +1697,12 @@ class ThingObject(abc.ABC):
         self.__icon = value
 
     @property
-    def description(self) -> Optional[list[Description]]:
+    def description(self) -> Optional[List[Description]]:
         """Description of the thing (optional)."""
         return self.__description
 
     @description.setter
-    def description(self, value: list[Description]):
+    def description(self, value: List[Description]):
         self.__description = value
 
     def add_description(self, description: str, language_code: LanguageCode):
@@ -1776,35 +1776,35 @@ class ThingObject(abc.ABC):
         self.__concept_type = value
 
     @property
-    def ontology_types(self) -> set[str]:
+    def ontology_types(self) -> Set[str]:
         """Ontology types. For public entities."""
         return self.__ontology_types
 
     @ontology_types.setter
-    def ontology_types(self, value: set[str]):
+    def ontology_types(self, value: Set[str]):
         self.__ontology_types = value
 
     @property
-    def data_properties(self) -> dict[OntologyPropertyReference, list[DataProperty]]:
+    def data_properties(self) -> Dict[OntologyPropertyReference, List[DataProperty]]:
         """Literals of the concept."""
         return self.__data_properties
 
     @data_properties.setter
-    def data_properties(self, data_properties: dict[OntologyPropertyReference, list[DataProperty]]):
+    def data_properties(self, data_properties: Dict[OntologyPropertyReference, List[DataProperty]]):
         """Literals of the concept."""
         self.__data_properties = data_properties
 
     @property
-    def object_properties(self) -> dict[OntologyPropertyReference, ObjectProperty]:
+    def object_properties(self) -> Dict[OntologyPropertyReference, ObjectProperty]:
         """Relations of the concept."""
         return self.__object_properties
 
     @object_properties.setter
-    def object_properties(self, relations: dict[OntologyPropertyReference, ObjectProperty]):
+    def object_properties(self, relations: Dict[OntologyPropertyReference, ObjectProperty]):
         self.__object_properties = relations
 
     def data_property_lang(self, data_property: OntologyPropertyReference, language_code: LanguageCode) \
-            -> list[DataProperty]:
+            -> List[DataProperty]:
         """
         Get data property for language_code code.
 
@@ -1816,7 +1816,7 @@ class ThingObject(abc.ABC):
             Requested language_code code
         Returns
         -------
-        data_properties: list[DataProperty]
+        data_properties: List[DataProperty]
             Returns a list of data properties for a specific language code
         """
         return [d for d in self.data_properties.get(data_property, []) if d.language_code == language_code]
@@ -1832,15 +1832,15 @@ class ThingObject(abc.ABC):
         self.__data_properties.pop(data_property, None)
 
     @property
-    def alias(self) -> list[Label]:
+    def alias(self) -> List[Label]:
         """Alternative labels of the concept."""
         return self.__alias
 
     @alias.setter
-    def alias(self, alias: list[Label]):
+    def alias(self, alias: List[Label]):
         self.__alias = alias
 
-    def alias_lang(self, language_code: LanguageCode) -> list[Label]:
+    def alias_lang(self, language_code: LanguageCode) -> List[Label]:
         """
         Get alias for language_code code.
 
@@ -1850,10 +1850,10 @@ class ThingObject(abc.ABC):
             Requested language_code code
         Returns
         -------
-        aliases: list[Label]
+        aliases: List[Label]
             Returns a list of aliases for a specific language code
         """
-        aliases: list[Label] = []
+        aliases: List[Label] = []
         for alias in self.alias:
             if alias.language_code == language_code:
                 aliases.append(alias)
@@ -1924,10 +1924,10 @@ class ThingObject(abc.ABC):
         self.__tenants_rights = rights
 
     def __dict__(self):
-        labels: list[dict[str, Any]] = []
+        labels: List[Dict[str, Any]] = []
         labels.extend([la.__dict__() for la in self.label])
         labels.extend([la.__dict__() for la in self.alias])
-        dict_object: dict[str, Any] = {
+        dict_object: Dict[str, Any] = {
             URI_TAG: self.uri,
             IMAGE_TAG: self.image,
             LABELS_TAG: labels,
@@ -1946,11 +1946,11 @@ class ThingObject(abc.ABC):
             dict_object[OBJECT_PROPERTIES_TAG][relation_type.iri] = item.__dict__()
         return dict_object
 
-    def __import_format_dict__(self, group_ids: list[dict[str, str]] = None):
-        labels: list[dict[str, Any]] = []
+    def __import_format_dict__(self, group_ids: List[Dict[str, str]] = None):
+        labels: List[Dict[str, Any]] = []
         labels.extend([la.__dict__() for la in self.label])
         labels.extend([la.__dict__() for la in self.alias])
-        dict_object: dict[str, Any] = {
+        dict_object: Dict[str, Any] = {
             SOURCE_REFERENCE_ID_TAG: self.reference_id,
             SOURCE_SYSTEM_TAG: self.source_system,
             IMAGE_TAG: self.image,
@@ -1970,12 +1970,12 @@ class ThingObject(abc.ABC):
         return dict_object
 
     @staticmethod
-    def from_import_dict(entity: dict[str, Any]) -> 'ThingObject':
+    def from_import_dict(entity: Dict[str, Any]) -> 'ThingObject':
         """Creates a ThingObject from a dict.
 
         Parameters
         ----------
-        entity: dict[str, Any]
+        entity: Dict[str, Any]
             Dictionary that contains the data of the entity
 
         Returns
@@ -1983,9 +1983,9 @@ class ThingObject(abc.ABC):
         instance: ThingObject
             ThingObject that is created from the dict
         """
-        labels: list[Label] = []
-        alias: list[Label] = []
-        descriptions: list[Description] = []
+        labels: List[Label] = []
+        alias: List[Label] = []
+        descriptions: List[Description] = []
 
         for label in entity[LABELS_TAG]:
             if label[LOCALE_TAG] in SUPPORTED_LOCALES:
@@ -2030,12 +2030,12 @@ class ThingObject(abc.ABC):
         return thing
 
     @staticmethod
-    def from_dict(entity: dict[str, Any]) -> 'ThingObject':
+    def from_dict(entity: Dict[str, Any]) -> 'ThingObject':
         """Creates a ThingObject from a dict.
 
         Parameters
         ----------
-        entity: dict[str, Any]
+        entity: Dict[str, Any]
             Dictionary that contains the data of the entity
 
         Returns
@@ -2043,9 +2043,9 @@ class ThingObject(abc.ABC):
         instance: ThingObject
             ThingObject that is created from the dict
         """
-        labels: list[Label] = []
-        alias: list[Label] = []
-        descriptions: list[Description] = []
+        labels: List[Label] = []
+        alias: List[Label] = []
+        descriptions: List[Description] = []
 
         for label in entity[LABELS_TAG]:
             if label[LOCALE_TAG] in SUPPORTED_LOCALES:
@@ -2092,19 +2092,19 @@ class ThingObject(abc.ABC):
             thing.tenant_access_right = TenantAccessRight.parse(entity[TENANT_RIGHTS_TAG])
         return thing
 
-    def __getstate__(self) -> dict[str, Any]:
+    def __getstate__(self) -> Dict[str, Any]:
         return self.__dict__()
 
-    def __setstate__(self, state: dict[str, Any]):
-        self.__label: list[Label] = []
-        self.__description: list[Description] = []
-        self.__alias: list[Label] = []
-        self.__data_properties: dict[OntologyPropertyReference, list[DataProperty]] = {}
-        self.__object_properties: dict[OntologyPropertyReference, ObjectProperty] = {}
+    def __setstate__(self, state: Dict[str, Any]):
+        self.__label: List[Label] = []
+        self.__description: List[Description] = []
+        self.__alias: List[Label] = []
+        self.__data_properties: Dict[OntologyPropertyReference, List[DataProperty]] = {}
+        self.__object_properties: Dict[OntologyPropertyReference, ObjectProperty] = {}
         self.__status_flag: EntityStatus = EntityStatus.UNKNOWN
-        self.__ontology_types: Optional[set[str]] = None
+        self.__ontology_types: Optional[Set[str]] = None
         self.__owner_id: Optional[str] = None
-        self.__group_ids: list[str] = []
+        self.__group_ids: List[str] = []
         self.__visibility: Optional[str] = None
 
         for label in state[LABELS_TAG]:
@@ -2201,12 +2201,12 @@ class InflectionSetting(abc.ABC):
         return self.__case_sensitive
 
     @staticmethod
-    def from_dict(entity: dict[str, Any]) -> 'InflectionSetting':
+    def from_dict(entity: Dict[str, Any]) -> 'InflectionSetting':
         """
         Create inflection setting from dictionary.
         Parameters
         ----------
-        entity: dict[str, Any]
+        entity: Dict[str, Any]
             Entity dictionary
 
         Returns

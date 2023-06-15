@@ -127,7 +127,7 @@ class SearchFlow(TestCase):
         self.assertGreaterEqual(len(res_entities), 1)
 
     def teardown_class(self):
-        list_user_all: list[User] = self.user_management.listing_users(self.tenant_api_key, limit=SearchFlow.LIMIT)
+        list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=SearchFlow.LIMIT)
         for u_i in list_user_all:
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
                 logging.info(f'Clean user {u_i.external_user_id}')

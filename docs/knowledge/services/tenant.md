@@ -45,7 +45,7 @@ Classes
 
     ### Methods
 
-    `create_tenant(self, name: str) ‑> dict[str, str]`
+    `create_tenant(self, name: str) ‑> Dict[str, str]`
     :   Creates a tenant.
         
         Parameters
@@ -55,7 +55,7 @@ Classes
         
         Returns
         -------
-        tenant_dict: dict[str, str]
+        tenant_dict: Dict[str, str]
         
         Newly created tenant structure.
         >>>     {
@@ -69,12 +69,12 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `listing_tenant(self) ‑> list[dict[str, str]]`
+    `listing_tenant(self) ‑> List[Dict[str, str]]`
     :   Listing all tenants configured for this instance.
         
         Returns
         -------
-        tenants:  list[dict[str, str]]
+        tenants:  List[Dict[str, str]]
             List of tenants:
             >>> [
             >>>     {

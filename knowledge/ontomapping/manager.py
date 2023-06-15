@@ -2,7 +2,7 @@
 # Copyright © 2023 Wacom. All rights reserved.
 import logging
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional, Any, List, Dict, Tuple
 
 from knowledge.base.entity import Label, LanguageCode, Description
 from knowledge.base.ontology import ThingObject, DataProperty, SYSTEM_SOURCE_SYSTEM, SYSTEM_SOURCE_REFERENCE_ID, \
@@ -14,7 +14,7 @@ from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient, Wikidata
 from knowledge.utils.wikipedia import get_wikipedia_summary
 
 
-def flatten(hierarchy: WikidataClass, use_names: bool = False) -> list[str]:
+def flatten(hierarchy: WikidataClass, use_names: bool = False) -> List[str]:
     """
     Flattens the hierarchy.
 
@@ -27,12 +27,12 @@ def flatten(hierarchy: WikidataClass, use_names: bool = False) -> list[str]:
 
     Returns
     -------
-    hierarchy: list[str]
+    hierarchy: List[str]
         Hierarchy
 
     """
-    hierarchy_list: list[str] = [hierarchy.qid]
-    jobs: list[WikidataClass] = [hierarchy]
+    hierarchy_list: List[str] = [hierarchy.qid]
+    jobs: List[WikidataClass] = [hierarchy]
     while len(jobs) > 0:
         job: WikidataClass = jobs.pop()
         if use_names:
@@ -70,12 +70,12 @@ def wikidata_taxonomy(qid: str) -> Optional[WikidataClass]:
     return hierarchy
 
 
-def convert_dict(structure: dict[str, Any], locale: str) -> Optional[str]:
+def convert_dict(structure: Dict[str, Any], locale: str) -> Optional[str]:
     """
     Converts a dictionary to a string.
     Parameters
     ----------
-    structure:  dict[str, Any]
+    structure:  Dict[str, Any]
         Dictionary to convert.
     locale: str
         Locale.
@@ -112,9 +112,9 @@ def convert_dict(structure: dict[str, Any], locale: str) -> Optional[str]:
     raise NotImplementedError()
 
 
-def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: dict[str, Any], supported_locales: list[str],
-                      all_wikidata_objects: dict[str, WikidataThing], pull_wikipedia: bool = False)\
-        -> tuple[ThingObject, list[dict[str, Any]]]:
+def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, Any], supported_locales: List[str],
+                      all_wikidata_objects: Dict[str, WikidataThing], pull_wikipedia: bool = False)\
+        -> Tuple[ThingObject, List[Dict[str, Any]]]:
     """
     Converts a Wikidata thing to a ThingObject.
 
@@ -123,13 +123,13 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: dict[str, An
     wikidata_thing: WikidataThing
         Wikidata thing
 
-    all_relations: dict[str, Any]
+    all_relations: Dict[str, Any]
         All relations.
 
-    supported_locales: list[str]
+    supported_locales: List[str]
         Supported locales.
 
-    all_wikidata_objects: dict[str, WikidataThing]
+    all_wikidata_objects: Dict[str, WikidataThing]
         All Wikidata objects.
 
     pull_wikipedia: bool
@@ -139,17 +139,17 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: dict[str, An
     -------
     thing: ThingObject
         Thing object
-    import_warnings: list[dict[str, Any]]
+    import_warnings: List[Dict[str, Any]]
         Errors
 
     """
-    import_warnings: list[dict[str, Any]] = []
+    import_warnings: List[Dict[str, Any]] = []
     qid: str = wikidata_thing.qid
-    labels: list[Label] = [la for la in wikidata_thing.label.values() if str(la.language_code) in supported_locales]
+    labels: List[Label] = [la for la in wikidata_thing.label.values() if str(la.language_code) in supported_locales]
     for lang, aliases in wikidata_thing.aliases.items():
         if str(lang) in supported_locales:
             labels.extend([a for a in aliases])
-    descriptions: list[Description] = []
+    descriptions: List[Description] = []
     if 'wiki' in wikidata_thing.sitelinks and pull_wikipedia:
         for lang, title in wikidata_thing.sitelinks['wiki'].titles.items():
             locale: str = LANGUAGE_LOCALE_MAPPING.get(lang, "NOT_SUPPORTED")
@@ -171,7 +171,7 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: dict[str, An
                                                language_code=LanguageCode('en_US')))
     thing.add_data_property(DataProperty(content=datetime.utcnow().isoformat(),
                                          property_ref=OntologyPropertyReference.parse('wacom:core#lastUpdate')))
-    class_types: list[str] = wikidata_thing.ontology_types
+    class_types: List[str] = wikidata_thing.ontology_types
     for cls in wikidata_thing.instance_of:
         hierarchy: WikidataClass = wikidata_taxonomy(cls.qid)
         if hierarchy:
@@ -181,7 +181,7 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: dict[str, An
         thing.concept_type = class_configuration.concept_type
     else:
         thing.concept_type = OntologyClassReference.parse(TOPIC_CLASS)
-    relation_props: dict[OntologyPropertyReference, list[str]] = {}
+    relation_props: Dict[OntologyPropertyReference, List[str]] = {}
     for pid, cl in wikidata_thing.claims.items():
         prop: Optional[PropertyConfiguration] = get_mapping_configuration().guess_property(pid, thing.concept_type)
         if prop and prop.type == PropertyType.DATA_PROPERTY:
@@ -203,7 +203,7 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: dict[str, An
         target_thing: Optional[WikidataThing] = all_wikidata_objects.get(relation['target']['qid'])
         if target_thing:
             if prop and prop.type == PropertyType.OBJECT_PROPERTY:
-                class_types: list[str] = [c.qid for c in target_thing.instance_of]
+                class_types: List[str] = [c.qid for c in target_thing.instance_of]
                 class_types.extend(target_thing.ontology_types)
                 target_config: Optional[ClassConfiguration] = get_mapping_configuration().guess_classed(class_types)
                 if target_config:

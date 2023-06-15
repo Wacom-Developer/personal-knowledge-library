@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-23 Wacom. All rights reserved.
 import urllib.parse
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Dict
 
 import requests
 from requests import Response
@@ -84,12 +84,12 @@ class Group:
         return self.__rights
 
     @classmethod
-    def parse(cls, param: dict[str, Any]) -> 'Group':
+    def parse(cls, param: Dict[str, Any]) -> 'Group':
         """Parse group from dictionary.
 
         Arguments
         ---------
-        param: dict[str, Any]
+        param: Dict[str, Any]
             Dictionary containing group information.
 
         Returns
@@ -119,8 +119,8 @@ class GroupInfo(Group):
     """
 
     def __init__(self, tenant_id: str, group_id: str, owner: str, name: str, join_key: str, rights: GroupAccessRight,
-                 group_users: list[User]):
-        self.__users: list[User] = group_users
+                 group_users: List[User]):
+        self.__users: List[User] = group_users
         super().__init__(tenant_id, group_id, owner, name, join_key, rights)
 
     @property
@@ -129,7 +129,7 @@ class GroupInfo(Group):
         return self.__users
 
     @classmethod
-    def parse(cls, param: dict[str, Any]) -> 'GroupInfo':
+    def parse(cls, param: Dict[str, Any]) -> 'GroupInfo':
         tenant_id: str = param.get('tenantId')
         owner_id: str = param.get('ownerId')
         join_key: str = param.get('joinKey')
@@ -197,11 +197,11 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
-        payload: dict[str, str] = {
+        payload: Dict[str, str] = {
             NAME_TAG: name,
             GROUP_USER_RIGHTS_TAG: rights.to_list()
         }
@@ -239,11 +239,11 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
-        payload: dict[str, str] = {
+        payload: Dict[str, str] = {
             NAME_TAG: name,
             GROUP_USER_RIGHTS_TAG: rights.to_list()
         }
@@ -276,7 +276,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         mount_point: str = \
@@ -290,7 +290,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
                 raise WacomServiceException(f'Deletion of group failed.'
                                             f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def listing_groups(self, auth_key: str, admin: bool = False) -> list[Group]:
+    def listing_groups(self, auth_key: str, admin: bool = False) -> List[Group]:
         """
         Listing all groups configured for this instance.
 
@@ -305,13 +305,13 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
 
         Returns
         -------
-        user:  list[Groups]
+        user:  List[Groups]
             List of groups.
         """
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}'
         if admin:
             url += '/admin'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         mount_point: str = \
@@ -322,7 +322,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.get(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if response.ok:
-                groups: list[dict[str, Any]] = response.json()
+                groups: List[Dict[str, Any]] = response.json()
                 return [Group.parse(g) for g in groups]
         raise WacomServiceException(f'Listing of group failed.'
                                     f'Response code:={response.status_code}, exception:= {response.text}')
@@ -348,12 +348,12 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         response: Response = requests.get(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if response.ok:
-            group: dict[str, Any] = response.json()
+            group: Dict[str, Any] = response.json()
             return GroupInfo.parse(group)
         raise WacomServiceException(f'Getting of group information failed.'
                                     f'Response code:={response.status_code}, exception:= {response.text}')
@@ -376,10 +376,10 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/join'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        params: dict[str, str] = {
+        params: Dict[str, str] = {
             JOIN_KEY_PARAM: join_key,
         }
         response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
@@ -404,7 +404,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/leave'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
 
@@ -431,10 +431,10 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/user/add'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        params: dict[str, str] = {
+        params: Dict[str, str] = {
             USER_TO_ADD_PARAM: user_id,
         }
         response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
@@ -463,10 +463,10 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/user/remove'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        params: dict[str, str] = {
+        params: Dict[str, str] = {
             USER_TO_REMOVE_PARAM: user_id,
             FORCE_PARAM: force
         }
@@ -495,7 +495,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         """
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/entity/{uri}/add'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         mount_point: str = \
@@ -528,7 +528,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         """
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/entity/{uri}/remove'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         mount_point: str = \

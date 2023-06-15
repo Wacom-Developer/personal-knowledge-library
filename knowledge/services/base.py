@@ -2,7 +2,7 @@
 # Copyright © 2021-23 Wacom. All rights reserved.
 from abc import ABC
 from datetime import timezone, datetime
-from typing import Any
+from typing import Any, Tuple, Dict
 
 import jwt
 import requests
@@ -106,7 +106,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         # This is in graph service REST API
         return f'{self.service_url}/{self.__auth_service_endpoint}/{self.USER_LOGIN_ENDPOINT}'
 
-    def request_user_token(self, tenant_key: str, external_id: str) -> tuple[str, str, datetime]:
+    def request_user_token(self, tenant_key: str, external_id: str) -> Tuple[str, str, datetime]:
         """
         Login as user by using the tenant key and its external user id.
 
@@ -144,7 +144,7 @@ class WacomServiceAPIClient(RESTAPIClient):
                                            verify=self.verify_calls)
         if response.ok:
             try:
-                response_token: dict[str, str] = response.json()
+                response_token: Dict[str, str] = response.json()
                 try:
                     date_object: datetime = parse(response_token['expirationDate'])
                 except (ParserError, OverflowError) as _:
@@ -158,7 +158,7 @@ class WacomServiceAPIClient(RESTAPIClient):
                                     f'Response code:={response.status_code}, exception:= {response.text}',
                                     status_code=response.status_code)
 
-    def refresh_token(self, refresh_token: str) -> tuple[str, str, datetime]:
+    def refresh_token(self, refresh_token: str) -> Tuple[str, str, datetime]:
         """
         Refreshing a token.
 
@@ -182,17 +182,17 @@ class WacomServiceAPIClient(RESTAPIClient):
             Exception if service returns HTTP error code.
         """
         url: str = f'{self.service_base_url}/{WacomServiceAPIClient.USER_REFRESH_ENDPOINT}/'
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
-        payload: dict[str, str] = {
+        payload: Dict[str, str] = {
             REFRESH_TOKEN_TAG: refresh_token
         }
         response: Response = requests.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT,
                                            verify=self.verify_calls)
         if response.ok:
-            response_token: dict[str, str] = response.json()
+            response_token: Dict[str, str] = response.json()
             try:
                 date_object: datetime = parse(response_token[EXPIRATION_DATE_TAG])
             except (ParserError, OverflowError) as _:
@@ -202,7 +202,7 @@ class WacomServiceAPIClient(RESTAPIClient):
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 
     @staticmethod
-    def unpack_token(auth_token: str) -> dict[str, Any]:
+    def unpack_token(auth_token: str) -> Dict[str, Any]:
         """Unpacks the token.
 
         Parameters
@@ -212,7 +212,7 @@ class WacomServiceAPIClient(RESTAPIClient):
 
         Returns
         -------
-        token_dict: dict[str, Any]
+        token_dict: Dict[str, Any]
             Token dictionary
         """
         return jwt.decode(auth_token, options={"verify_signature": False})
@@ -249,7 +249,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         expired_in: float
             Seconds until token is expired
         """
-        token_dict: dict[str, Any] = WacomServiceAPIClient.unpack_token(auth_token)
+        token_dict: Dict[str, Any] = WacomServiceAPIClient.unpack_token(auth_token)
         timestamp: datetime = datetime.now(tz=timezone.utc)
         expiration_time: datetime = datetime.fromtimestamp(token_dict['exp'], tz=timezone.utc)
         return expiration_time.timestamp() - timestamp.timestamp()

@@ -30,12 +30,12 @@ Classes
 
     ### Static methods
 
-    `parse(param: dict[str, typing.Any]) ‑> knowledge.services.group.Group`
+    `parse(param: Dict[str, Any]) ‑> knowledge.services.group.Group`
     :   Parse group from dictionary.
         
         Arguments
         ---------
-        param: dict[str, Any]
+        param: Dict[str, Any]
             Dictionary containing group information.
         
         Returns
@@ -63,7 +63,7 @@ Classes
     `tenant_id: str`
     :   Tenant ID.
 
-`GroupInfo(tenant_id: str, group_id: str, owner: str, name: str, join_key: str, rights: knowledge.base.access.GroupAccessRight, group_users: list[knowledge.services.users.User])`
+`GroupInfo(tenant_id: str, group_id: str, owner: str, name: str, join_key: str, rights: knowledge.base.access.GroupAccessRight, group_users: List[knowledge.services.users.User])`
 :   Group Information
     -----------------
     Provides additional information on the group.
@@ -232,7 +232,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `listing_groups(self, auth_key: str, admin: bool = False) ‑> list[knowledge.services.group.Group]`
+    `listing_groups(self, auth_key: str, admin: bool = False) ‑> List[knowledge.services.group.Group]`
     :   Listing all groups configured for this instance.
         
         Parameters
@@ -246,7 +246,7 @@ Classes
         
         Returns
         -------
-        user:  list[Groups]
+        user:  List[Groups]
             List of groups.
 
     `remove_entity_to_group(self, auth_key: str, group_id: str, entity_uri: str)`

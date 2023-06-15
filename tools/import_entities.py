@@ -5,7 +5,7 @@ import json
 import os
 import uuid
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, List, Dict, Tuple
 
 import ndjson
 import requests
@@ -19,7 +19,7 @@ from knowledge.services.base import WacomServiceException, USER_AGENT_HEADER_FLA
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.group import GroupManagementServiceAPI, Group
 
-MIME_TYPE: dict[str, str] = {
+MIME_TYPE: Dict[str, str] = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.png': 'image/png'
@@ -30,20 +30,20 @@ THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', '
 CONTENT: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:core#content")
 
 # So far only these locales are supported
-SUPPORTED_LANGUAGES: list[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES']
+SUPPORTED_LANGUAGES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES']
 SOURCE_ID_TAG: str = "source_reference_id"
 GROUP_IDS_TAG: str = "groupIds"
 TIMEOUT: int = 60  # seconds
 
 
-def log_issue(error_path: Path, param: dict[str, Any]):
+def log_issue(error_path: Path, param: Dict[str, Any]):
     """
     Log an issue to the error file.
     Parameters
     ----------
     error_path: Path
         Path to the error file.
-    param: dict[str, Any]
+    param: Dict[str, Any]
         Parameters to log.
     """
     with error_path.open('a') as f_writer:
@@ -51,7 +51,7 @@ def log_issue(error_path: Path, param: dict[str, Any]):
         writer.writerow(param)
 
 
-def log_file(thing_path: Path, param: dict[str, Any]):
+def log_file(thing_path: Path, param: Dict[str, Any]):
     """
     Log thing import format to a file.
 
@@ -59,7 +59,7 @@ def log_file(thing_path: Path, param: dict[str, Any]):
     ----------
     thing_path: Path
         Path to the thing file.
-    param: dict[str, Any]
+    param: Dict[str, Any]
         Parameters to log.
     """
     with thing_path.open('a') as f_writer:
@@ -67,7 +67,7 @@ def log_file(thing_path: Path, param: dict[str, Any]):
         writer.writerow(param)
 
 
-def cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[str], Optional[str]]:
+def cache_image(image_url: str, path: Path) -> Tuple[Optional[bytes], Optional[str], Optional[str]]:
     """
     Pull image from the URL and caches it to the path.
 
@@ -88,7 +88,7 @@ def cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[s
         File name of the image.
     """
     with requests.session() as session:
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG:
                 'ImageFetcher/0.1 (https://github.com/Wacom-Developer/personal-knowledge-library)'
                 f' personal-knowledge-library/{__version__}'
@@ -96,7 +96,7 @@ def cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[s
         response: Response = session.get(image_url, headers=headers)
         if response.ok:
             index_path: Path = path / 'index.json'
-            cache: dict[str, dict[str]] = {}
+            cache: Dict[str, Dict[str]] = {}
             if index_path.exists():
                 cache = json.loads(index_path.open('r').read())
             image_bytes: bytes = response.content
@@ -116,7 +116,7 @@ def cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[s
         return None, None, None
 
 
-def check_cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[str], Optional[str]]:
+def check_cache_image(image_url: str, path: Path) -> Tuple[Optional[bytes], Optional[str], Optional[str]]:
     """
     Check if the image is cached.
     Parameters
@@ -137,9 +137,9 @@ def check_cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Opti
     """
     index_path: Path = path / 'index.json'
     if index_path.exists():
-        cache: dict[str, dict[str, str]] = json.loads(index_path.open('r').read())
+        cache: Dict[str, Dict[str, str]] = json.loads(index_path.open('r').read())
         if image_url in cache:
-            entry: dict[str, str] = cache[image_url]
+            entry: Dict[str, str] = cache[image_url]
             with Path(entry['file']).open('rb') as fp:
                 image_bytes: bytes = fp.read()
                 file_name: str = image_url
@@ -149,7 +149,7 @@ def check_cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Opti
 
 
 def imported_uris_own(client: WacomKnowledgeService, auth_key: str, refresh_token: str) \
-        -> tuple[dict[str, str], str, str]:
+        -> Tuple[Dict[str, str], str, str]:
     """
     Retrieve all the URIs of the imported objects of the user.
     Parameters
@@ -163,7 +163,7 @@ def imported_uris_own(client: WacomKnowledgeService, auth_key: str, refresh_toke
 
     Returns
     -------
-    session: dict[str, str]
+    session: Dict[str, str]
         The URIs of the imported objects and the user auth key.
     user_auth_key: str
         The updated auth token.
@@ -171,7 +171,7 @@ def imported_uris_own(client: WacomKnowledgeService, auth_key: str, refresh_toke
         The refresh token.
     """
     page_id: Optional[str] = None
-    session: dict[str, str] = {}
+    session: Dict[str, str] = {}
     while True:
         if client.expires_in(auth_key) < 60:
             auth_key, refresh_token, _ = client.refresh_token(refresh_token)
@@ -216,7 +216,7 @@ def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, a
     failed_path: Path = Path(f'{str(cache_file)}.{user}.failed.ndjson')
     image_cache: Path = cache_path_dir / 'image_cache'
     image_cache.mkdir(parents=True, exist_ok=True)
-    errors: list[dict[str, Any]] = []
+    errors: List[Dict[str, Any]] = []
     # Get all imported uris
     session, auth_key, refresh_token = imported_uris_own(client, auth_key, refresh_token)
 
@@ -227,17 +227,17 @@ def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, a
                 errors.append(w)
     group: Optional[Group] = None
     if group_name:
-        list_groups: list[Group] = management.listing_groups(auth_key)
+        list_groups: List[Group] = management.listing_groups(auth_key)
         for g in list_groups:
             if g.name == group_name:
                 group = g
         if group is None:
             group = management.create_group(user_auth_key, group_name)
 
-    relations: list[tuple[str, OntologyPropertyReference, str]] = []
+    relations: List[Tuple[str, OntologyPropertyReference, str]] = []
     with cache_file.open(encoding="utf8") as f:
         reader = ndjson.reader(f)
-        cached_entities: list[ThingObject] = [ThingObject.from_import_dict(entity) for entity in reader]
+        cached_entities: List[ThingObject] = [ThingObject.from_import_dict(entity) for entity in reader]
         pbar: tqdm = tqdm(cached_entities, desc='Importing entities from cache.')
         for thing in pbar:
             if client.expires_in(auth_key) < TIMEOUT:
@@ -291,7 +291,7 @@ def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, a
             predicate: OntologyPropertyReference = rel[1]
             target: str = session.get(rel[2])
             try:
-                rels_source: dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key, source)
+                rels_source: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key, source)
                 if predicate in rels_source:
                     rel_source: ObjectProperty = rels_source[predicate]
                     if target in [t.uri for t in rel_source.outgoing_relations] or \

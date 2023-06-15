@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-23 Wacom. All rights reserved.
+from typing import List
 
 
 class AccessRight:
@@ -64,16 +65,16 @@ class AccessRight:
         result += ']'
         return result
 
-    def to_list(self) -> list[str]:
+    def to_list(self) -> List[str]:
         """
         Converts the access to list of properties.
 
         Returns
         -------
-        access_list: list[str]
+        access_list: List[str]
             List of rights
         """
-        rights: list[str] = []
+        rights: List[str] = []
         if self.read:
             rights.append(TenantAccessRight.READ)
         if self.write:
@@ -103,13 +104,13 @@ class TenantAccessRight(AccessRight):
         super().__init__(read, write, delete)
 
     @classmethod
-    def parse(cls, param: list[str]) -> 'TenantAccessRight':
+    def parse(cls, param: List[str]) -> 'TenantAccessRight':
         """
         Converts the access to list of properties.
 
         Parameters
         ----------
-        param: list[str]
+        param: List[str]
             List of rights
 
         Returns
@@ -144,13 +145,13 @@ class GroupAccessRight(AccessRight):
         super().__init__(read, write, delete)
 
     @classmethod
-    def parse(cls, param: list[str]) -> 'GroupAccessRight':
+    def parse(cls, param: List[str]) -> 'GroupAccessRight':
         """
         Converts the access to list of properties.
 
         Parameters
         ----------
-        param: list[str]
+        param: List[str]
             List of rights
 
         Returns

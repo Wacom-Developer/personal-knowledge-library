@@ -34,7 +34,7 @@ def create_thing() -> ThingObject:
         lang_inst: LanguageCode = LanguageCode(lang)
         thing.add_label(name, lang_inst)
         thing.add_description(fake.text(), lang_inst)
-        names: list[str] = name.split()
+        names: List[str] = name.split()
         if len(names) == 2:
             thing.add_data_property(DataProperty(names[0],  OntologyPropertyReference.parse('wacom:core#firstName'),
                                                  language_code=lang_inst))
@@ -154,18 +154,18 @@ class EntityFlow(TestCase):
 
     def test_5_literal_entity(self):
         """Pull literals from the entity."""
-        literals: list[DataProperty] = self.knowledge_client.literals(self.cache.token, self.cache.thing_uri)
+        literals: List[DataProperty] = self.knowledge_client.literals(self.cache.token, self.cache.thing_uri)
         self.assertIsNotNone(literals)
 
     def test_6_labels_entity(self):
         """Pull labels from the entity."""
-        labels: list[Label] = self.knowledge_client.labels(self.cache.token, self.cache.thing_uri)
+        labels: List[Label] = self.knowledge_client.labels(self.cache.token, self.cache.thing_uri)
         self.assertIsNotNone(labels)
 
     def test_7_relations_entity(self):
         """Pull relations from the entity."""
         # Pull relations if configured
-        relations: dict[OntologyPropertyReference, ObjectProperty] = \
+        relations: Dict[OntologyPropertyReference, ObjectProperty] = \
             self.knowledge_client.relations(auth_key=self.cache.token, uri=self.cache.thing_uri)
         # Assert relations are
         self.assertIsNotNone(relations)
@@ -177,7 +177,7 @@ class EntityFlow(TestCase):
 
     def teardown_class(self):
         """Clean up the test environment."""
-        list_user_all: list[User] = self.user_management.listing_users(self.tenant_api_key, limit=EntityFlow.LIMIT)
+        list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=EntityFlow.LIMIT)
         for u_i in list_user_all:
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
                 logging.info(f'Clean user {u_i.external_user_id}')

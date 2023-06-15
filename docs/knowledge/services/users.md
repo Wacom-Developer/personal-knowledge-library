@@ -4,7 +4,7 @@ Module knowledge.services.users
 Classes
 -------
 
-`User(tenant_id: str, user_id: str, external_user_id: str, meta_data: dict[str, typing.Any], user_roles: list[knowledge.services.users.UserRole])`
+`User(tenant_id: str, user_id: str, external_user_id: str, meta_data: Dict[str, Any], user_roles: List[knowledge.services.users.UserRole])`
 :   User
     -----
     In Personal Knowledge backend is linking a user to a shadow user which is used within the personal knowledge graph.
@@ -17,18 +17,18 @@ Classes
         User id
     external_user_id: str
         External user id, referencing the user to authentication system.
-    meta_data: dict[str, Any]
+    meta_data: Dict[str, Any]
         Metadata associated with user.
-    user_roles: list[UserRole]
+    user_roles: List[UserRole]
         List of user roles.
 
     ### Static methods
 
-    `parse(param: dict[str, typing.Any]) ‑> knowledge.services.users.User`
+    `parse(param: Dict[str, Any]) ‑> knowledge.services.users.User`
     :   Parse user from dictionary.
         Parameters
         ----------
-        param: dict[str, Any]
+        param: Dict[str, Any]
             Dictionary containing user information.
         
         Returns
@@ -44,13 +44,13 @@ Classes
     `id: str`
     :   User id.
 
-    `meta_data: dict[str, typing.Any]`
+    `meta_data: Dict[str, Any]`
     :   Meta data for user.
 
     `tenant_id: str`
     :   Tenant ID.
 
-    `user_roles: list[knowledge.services.users.UserRole]`
+    `user_roles: List[knowledge.services.users.UserRole]`
     :   List of user roles
 
 `UserManagementServiceAPI(service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
@@ -81,7 +81,7 @@ Classes
 
     ### Methods
 
-    `create_user(self, tenant_key: str, external_id: str, meta_data: dict[str, str] = None, roles: list[knowledge.services.users.UserRole] = None) ‑> tuple[knowledge.services.users.User, str, str, datetime.datetime]`
+    `create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None, roles: List[knowledge.services.users.UserRole] = None) ‑> Tuple[knowledge.services.users.User, str, str, datetime.datetime]`
     :   Creates user for a tenant.
         
         Parameters
@@ -90,9 +90,9 @@ Classes
             API key for tenant
         external_id: str -
             External id of user identification service.
-        meta_data: dict[str, str]
+        meta_data: Dict[str, str]
             Meta-data dictionary.
-        roles: list[UserRole]
+        roles: List[UserRole]
             List of roles.
         
         Returns
@@ -129,7 +129,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `listing_users(self, tenant_key: str, offset: int = 0, limit: int = 20) ‑> list[knowledge.services.users.User]`
+    `listing_users(self, tenant_key: str, offset: int = 0, limit: int = 20) ‑> List[knowledge.services.users.User]`
     :   Listing all users configured for this instance.
         
         Parameters
@@ -143,10 +143,10 @@ Classes
         
         Returns
         -------
-        user: list[User]
+        user: List[User]
             List of users.
 
-    `update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: dict[str, str] = None, roles: list[knowledge.services.users.UserRole] = None)`
+    `update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: Dict[str, str] = None, roles: List[knowledge.services.users.UserRole] = None)`
     :   Updates user for a tenant.
         
         Parameters
@@ -157,9 +157,9 @@ Classes
             Internal id of semantic service.
         external_id: str
             External id of user identification service.
-        meta_data: dict[str, str]
+        meta_data: Dict[str, str]
             Meta-data dictionary.
-        roles: list[UserRole]
+        roles: List[UserRole]
             List of roles.
         
         Raises

@@ -5,7 +5,7 @@ import math
 import urllib
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, Dict, List
 
 import requests
 from dateutil import parser
@@ -156,17 +156,17 @@ def parse_date(date_string: str) -> Optional[datetime]:
             return None
 
 
-def wikidate(param: dict[str, Any]) -> dict[str, Any]:
+def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
     """
     Parse and extract wikidata structure.
     Parameters
     ----------
-    param: dict[str, Any]
+    param: Dict[str, Any]
         Entity wikidata
 
     Returns
     -------
-    result: dict[str, Any]
+    result: Dict[str, Any]
         Dict with pretty print of date
     """
     time: str = param['time']
@@ -264,7 +264,7 @@ def wikidate(param: dict[str, Any]) -> dict[str, Any]:
 
 def __waiting_request__(
         entity_id: str, base_url: str = WIKIDATA_LDI_URL
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """
     Sena a request with retry policy.
 
@@ -276,7 +276,7 @@ def __waiting_request__(
         Base URL
     Returns
     -------
-    result_dict: dict[str, Any]
+    result_dict: Dict[str, Any]
         Result dict
     """
     url: str = f"{base_url}/{entity_id}.json"
@@ -300,7 +300,7 @@ def __waiting_request__(
         # Check the response status code
         if not response.ok:
             raise WikiDataAPIException(f"Request failed with status code : {response.status_code}. URL:= {url}")
-        entity_dict_full: dict[str, Any] = response.json()
+        entity_dict_full: Dict[str, Any] = response.json()
         # remove redundant top level keys
         returned_entity_id: str = next(iter(entity_dict_full["entities"]))
         entity_dict = entity_dict_full["entities"][returned_entity_id]
@@ -314,20 +314,20 @@ def __waiting_request__(
 
 
 def __waiting_multi_request__(
-        entity_ids: list[str], base_url: str = MULTIPLE_ENTITIES_API
-) -> list[dict[str, Any]]:
+        entity_ids: List[str], base_url: str = MULTIPLE_ENTITIES_API
+) -> List[Dict[str, Any]]:
     """
     Sena a request to retrieve multiple entities with retry policy.
 
     Parameters
     ----------
-    entity_ids: list[str]
+    entity_ids: List[str]
         Entity QID
     base_url: Base URL
         Base URL
     Returns
     -------
-    result_dict: dict[str, Any]
+    result_dict: Dict[str, Any]
         Result dict
     Raises
     ------
@@ -357,8 +357,8 @@ def __waiting_multi_request__(
         # Check the response status code
         if not response.ok:
             raise WikiDataAPIException(f"Request failed with status code : {response.status_code}. URL:= {url}")
-        entity_dict_full: dict[str, Any] = response.json()
-        results: list[dict[str, Any]] = []
+        entity_dict_full: Dict[str, Any] = response.json()
+        results: List[Dict[str, Any]] = []
         for qid, e in entity_dict_full["entities"].items():
             if qid not in entity_ids:
                 logger.warning(f"Wikidata redirect detected. "

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-23 Wacom. All rights reserved.
-from typing import Any
+from typing import Any, Dict
 
 import requests
 from requests import Response
@@ -29,7 +29,7 @@ def __extract_abstract__(title: str, language: str = 'en',  max_retries: int = 5
     abstract: str
         Abstract of the wikipedia article
     """
-    params: dict[str, str] = {
+    params: Dict[str, str] = {
         "action": "query",
         "format": "json",
         "titles": title,
@@ -48,7 +48,7 @@ def __extract_abstract__(title: str, language: str = 'en',  max_retries: int = 5
         session.mount(mount_point, HTTPAdapter(max_retries=retries))
         response: Response = session.get(url, params=params)
         if response.ok:
-            result: dict[str, Any] = response.json()
+            result: Dict[str, Any] = response.json()
             if 'query' in result:
                 pages = result['query']['pages']
                 if len(pages) == 1:
@@ -78,7 +78,7 @@ def __extract_thumb__(title: str, language: str = 'en', max_retries: int = 5, ba
     url: str
         thumb URL
     """
-    params: dict[str, str] = {
+    params: Dict[str, str] = {
         "action": "query",
         "format": "json",
         "titles": title,
@@ -119,7 +119,7 @@ def get_wikipedia_summary(title: str, lang: str = 'en') -> str:
 
     Returns
     -------
-    result: dict[str, str]
+    result: Dict[str, str]
         Summary dict with image and summary text
     """
     try:
@@ -129,7 +129,7 @@ def get_wikipedia_summary(title: str, lang: str = 'en') -> str:
     return summary
 
 
-def get_wikipedia_summary_image(title: str, lang: str = 'en') -> dict[str, str]:
+def get_wikipedia_summary_image(title: str, lang: str = 'en') -> Dict[str, str]:
     """
     Extracting summary image and abstract for wikipedia URL.
 
@@ -142,7 +142,7 @@ def get_wikipedia_summary_image(title: str, lang: str = 'en') -> dict[str, str]:
 
     Returns
     -------
-    result: dict[str, str]
+    result: Dict[str, str]
         Summary dict with image and summary text
     """
     try:
@@ -159,7 +159,7 @@ def get_wikipedia_summary_image(title: str, lang: str = 'en') -> dict[str, str]:
     }
 
 
-def get_wikipedia_summary_url(wiki_url: str, lang: str = 'en') -> dict[str, str]:
+def get_wikipedia_summary_url(wiki_url: str, lang: str = 'en') -> Dict[str, str]:
     """
     Extracting summary image and abstract for wikipedia URL.
     Parameters
@@ -171,7 +171,7 @@ def get_wikipedia_summary_url(wiki_url: str, lang: str = 'en') -> dict[str, str]
 
     Returns
     -------
-    result: dict[str, str]
+    result: Dict[str, str]
         Result dictionary.
     """
     title: str = wiki_url.split('/')[-1]

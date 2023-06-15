@@ -5,7 +5,7 @@ import json
 import os
 import uuid
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, List, Dict, Tuple
 
 import ndjson
 import requests
@@ -23,17 +23,17 @@ from knowledge.services.base import WacomServiceException, USER_AGENT_HEADER_FLA
 from knowledge.services.graph import WacomKnowledgeService, SearchPattern
 from knowledge.services.group import GroupManagementServiceAPI, Group
 
-MIME_TYPE: dict[str, str] = {
+MIME_TYPE: Dict[str, str] = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.png': 'image/png'
 }
 
 # So far only these locales are supported
-SUPPORTED_LANGUAGES: list[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'ru_RU']
+SUPPORTED_LANGUAGES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'ru_RU']
 
 
-def log_issue(error_path: Path, param: dict[str, Any]):
+def log_issue(error_path: Path, param: Dict[str, Any]):
     """
     Logs the given parameter to the given error path.
 
@@ -41,7 +41,7 @@ def log_issue(error_path: Path, param: dict[str, Any]):
     ----------
     error_path: Path
         Path to the error file.
-    param: dict[str, Any]
+    param: Dict[str, Any]
         Parameter to be logged.
     """
     with error_path.open('a') as f_writer:
@@ -49,7 +49,7 @@ def log_issue(error_path: Path, param: dict[str, Any]):
         writer.writerow(param)
 
 
-def cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[str], Optional[str]]:
+def cache_image(image_url: str, path: Path) -> Tuple[Optional[bytes], Optional[str], Optional[str]]:
     """
     Caches the image from the given URL to the given path.
     Parameters
@@ -61,11 +61,11 @@ def cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[s
 
     Returns
     -------
-    cache_image: tuple[Optional[bytes], Optional[str], Optional[str]]
+    cache_image: Tuple[Optional[bytes], Optional[str], Optional[str]]
         Returns the image bytes, the image cache name and the file extension.
     """
     with requests.session() as session:
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG:
                 'ImageFetcher/0.1 (https://github.com/Wacom-Developer/personal-knowledge-library)'
                 ' personal-knowledge-library/0.2.4'
@@ -73,7 +73,7 @@ def cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[s
         response: Response = session.get(image_url, headers=headers)
         if response.ok:
             index_path: Path = path / 'index.json'
-            cache: dict[str, dict[str]] = {}
+            cache: Dict[str, Dict[str]] = {}
             if index_path.exists():
                 cache = json.loads(index_path.open('r').read())
             image_bytes: bytes = response.content
@@ -93,21 +93,21 @@ def cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[s
         return None, None, None
 
 
-def from_dict(entity: dict[str, Any]) -> 'ThingObject':
+def from_dict(entity: Dict[str, Any]) -> 'ThingObject':
     """
     Creates a ThingObject from the given dictionary.
     Parameters
     ----------
-    entity: dict[str, Any]
+    entity: Dict[str, Any]
         Dictionary containing the entity data.
     Returns
     -------
     thing: ThingObject
         Instance of ThingObject.
     """
-    labels: list[Label] = []
-    alias: list[Label] = []
-    descriptions: list[Description] = []
+    labels: List[Label] = []
+    alias: List[Label] = []
+    descriptions: List[Description] = []
 
     for label in entity[LABELS_TAG]:
         if label[LOCALE_TAG] in SUPPORTED_LANGUAGES:
@@ -153,7 +153,7 @@ def from_dict(entity: dict[str, Any]) -> 'ThingObject':
     return thing
 
 
-def check_cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Optional[str], Optional[str]]:
+def check_cache_image(image_url: str, path: Path) -> Tuple[Optional[bytes], Optional[str], Optional[str]]:
     """
     Checks if the image is already cached and returns the image bytes, the mime type and the file name.
     Parameters
@@ -165,14 +165,14 @@ def check_cache_image(image_url: str, path: Path) -> tuple[Optional[bytes], Opti
 
     Returns
     -------
-    cache_image: tuple[Optional[bytes], Optional[str], Optional[str]]
+    cache_image: Tuple[Optional[bytes], Optional[str], Optional[str]]
         Returns the image bytes, the image cache name and the file extension.
     """
     index_path: Path = path / 'index.json'
     if index_path.exists():
-        cache: dict[str, dict[str, str]] = json.loads(index_path.open('r').read())
+        cache: Dict[str, Dict[str, str]] = json.loads(index_path.open('r').read())
         if image_url in cache:
-            entry: dict[str, str] = cache[image_url]
+            entry: Dict[str, str] = cache[image_url]
             with Path(entry['file']).open('rb') as fp:
                 image_bytes: bytes = fp.read()
                 file_name: str = image_url
@@ -207,8 +207,8 @@ def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, a
     error_path: Path = Path(f'{str(cache_file)}.{user}.errors')
     image_cache: Path = cache_path_dir / 'image_cache'
     image_cache.mkdir(parents=True, exist_ok=True)
-    session: dict[str, str] = {}
-    errors: list[dict[str, Any]] = []
+    session: Dict[str, str] = {}
+    errors: List[Dict[str, Any]] = []
     # Check if the has been a previous session
     if session_path.exists():
         with session_path.open('r', encoding='utf-8') as sf:
@@ -222,14 +222,14 @@ def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, a
                 errors.append(w_error)
     group: Optional[Group] = None
     if group_name:
-        list_groups: list[Group] = management.listing_groups(auth_key)
+        list_groups: List[Group] = management.listing_groups(auth_key)
         for g in list_groups:
             if g.name == group_name:
                 group = g
         if group is None:
             group = management.create_group(user_auth_key, group_name)
 
-    relations: list[tuple[str, OntologyPropertyReference, str]] = []
+    relations: List[Tuple[str, OntologyPropertyReference, str]] = []
     with cache_file.open(encoding="utf8") as f:
         reader = ndjson.reader(f)
         pbar = tqdm(reader)
@@ -287,7 +287,7 @@ def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, a
             predicate: OntologyPropertyReference = rel[1]
             target: str = session.get(rel[2])
             try:
-                rels_source: dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key, source)
+                rels_source: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key, source)
                 if predicate in rels_source:
                     rel_source: ObjectProperty = rels_source[predicate]
                     if target in [t.uri for t in rel_source.outgoing_relations] or \

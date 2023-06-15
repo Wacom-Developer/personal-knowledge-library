@@ -2,7 +2,7 @@
 # Copyright © 2023 Wacom. All rights reserved.
 import argparse
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict
 
 import ndjson
 import requests
@@ -45,7 +45,7 @@ def download_file(url: str, user_images_path: Path, uri: str) -> str:
             return img_offline.absolute().as_uri()
 
 
-def print_summary(total: int, types: dict[str, int], languages: dict[str, int]):
+def print_summary(total: int, types: Dict[str, int], languages: Dict[str, int]):
     """
     Print summary of the listing.
 
@@ -53,9 +53,9 @@ def print_summary(total: int, types: dict[str, int], languages: dict[str, int]):
     ----------
     total: int
         Total number of entities.
-    types: dict[str, int]
+    types: Dict[str, int]
         Dictionary of types and their counts.
-    languages: dict[str, int]
+    languages: Dict[str, int]
         Dictionary of languages and their counts.
 
     """
@@ -97,10 +97,10 @@ if __name__ == '__main__':
     next_page_id: Union[str, None] = None
     page_number: int = 1
     entity_count: int = 0
-    types_count: dict[str, int] = {}
-    languages_count: dict[str, int] = {}
+    types_count: Dict[str, int] = {}
+    languages_count: Dict[str, int] = {}
     dump_mode: bool = len(args.dump) > 0
-    dump_entities: list[ThingObject] = []
+    dump_entities: List[ThingObject] = []
     dump_path: Path = Path(args.dump)
     dump_file: Path = dump_path / 'entities.ndjson'
     images_path: Path = dump_path / 'images'

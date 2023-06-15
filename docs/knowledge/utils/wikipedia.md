@@ -17,11 +17,11 @@ Functions
     
     Returns
     -------
-    result: dict[str, str]
+    result: Dict[str, str]
         Summary dict with image and summary text
 
     
-`get_wikipedia_summary_image(title: str, lang: str = 'en') ‑> dict[str, str]`
+`get_wikipedia_summary_image(title: str, lang: str = 'en') ‑> Dict[str, str]`
 :   Extracting summary image and abstract for wikipedia URL.
     
     Parameters
@@ -33,11 +33,11 @@ Functions
     
     Returns
     -------
-    result: dict[str, str]
+    result: Dict[str, str]
         Summary dict with image and summary text
 
     
-`get_wikipedia_summary_url(wiki_url: str, lang: str = 'en') ‑> dict[str, str]`
+`get_wikipedia_summary_url(wiki_url: str, lang: str = 'en') ‑> Dict[str, str]`
 :   Extracting summary image and abstract for wikipedia URL.
     Parameters
     ----------
@@ -48,7 +48,7 @@ Functions
     
     Returns
     -------
-    result: dict[str, str]
+    result: Dict[str, str]
         Result dictionary.
 
 Classes

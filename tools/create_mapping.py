@@ -5,18 +5,18 @@ from typing import Dict, Any
 if __name__ == '__main__':
 
     with Path('../pkl-cache/ontology_mapping.json').open('r') as fp:
-        mapping_configuration: dict[str, Any] = json.load(fp)
+        mapping_configuration: Dict[str, Any] = json.load(fp)
 
         for json_file in Path('/Users/markus/develop/research/knowledge-graph-bootstrapper/ontology-mapping')\
                 .glob('**/*.json'):
             print(f"Processing {json_file}")
             with json_file.open('r') as fp:
-                configuration: dict[str, Any] = json.load(fp)
+                configuration: Dict[str, Any] = json.load(fp)
                 for class_mapping in configuration['class-mapping']:
                     class_name: str = class_mapping['wacom-knowledge']
-                    wikidata_classes: dict[str, Any] = class_mapping['wikidata']
+                    wikidata_classes: Dict[str, Any] = class_mapping['wikidata']
                     if class_name in mapping_configuration['classes']:
-                        class_configuration: dict[str, Any] = mapping_configuration['classes'][class_name]
+                        class_configuration: Dict[str, Any] = mapping_configuration['classes'][class_name]
                         for wikidata_class in wikidata_classes:
                             if wikidata_class not in class_configuration['wikidata_types']:
                                 if wikidata_class not in class_configuration['wikidata_types']:
@@ -25,7 +25,7 @@ if __name__ == '__main__':
                         for literal in class_mapping['literals']:
                             data_property_name: str = literal['wacom-knowledge']
                             if data_property_name in mapping_configuration['data_properties']:
-                                data_configuration: dict[str, Any] = \
+                                data_configuration: Dict[str, Any] = \
                                     mapping_configuration['data_properties'][data_property_name]
                                 wikidata: str = literal['wikidata']
                                 if wikidata not in data_configuration['wikidata_types']:
@@ -36,7 +36,7 @@ if __name__ == '__main__':
                         for relation in class_mapping['relations']:
                             object_property_name: str = relation['wacom-knowledge']
                             if object_property_name in mapping_configuration['object_properties']:
-                                object_configuration: dict[str, Any] = \
+                                object_configuration: Dict[str, Any] = \
                                     mapping_configuration['object_properties'][object_property_name]
                                 wikidata: str = relation['wikidata']
                                 if object_property_name not in object_configuration['wikidata_types']:

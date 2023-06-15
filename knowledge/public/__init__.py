@@ -10,7 +10,7 @@ INSTANCE_OF_PROPERTY: str = 'P31'
 IMAGE_PROPERTY: str = 'P18'
 
 # Mapping for property names
-PROPERTY_MAPPING: dict[str, str] = {}
+PROPERTY_MAPPING: Dict[str, str] = {}
 
 CWD: Path = Path(__file__).parent
 CONFIGURATION_FILE: Path = CWD / '../../pkl-cache/property_cache.json'

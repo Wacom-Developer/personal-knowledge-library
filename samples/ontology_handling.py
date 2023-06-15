@@ -13,7 +13,7 @@
 #  See the License for the specific language_code governing permissions and
 #  limitations under the License.
 import argparse
-from typing import Optional
+from typing import Optional, Tuple, List
 
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, OntologyClass, OntologyProperty,\
     Ontology, OntologyContext
@@ -49,7 +49,7 @@ if __name__ == '__main__':
         context: Optional[OntologyContext] = ontology_client.context(auth_key)
     # All context create for a tenant.
     desc = ontology_client.context_metadata(auth_key, context.context)
-    concepts: list[tuple[OntologyClassReference, OntologyClassReference]] = ontology_client.concepts(auth_key,
+    concepts: List[Tuple[OntologyClassReference, OntologyClassReference]] = ontology_client.concepts(auth_key,
                                                                                                      context.iri)
     # All context create for a tenant.
     print('-------------------------------------------------------------------------------------------------------')
@@ -60,7 +60,7 @@ if __name__ == '__main__':
             onto_class: OntologyClass = ontology_client.concept(auth_key, context.iri, cpt.iri)
             print(f'{onto_class.reference.context.upper()}_{onto_class.reference.name.upper()}: str = '
                   f'"{onto_class.iri}"')
-    properties: list[tuple[OntologyPropertyReference, OntologyPropertyReference]] = \
+    properties: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]] = \
         ontology_client.properties(auth_key, context.iri)
     # All context create for a tenant.
     print('-------------------------------------------------------------------------------------------------------')
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     print('-------------------------------------------------------------------------------------------------------')
     print(f' Properties for: {context.iri}.')
     print('-------------------------------------------------------------------------------------------------------')
-    properties: list[tuple[OntologyPropertyReference, OntologyPropertyReference]] = \
+    properties: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]] = \
         ontology_client.properties(auth_key, context.iri)
     for ontology_property_ref, sub_property_ref in properties:
         ontology_property: OntologyProperty = ontology_client.property(auth_key, context.iri, ontology_property_ref.iri)

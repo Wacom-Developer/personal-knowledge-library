@@ -13,7 +13,7 @@
 #  See the License for the specific language_code governing permissions and
 #  limitations under the License.
 import argparse
-from typing import Optional
+from typing import Optional, List
 
 from knowledge.base.entity import Label, LanguageCode, Description
 from knowledge.base.ontology import DataPropertyType, OntologyClassReference, OntologyPropertyReference, ThingObject, \
@@ -43,12 +43,12 @@ def create_artist() -> ThingObject:
         Artist entity
     """
     # Main labels for entity
-    topic_labels: list[Label] = [
+    topic_labels: List[Label] = [
         Label('Gian Giacomo Caprotti', LanguageCode('en_US'))
     ]
 
     # Topic description
-    topic_description: list[Description] = [
+    topic_description: List[Description] = [
         Description('Hidden entity to explain access management.', LanguageCode('en_US')),
         Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
     ]

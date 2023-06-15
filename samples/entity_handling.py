@@ -13,7 +13,7 @@
 #  See the License for the specific language_code governing permissions and
 #  limitations under the License.
 import argparse
-from typing import Optional
+from typing import Optional, Dict, List
 
 from knowledge.base.entity import LanguageCode, Description, Label
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, ThingObject, ObjectProperty
@@ -76,7 +76,7 @@ def print_entity(display_entity: ThingObject, list_idx: int, auth_key: str, clie
                     print(f'    |    |-- "{li.value}"@{li.language_code}')
             print('    |')
 
-        relations_obj: dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key,
+        relations_obj: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key,
                                                                                           uri=entity.uri)
         if len(relations_obj) > 0:
             print('    | [Relations]')
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     print('-----------------------------------------------------------------------------------------------------------')
     print(' What artwork exists in the knowledge graph.')
     print('-----------------------------------------------------------------------------------------------------------')
-    relations_dict: dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(auth_key=user_token,
+    relations_dict: Dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(auth_key=user_token,
                                                                                                  uri=leo.uri)
     print(f' Artwork of {leo.label}')
     print('-----------------------------------------------------------------------------------------------------------')
@@ -136,17 +136,17 @@ if __name__ == '__main__':
     print('-----------------------------------------------------------------------------------------------------------')
 
     # Main labels for entity
-    artwork_labels: list[Label] = [
+    artwork_labels: List[Label] = [
         Label('Ginevra Gherardini', LanguageCode('en_US')),
         Label('Ginevra Gherardini', LanguageCode('de_DE'))
     ]
     # Alias labels for entity
-    artwork_alias: list[Label] = [
+    artwork_alias: List[Label] = [
         Label("Ginevra", LanguageCode('en_US')),
         Label("Ginevra", LanguageCode('de_DE'))
     ]
     # Topic description
-    artwork_description: list[Description] = [
+    artwork_description: List[Description] = [
         Description('Oil painting of Mona Lisa\' sister', LanguageCode('en_US')),
         Description('Ölgemälde von Mona Lisa\' Schwester', LanguageCode('de_DE'))
     ]
@@ -249,7 +249,7 @@ if __name__ == '__main__':
         pulled_entities: int = len(entities)
         if pulled_entities == 0:
             break
-        delete_uris: list[str] = [e.uri for e in entities]
+        delete_uris: List[str] = [e.uri for e in entities]
         print(f'Cleanup. Delete entities: {delete_uris}')
         knowledge_client.delete_entities(auth_key=user_token, uris=delete_uris, force=True)
         page_number += 1

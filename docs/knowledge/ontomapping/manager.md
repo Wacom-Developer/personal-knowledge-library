@@ -5,11 +5,11 @@ Functions
 ---------
 
     
-`convert_dict(structure: dict[str, typing.Any], locale: str) ‑> Optional[str]`
+`convert_dict(structure: Dict[str, Any], locale: str) ‑> Optional[str]`
 :   Converts a dictionary to a string.
     Parameters
     ----------
-    structure:  dict[str, Any]
+    structure:  Dict[str, Any]
         Dictionary to convert.
     locale: str
         Locale.
@@ -20,7 +20,7 @@ Functions
         String representation of the dictionary.
 
     
-`flatten(hierarchy: knowledge.public.wikidata.WikidataClass, use_names: bool = False) ‑> list[str]`
+`flatten(hierarchy: knowledge.public.wikidata.WikidataClass, use_names: bool = False) ‑> List[str]`
 :   Flattens the hierarchy.
     
     Parameters
@@ -32,7 +32,7 @@ Functions
     
     Returns
     -------
-    hierarchy: list[str]
+    hierarchy: List[str]
         Hierarchy
 
     
@@ -49,7 +49,7 @@ Functions
         Hierarchy.
 
     
-`wikidata_to_thing(wikidata_thing: knowledge.public.wikidata.WikidataThing, all_relations: dict[str, typing.Any], supported_locales: list[str], all_wikidata_objects: dict[str, knowledge.public.wikidata.WikidataThing], pull_wikipedia: bool = False) ‑> tuple[knowledge.base.ontology.ThingObject, list[dict[str, typing.Any]]]`
+`wikidata_to_thing(wikidata_thing: knowledge.public.wikidata.WikidataThing, all_relations: Dict[str, Any], supported_locales: List[str], all_wikidata_objects: Dict[str, knowledge.public.wikidata.WikidataThing], pull_wikipedia: bool = False) ‑> Tuple[knowledge.base.ontology.ThingObject, List[Dict[str, Any]]]`
 :   Converts a Wikidata thing to a ThingObject.
     
     Parameters
@@ -57,13 +57,13 @@ Functions
     wikidata_thing: WikidataThing
         Wikidata thing
     
-    all_relations: dict[str, Any]
+    all_relations: Dict[str, Any]
         All relations.
     
-    supported_locales: list[str]
+    supported_locales: List[str]
         Supported locales.
     
-    all_wikidata_objects: dict[str, WikidataThing]
+    all_wikidata_objects: Dict[str, WikidataThing]
         All Wikidata objects.
     
     pull_wikipedia: bool
@@ -73,5 +73,5 @@ Functions
     -------
     thing: ThingObject
         Thing object
-    import_warnings: list[dict[str, Any]]
+    import_warnings: List[Dict[str, Any]]
         Errors

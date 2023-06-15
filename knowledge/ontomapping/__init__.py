@@ -28,7 +28,7 @@ TAXONOMY_FILE: Path = CWD / '../../pkl-cache/taxonomy_cache.json'
 ontology_graph: Graph = Graph()
 
 
-def subclasses_of(iri: str) -> list[str]:
+def subclasses_of(iri: str) -> List[str]:
     """
     Returns the subclasses of an ontology class.
     Parameters
@@ -38,10 +38,10 @@ def subclasses_of(iri: str) -> list[str]:
 
     Returns
     -------
-    subclasses: list[str]
+    subclasses: List[str]
         Subclasses of the ontology class.
     """
-    sub_classes: list[str] = [str(s) for s, p, o in ontology_graph.triples((None, RDFS.subClassOf, URIRef(iri)))]
+    sub_classes: List[str] = [str(s) for s, p, o in ontology_graph.triples((None, RDFS.subClassOf, URIRef(iri)))]
     for sub_class in sub_classes:
         sub_classes.extend(subclasses_of(sub_class))
     return sub_classes
@@ -88,8 +88,8 @@ class ClassConfiguration:
     """
     def __init__(self, ontology_class: str):
         self.__ontology_class: str = ontology_class
-        self.__wikidata_classes: list[str] = []
-        self.__dbpedia_classes: list[str] = []
+        self.__wikidata_classes: List[str] = []
+        self.__dbpedia_classes: List[str] = []
 
     @property
     def ontology_class(self) -> str:
@@ -97,21 +97,21 @@ class ClassConfiguration:
         return self.__ontology_class
 
     @property
-    def wikidata_classes(self) -> list[str]:
+    def wikidata_classes(self) -> List[str]:
         """Wikidata classes."""
         return self.__wikidata_classes
 
     @wikidata_classes.setter
-    def wikidata_classes(self, value: list[str]):
+    def wikidata_classes(self, value: List[str]):
         self.__wikidata_classes = value
 
     @property
-    def dbpedia_classes(self) -> list[str]:
+    def dbpedia_classes(self) -> List[str]:
         """DBpedia classes."""
         return self.__dbpedia_classes
 
     @dbpedia_classes.setter
-    def dbpedia_classes(self, value: list[str]):
+    def dbpedia_classes(self, value: List[str]):
         self.__dbpedia_classes = value
 
     @property
@@ -144,17 +144,17 @@ class PropertyConfiguration:
         The IRI of the property.
     property_type: PropertyType
         The property type.
-    pids: Optional[list[str]]
+    pids: Optional[List[str]]
         The list of property PIDs.
     """
 
-    def __init__(self, iri: str, property_type: PropertyType, pids: Optional[list[str]] = None):
+    def __init__(self, iri: str, property_type: PropertyType, pids: Optional[List[str]] = None):
         self.__iri: str = iri
-        self.__pids: list[str] = pids if pids else []
+        self.__pids: List[str] = pids if pids else []
         self.__property: PropertyType = property_type
         self.__inverse: Optional[str] = None
-        self.__ranges: list[str] = []
-        self.__domains: list[str] = []
+        self.__ranges: List[str] = []
+        self.__domains: List[str] = []
 
     @property
     def iri(self) -> str:
@@ -180,17 +180,17 @@ class PropertyConfiguration:
         return self.__property
 
     @property
-    def pids(self) -> list[str]:
+    def pids(self) -> List[str]:
         """List of property PIDs."""
         return self.__pids
 
     @property
-    def ranges(self) -> list[str]:
+    def ranges(self) -> List[str]:
         """List of ranges."""
         return self.__ranges
 
     @property
-    def domains(self) -> list[str]:
+    def domains(self) -> List[str]:
         """List of domains."""
         return self.__domains
 
@@ -207,28 +207,28 @@ class MappingConfiguration:
     """
 
     def __init__(self):
-        self.__classes: list[ClassConfiguration] = []
-        self.__properties: list[PropertyConfiguration] = []
-        self.__index: dict[str, int] = {}
-        self.__index_properties: dict[str, list[int]] = {}
-        self.__index_iri: dict[str, int] = {}
+        self.__classes: List[ClassConfiguration] = []
+        self.__properties: List[PropertyConfiguration] = []
+        self.__index: Dict[str, int] = {}
+        self.__index_properties: Dict[str, List[int]] = {}
+        self.__index_iri: Dict[str, int] = {}
 
     @property
-    def classes(self) -> list[ClassConfiguration]:
+    def classes(self) -> List[ClassConfiguration]:
         """List of classes."""
         return self.__classes
 
     @property
-    def properties(self) -> list[PropertyConfiguration]:
+    def properties(self) -> List[PropertyConfiguration]:
         """List of properties."""
         return self.__properties
 
-    def guess_classed(self, classes: list[str]) -> Optional[ClassConfiguration]:
+    def guess_classed(self, classes: List[str]) -> Optional[ClassConfiguration]:
         """
         Guesses the class from the label.
         Parameters
         ----------
-        classes: list[str]
+        classes: List[str]
             The list of classes
 
         Returns
@@ -264,7 +264,7 @@ class MappingConfiguration:
         return None
 
     def property_for(self, class_ref: OntologyClassReference, property_type: Optional[PropertyType]) \
-            -> list[PropertyConfiguration]:
+            -> List[PropertyConfiguration]:
         """
         Returns the properties for a class.
         Parameters
@@ -275,13 +275,13 @@ class MappingConfiguration:
             The property type, if None, all properties are returned.
         Returns
         -------
-        properties: list[PropertyConfiguration]
+        properties: List[PropertyConfiguration]
             The list of properties.
         """
-        domain_classes: list[str] = [class_ref.iri]
+        domain_classes: List[str] = [class_ref.iri]
         domain_classes += subclasses_of(class_ref.iri)
-        domain_subclasses: dict[str, list[str]] = {}
-        properties: list[PropertyConfiguration] = []
+        domain_subclasses: Dict[str, List[str]] = {}
+        properties: List[PropertyConfiguration] = []
         for prop_conf in self.properties:
             for d in prop_conf.domains:
                 if d not in domain_subclasses:
@@ -413,12 +413,12 @@ class MappingConfiguration:
                f", #properties={len(self.__properties)})"
 
 
-def build_configuration(mapping: dict[str, Any]) -> MappingConfiguration:
+def build_configuration(mapping: Dict[str, Any]) -> MappingConfiguration:
     """
     Builds the configuration from the mapping file.
     Parameters
     ----------
-    mapping: dict[str, Any]
+    mapping: Dict[str, Any]
         The mapping file
 
     Returns
@@ -483,7 +483,7 @@ def register_ontology(rdf_str: str):
 
 # Mapping configuration
 mapping_configuration: Optional[MappingConfiguration] = None
-taxonomy_cache: Optional[dict[str, WikidataClass]] = None
+taxonomy_cache: Optional[Dict[str, WikidataClass]] = None
 
 
 def load_configuration():

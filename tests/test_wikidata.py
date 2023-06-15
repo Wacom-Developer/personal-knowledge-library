@@ -41,23 +41,23 @@ def cache_class(request):
         """
 
         def __init__(self):
-            self.__wikidata_things: dict[str, WikidataThing] = {}
-            self.__relations: dict[str, dict[str, Any]] = {}
+            self.__wikidata_things: Dict[str, WikidataThing] = {}
+            self.__relations: Dict[str, Dict[str, Any]] = {}
 
         @property
-        def wikidata_things(self) -> dict[str, WikidataThing]:
+        def wikidata_things(self) -> Dict[str, WikidataThing]:
             return self.__wikidata_things
 
         @wikidata_things.setter
-        def wikidata_things(self, wikidata_things: dict[str, WikidataThing]):
+        def wikidata_things(self, wikidata_things: Dict[str, WikidataThing]):
             self.__wikidata_things = wikidata_things
 
         @property
-        def relations(self) -> dict[str, dict[str, Any]]:
+        def relations(self) -> Dict[str, Dict[str, Any]]:
             return self.__relations
 
         @relations.setter
-        def relations(self, relations: dict[str, dict[str, Any]]):
+        def relations(self, relations: Dict[str, Dict[str, Any]]):
             self.__relations = relations
 
     # set a class attribute on the invoking test context
@@ -101,13 +101,13 @@ class WikidataFlow(TestCase):
 
     def test_1_wikidata(self):
         # Q762 is Leonardo da Vinci and Q12418 is Mona Lisa
-        entities: list[WikidataThing] = WikiDataAPIClient.retrieve_entities(["Q762", "Q12418"])
+        entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(["Q762", "Q12418"])
         self.assertEqual(len(entities), 2)
         self.cache.wikidata_things = dict([(e.qid, e) for e in entities])
 
     def test_2_relations(self):
         # Extract relations between entities
-        relations: dict[str, list[dict[str, Any]]] = wikidata_relations_extractor(self.cache.wikidata_things)
+        relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(self.cache.wikidata_things)
         self.assertGreaterEqual(len(relations), 2)
         self.cache.relations = relations
 

@@ -5,7 +5,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, Dict, List, Set
 
 import ndjson
 from tqdm import tqdm
@@ -38,7 +38,7 @@ SPARQL_QUERY_MODE: str = 'query'
 CLASS_MAPPING: str = 'class-mapping'
 
 # Mapping to map the simple language_code code to a default language_code / country code
-language_code_mapping: dict[str, LanguageCode] = {
+language_code_mapping: Dict[str, LanguageCode] = {
     'en': LanguageCode('en_US'),
     'ja': LanguageCode('ja_JP'),
     'de': LanguageCode('de_DE'),
@@ -72,53 +72,53 @@ def update_language_code(lang: str) -> LanguageCode:
     return language_code_mapping[lang]
 
 
-def localized_list_description(entity_dict: dict[str, str]) -> list[Description]:
+def localized_list_description(entity_dict: Dict[str, str]) -> List[Description]:
     """
     Creates a list of descriptions for the given entity dictionary.
     Parameters
     ----------
-    entity_dict: dict[str, str]
+    entity_dict: Dict[str, str]
         Entity dictionary.
 
     Returns
     -------
-    descriptions: list[Description]
+    descriptions: List[Description]
         List of descriptions.
     """
     return [Description(cont, update_language_code(lang)) for lang, cont in entity_dict.items()]
 
 
-def localized_list_label(entity_dict: dict[str, str]) -> list[Label]:
+def localized_list_label(entity_dict: Dict[str, str]) -> List[Label]:
     """
     Creates a list of labels for the given entity dictionary.
 
     Parameters
     ----------
-    entity_dict: dict[str, str]
+    entity_dict: Dict[str, str]
         Entity dictionary.
 
     Returns
     -------
-    labels: list[Label]
+    labels: List[Label]
         List of labels.
     """
     return [Label(cont, update_language_code(lang), main=True) for lang, cont in entity_dict.items() if cont != '']
 
 
-def localized_flatten_alias_list(entity_dict: dict[str, list[str]]) -> list[Label]:
+def localized_flatten_alias_list(entity_dict: Dict[str, List[str]]) -> List[Label]:
     """
     Flattens the alias list.
     Parameters
     ----------
-    entity_dict: dict[str, list[str]]
+    entity_dict: Dict[str, List[str]]
         Entity dictionary.
 
     Returns
     -------
-    flatten: list[Label]
+    flatten: List[Label]
         Flattened list of labels.
     """
-    flatten: list[Label] = []
+    flatten: List[Label] = []
     for language, items in entity_dict.items():
         for i in items:
             if i != '':
@@ -126,12 +126,12 @@ def localized_flatten_alias_list(entity_dict: dict[str, list[str]]) -> list[Labe
     return flatten
 
 
-def from_dict(entity: dict[str, Any], concept_type: OntologyClassReference) -> ThingObject:
+def from_dict(entity: Dict[str, Any], concept_type: OntologyClassReference) -> ThingObject:
     """
     Create a thing object from a dictionary.
     Parameters
     ----------
-    entity: dict[str, Any]
+    entity: Dict[str, Any]
         Entity dictionary.
     concept_type: OntologyClassReference
         Concept type.
@@ -141,9 +141,9 @@ def from_dict(entity: dict[str, Any], concept_type: OntologyClassReference) -> T
     thing: ThingObject
         Thing object.
     """
-    labels: list[Label] = localized_list_label(entity['label'])
-    description: list[Description] = localized_list_description(entity['description'])
-    alias: list[Label] = localized_flatten_alias_list(entity['alias'])
+    labels: List[Label] = localized_list_label(entity['label'])
+    description: List[Description] = localized_list_description(entity['description'])
+    alias: List[Label] = localized_flatten_alias_list(entity['alias'])
     if IMAGE_TAG in entity:
         icon: str = entity[IMAGE_TAG]
     else:
@@ -174,7 +174,7 @@ def strip(url: str) -> str:
     return parts[-1]
 
 
-def build_query(params: dict[str, Any]) -> list[str]:
+def build_query(params: Dict[str, Any]) -> List[str]:
     """
     Build of query.
 
@@ -185,15 +185,15 @@ def build_query(params: dict[str, Any]) -> list[str]:
 
     Returns
     -------
-    queries: list[str]
+    queries: List[str]
         SPARQL query string
     """
-    filters: list[dict[str, Any]] = params.get('filters')
-    dynamics: dict[str, Any] = params.get('dynamic-filters')
+    filters: List[Dict[str, Any]] = params.get('filters')
+    dynamics: Dict[str, Any] = params.get('dynamic-filters')
     limit: int = params.get('limit', 1000)
     lang_code: str = params.get('language_code', 'en')
     filter_string: str = ''
-    queries: list[str] = []
+    queries: List[str] = []
     for f in filters:
         filter_string += f"?item wdt:{f['property']}  wd:{f['target']}.\n"
     if dynamics:
@@ -216,7 +216,7 @@ def build_query(params: dict[str, Any]) -> list[str]:
     return queries
 
 
-def load_cache(cache: Path) -> dict[str, WikidataThing]:
+def load_cache(cache: Path) -> Dict[str, WikidataThing]:
     """
     Load the cache from the file.
     Parameters
@@ -226,10 +226,10 @@ def load_cache(cache: Path) -> dict[str, WikidataThing]:
 
     Returns
     -------
-    wikidata_things: dict[str, WikidataThing]
+    wikidata_things: Dict[str, WikidataThing]
         Dictionary of Wikidata things.
     """
-    wikidata_things: dict[str, WikidataThing] = {}
+    wikidata_things: Dict[str, WikidataThing] = {}
     if cache.exists():
         with cache.open('r') as r:
             reader = ndjson.reader(r)
@@ -238,14 +238,14 @@ def load_cache(cache: Path) -> dict[str, WikidataThing]:
     return wikidata_things
 
 
-def count_type(concept_type: str, types_mapping: dict[str, int]):
+def count_type(concept_type: str, types_mapping: Dict[str, int]):
     """
     Count the number of types.
     Parameters
     ----------
     concept_type: str
         Concept type.
-    types_mapping: dict[str, int]
+    types_mapping: Dict[str, int]
         Dictionary of types.
     """
     if concept_type not in types_mapping:
@@ -253,22 +253,22 @@ def count_type(concept_type: str, types_mapping: dict[str, int]):
     types_mapping[concept_type] += 1
 
 
-def check_missing_qids(entities: list[WikidataThing]) -> set[str]:
+def check_missing_qids(entities: List[WikidataThing]) -> Set[str]:
     """
     Check if there are missing qids in the retrieved entities.
     Parameters
     ----------
-    entities: list[WikidataThing]
+    entities: List[WikidataThing]
         List of entities.
 
     Returns
     -------
-    missing: set[str]
+    missing: Set[str]
         Set of missing qids.
     """
-    missing: set[str] = set()
+    missing: Set[str] = set()
     for entity in tqdm(entities, desc="Checking missing qid references."):
-        wiki_classes: set[str] = set()
+        wiki_classes: Set[str] = set()
         for cls in entity.instance_of:
             hierarchy: WikidataClass = wikidata_taxonomy(cls.qid)
             if hierarchy:
@@ -276,7 +276,7 @@ def check_missing_qids(entities: list[WikidataThing]) -> set[str]:
                 wiki_classes.add(hierarchy.qid)
         class_conf = get_mapping_configuration().guess_classed(list(wiki_classes))
         if class_conf:
-            properties: list[PropertyConfiguration] = get_mapping_configuration(). \
+            properties: List[PropertyConfiguration] = get_mapping_configuration(). \
                 property_for(class_conf.concept_type, PropertyType.OBJECT_PROPERTY)
             for prop in properties:
                 for pid in prop.pids:
@@ -301,11 +301,11 @@ def extract_qid(url: str) -> str:
     qid: str
         QID
     """
-    parts: list[str] = url.split('/')
+    parts: List[str] = url.split('/')
     return parts[-1]
 
 
-def main(mapping: Path, cache: Path, languages: list[str] = None, max_depth: int = -1):
+def main(mapping: Path, cache: Path, languages: List[str] = None, max_depth: int = -1):
     """
     Main.
 
@@ -315,7 +315,7 @@ def main(mapping: Path, cache: Path, languages: list[str] = None, max_depth: int
         Path to mapping file
     cache: Path
         Path to cache file with ThingObjects
-    languages: list[str]
+    languages: List[str]
         List of languages
     max_depth: int
         Maximum depth of the crawling
@@ -326,12 +326,12 @@ def main(mapping: Path, cache: Path, languages: list[str] = None, max_depth: int
     thing_path: Path = cache / 'things.ndjson'
     warnings_path: Path = cache / 'warnings.json'
 
-    all_wikidata_things: dict[str, WikidataThing] = load_cache(wikidata_path)
+    all_wikidata_things: Dict[str, WikidataThing] = load_cache(wikidata_path)
     # Load mapping
     with mapping.open('r') as json_file:
-        configuration: dict[str, Any] = json.load(json_file)
+        configuration: Dict[str, Any] = json.load(json_file)
 
-    imported_qids: set[str] = set()
+    imported_qids: Set[str] = set()
     if thing_path.exists():
         with thing_path.open('r') as r:
             reader = ndjson.reader(r)
@@ -340,7 +340,7 @@ def main(mapping: Path, cache: Path, languages: list[str] = None, max_depth: int
                 imported_qids.add(thing.reference_id)
 
     # List of qids
-    qid_references: set[str] = set()
+    qid_references: Set[str] = set()
 
     # First query the entry entities
     if SPARQL_QUERY_MODE in configuration:
@@ -356,8 +356,8 @@ def main(mapping: Path, cache: Path, languages: list[str] = None, max_depth: int
         sys.exit(0)
     depth: int = 0
     while len(qid_references) > 0 and (depth == -1 or depth < max_depth):
-        entities: list[WikidataThing] = []
-        qids_to_remove: set[str] = set()
+        entities: List[WikidataThing] = []
+        qids_to_remove: Set[str] = set()
         # Check for existing entities
         for ref_qid in qid_references:
             if ref_qid in all_wikidata_things:
@@ -368,9 +368,9 @@ def main(mapping: Path, cache: Path, languages: list[str] = None, max_depth: int
             qid_references.remove(item)
         # Retrieve entities
         if len(qid_references) > 0:
-            pull_entities: list[WikidataThing] = WikiDataAPIClient.retrieve_entities(qid_references)
+            pull_entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(qid_references)
         else:
-            pull_entities: list[WikidataThing] = []
+            pull_entities: List[WikidataThing] = []
         # Merge entities
         entities.extend(pull_entities)
         # Cache entities
@@ -387,12 +387,12 @@ def main(mapping: Path, cache: Path, languages: list[str] = None, max_depth: int
         # Cache more taxonomy
         update_taxonomy_cache()
         depth += 1
-    relations: dict[str, list[dict[str, Any]]] = wikidata_relations_extractor(all_wikidata_things)
+    relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(all_wikidata_things)
     logger.info(f"{len(all_wikidata_things)} entities are imported.")
 
-    thing_objects: list[ThingObject] = []
+    thing_objects: List[ThingObject] = []
     # process warnings
-    import_warnings_property: dict[str, dict[str, Any]] = {}
+    import_warnings_property: Dict[str, Dict[str, Any]] = {}
     with thing_path.open('w', encoding='utf-8') as fp_thing:
         for _, w_thing in tqdm(all_wikidata_things.items(),
                                desc=f"Processing {len(all_wikidata_things)} Wikidata entities."):

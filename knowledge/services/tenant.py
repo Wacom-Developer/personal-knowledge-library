@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-23 Wacom. All rights reserved.
+from typing import List, Dict
 
 import requests
 from requests import Response
@@ -52,7 +53,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
 
     # ------------------------------------------ Tenants handling ------------------------------------------------------
 
-    def create_tenant(self, name: str) -> dict[str, str]:
+    def create_tenant(self, name: str) -> Dict[str, str]:
         """
         Creates a tenant.
 
@@ -63,7 +64,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
 
         Returns
         -------
-        tenant_dict: dict[str, str]
+        tenant_dict: Dict[str, str]
 
         Newly created tenant structure.
         >>>     {
@@ -92,13 +93,13 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             return response.json()
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def listing_tenant(self) -> list[dict[str, str]]:
+    def listing_tenant(self) -> List[Dict[str, str]]:
         """
         Listing all tenants configured for this instance.
 
         Returns
         -------
-        tenants:  list[dict[str, str]]
+        tenants:  List[Dict[str, str]]
             List of tenants:
             >>> [
             >>>     {

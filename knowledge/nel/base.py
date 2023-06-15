@@ -2,7 +2,7 @@
 # Copyright © 2021-23 Wacom. All rights reserved.
 import abc
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
 
 from knowledge.base.entity import LanguageCode
 from knowledge.base.ontology import THING_CLASS, OntologyClassReference
@@ -155,7 +155,7 @@ class KnowledgeGraphEntity(NamedEntity):
         Source of the entity
     content_link: str
         Link to side with content
-    ontology_types: list[str]
+    ontology_types: List[str]
         List of ontology types (class names)
     entity_type: EntityType
         Type of the entity.
@@ -163,7 +163,7 @@ class KnowledgeGraphEntity(NamedEntity):
 
     def __init__(self, ref_text: str, start_idx: int, end_idx: int, label: str, confidence: float,
                  source: EntitySource, content_link: str,
-                 ontology_types: list[str], entity_type: EntityType = EntityType.PUBLIC_ENTITY):
+                 ontology_types: List[str], entity_type: EntityType = EntityType.PUBLIC_ENTITY):
         super().__init__(ref_text, start_idx, end_idx, entity_type)
         self.__source: EntitySource = source
         self.__content_link: str = content_link
@@ -171,7 +171,7 @@ class KnowledgeGraphEntity(NamedEntity):
         self.__confidence: float = confidence
         self.__description: Optional[str] = None
         self.__thumbnail: Optional[str] = None
-        self.__ontology_types: list[str] = ontology_types
+        self.__ontology_types: List[str] = ontology_types
         self.__relevant_type: OntologyClassReference = THING_CLASS
 
     @property
@@ -217,7 +217,7 @@ class KnowledgeGraphEntity(NamedEntity):
         return self.__content_link
 
     @property
-    def ontology_types(self) -> list[str]:
+    def ontology_types(self) -> List[str]:
         """List of ontology types."""
         return self.__ontology_types
 
@@ -275,20 +275,20 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: list[str] = None
+    supported_languages: List[str] = None
         List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
     """
 
-    def __init__(self, service_url: str = str, supported_languages: list[str] = None, verify_calls: bool = True):
+    def __init__(self, service_url: str = str, supported_languages: List[str] = None, verify_calls: bool = True):
         super().__init__(application_name="Personal entity linking", service_url=service_url,
                          service_endpoint='graph/v1', verify_calls=verify_calls)
-        self.__supported_languages: list[str] = supported_languages if supported_languages else []
+        self.__supported_languages: List[str] = supported_languages if supported_languages else []
 
     @abc.abstractmethod
     def link_personal_entities(self, auth_key: str, text: str, language_code: LanguageCode = 'en_US') \
-            -> list[KnowledgeGraphEntity]:
+            -> List[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
@@ -304,13 +304,13 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
 
         Returns
         -------
-        entities: list[KnowledgeGraphEntity]
+        entities: List[KnowledgeGraphEntity]
             List of knowledge graph entities.
         """
         raise NotImplementedError
 
     @property
-    def supported_language(self) -> list[str]:
+    def supported_language(self) -> List[str]:
         """List of supported languages."""
         return self.__supported_languages
 
@@ -343,20 +343,20 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: list[str] = None
+    supported_languages: List[str] = None
         List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
     """
 
-    def __init__(self, service_url: str, supported_languages: list[LanguageCode] = None,
+    def __init__(self, service_url: str, supported_languages: List[LanguageCode] = None,
                  verify_calls: bool = False):
         super().__init__(application_name='Named Entity Linking', service_url=service_url, service_endpoint="graph",
                          verify_calls=verify_calls)
-        self.__supported_languages: list[LanguageCode] = supported_languages if supported_languages else []
+        self.__supported_languages: List[LanguageCode] = supported_languages if supported_languages else []
 
     @abc.abstractmethod
-    def named_entities(self, text: str, language_code: LanguageCode = 'en_US') -> list[NamedEntity]:
+    def named_entities(self, text: str, language_code: LanguageCode = 'en_US') -> List[NamedEntity]:
         """
         Performs Named Entity Recognition on a text.
 
@@ -369,13 +369,13 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
 
         Returns
         -------
-        entities: list[NamedEntity]
+        entities: List[NamedEntity]
             List of knowledge named entities.
         """
         raise NotImplementedError
 
     @property
-    def supported_language(self) -> list[LanguageCode]:
+    def supported_language(self) -> List[LanguageCode]:
         """List of supported languages."""
         return self.__supported_languages
 
@@ -408,18 +408,18 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: list[str] = None
+    supported_languages: List[str] = None
         List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
     """
 
-    def __init__(self, service_url: str = str, supported_languages: list[str] = None, verify_calls: bool = False):
+    def __init__(self, service_url: str = str, supported_languages: List[str] = None, verify_calls: bool = False):
         super().__init__(service_url=service_url, verify_calls=verify_calls)
-        self.__supported_languages: list[str] = supported_languages if supported_languages else []
+        self.__supported_languages: List[str] = supported_languages if supported_languages else []
 
     @abc.abstractmethod
-    def link_public_entities(self, text: str, language_code: LanguageCode = 'en_US') -> list[KnowledgeGraphEntity]:
+    def link_public_entities(self, text: str, language_code: LanguageCode = 'en_US') -> List[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities within a large public knowledge graph.
 
@@ -432,13 +432,13 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
 
         Returns
         -------
-        entities: list[KnowledgeGraphEntity]
+        entities: List[KnowledgeGraphEntity]
             List of knowledge public knowledge entities.
         """
         raise NotImplementedError
 
     @property
-    def supported_language(self) -> list[str]:
+    def supported_language(self) -> List[str]:
         """List of supported languages."""
         return self.__supported_languages
 

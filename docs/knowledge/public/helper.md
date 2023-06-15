@@ -33,16 +33,16 @@ Functions
         Parsed date
 
     
-`wikidate(param: dict[str, typing.Any]) ‑> dict[str, typing.Any]`
+`wikidate(param: Dict[str, Any]) ‑> Dict[str, Any]`
 :   Parse and extract wikidata structure.
     Parameters
     ----------
-    param: dict[str, Any]
+    param: Dict[str, Any]
         Entity wikidata
     
     Returns
     -------
-    result: dict[str, Any]
+    result: Dict[str, Any]
         Dict with pretty print of date
 
 Classes

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021 Wacom. All rights reserved.
 import argparse
-from typing import Union
+from typing import Union, List
 
 from knowledge.base.ontology import OntologyClassReference
 from knowledge.services.graph import WacomKnowledgeService
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     while True:
         # pull
         entities, total_number, next_page_id = wacom_client.listing(user_auth_key, filter_type, next_page_id, limit=100)
-        page_uris: list[str] = [e.uri for e in entities]
+        page_uris: List[str] = [e.uri for e in entities]
         pulled_entities: int = len(entities)
         if pulled_entities == 0:
             break

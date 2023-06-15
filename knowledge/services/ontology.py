@@ -2,7 +2,7 @@
 # Copyright © 2021-23 Wacom. All rights reserved.
 import urllib.parse
 from http import HTTPStatus
-from typing import Any, Optional
+from typing import Any, Optional, Dict, Tuple, List
 
 import requests
 from requests import Response
@@ -71,7 +71,7 @@ class OntologyService(WacomServiceAPIClient):
         context_description: Optional[OntologyContext]
             Context of the Ontology
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -81,7 +81,7 @@ class OntologyService(WacomServiceAPIClient):
             return OntologyContext.from_dict(response.json())
         return None
 
-    def context_metadata(self, auth_key: str, context: str) -> list[InflectionSetting]:
+    def context_metadata(self, auth_key: str, context: str) -> List[InflectionSetting]:
         """
         Getting the meta-data on the context.
 
@@ -94,10 +94,10 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        list_inflection_settings: list[InflectionSetting]
+        list_inflection_settings: List[InflectionSetting]
             List of inflection settings.
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -109,7 +109,7 @@ class OntologyService(WacomServiceAPIClient):
                     and not c.get('concept').startswith('http')]
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def concepts(self, auth_key: str, context: str) -> list[tuple[OntologyClassReference, OntologyClassReference]]:
+    def concepts(self, auth_key: str, context: str) -> List[Tuple[OntologyClassReference, OntologyClassReference]]:
         """Retrieve all concept classes.
 
         **Remark:**
@@ -124,10 +124,10 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        concepts: list[tuple[OntologyClassReference, OntologyClassReference]]
+        concepts: List[Tuple[OntologyClassReference, OntologyClassReference]]
             List of ontology classes. Tuple<Classname, Superclass>
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -135,7 +135,7 @@ class OntologyService(WacomServiceAPIClient):
                    f'{OntologyService.CONCEPTS_ENDPOINT}'
         response: Response = requests.get(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if response.ok:
-            response_list: list[tuple[OntologyClassReference, OntologyClassReference]] = []
+            response_list: List[Tuple[OntologyClassReference, OntologyClassReference]] = []
             result = response.json()
             for struct in result:
                 response_list.append((OntologyClassReference.parse(struct[NAME_TAG]),
@@ -145,7 +145,7 @@ class OntologyService(WacomServiceAPIClient):
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
     def properties(self, auth_key: str, context: str) \
-            -> list[tuple[OntologyPropertyReference, OntologyPropertyReference]]:
+            -> List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]:
         """List all properties.
 
         **Remark:**
@@ -160,10 +160,10 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        contexts: list[tuple[OntologyPropertyReference, OntologyPropertyReference]]
+        contexts: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]
             List of ontology contexts
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -175,7 +175,7 @@ class OntologyService(WacomServiceAPIClient):
         if response.status_code == HTTPStatus.NOT_FOUND:
             return []
         if response.ok:
-            response_list: list[tuple[OntologyPropertyReference, OntologyPropertyReference]] = []
+            response_list: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]] = []
             for c in response.json():
                 response_list.append((OntologyPropertyReference.parse(c[NAME_TAG]),
                                       None if c[SUB_PROPERTY_OF_TAG] is None or c.get(SUB_PROPERTY_OF_TAG) == '' else
@@ -203,7 +203,7 @@ class OntologyService(WacomServiceAPIClient):
         instance: OntologyClass
             Instance of the concept
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -213,7 +213,7 @@ class OntologyService(WacomServiceAPIClient):
                                           f'/{OntologyService.CONCEPTS_ENDPOINT}/{concept_url}',
                                           headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if response.ok:
-            result: dict[str, Any] = response.json()
+            result: Dict[str, Any] = response.json()
             return OntologyClass.from_dict(result)
         raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
@@ -237,7 +237,7 @@ class OntologyService(WacomServiceAPIClient):
         instance: OntologyProperty
             Instance of the property
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -252,8 +252,8 @@ class OntologyService(WacomServiceAPIClient):
 
     def create_concept(self, auth_key: str, context: str, reference: OntologyClassReference,
                        subclass_of: OntologyClassReference = THING_CLASS,
-                       icon: Optional[str] = None, labels: Optional[list[OntologyLabel]] = None,
-                       comments: Optional[list[Comment]] = None) -> dict[str, str]:
+                       icon: Optional[str] = None, labels: Optional[List[OntologyLabel]] = None,
+                       comments: Optional[List[Comment]] = None) -> Dict[str, str]:
         """Create concept class.
 
         **Remark:**
@@ -271,13 +271,13 @@ class OntologyService(WacomServiceAPIClient):
             Super class of the concept
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[list[OntologyLabel]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the class
-        comments: Optional[list[Comment]] (default:= None)
+        comments: Optional[List[Comment]] (default:= None)
             Comments for the class
         Returns
         -------
-        result: dict[str, str]
+        result: Dict[str, str]
             Result from the service
 
         Raises
@@ -285,11 +285,11 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        payload: dict[str, Any] = {
+        payload: Dict[str, Any] = {
             SUB_CLASS_OF_TAG: subclass_of.iri,
             NAME_TAG: reference.iri,
             LABELS_TAG: [],
@@ -305,14 +305,14 @@ class OntologyService(WacomServiceAPIClient):
         response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls,
                                            timeout=DEFAULT_TIMEOUT)
         if response.ok:
-            result_dict: dict[str, str] = response.json()
+            result_dict: Dict[str, str] = response.json()
             return result_dict
         raise WacomServiceException(f'Creation of concept failed. '
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 
     def update_concept(self, auth_key: str, context: str, name: str, subclass_of: Optional[str],
-                       icon: Optional[str] = None, labels: Optional[list[OntologyLabel]] = None,
-                       comments: Optional[list[Comment]] = None) -> dict[str, str]:
+                       icon: Optional[str] = None, labels: Optional[List[OntologyLabel]] = None,
+                       comments: Optional[List[Comment]] = None) -> Dict[str, str]:
         """Update concept class.
 
         **Remark:**
@@ -330,14 +330,14 @@ class OntologyService(WacomServiceAPIClient):
             Super class of the concept
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[list[OntologyLabel]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the class
-        comments: Optional[list[Comment]] (default:= None)
+        comments: Optional[List[Comment]] (default:= None)
             Comments for the class
 
         Returns
         -------
-        response: dict[str, str]
+        response: Dict[str, str]
             Response from service
 
         Raises
@@ -345,11 +345,11 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        payload: dict[str, Any] = {
+        payload: Dict[str, Any] = {
             SUB_CLASS_OF_TAG: subclass_of,
             NAME_TAG: name,
             LABELS_TAG: [],
@@ -389,7 +389,7 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -403,12 +403,12 @@ class OntologyService(WacomServiceAPIClient):
 
     def create_object_property(self, auth_key: str, context: str,
                                reference: OntologyPropertyReference,
-                               domains_cls: list[OntologyClassReference], ranges_cls: list[OntologyClassReference],
+                               domains_cls: List[OntologyClassReference], ranges_cls: List[OntologyClassReference],
                                inverse_of: Optional[OntologyPropertyReference] = None,
                                subproperty_of: Optional[OntologyPropertyReference] = None,
                                icon: Optional[str] = None,
-                               labels: Optional[list[OntologyLabel]] = None,
-                               comments: Optional[list[Comment]] = None) -> dict[str, str]:
+                               labels: Optional[List[OntologyLabel]] = None,
+                               comments: Optional[List[Comment]] = None) -> Dict[str, str]:
         """Create property.
 
         **Remark:**
@@ -422,9 +422,9 @@ class OntologyService(WacomServiceAPIClient):
             Context of ontology
         reference: OntologyPropertyReference
             Name of the concept
-        domains_cls: list[OntologyClassReference]
+        domains_cls: List[OntologyClassReference]
             IRI of the domain
-        ranges_cls: list[OntologyClassReference]
+        ranges_cls: List[OntologyClassReference]
             IRI of the range
         inverse_of: Optional[OntologyPropertyReference] (default:= None)
             Inverse property
@@ -432,14 +432,14 @@ class OntologyService(WacomServiceAPIClient):
             Super property of the concept
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[list[OntologyLabel]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the class
-        comments: Optional[list[Comment]] (default:= None)
+        comments: Optional[List[Comment]] (default:= None)
             Comments for the class
 
         Returns
         -------
-        result: dict[str, str]
+        result: Dict[str, str]
             Result from the service
 
         Raises
@@ -447,11 +447,11 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        payload: dict[str, Any] = {
+        payload: Dict[str, Any] = {
             KIND_TAG: PropertyType.OBJECT_PROPERTY.value,
             DOMAIN_TAG: [d.iri for d in domains_cls],
             RANGE_TAG: [r.iri for r in ranges_cls],
@@ -478,11 +478,11 @@ class OntologyService(WacomServiceAPIClient):
 
     def create_data_property(self, auth_key: str, context: str,
                              reference: OntologyPropertyReference,
-                             domains_cls: list[OntologyClassReference], ranges_cls: list[DataPropertyType],
+                             domains_cls: List[OntologyClassReference], ranges_cls: List[DataPropertyType],
                              subproperty_of: Optional[OntologyPropertyReference] = None,
                              icon: Optional[str] = None,
-                             labels: Optional[list[OntologyLabel]] = None,
-                             comments: Optional[list[Comment]] = None) -> dict[str, str]:
+                             labels: Optional[List[OntologyLabel]] = None,
+                             comments: Optional[List[Comment]] = None) -> Dict[str, str]:
         """Create data property.
 
         **Remark:**
@@ -496,22 +496,22 @@ class OntologyService(WacomServiceAPIClient):
             Context of ontology
         reference: OntologyPropertyReference
             Name of the concept
-        domains_cls: list[OntologyClassReference]
+        domains_cls: List[OntologyClassReference]
             IRI of the domain
-        ranges_cls: list[DataPropertyType]
+        ranges_cls: List[DataPropertyType]
             Data property type
         subproperty_of: Optional[OntologyPropertyReference] = None,
             Super property of the concept
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[list[Label]] (default:= None)
+        labels: Optional[List[Label]] (default:= None)
             Labels for the class
-        comments: Optional[list[Comment]] (default:= None)
+        comments: Optional[List[Comment]] (default:= None)
             Comments for the class
 
         Returns
         -------
-        result: dict[str, str]
+        result: Dict[str, str]
             Result from the service
 
         Raises
@@ -519,11 +519,11 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        payload: dict[str, Any] = {
+        payload: Dict[str, Any] = {
             KIND_TAG: PropertyType.DATA_PROPERTY.value,
             DOMAIN_TAG: [d.iri for d in domains_cls],
             RANGE_TAG: [r.value for r in ranges_cls],
@@ -567,7 +567,7 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -580,7 +580,7 @@ class OntologyService(WacomServiceAPIClient):
                                         f'Response code:={response.status_code}, exception:= {response.text}')
 
     def create_context(self, auth_key: str, name: str, base_uri: Optional[str] = None, icon: Optional[str] = None,
-                       labels: list[OntologyLabel] = None, comments: list[Comment] = None) -> dict[str, str]:
+                       labels: List[OntologyLabel] = None, comments: List[Comment] = None) -> Dict[str, str]:
         """Create context.
 
         **Remark:**
@@ -596,14 +596,14 @@ class OntologyService(WacomServiceAPIClient):
             Name of the context
         icon: Optional[str] (default:= None)
             Icon representing the concept
-        labels: Optional[list[OntologyLabel]] (default:= None)
+        labels: Optional[List[OntologyLabel]] (default:= None)
             Labels for the context
-        comments: Optional[list[Comment]] (default:= None)
+        comments: Optional[List[Comment]] (default:= None)
             Comments for the context
 
         Returns
         -------
-        result: dict[str, str]
+        result: Dict[str, str]
             Result from the service
 
         Raises
@@ -611,11 +611,11 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        payload: dict[str, Any] = {
+        payload: Dict[str, Any] = {
             BASE_URI_TAG: base_uri if base_uri is not None else f'wacom:{name}',
             NAME_TAG: name,
             LABELS_TAG: [],
@@ -648,10 +648,10 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        result: dict[str, str]
+        result: Dict[str, str]
             Result from the service
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -673,7 +673,7 @@ class OntologyService(WacomServiceAPIClient):
         context: str
             Name of the context.
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -700,7 +700,7 @@ class OntologyService(WacomServiceAPIClient):
         rdf: str
             Ontology as RDFS / OWL  ontology
         """
-        headers: dict[str, str] = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }

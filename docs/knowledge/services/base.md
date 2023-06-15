@@ -111,7 +111,7 @@ Classes
         expired_in: float
             Seconds until token is expired
 
-    `unpack_token(auth_token: str) ‑> dict[str, typing.Any]`
+    `unpack_token(auth_token: str) ‑> Dict[str, Any]`
     :   Unpacks the token.
         
         Parameters
@@ -121,7 +121,7 @@ Classes
         
         Returns
         -------
-        token_dict: dict[str, Any]
+        token_dict: Dict[str, Any]
             Token dictionary
 
     ### Instance variables
@@ -140,7 +140,7 @@ Classes
 
     ### Methods
 
-    `refresh_token(self, refresh_token: str) ‑> tuple[str, str, datetime.datetime]`
+    `refresh_token(self, refresh_token: str) ‑> Tuple[str, str, datetime.datetime]`
     :   Refreshing a token.
         
         Parameters
@@ -162,7 +162,7 @@ Classes
         WacomServiceException
             Exception if service returns HTTP error code.
 
-    `request_user_token(self, tenant_key: str, external_id: str) ‑> tuple[str, str, datetime.datetime]`
+    `request_user_token(self, tenant_key: str, external_id: str) ‑> Tuple[str, str, datetime.datetime]`
     :   Login as user by using the tenant key and its external user id.
         
         Parameters
