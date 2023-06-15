@@ -5,7 +5,22 @@ Functions
 ---------
 
     
-`flatten(hierarchy: knowledge.public.wikidata.WikidataClass, use_names: bool = False) ‑> List[str]`
+`convert_dict(structure: dict[str, typing.Any], locale: str) ‑> Optional[str]`
+:   Converts a dictionary to a string.
+    Parameters
+    ----------
+    structure:  dict[str, Any]
+        Dictionary to convert.
+    locale: str
+        Locale.
+    
+    Returns
+    -------
+    string: str
+        String representation of the dictionary.
+
+    
+`flatten(hierarchy: knowledge.public.wikidata.WikidataClass, use_names: bool = False) ‑> list[str]`
 :   Flattens the hierarchy.
     
     Parameters
@@ -17,7 +32,7 @@ Functions
     
     Returns
     -------
-    hierarchy: List[str]
+    hierarchy: list[str]
         Hierarchy
 
     
@@ -34,7 +49,7 @@ Functions
         Hierarchy.
 
     
-`wikidata_to_thing(wikidata_thing: knowledge.public.wikidata.WikidataThing, all_relations: Dict[str, Any], supported_locales: List[str], pull_wikipedia: bool = False) ‑> knowledge.base.ontology.ThingObject`
+`wikidata_to_thing(wikidata_thing: knowledge.public.wikidata.WikidataThing, all_relations: dict[str, typing.Any], supported_locales: list[str], all_wikidata_objects: dict[str, knowledge.public.wikidata.WikidataThing], pull_wikipedia: bool = False) ‑> tuple[knowledge.base.ontology.ThingObject, list[dict[str, typing.Any]]]`
 :   Converts a Wikidata thing to a ThingObject.
     
     Parameters
@@ -42,11 +57,14 @@ Functions
     wikidata_thing: WikidataThing
         Wikidata thing
     
-    all_relations: Dict[str, Any]
+    all_relations: dict[str, Any]
         All relations.
     
-    supported_locales: List[str]
+    supported_locales: list[str]
         Supported locales.
+    
+    all_wikidata_objects: dict[str, WikidataThing]
+        All Wikidata objects.
     
     pull_wikipedia: bool
         Pull Wikipedia summary.
@@ -55,3 +73,5 @@ Functions
     -------
     thing: ThingObject
         Thing object
+    import_warnings: list[dict[str, Any]]
+        Errors

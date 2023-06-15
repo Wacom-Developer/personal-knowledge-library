@@ -11,7 +11,9 @@ Classes
     Functionality:
         - List all tenants
         - Create tenants
-        - Create users
+    
+    This is service is used to manage tenants. Only admins can use this service, as it requires the secret key for
+    tenant administration.
     
     Parameters
     ----------
@@ -43,7 +45,7 @@ Classes
 
     ### Methods
 
-    `create_tenant(self, name: str) ‑> Dict[str, str]`
+    `create_tenant(self, name: str) ‑> dict[str, str]`
     :   Creates a tenant.
         
         Parameters
@@ -53,7 +55,7 @@ Classes
         
         Returns
         -------
-        tenant_dict: Dict[str, str]
+        tenant_dict: dict[str, str]
         
         Newly created tenant structure.
         >>>     {
@@ -67,12 +69,12 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `listing_tenant(self) ‑> List[Dict[str, str]]`
+    `listing_tenant(self) ‑> list[dict[str, str]]`
     :   Listing all tenants configured for this instance.
         
         Returns
         -------
-        tenants:  List[Dict[str, str]]
+        tenants:  list[dict[str, str]]
             List of tenants:
             >>> [
             >>>     {

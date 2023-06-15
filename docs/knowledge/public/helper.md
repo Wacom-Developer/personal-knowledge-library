@@ -20,16 +20,29 @@ Functions
         URL of wikimedia
 
     
-`wikidate(param: Dict[str, Any]) ‑> Dict[str, Any]`
+`parse_date(date_string: str) ‑> Optional[datetime.datetime]`
+:   Parse date string to datetime object.
+    Parameters
+    ----------
+    date_string: str
+        Date string
+    
+    Returns
+    -------
+    parsed_date: datetime
+        Parsed date
+
+    
+`wikidate(param: dict[str, typing.Any]) ‑> dict[str, typing.Any]`
 :   Parse and extract wikidata structure.
     Parameters
     ----------
-    param: Dict[str, Any]
+    param: dict[str, Any]
         Entity wikidata
     
     Returns
     -------
-    result: Dict[str, Any]
+    result: dict[str, Any]
         Dict with pretty print of date
 
 Classes

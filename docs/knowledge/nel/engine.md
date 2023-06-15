@@ -23,18 +23,15 @@ Classes
 
     ### Class variables
 
-    `LANGUAGES: List[knowledge.base.entity.LanguageCode]`
+    `LANGUAGES: list[knowledge.base.entity.LanguageCode]`
     :
 
     `SERVICE_ENDPOINT: str`
     :
 
-    `SERVICE_URL: str`
-    :
-
     ### Methods
 
-    `link_personal_entities(self, auth_key: str, text: str, locale: str = 'en_US', max_retries: int = 5) ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
+    `link_personal_entities(self, auth_key: str, text: str, locale: str = 'en_US', max_retries: int = 5) ‑> list[knowledge.nel.base.KnowledgeGraphEntity]`
     :   Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
         
@@ -51,7 +48,7 @@ Classes
         
         Returns
         -------
-        entities: List[KnowledgeGraphEntity]
+        entities: list[KnowledgeGraphEntity]
             List of knowledge graph entities.
         
         Raises

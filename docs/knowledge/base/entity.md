@@ -4,31 +4,6 @@ Module knowledge.base.entity
 Classes
 -------
 
-`Comment(text: str, language_code: knowledge.base.entity.LanguageCode = 'en')`
-:   Comment
-    -------
-    Comment that is multi-lingual.
-    
-    Parameters
-    ----------
-    text: str
-        Text value
-    language_code: LanguageCode (default:= 'en')
-        Language code of content
-
-    ### Ancestors (in MRO)
-
-    * knowledge.base.entity.LocalizedContent
-    * abc.ABC
-
-    ### Static methods
-
-    `create_from_dict(dict_description: Dict[str, Any]) ‑> knowledge.base.entity.Comment`
-    :
-
-    `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.entity.Comment]`
-    :
-
 `Description(description: str, language_code: knowledge.base.entity.LanguageCode = 'en_US')`
 :   Description
     -----------
@@ -48,10 +23,10 @@ Classes
 
     ### Static methods
 
-    `create_from_dict(dict_description: Dict[str, Any], tag_name: str = 'description', locale_name: str = 'locale') ‑> knowledge.base.entity.Description`
+    `create_from_dict(dict_description: dict[str, typing.Any], tag_name: str = 'description', locale_name: str = 'locale') ‑> knowledge.base.entity.Description`
     :
 
-    `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.entity.Description]`
+    `create_from_list(param: list[dict[str, typing.Any]]) ‑> list['Description']`
     :
 
 `EntityStatus(value, names=None, *, module=None, qualname=None, type=None, start=1)`
@@ -106,11 +81,11 @@ Classes
 
     ### Static methods
 
-    `create_from_dict(dict_label: Dict[str, Any], tag_name: str = 'value', locale_name: str = 'locale') ‑> knowledge.base.entity.Label`
+    `create_from_dict(dict_label: dict[str, typing.Any], tag_name: str = 'value', locale_name: str = 'locale') ‑> knowledge.base.entity.Label`
     :   Create a label from a dictionary.
         Parameters
         ----------
-        dict_label: Dict[str, Any]
+        dict_label: dict[str, Any]
             Dictionary containing the label information.
         tag_name: str
             Tag name of the content.
@@ -122,7 +97,7 @@ Classes
         instance: Label
             Label instance.
 
-    `create_from_list(param: List[dict]) ‑> List[knowledge.base.entity.LocalizedContent]`
+    `create_from_list(param: list[dict]) ‑> list['LocalizedContent']`
     :
 
     ### Instance variables
@@ -140,7 +115,7 @@ Classes
     content: str
         Content value
     language_code: LanguageCode (default:= 'en_US')
-        ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+        ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
     ### Ancestors (in MRO)
 
@@ -148,10 +123,10 @@ Classes
 
     ### Descendants
 
-    * knowledge.base.entity.Comment
     * knowledge.base.entity.Description
     * knowledge.base.entity.Label
-    * knowledge.base.entity.OntologyLabel
+    * knowledge.base.ontology.Comment
+    * knowledge.base.ontology.OntologyLabel
 
     ### Instance variables
 
@@ -160,192 +135,6 @@ Classes
 
     `language_code: knowledge.base.entity.LanguageCode`
     :   Language code of the content.
-
-`OntologyContext(cid: str, tenant_id: str, name: str, icon: str, labels: List[knowledge.base.entity.OntologyLabel], comments: List[knowledge.base.entity.Comment], date_added: datetime.datetime, date_modified: datetime.datetime, context: str, base_uri: str, version: int, orphaned: bool, concepts: List[str], properties: List[str])`
-:   OntologyContext
-    ----------------
-    Ontology context representation.
-    
-    Parameters
-    ----------
-    cid: str
-        Context id
-    tenant_id: str
-        Tenant id.
-    name: str
-        Name of the ontology context
-    icon: str
-        Icon or Base64 encoded
-    labels: List[Label]
-        List of labels
-    comments: List[Comment]
-        List of comments
-    context: str
-        context name
-    base_uri: str
-        Base URI
-    concepts: List[str]
-        List of classes / concepts
-    properties: List[str]
-        List of properties (data and object properties)
-
-    ### Ancestors (in MRO)
-
-    * knowledge.base.entity.OntologyObject
-    * abc.ABC
-
-    ### Static methods
-
-    `from_dict(context_dict: Dict[str, Any])`
-    :
-
-    ### Instance variables
-
-    `base_uri: str`
-    :   Base URI.
-
-    `concepts: List[str]`
-    :   List of concepts.
-
-    `date_added: datetime.datetime`
-    :   Date added.
-
-    `date_modified: datetime.datetime`
-    :   Date modified.
-
-    `id: str`
-    :   Context id.
-
-    `orphaned: bool`
-    :   Orphaned.
-
-    `properties: List[str]`
-    :   List of properties.
-
-    `version: int`
-    :   Version.
-
-`OntologyContextSettings(rdf_prefix: str, rdfs_prefix: str, owl_prefix: str, base_literal_uri: str, base_class_uri: str, description_literal_name: str, depth: int)`
-:   OntologyContextSettings
-    -----------------------
-    Describes the settings of the context, such as:
-    - prefixes for RDF, RDFS and OWL
-    - Base literal URI
-    - Base class URI
-    - Description literal name
-    - depth
-
-    ### Instance variables
-
-    `base_class_uri`
-    :   Base class URI.
-
-    `base_literal_uri`
-    :   Base literal URI.
-
-    `depth: int`
-    :   Depth.
-
-    `description_literal_name: str`
-    :   Literal name of the description.
-
-    `owl_prefix`
-    :   OWL prefix
-
-    `rdf_prefix`
-    :   RDF prefix
-
-    `rdfs_prefix`
-    :   RDFS prefix
-
-`OntologyLabel(content: str, language_code: knowledge.base.entity.LanguageCode = 'en', main: bool = False)`
-:   Ontology Label
-    --------------
-    Label that is multi-lingual.
-    
-    Parameters
-    ----------
-    content: str
-        Content value
-    language_code: LanguageCode (default:= 'en')
-        Language code of content
-    main: bool (default:=False)
-        Main content
-
-    ### Ancestors (in MRO)
-
-    * knowledge.base.entity.LocalizedContent
-    * abc.ABC
-
-    ### Static methods
-
-    `create_from_dict(dict_label: Dict[str, Any], tag_name: str = 'value', locale_name: str = 'locale') ‑> knowledge.base.entity.OntologyLabel`
-    :
-
-    `create_from_list(param: List[dict]) ‑> List[knowledge.base.entity.LocalizedContent]`
-    :
-
-    ### Instance variables
-
-    `main: bool`
-    :   Flag if the content is the  main content or an alias.
-
-`OntologyObject(tenant_id: str, iri: str, icon: str, labels: List[knowledge.base.entity.OntologyLabel], comments: List[knowledge.base.entity.Comment], context: str)`
-:   Generic ontology object
-    -----------------------
-    
-    Parameters
-    ----------
-    tenant_id: str
-        Reference id for tenant
-    iri: str
-        IRI of the ontology object
-    icon: str
-        Icon assigned to object, visually representing it
-    labels: List[Label]
-        List of multi-language_code labels
-    comments: List[Label]
-        List of multi-language_code comments
-    context: str
-        Context
-
-    ### Ancestors (in MRO)
-
-    * abc.ABC
-
-    ### Descendants
-
-    * knowledge.base.entity.OntologyContext
-    * knowledge.base.ontology.OntologyClass
-    * knowledge.base.ontology.OntologyProperty
-
-    ### Instance variables
-
-    `comments: List[knowledge.base.entity.Comment]`
-    :   Comment related to ontology object.
-
-    `context: str`
-    :   Context.
-
-    `icon: str`
-    :   Icon.
-
-    `iri: str`
-    :   IRI
-
-    `labels: List[knowledge.base.entity.OntologyLabel]`
-    :
-
-    `tenant_id: str`
-    :   Tenant id.
-
-    ### Methods
-
-    `comment_for_lang(self, language_code: knowledge.base.entity.LanguageCode) ‑> Optional[knowledge.base.entity.Comment]`
-    :
-
-    `label_for_lang(self, language_code: knowledge.base.entity.LanguageCode) ‑> Optional[knowledge.base.entity.OntologyLabel]`
-    :
 
 `ServiceException(*args, **kwargs)`
 :   Service exception.

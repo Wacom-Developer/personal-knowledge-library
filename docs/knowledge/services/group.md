@@ -30,7 +30,7 @@ Classes
 
     ### Static methods
 
-    `parse(param: Dict[str, Any]) ‑> knowledge.services.group.Group`
+    `parse(param: dict[str, typing.Any]) ‑> knowledge.services.group.Group`
     :
 
     ### Instance variables
@@ -53,7 +53,7 @@ Classes
     `tenant_id: str`
     :   Tenant ID.
 
-`GroupInfo(tenant_id: str, group_id: str, owner: str, name: str, join_key: str, rights: knowledge.base.access.GroupAccessRight, group_users: List[knowledge.services.users.User])`
+`GroupInfo(tenant_id: str, group_id: str, owner: str, name: str, join_key: str, rights: knowledge.base.access.GroupAccessRight, group_users: list[knowledge.services.users.User])`
 :   Group Information
     -----------------
     Provides additional information on the group.
@@ -65,7 +65,7 @@ Classes
 
     ### Static methods
 
-    `parse(param: Dict[str, Any]) ‑> knowledge.services.group.GroupInfo`
+    `parse(param: dict[str, typing.Any]) ‑> knowledge.services.group.GroupInfo`
     :
 
     ### Instance variables
@@ -105,14 +105,14 @@ Classes
     ### Methods
 
     `add_entity_to_group(self, auth_key: str, group_id: str, entity_uri: str)`
-    :   Adding a entity to group.
+    :   Adding an entity to group.
         
         Parameters
         ----------
         auth_key: str
             API key for user.
         group_id: str
-            Id of group
+            Group ID
         entity_uri: str
             Entity URI
         
@@ -129,7 +129,7 @@ Classes
         auth_key: str
             API key for user.
         group_id: str
-            Id of group
+            Group ID
         user_id: str
             User who is added to the group
         
@@ -183,7 +183,7 @@ Classes
         auth_key: str
             API key for user.
         group_id: str
-            Id of group
+            Group ID
         
         Returns
         -------
@@ -203,7 +203,7 @@ Classes
         auth_key: str
             API key for user.
         group_id: str
-            Id of group
+            Group ID
         join_key: str
             Key which is used to join the group.
         
@@ -220,14 +220,14 @@ Classes
         auth_key: str
             API key for user.
         group_id: str
-            Id of group
+            Group ID
         
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
 
-    `listing_groups(self, auth_key: str, admin: bool = False) ‑> List[knowledge.services.group.Group]`
+    `listing_groups(self, auth_key: str, admin: bool = False) ‑> list[knowledge.services.group.Group]`
     :   Listing all groups configured for this instance.
         
         Parameters
@@ -241,18 +241,18 @@ Classes
         
         Returns
         -------
-        user:  List[Groups]
+        user:  list[Groups]
             List of groups.
 
     `remove_entity_to_group(self, auth_key: str, group_id: str, entity_uri: str)`
-    :   Remove a entity from group.
+    :   Remove an entity from group.
         
         Parameters
         ----------
         auth_key: str
             API key for user.
         group_id: str
-            Id of group
+            Group ID
         entity_uri: str
             URI of entity
         
@@ -261,17 +261,19 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `remove_user_to_group(self, auth_key: str, group_id: str, user_id: str)`
-    :   Remove a user to group.
+    `remove_user_from_group(self, auth_key: str, group_id: str, user_id: str, force: bool = False)`
+    :   Remove a user from group.
         
         Parameters
         ----------
         auth_key: str
             API key for user.
         group_id: str
-            Id of group
+            Group ID
         user_id: str
             User who is remove from the group
+        force: bool
+            If true remove user and entities owned by the user if any
         
         Raises
         ------

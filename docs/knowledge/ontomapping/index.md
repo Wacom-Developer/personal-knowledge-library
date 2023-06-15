@@ -9,17 +9,48 @@ Functions
 ---------
 
     
-`build_configuration(mapping: Dict[str, Any]) ‑> knowledge.ontomapping.MappingConfiguration`
+`build_configuration(mapping: dict[str, typing.Any]) ‑> knowledge.ontomapping.MappingConfiguration`
 :   Builds the configuration from the mapping file.
     Parameters
     ----------
-    mapping: Dict[str, Any]
+    mapping: dict[str, Any]
         The mapping file
     
     Returns
     -------
     conf: MappingConfiguration
         The mapping configuration
+
+    
+`get_mapping_configuration() ‑> knowledge.ontomapping.MappingConfiguration`
+:   Returns the mapping configuration.
+    
+    Returns
+    -------
+    mapping_configuration: MappingConfiguration
+        The mapping configuration
+
+    
+`is_iso_date(date_string: str) ‑> bool`
+:   Checks if a date string is an ISO date.
+    Parameters
+    ----------
+    date_string: str
+        Date string.
+    
+    Returns
+    -------
+    is_iso_date: bool
+        True if the date string is an ISO date, otherwise False.
+
+    
+`load_configuration()`
+:   Loads the configuration.
+    
+    Raises
+    ------
+    ValueError
+        If the configuration file is not found.
 
     
 `register_ontology(rdf_str: str)`
@@ -30,8 +61,17 @@ Functions
         The ontology in RDF/XML format.
 
     
-`subclasses_of(iri: str) ‑> List[str]`
-:   
+`subclasses_of(iri: str) ‑> list[str]`
+:   Returns the subclasses of an ontology class.
+    Parameters
+    ----------
+    iri: str
+        Ontology class IRI.
+    
+    Returns
+    -------
+    subclasses: list[str]
+        Subclasses of the ontology class.
 
     
 `update_taxonomy_cache()`
@@ -50,13 +90,13 @@ Classes
     `concept_type: knowledge.base.ontology.OntologyClassReference`
     :
 
-    `dbpedia_classes: List[str]`
+    `dbpedia_classes: list[str]`
     :   DBpedia classes.
 
     `ontology_class: str`
     :
 
-    `wikidata_classes: List[str]`
+    `wikidata_classes: list[str]`
     :   Wikidata classes.
 
 `MappingConfiguration()`
@@ -66,10 +106,10 @@ Classes
 
     ### Instance variables
 
-    `classes: List[knowledge.ontomapping.ClassConfiguration]`
+    `classes: list[knowledge.ontomapping.ClassConfiguration]`
     :   List of classes.
 
-    `properties: List[knowledge.ontomapping.PropertyConfiguration]`
+    `properties: list[knowledge.ontomapping.PropertyConfiguration]`
     :   List of properties.
 
     ### Methods
@@ -90,11 +130,42 @@ Classes
         property_configuration: PropertyConfiguration
             The property configuration
 
-    `guess_classed(self, classes: List[str]) ‑> Optional[knowledge.ontomapping.ClassConfiguration]`
+    `check_data_property_range(self, property_type: knowledge.base.ontology.OntologyPropertyReference, content: Optional[Any]) ‑> bool`
+    :   Checks if the content is in the range of the property.
+        
+        Parameters
+        ----------
+        property_type: OntologyPropertyReference
+            The property type
+        content: Optional[Any]
+            The content
+        
+        Returns
+        -------
+        evaluation: bool
+            True if the content is in the range, False otherwise.
+
+    `check_object_property_range(self, property_type: knowledge.base.ontology.OntologyPropertyReference, source_type: knowledge.base.ontology.OntologyClassReference, target_type: knowledge.base.ontology.OntologyClassReference) ‑> bool`
+    :   Checks if the target is in the range of the property.
+        Parameters
+        ----------
+        property_type: OntologyPropertyReference
+            The property
+        source_type: OntologyClassReference
+            The concept type
+        target_type: OntologyClassReference
+            The target type
+        
+        Returns
+        -------
+        valid: bool
+            True if the target is in the range, False otherwise.
+
+    `guess_classed(self, classes: list[str]) ‑> Optional[knowledge.ontomapping.ClassConfiguration]`
     :   Guesses the class from the label.
         Parameters
         ----------
-        classes: List[str]
+        classes: list[str]
             The list of classes
         
         Returns
@@ -112,10 +183,10 @@ Classes
             The concept type.
         Returns
         -------
-        property: Optional[PropertyConfiguration]
+        property_config: Optional[PropertyConfiguration]
             If a mapping exists, the property configuration, otherwise None.
 
-    `property_for(self, class_ref: knowledge.base.ontology.OntologyClassReference, property_type: Optional[knowledge.ontomapping.PropertyType]) ‑> List[knowledge.ontomapping.PropertyConfiguration]`
+    `property_for(self, class_ref: knowledge.base.ontology.OntologyClassReference, property_type: Optional[knowledge.ontomapping.PropertyType]) ‑> list[knowledge.ontomapping.PropertyConfiguration]`
     :   Returns the properties for a class.
         Parameters
         ----------
@@ -125,10 +196,28 @@ Classes
             The property type, if None, all properties are returned.
         Returns
         -------
-        properties: List[PropertyConfiguration]
+        properties: list[PropertyConfiguration]
             The list of properties.
 
-`PropertyConfiguration(iri: str, property_type: knowledge.ontomapping.PropertyType, pids: Optional[List[str]] = None)`
+    `property_for_iri(self, property_iri: str) ‑> knowledge.ontomapping.PropertyConfiguration`
+    :   Returns the property configuration for an IRI.
+        
+        Parameters
+        ----------
+        property_iri: str
+            The property IRI
+        
+        Returns
+        -------
+        property: PropertyConfiguration
+            The property configuration
+        
+        Raises
+        ------
+        ValueError
+            If the property is not found.
+
+`PropertyConfiguration(iri: str, property_type: knowledge.ontomapping.PropertyType, pids: Optional[list[str]] = None)`
 :   Property configuration.
     -----------------------
     This class contains the configuration for a property.
@@ -139,12 +228,12 @@ Classes
         The IRI of the property.
     property_type: PropertyType
         The property type.
-    pids: Optional[List[str]]
+    pids: Optional[list[str]]
         The list of property PIDs.
 
     ### Instance variables
 
-    `domains: List[str]`
+    `domains: list[str]`
     :   List of domains.
 
     `inverse: Optional[str]`
@@ -153,10 +242,10 @@ Classes
     `iri: str`
     :   IRI of the property.
 
-    `pids: List[str]`
+    `pids: list[str]`
     :   List of property PIDs.
 
-    `ranges: List[str]`
+    `ranges: list[str]`
     :   List of ranges.
 
     `type: knowledge.ontomapping.PropertyType`

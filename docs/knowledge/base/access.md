@@ -45,12 +45,12 @@ Classes
 
     ### Methods
 
-    `to_list(self) ‑> List[str]`
+    `to_list(self) ‑> list[str]`
     :   Converts the access to list of properties.
         
         Returns
         -------
-        access_list: List[str]
+        access_list: list[str]
             List of rights
 
 `GroupAccessRight(read: bool = False, write: bool = False, delete: bool = False)`
@@ -73,12 +73,12 @@ Classes
 
     ### Static methods
 
-    `parse(param: List[str]) ‑> knowledge.base.access.GroupAccessRight`
+    `parse(param: list[str]) ‑> knowledge.base.access.GroupAccessRight`
     :   Converts the access to list of properties.
         
         Parameters
         ----------
-        param: List[str]
+        param: list[str]
             List of rights
         
         Returns
@@ -106,12 +106,12 @@ Classes
 
     ### Static methods
 
-    `parse(param: List[str]) ‑> knowledge.base.access.TenantAccessRight`
+    `parse(param: list[str]) ‑> knowledge.base.access.TenantAccessRight`
     :   Converts the access to list of properties.
         
         Parameters
         ----------
-        param: List[str]
+        param: list[str]
             List of rights
         
         Returns

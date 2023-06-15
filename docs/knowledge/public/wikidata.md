@@ -5,23 +5,23 @@ Functions
 ---------
 
     
-`chunks(lst: List[str], chunk_size: int)`
+`chunks(lst: list[str], chunk_size: int)`
 :   Yield successive n-sized chunks from lst.Yield successive n-sized chunks from lst.
     Parameters
     ----------
-    lst: List[str]
+    lst: list[str]
         Full length.
     chunk_size: int
         Chunk size.
 
     
-`detect_cycle(super_class_qid: str, cycle_detector: List[Tuple[str, str]])`
+`detect_cycle(super_class_qid: str, cycle_detector: list[tuple[str, str]])`
 :   
 
 Classes
 -------
 
-`Claim(pid: knowledge.public.wikidata.WikidataProperty, literal: List[Dict[str, Any]], qualifiers: List[Dict[str, Any]])`
+`Claim(pid: knowledge.public.wikidata.WikidataProperty, literal: list[dict[str, typing.Any]], qualifiers: list[dict[str, typing.Any]])`
 :   Claim
     ------
     A Wikidata claim is a statement that describes a particular property-value relationship about an item in the
@@ -46,13 +46,13 @@ Classes
 
     ### Instance variables
 
-    `literals: List[Dict[str, Any]]`
+    `literals: list[dict[str, typing.Any]]`
     :   Literals. Objects of the statement.
 
     `pid: knowledge.public.wikidata.WikidataProperty`
     :   Property name. Predicate of the claim.
 
-    `qualifiers: List[Dict[str, Any]]`
+    `qualifiers: list[dict[str, typing.Any]]`
     :   Qualifiers.
 
 `SiteLinks(source: str)`
@@ -77,21 +77,31 @@ Classes
 
     ### Static methods
 
-    `create_from_dict(entity_dict: Dict[str, Any]) ‑> knowledge.public.wikidata.SiteLinks`
-    :
+    `create_from_dict(entity_dict: dict[str, typing.Any]) ‑> knowledge.public.wikidata.SiteLinks`
+    :   Create a SiteLinks object from a dictionary.
+        
+        Parameters
+        ----------
+        entity_dict: dict[str, Any]
+            dictionary containing the entity information.
+        
+        Returns
+        -------
+        instance: SiteLinks
+            SiteLinks instance.
 
     ### Instance variables
 
     `source: str`
     :   Sitelinks source.
 
-    `titles: Dict[str, str]`
+    `titles: dict[str, str]`
     :   Titles for the source.
 
-    `urls: Dict[str, str]`
+    `urls: dict[str, str]`
     :   URLs for the source.
 
-    `urls_languages: List[str]`
+    `urls_languages: list[str]`
     :   List of all supported languages.
 
 `WikiDataAPIClient()`
@@ -105,8 +115,17 @@ Classes
 
     ### Static methods
 
-    `retrieve_entities(qids: Union[List[str], Set[str]]) ‑> List[knowledge.public.wikidata.WikidataThing]`
-    :
+    `retrieve_entities(qids: Union[list[str], set[str]]) ‑> list[knowledge.public.wikidata.WikidataThing]`
+    :   Retrieve multiple Wikidata things.
+        Parameters
+        ----------
+        qids: list[str]
+            QIDs of the entities.
+        
+        Returns
+        -------
+        instances: list[WikidataThing]
+            List of wikidata things.
 
     `retrieve_entity(qid: str) ‑> knowledge.public.wikidata.WikidataThing`
     :   Retrieve a single Wikidata thing.
@@ -121,7 +140,23 @@ Classes
         instance: WikidataThing
             Single wikidata thing
 
-    `sparql_query(query_string: str, wikidata_sparql_url: str = 'https://query.wikidata.org/sparql', max_retries: int = 3) ‑> Dict`
+    `search_term(search_term: str, language: str, url: str = 'https://www.wikidata.org/w/api.php') ‑> list[knowledge.public.wikidata.WikidataSearchResult]`
+    :   Search for a term in the WikiData.
+        Parameters
+        ----------
+        search_term: str
+            The term to search for.
+        language: str
+            The language to search in.
+        url: str
+            The URL of the WikiData search API.
+        
+        Returns
+        -------
+        search_results_dict: list[WikidataSearchResult]
+            The search results.
+
+    `sparql_query(query_string: str, wikidata_sparql_url: str = 'https://query.wikidata.org/sparql', max_retries: int = 3) ‑> dict`
     :   Send a SPARQL query and return the JSON formatted result.
         
         Parameters
@@ -130,6 +165,8 @@ Classes
           SPARQL query string
         wikidata_sparql_url: str
           Wikidata SPARQL endpoint to use
+        max_retries: int
+            Maximum number of retries
 
     `superclasses(qid: str) ‑> Optional[knowledge.public.wikidata.WikidataClass]`
     :
@@ -166,7 +203,7 @@ Classes
 
     ### Static methods
 
-    `create_from_dict(class_dict: Dict[str, Any]) ‑> knowledge.public.wikidata.WikidataClass`
+    `create_from_dict(class_dict: dict[str, typing.Any]) ‑> knowledge.public.wikidata.WikidataClass`
     :
 
     ### Instance variables
@@ -177,7 +214,7 @@ Classes
     `qid`
     :   Property id.
 
-    `superclasses: List[knowledge.public.wikidata.WikidataClass]`
+    `superclasses: list['WikidataClass']`
     :
 
 `WikidataProperty(pid: str, label: Optional[str] = None)`
@@ -192,7 +229,7 @@ Classes
 
     ### Static methods
 
-    `create_from_dict(prop_dict: Dict[str, Any]) ‑> knowledge.public.wikidata.WikidataProperty`
+    `create_from_dict(prop_dict: dict[str, typing.Any]) ‑> knowledge.public.wikidata.WikidataProperty`
     :
 
     ### Instance variables
@@ -206,7 +243,31 @@ Classes
     `pid`
     :   Property id.
 
-`WikidataThing(revision: str, qid: str, modified: datetime.datetime, label: Optional[Dict[str, knowledge.base.entity.Label]] = None, aliases: Optional[Dict[str, List[knowledge.base.entity.Label]]] = None, description: Optional[Dict[str, knowledge.base.entity.Description]] = None)`
+`WikidataSearchResult(qid: str, label: knowledge.base.entity.Label, description: Optional[knowledge.base.entity.Description], repository: str, aliases: list[str])`
+:   WikidataSearchResult
+    --------------------
+    Search result from wikidata.
+
+    ### Static methods
+
+    `from_dict(search_result: dict[str, typing.Any]) ‑> knowledge.public.wikidata.WikidataSearchResult`
+    :
+
+    ### Instance variables
+
+    `description: Optional[knowledge.base.entity.Description]`
+    :
+
+    `label: knowledge.base.entity.Label`
+    :
+
+    `qid: str`
+    :
+
+    `repository: str`
+    :
+
+`WikidataThing(revision: str, qid: str, modified: datetime.datetime, label: Optional[dict[str, knowledge.base.entity.Label]] = None, aliases: Optional[dict[str, list[knowledge.base.entity.Label]]] = None, description: Optional[dict[str, knowledge.base.entity.Description]] = None)`
 :   WikidataEntity
     -----------
     Generic entity within wikidata.
@@ -218,34 +279,35 @@ Classes
     
     Parameters
     ----------
-    label: List[Label]
+    label: list[Label]
         List of labels
-    description: List[Description] (optional)
+    description: list[Description] (optional)
         List of descriptions
     qid: str
          QID for entity. For new entities the URI is None, as the knowledge graph backend assigns this.
 
     ### Static methods
 
-    `create_from_dict(entity_dict: Dict[str, Any]) ‑> knowledge.public.wikidata.WikidataThing`
+    `create_from_dict(entity_dict: dict[str, typing.Any]) ‑> knowledge.public.wikidata.WikidataThing`
     :   Create WikidataThing from dict.
+        
         Parameters
         ----------
-        entity_dict: Dict[str, Any]
-            Dictionary with WikidataThing information.
+        entity_dict: dict[str, Any]
+            dictionary with WikidataThing information.
         
         Returns
         -------
         thing: WikidataThing
             Instance of WikidataThing
 
-    `from_wikidata(entity_dict: Dict[str, Any], supported_languages: Optional[List[str]] = None) ‑> knowledge.public.wikidata.WikidataThing`
+    `from_wikidata(entity_dict: dict[str, typing.Any], supported_languages: Optional[list[str]] = None) ‑> knowledge.public.wikidata.WikidataThing`
     :   Create WikidataThing from Wikidata JSON response.
         Parameters
         ----------
-        entity_dict: Dict[str, Any]
-            Dictionary with WikidataThing information.
-        supported_languages: Optional[List[str]]
+        entity_dict: dict[str, Any]
+            dictionary with WikidataThing information.
+        supported_languages: Optional[list[str]]
             List of supported languages. If None, all languages are supported.
         
         Returns
@@ -255,40 +317,40 @@ Classes
 
     ### Instance variables
 
-    `alias_languages: List[str]`
+    `alias_languages: list[str]`
     :   All available languages for a aliaes.
 
-    `aliases: Dict[str, List[knowledge.base.entity.Label]]`
+    `aliases: dict[str, list[knowledge.base.entity.Label]]`
     :   Alternative labels of the concept.
 
-    `claim_properties: List[knowledge.public.wikidata.WikidataProperty]`
+    `claim_properties: list[knowledge.public.wikidata.WikidataProperty]`
     :
 
-    `claims: Dict[str, knowledge.public.wikidata.Claim]`
+    `claims: dict[str, knowledge.public.wikidata.Claim]`
     :
 
-    `claims_dict: Dict[str, knowledge.public.wikidata.Claim]`
+    `claims_dict: dict[str, knowledge.public.wikidata.Claim]`
     :
 
-    `description: Dict[str, knowledge.base.entity.Description]`
+    `description: dict[str, knowledge.base.entity.Description]`
     :   Description of the thing (optional).
 
-    `description_languages: List[str]`
+    `description_languages: list[str]`
     :
 
-    `instance_of: List[knowledge.public.wikidata.WikidataClass]`
+    `instance_of: list[knowledge.public.wikidata.WikidataClass]`
     :
 
-    `label: Dict[str, knowledge.base.entity.Label]`
+    `label: dict[str, knowledge.base.entity.Label]`
     :   Labels of the entity.
 
-    `label_languages: List[str]`
+    `label_languages: list[str]`
     :   All available languages for a labels.
 
     `modified: datetime.datetime`
     :   Modification date of entity.
 
-    `ontology_types: List[str]`
+    `ontology_types: list[str]`
     :   Ontology types of the entity.
 
     `qid: str`
@@ -297,7 +359,7 @@ Classes
     `revision: str`
     :   Revision version of entity.
 
-    `sitelinks: Dict[str, knowledge.public.wikidata.SiteLinks]`
+    `sitelinks: dict[str, knowledge.public.wikidata.SiteLinks]`
     :   Different sitelinks assigned to entity.
 
     ### Methods
@@ -310,7 +372,7 @@ Classes
         alias: str
             Alias
         language_code: str
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
     `add_claim(self, pid: str, claim: knowledge.public.wikidata.Claim)`
     :   Adding a claim.
@@ -330,7 +392,7 @@ Classes
         description: str
             Description
         language_code: str
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
     `add_label(self, label: str, language_code: str)`
     :   Adding a label for entity.
@@ -340,9 +402,9 @@ Classes
         label: str
             Label
         language_code: str
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `alias_lang(self, language_code: knowledge.base.entity.LanguageCode) ‑> List[knowledge.base.entity.Label]`
+    `alias_lang(self, language_code: knowledge.base.entity.LanguageCode) ‑> list[knowledge.base.entity.Label]`
     :   Get alias for language_code code.
         
         Parameters
@@ -351,7 +413,7 @@ Classes
             Requested language_code code
         Returns
         -------
-        aliases: List[Label]
+        aliases: list[Label]
             Returns a list of aliases for a specific language code
 
     `description_lang(self, language_code: str) ‑> Optional[knowledge.base.entity.Description]`
@@ -360,7 +422,7 @@ Classes
         Parameters
         ----------
         language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         Returns
         -------
         label: LocalizedContent

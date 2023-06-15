@@ -126,23 +126,23 @@ Classes
 
     ### Methods
 
-    `activations(self, auth_key: str, uris: List[str], depth: int) ‑> Tuple[Dict[str, knowledge.base.ontology.ThingObject], List[Tuple[str, knowledge.base.ontology.OntologyPropertyReference, str]]]`
+    `activations(self, auth_key: str, uris: list[str], depth: int) ‑> tuple[dict[str, knowledge.base.ontology.ThingObject], list[tuple[str, knowledge.base.ontology.OntologyPropertyReference, str]]]`
     :   Spreading activation, retrieving the entities related to an entity.
         
         Parameters
         ----------
         auth_key: str
             Auth key for user
-        uris: List[str]
+        uris: list[str]
             List of URIS for entity.
         depth: int
             Depth of activations
         
         Returns
         -------
-        entity_map: Dict[str, ThingObject]
+        entity_map: dict[str, ThingObject]
             Map with entity and its URI as key.
-        relations: List[Tuple[str, OntologyPropertyReference, str]]
+        relations: list[tuple[str, OntologyPropertyReference, str]]
             List of relations with subject predicate, (Property), and subject
         
         Raises
@@ -178,14 +178,14 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `create_entity_bulk(self, auth_key: str, entities: List[knowledge.base.ontology.ThingObject], batch_size: int = 10) ‑> List[knowledge.base.ontology.ThingObject]`
+    `create_entity_bulk(self, auth_key: str, entities: list[knowledge.base.ontology.ThingObject], batch_size: int = 10) ‑> list[knowledge.base.ontology.ThingObject]`
     :   Creates entity in graph.
         
         Parameters
         ----------
         auth_key: str
             Auth key from user
-        entities: List[ThingObject]
+        entities: list[ThingObject]
             Entities
         batch_size: int
             Batch size
@@ -219,14 +219,14 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `delete_entities(self, auth_key: str, uris: List[str], force: bool = False, max_retries: int = 3, backoff_factor: float = 0.1)`
+    `delete_entities(self, auth_key: str, uris: list[str], force: bool = False, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Delete a list of entities.
         
         Parameters
         ----------
         auth_key: str
             Auth key from user
-        uris: List[str]
+        uris: list[str]
             List of URI of entities. **Remark:** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
@@ -300,7 +300,7 @@ Classes
         flag: bool
             Flag if entity does exist
 
-    `labels(self, auth_key: str, uri: str, locale: str = 'en_US') ‑> List[knowledge.base.entity.Label]`
+    `labels(self, auth_key: str, uri: str, locale: str = 'en_US') ‑> list[knowledge.base.entity.Label]`
     :   Extract list labels of entity.
         
         Parameters
@@ -314,7 +314,7 @@ Classes
         
         Returns
         -------
-        labels: List[Label]
+        labels: list[Label]
             List of labels of an entity.
         
         Raises
@@ -322,7 +322,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `listing(self, auth_key: str, filter_type: knowledge.base.ontology.OntologyClassReference, page_id: Optional[str] = None, limit: int = 30, locale: Optional[knowledge.base.entity.LanguageCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None, estimate_count: bool = False, max_retries: int = 3, backoff_factor: float = 0.1) ‑> Tuple[List[knowledge.base.ontology.ThingObject], int, str]`
+    `listing(self, auth_key: str, filter_type: knowledge.base.ontology.OntologyClassReference, page_id: Optional[str] = None, limit: int = 30, locale: Optional[knowledge.base.entity.LanguageCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None, estimate_count: bool = False, max_retries: int = 3, backoff_factor: float = 0.1) ‑> tuple[list[knowledge.base.ontology.ThingObject], int, str]`
     :   List all entities visible to users.
         
         Parameters
@@ -349,7 +349,7 @@ Classes
         
         Returns
         -------
-        entities: List[ThingObject]
+        entities: list[ThingObject]
             List of entities
         estimated_total_number: int
             Number of all entities
@@ -361,7 +361,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `literals(self, auth_key: str, uri: str, locale: str = 'en_US') ‑> List[knowledge.base.ontology.DataProperty]`
+    `literals(self, auth_key: str, uri: str, locale: str = 'en_US') ‑> list[knowledge.base.ontology.DataProperty]`
     :   Collect all literals of entity.
         
         Parameters
@@ -375,7 +375,7 @@ Classes
         
         Returns
         -------
-        labels: List[DataProperty]
+        labels: list[DataProperty]
             List of data properties of an entity.
         
         Raises
@@ -399,7 +399,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code and commit failed.
 
-    `relations(self, auth_key: str, uri: str) ‑> Dict[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.ObjectProperty]`
+    `relations(self, auth_key: str, uri: str) ‑> dict[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.ObjectProperty]`
     :   Retrieve the relations (object properties) of an entity.
         
         Parameters
@@ -411,7 +411,7 @@ Classes
         
         Returns
         -------
-        relations: Dict[OntologyPropertyReference, ObjectProperty]
+        relations: dict[OntologyPropertyReference, ObjectProperty]
             All relations a dict
         
         Raises
@@ -438,7 +438,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `search_all(self, auth_key: str, search_term: str, language_code: knowledge.base.entity.LanguageCode, types: List[knowledge.base.ontology.OntologyClassReference], limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_all(self, auth_key: str, search_term: str, language_code: knowledge.base.entity.LanguageCode, types: list[knowledge.base.ontology.OntologyClassReference], limit: int = 30, next_page_id: str = None) ‑> tuple[list[knowledge.base.ontology.ThingObject], str]`
     :   Search term in labels, literals and description.
         
         Parameters
@@ -449,7 +449,7 @@ Classes
             Search term.
         language_code: LanguageCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
-        types: List[OntologyClassReference]
+        types: list[OntologyClassReference]
             Limits the types for search.
         limit: int  (default:= 30)
             Size of the page for pagination.
@@ -458,7 +458,7 @@ Classes
         
         Returns
         -------
-        results: List[ThingObject]
+        results: list[ThingObject]
             List of things matching the search term
         next_page_id: str
             ID of the next page.
@@ -468,7 +468,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_description(self, auth_key: str, search_term: str, language_code: knowledge.base.entity.LanguageCode, limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_description(self, auth_key: str, search_term: str, language_code: knowledge.base.entity.LanguageCode, limit: int = 30, next_page_id: str = None) ‑> tuple[list[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in description.
         
         Parameters
@@ -486,7 +486,7 @@ Classes
         
         Returns
         -------
-        results: List[ThingObject]
+        results: list[ThingObject]
             List of things matching the search term
         next_page_id: str
             ID of the next page.
@@ -496,7 +496,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_labels(self, auth_key: str, search_term: str, language_code: knowledge.base.entity.LanguageCode, limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_labels(self, auth_key: str, search_term: str, language_code: knowledge.base.entity.LanguageCode, limit: int = 30, next_page_id: str = None) ‑> tuple[list[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in labels.
         
         Parameters
@@ -514,7 +514,7 @@ Classes
         
         Returns
         -------
-        results: List[ThingObject]
+        results: list[ThingObject]
             List of things matching the search term
         next_page_id: str
             ID of the next page.
@@ -524,7 +524,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_literal(self, auth_key: str, search_term: str, literal: knowledge.base.ontology.OntologyPropertyReference, pattern: knowledge.services.graph.SearchPattern = SearchPattern.REGEX, language_code: knowledge.base.entity.LanguageCode = 'en_US', limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_literal(self, auth_key: str, search_term: str, literal: knowledge.base.ontology.OntologyPropertyReference, pattern: knowledge.services.graph.SearchPattern = SearchPattern.REGEX, language_code: knowledge.base.entity.LanguageCode = 'en_US', limit: int = 30, next_page_id: str = None) ‑> tuple[list[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in literals.
         
          Parameters
@@ -546,7 +546,7 @@ Classes
         
          Returns
          -------
-         results: List[ThingObject]
+         results: list[ThingObject]
             List of things matching the search term
         next_page_id: str
             ID of the next page.
@@ -556,7 +556,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_relation(self, auth_key: str, relation: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.entity.LanguageCode, subject_uri: str = None, object_uri: str = None, limit: int = 30, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_relation(self, auth_key: str, relation: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.entity.LanguageCode, subject_uri: str = None, object_uri: str = None, limit: int = 30, next_page_id: str = None) ‑> tuple[list[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in literals.
         
          Parameters
@@ -578,7 +578,7 @@ Classes
         
          Returns
          -------
-         results: List[ThingObject]
+         results: list[ThingObject]
             List of things matching the search term
          next_page_id: str
             ID of the next page.
@@ -674,11 +674,6 @@ Classes
             Auth key from user
         entity: ThingObject
             entity object
-        
-        Returns
-        -------
-        uri: str
-            URI of entity
         
         Raises
         ------

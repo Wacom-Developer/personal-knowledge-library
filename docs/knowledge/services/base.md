@@ -33,7 +33,7 @@ Classes
     `verify_calls`
     :   Certificate verification activated.
 
-`WacomServiceAPIClient(application_name: str, service_url: str, service_endpoint: str, verify_calls: bool = True)`
+`WacomServiceAPIClient(application_name: str, service_url: str, service_endpoint: str, auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True)`
 :   Wacom Service API Client
     ------------------------
     Abstract class for Wacom service APIs.
@@ -46,6 +46,8 @@ Classes
         URL of the service
     service_endpoint: str
         Base endpoint
+    auth_service_endpoint: str (Default:= 'graph/v1')
+        Authentication service endpoint
     verify_calls: bool (Default:= False)
         Flag if  API calls should be verified.
 
@@ -66,14 +68,11 @@ Classes
 
     ### Class variables
 
-    `AUTH_ENDPOINT: str`
-    :
-
     `SERVICE_URL: str`
-    :
+    :   Production service URL
 
     `STAGING_SERVICE_URL: str`
-    :
+    :   Staging service URL
 
     `USER_ENDPOINT: str`
     :
@@ -112,13 +111,16 @@ Classes
         expired_in: float
             Seconds until token is expired
 
-    `unpack_token(auth_token: str) ‑> Dict[str, Any]`
+    `unpack_token(auth_token: str) ‑> dict[str, typing.Any]`
     :
 
     ### Instance variables
 
     `application_name`
     :   Application name.
+
+    `auth_endpoint: str`
+    :   Authentication endpoint.
 
     `service_base_url`
     :   Service endpoint.
@@ -128,7 +130,7 @@ Classes
 
     ### Methods
 
-    `refresh_token(self, refresh_token: str) ‑> Tuple[str, str, datetime.datetime]`
+    `refresh_token(self, refresh_token: str) ‑> tuple[str, str, datetime.datetime]`
     :   Refreshing a token.
         
         Parameters
@@ -150,7 +152,7 @@ Classes
         WacomServiceException
             Exception if service returns HTTP error code.
 
-    `request_user_token(self, tenant_key: str, external_id: str) ‑> Tuple[str, str, datetime.datetime]`
+    `request_user_token(self, tenant_key: str, external_id: str) ‑> tuple[str, str, datetime.datetime]`
     :   Login as user by using the tenant key and its external user id.
         
         Parameters
