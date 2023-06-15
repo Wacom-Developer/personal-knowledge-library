@@ -13,12 +13,10 @@ ReferenceId = NewType("ReferenceId", str)
 #  ---------------------------------------- Exceptions -----------------------------------------------------------------
 class ServiceException(Exception):
     """Service exception."""
-    pass
 
 
 class KnowledgeException(Exception):
     """Knowledge exception."""
-    pass
 
 
 #  ---------------------------------------- Constants ------------------------------------------------------------------
@@ -172,11 +170,23 @@ class Label(LocalizedContent):
             raise ValueError("Dict is does not contain a language code")
         if IS_MAIN_TAG in dict_label:
             return Label(dict_label[tag_name], dict_label[locale_name], dict_label[IS_MAIN_TAG])
-        else:
-            return Label(dict_label[tag_name], dict_label[locale_name])
+        return Label(dict_label[tag_name], dict_label[locale_name])
 
     @staticmethod
     def create_from_list(param: list[dict]) -> list[LOCALIZED_CONTENT_TAG]:
+        """
+        Create a list of labels from a list of dictionaries.
+
+        Parameters
+        ----------
+        param: list[dict]
+            List of dictionaries containing the label information.
+
+        Returns
+        -------
+        instance: list[Label]
+            List of label instances.
+        """
         return [Label.create_from_dict(p) for p in param]
 
     def __dict__(self):
@@ -207,12 +217,41 @@ class Description(LocalizedContent):
     @staticmethod
     def create_from_dict(dict_description: dict[str, Any], tag_name: str = DESCRIPTION_TAG,
                          locale_name: str = LOCALE_TAG) -> 'Description':
+        """
+        Create a description from a dictionary.
+
+        Parameters
+        ----------
+        dict_description: dict[str, Any]
+            Dictionary containing the description information.
+        tag_name: str
+            Tag name of the content.
+        locale_name:
+            Tag name of the language code.
+
+        Returns
+        -------
+        instance: Description
+            Description instance.
+        """
         if tag_name not in dict_description or locale_name not in dict_description:
             raise ValueError("Dict is does not contain a localized label.")
         return Description(dict_description[tag_name], dict_description[locale_name])
 
     @staticmethod
     def create_from_list(param: list[dict[str, Any]]) -> list['Description']:
+        """ Create a list of descriptions from a list of dictionaries.
+
+        Parameters
+        ----------
+        param: list[dict[str, Any]]
+            List of dictionaries containing the description information.
+
+        Returns
+        -------
+        instance: list[Description]
+            List of description instances.
+        """
         return [Description.create_from_dict(p) for p in param]
 
     def __dict__(self):

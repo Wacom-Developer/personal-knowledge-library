@@ -19,6 +19,7 @@ TENANT_API_KEY: str = 'x-tenant-api-key'
 REFRESH_TOKEN_TAG: str = 'refreshToken'
 EXPIRATION_DATE_TAG: str = 'expirationDate'
 ACCESS_TOKEN_TAG: str = 'accessToken'
+DEFAULT_TIMEOUT: int = 60
 
 
 class WacomServiceException(Exception):
@@ -139,7 +140,8 @@ class WacomServiceAPIClient(RESTAPIClient):
         payload: dict = {
             'ExternalUserId': external_id
         }
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT,
+                                           verify=self.verify_calls)
         if response.ok:
             try:
                 response_token: dict[str, str] = response.json()
@@ -187,7 +189,8 @@ class WacomServiceAPIClient(RESTAPIClient):
         payload: dict[str, str] = {
             REFRESH_TOKEN_TAG: refresh_token
         }
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls)
+        response: Response = requests.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT,
+                                           verify=self.verify_calls)
         if response.ok:
             response_token: dict[str, str] = response.json()
             try:
@@ -200,6 +203,18 @@ class WacomServiceAPIClient(RESTAPIClient):
 
     @staticmethod
     def unpack_token(auth_token: str) -> dict[str, Any]:
+        """Unpacks the token.
+
+        Parameters
+        ----------
+        auth_token: str
+            Authentication token
+
+        Returns
+        -------
+        token_dict: dict[str, Any]
+            Token dictionary
+        """
         return jwt.decode(auth_token, options={"verify_signature": False})
 
     @staticmethod

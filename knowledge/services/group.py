@@ -85,6 +85,18 @@ class Group:
 
     @classmethod
     def parse(cls, param: dict[str, Any]) -> 'Group':
+        """Parse group from dictionary.
+
+        Arguments
+        ---------
+        param: dict[str, Any]
+            Dictionary containing group information.
+
+        Returns
+        -------
+        instance: Group
+            Group object
+        """
         tenant_id: str = param.get('tenantId')
         owner_id: str = param.get('ownerId')
         join_key: str = param.get('joinKey')

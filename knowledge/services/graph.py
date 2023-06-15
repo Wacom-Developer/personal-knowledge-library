@@ -51,6 +51,7 @@ ESTIMATE_COUNT: str = 'estimateCount'
 
 RELATION_TAG: str = 'relation'
 APPLICATION_JSON_HEADER: str = 'application/json'
+DEFAULT_TIMEOUT: int = 60
 
 MIME_TYPE: dict[str, str] = {
     '.jpg': 'image/jpeg',
@@ -69,18 +70,34 @@ class SearchPattern(enum.Enum):
     Different search pattern for literal search.
     """
     REGEX = 'regex'
+    """Regular expression search pattern."""
     GT = 'gt'
+    """Greater than search pattern."""
     GTE = 'gte'
+    """Greater than or equal search pattern."""
     LT = 'lt'
+    """Less than search pattern."""
     LTE = 'lte'
+    """Less than or equal search pattern."""
     EQ = 'eq'
+    """Equal search pattern."""
     RANGE = 'range'
+    """Range search pattern."""
 
 
 class Visibility(enum.Enum):
+    """
+    Visibility
+    ----------
+    Visibility of an entity.
+    The visibility of an entity determines who can see the entity.
+    """
     PRIVATE = 'Private'
+    """Only the owner of the entity can see the entity."""
     PUBLIC = 'Public'
+    """Everyone in the tenant can see the entity."""
     SHARED = 'Shared'
+    """Everyone who joined the group can see the entity."""
 
 
 # -------------------------------------------- Service API Client ------------------------------------------------------
@@ -152,7 +169,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.get(url, headers=headers, verify=self.verify_calls)
+        response: Response = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
         if response.ok:
             e: dict[str, Any] = response.json()
             pref_label: list[Label] = []
@@ -391,7 +408,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         for bulk_idx in range(0, len(entities), batch_size):
             bulk = payload[bulk_idx:bulk_idx + batch_size]
 
-            response: Response = requests.post(url, json=bulk, headers=headers,
+            response: Response = requests.post(url, json=bulk, headers=headers, timeout=DEFAULT_TIMEOUT,
                                                verify=self.verify_calls)
             if response.ok:
                 response_dict: dict[str, Any] = response.json()
@@ -539,7 +556,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         }
         if entity.tenant_access_right:
             payload[TENANT_RIGHTS_TAG] = entity.tenant_access_right.to_list()
-        response: Response = requests.patch(url, json=payload, headers=headers, verify=self.verify_calls)
+        response: Response = requests.patch(url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT,
+                                            verify=self.verify_calls)
         if not response.ok:
             raise WacomServiceException(f'Pushing entity failed. '
                                         f'Response code:={response.status_code}, exception:= {response.content}. '
@@ -614,14 +632,14 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         }
         response: Response = requests.get(url, headers=headers,  params={
             LOCALE_TAG: locale,
-        }, verify=self.verify_calls)
+        }, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
         if response.ok:
             response_dict: dict = response.json()
             if LABELS_TAG in response_dict:
                 return [Label.create_from_dict(label) for label in response_dict[LABELS_TAG]]
             return []
-        raise WacomServiceException('Failed to pull literals. Response code:={}, exception:= {}'
-                                    .format(response.status_code, response.content))
+        raise WacomServiceException(f'Failed to pull literals. Response code:={response.status_code}, '
+                                    'exception:= {response.content}')
 
     def literals(self, auth_key: str, uri: str, locale: str = 'en_US') -> list[DataProperty]:
         """
@@ -654,12 +672,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         response: Response = requests.get(url, headers=headers, params={
             LOCALE_TAG: locale,
-        }, verify=self.verify_calls)
+        }, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
         if response.ok:
             literals: list = response.json().get(DATA_PROPERTIES_TAG)
             return DataProperty.create_from_list(literals)
-        raise WacomServiceException('Failed to pull literals. Response code:={}, exception:= {}'
-                                    .format(response.status_code, response.content))
+        raise WacomServiceException(f'Failed to pull literals. Response code:={response.status_code}, '
+                                    f'exception:= {response.content}')
 
     def create_relation(self, auth_key: str, source: str, relation: OntologyPropertyReference, target: str):
         """
@@ -733,7 +751,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         # Get response
-        response: Response = requests.delete(url, params=params, headers=headers, verify=self.verify_calls)
+        response: Response = requests.delete(url, params=params, headers=headers, timeout=DEFAULT_TIMEOUT,
+                                             verify=self.verify_calls)
         if not response.ok:
             raise WacomServiceException(f'Deletion of relation failed. '
                                         f'Response code:={response.status_code}, exception:= {response.content}')
@@ -775,7 +794,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             ACTIVATION_TAG: depth
         }
 
-        response: Response = requests.get(url, headers=headers, params=params, verify=self.verify_calls)
+        response: Response = requests.get(url, headers=headers, params=params, timeout=DEFAULT_TIMEOUT,
+                                          verify=self.verify_calls)
         if response.ok:
             entities: dict[str, Any] = response.json()
             things: dict[str, ThingObject] = dict([(e[URI_TAG], ThingObject.from_dict(e))
@@ -899,7 +919,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.patch(url, headers=headers, verify=self.verify_calls)
+        response: Response = requests.patch(url, headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
         if not response.ok:
             raise WacomServiceException(f'Ontology update fails. '
                                         f'Response code:={response.status_code}, exception:= {response.content}')
@@ -948,7 +968,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             NEXT_PAGE_ID_TAG: next_page_id
         }
         url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_TYPES_ENDPOINT}'
-        response: Response = requests.get(url, headers=headers, params=parameters, verify=self.verify_calls)
+        response: Response = requests.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
+                                          verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
         raise WacomServiceException(f'Search on labels {search_term} failed. '
@@ -995,7 +1016,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             NEXT_PAGE_ID_TAG: next_page_id
         }
         url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_LABELS_ENDPOINT}'
-        response: Response = requests.get(url, headers=headers, params=parameters, verify=self.verify_calls)
+        response: Response = requests.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
+                                          verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
         raise WacomServiceException(f'Search on labels {search_term} failed. '
@@ -1049,7 +1071,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         headers: dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.get(url, headers=headers, params=parameters, verify=self.verify_calls)
+        response: Response = requests.get(url, headers=headers, params=parameters,  timeout=DEFAULT_TIMEOUT,
+                                          verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
         raise WacomServiceException(f'Search on labels {search_term} failed. '
@@ -1103,7 +1126,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
 
-        response = requests.get(url, headers=headers, params=parameters, verify=self.verify_calls)
+        response = requests.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
+                                verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
         raise WacomServiceException(f'Search on: subject:={subject_uri}, relation {relation.iri}, '
@@ -1150,7 +1174,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
 
-        response = requests.get(url, headers=headers, params=parameters, verify=self.verify_calls)
+        response = requests.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
+                                verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
         raise WacomServiceException(f'Search on labels {search_term} failed. '
@@ -1224,9 +1249,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         with requests.session() as session:
             headers: dict[str, str] = {
-                USER_AGENT_HEADER_FLAG:
-                    f'ImageFetcher/0.1 (https://github.com/Wacom-Developer/personal-knowledge-library)'
-                    f' personal-knowledge-library/0.9.5'
+                USER_AGENT_HEADER_FLAG: USER_AGENT_STR
             }
             response: Response = session.get(image_url, headers=headers)
             if response.ok:
@@ -1281,7 +1304,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             ('file', (file_name, image_byte, mime_type))
         ]
         url: str = f'{self.service_base_url}{self.ENTITY_IMAGE_ENDPOINT}{urllib.parse.quote(entity_uri)}'
-        response = requests.patch(url, headers=headers, files=files, verify=self.verify_calls)
+        response = requests.patch(url, headers=headers, files=files, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
         if response.ok:
             return response.json()['imageId']
         raise WacomServiceException(f'Creation of entity image failed'

@@ -11,10 +11,26 @@ from knowledge.public.wikidata import LITERALS_TAG, WikidataThing, WikiDataAPICl
 
 
 def __relations__(thing: dict[str, Any], wikidata: set[str]) -> tuple[str, list[dict[str, Any]]]:
+    """
+    Extracts relations from Wikidata.
+    Parameters
+    ----------
+    thing: dict[str, Any]
+        Wikidata thing
+    wikidata: set[str]
+        Set of unique QIDs
+
+    Returns
+    -------
+    qid: str
+        QID of the Wikidata thing
+    relations: list[dict[str, Any]]
+        Relations of the Wikidata thing
+    """
     relations: list[dict[str, Any]] = []
     for _, p_value in thing[CLAIMS_TAG].items():
         for v in p_value[LITERALS_TAG]:
-            if isinstance(v, dict) and v.get('type') in ['wikibase-entityid', 'wikibase-item']:
+            if isinstance(v, dict) and v.get('type') in {'wikibase-entityid', 'wikibase-item'}:
                 ref_qid = v['value']['id']
                 prop = p_value[PID_TAG][LABEL_TAG]
                 if ref_qid in wikidata:
@@ -50,8 +66,19 @@ def wikidata_extractor_entities(qids: set[str]) -> dict[str, WikidataThing]:
     return dict([(e.qid, e) for e in WikiDataAPIClient.retrieve_entities(qids)])
 
 
-def wikidata_relations_extractor(wikidata: dict[str, WikidataThing]) \
-        -> dict[str, list[dict[str, Any]]]:
+def wikidata_relations_extractor(wikidata: dict[str, WikidataThing]) -> dict[str, list[dict[str, Any]]]:
+    """Extracts relations from Wikidata.
+
+    Parameters
+    ----------
+    wikidata: dict[str, WikidataThing]
+        Wikidata map
+
+    Returns
+    -------
+    relations: dict[str, list[dict[str, Any]]]
+        Relations map.
+    """
     relations: dict[str, list[dict[str, Any]]] = {}
     quis: set[str] = set(wikidata.keys())
     num_processes: int = min(len(wikidata), multiprocessing.cpu_count())

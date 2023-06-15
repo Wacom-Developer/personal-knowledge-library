@@ -168,17 +168,45 @@ class OntologyLabel(LocalizedContent):
     @staticmethod
     def create_from_dict(dict_label: dict[str, Any], tag_name: str = CONTENT_TAG, locale_name: str = LOCALE_TAG) \
             -> 'OntologyLabel':
+        """
+        Create a label from a dictionary.
+
+        Parameters
+        ----------
+        dict_label: dict[str, Any]
+            Dictionary with the label information
+        tag_name: str
+            Tag name of the content
+        locale_name: str
+            Tag name of the language code
+
+        Returns
+        -------
+        instance: OntologyLabel
+            Instance of the label
+        """
         if tag_name not in dict_label:
             raise ValueError("Dict is does not contain a localized label.")
         if locale_name not in dict_label:
             raise ValueError("Dict is does not contain a language code")
         if IS_MAIN_TAG in dict_label:
             return OntologyLabel(dict_label[tag_name], dict_label[locale_name], dict_label[IS_MAIN_TAG])
-        else:
-            return OntologyLabel(dict_label[tag_name], dict_label[locale_name])
+        return OntologyLabel(dict_label[tag_name], dict_label[locale_name])
 
     @staticmethod
     def create_from_list(param: list[dict]) -> list[LOCALIZED_CONTENT_TAG]:
+        """
+        Create a list of labels from a list of dictionaries.
+        Parameters
+        ----------
+        param: list[dict]
+            List of dictionaries with the label information
+
+        Returns
+        -------
+        instances: list[OntologyLabel]
+            List of label instances
+        """
         return [Label.create_from_dict(p) for p in param]
 
     def __dict__(self):
@@ -235,6 +263,18 @@ class OntologyObjectReference(abc.ABC):
 
     @classmethod
     def parse_iri(cls, iri: str) -> tuple[str, str, str]:
+        """Parse an IRI into its components.
+
+        Parameters
+        ----------
+        iri: str
+            IRI to parse
+
+        Returns
+        -------
+        tuple[str, str, str]
+            Scheme, context and name of the IRI
+        """
         if iri is None:
             raise ValueError('IRI cannot be None')
         if ":" not in iri or "#" not in iri:
@@ -273,6 +313,18 @@ class OntologyClassReference(OntologyObjectReference):
 
     @classmethod
     def parse(cls, iri: str) -> 'OntologyClassReference':
+        """Parse IRI to create an ontology class reference.
+
+        Parameters
+        ----------
+        iri: str
+            IRI of ontology class reference
+
+        Returns
+        -------
+        instance: OntologyClassReference
+            Instance of ontology class reference
+        """
         scheme, context, name = OntologyObjectReference.parse_iri(iri)
         return OntologyClassReference(scheme, context, name)
 
@@ -311,6 +363,18 @@ class OntologyPropertyReference(OntologyObjectReference):
 
     @classmethod
     def parse(cls, iri: str) -> 'OntologyPropertyReference':
+        """ Parses an IRI into an OntologyPropertyReference.
+
+        Parameters
+        ----------
+        iri: str
+            IRI to parse
+
+        Returns
+        -------
+        instance: OntologyPropertyReference
+            Instance of OntologyPropertyReference
+        """
         scheme, context, name = OntologyObjectReference.parse_iri(iri)
         return OntologyPropertyReference(scheme, context, name)
 
@@ -348,12 +412,36 @@ class Comment(LocalizedContent):
 
     @staticmethod
     def create_from_dict(dict_description: dict[str, Any]) -> 'Comment':
+        """
+        Create a comment from a dictionary.
+        Parameters
+        ----------
+        dict_description: dict[str, Any]
+            Dictionary containing the comment
+
+        Returns
+        -------
+        instance: Comment
+            Instance of comment
+        """
         if VALUE_TAG not in dict_description or LANGUAGE_TAG not in dict_description:
             raise ValueError("Dict is does not contain a localized comment.")
         return Comment(dict_description[VALUE_TAG], dict_description[LANGUAGE_TAG])
 
     @staticmethod
     def create_from_list(param: list[dict[str, Any]]) -> list['Comment']:
+        """
+        Create a list of comments from a list of dictionaries.
+        Parameters
+        ----------
+        param: list[dict[str, Any]]
+            List of dictionaries containing the comments
+
+        Returns
+        -------
+        instances: list[Comment]
+            List of instances of comments
+        """
         return [Comment.create_from_dict(p) for p in param]
 
     def __dict__(self):
@@ -419,9 +507,22 @@ class OntologyObject(abc.ABC):
 
     @property
     def labels(self) -> list[OntologyLabel]:
+        """Labels related to ontology object."""
         return self.__labels
 
     def label_for_lang(self, language_code: LanguageCode) -> Optional[OntologyLabel]:
+        """
+        Get label for language_code.
+        Parameters
+        ----------
+        language_code: LanguageCode
+            Language code
+
+        Returns
+        -------
+        label: Optional[OntologyLabel]
+            Label for language_code
+        """
         for label in self.labels:
             if label.language_code == language_code:
                 return label
@@ -433,6 +534,18 @@ class OntologyObject(abc.ABC):
         return self.__comments
 
     def comment_for_lang(self, language_code: LanguageCode) -> Optional[Comment]:
+        """
+        Get comment for language_code.
+        Parameters
+        ----------
+        language_code: LanguageCode
+            Language code
+
+        Returns
+        -------
+        comment: Optional[Comment]
+            Comment for language_code
+        """
         for comment in self.comments:
             if comment.language_code == language_code:
                 return comment
@@ -582,6 +695,19 @@ class OntologyContext(OntologyObject):
 
     @classmethod
     def from_dict(cls, context_dict: dict[str, Any]):
+        """
+        Create OntologyContext from dictionary.
+
+        Parameters
+        ----------
+        context_dict: dict[str, Any]
+            Dictionary containing the context data.
+
+        Returns
+        -------
+        instance: OntologyContext
+            Instance of OntologyContext object.
+        """
         context_data: dict[str, Any] = context_dict['context']
         labels: list[OntologyLabel] = [] if context_data['labels'] is None else \
             [Label(content=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in context_data['labels']]
@@ -650,6 +776,18 @@ class OntologyClass(OntologyObject):
 
     @classmethod
     def from_dict(cls, concept_dict: dict[str, Any]):
+        """Create OntologyClass from dictionary.
+
+        Parameters
+        ----------
+        concept_dict: dict[str, Any]
+            Dictionary containing the concept data.
+
+        Returns
+        -------
+        instance: OntologyClass
+            Instance of OntologyClass object.
+        """
         labels: list[OntologyLabel] = [] if concept_dict[LABELS_TAG] is None else \
             [OntologyLabel(content=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in concept_dict[LABELS_TAG]]
         comments: list[Comment] = [] if concept_dict[COMMENTS_TAG] is None else \
@@ -661,6 +799,14 @@ class OntologyClass(OntologyObject):
 
     @classmethod
     def new(cls) -> 'OntologyClass':
+        """
+        Create new ontology class.
+
+        Returns
+        -------
+        instance: OntologyClass
+            New ontology class.
+        """
         return OntologyClass('', '', THING_CLASS)
 
 
@@ -715,6 +861,13 @@ class OntologyProperty(OntologyObject):
 
     @property
     def is_data_property(self) -> bool:
+        """Check if property is data property.
+
+        Returns
+        -------
+        is_data_property: bool
+            True if property is data property, False otherwise.
+        """
         return self.kind != PropertyType.OBJECT_PROPERTY
 
     @property
@@ -753,6 +906,18 @@ class OntologyProperty(OntologyObject):
 
     @classmethod
     def from_dict(cls, property_dict: dict[str, Any]):
+        """
+        Create ontology property from dictionary.
+        Parameters
+        ----------
+        property_dict: dict[str, Any]
+            Dictionary containing property information.
+
+        Returns
+        -------
+        instance: OntologyProperty
+            Ontology property instance.
+        """
         labels: list[OntologyLabel] = [] if property_dict[LABELS_TAG] is None else \
             [OntologyLabel.create_from_dict(la, locale_name=LANGUAGE_TAG) for la in property_dict[LABELS_TAG]]
         comments: list[Comment] = [] if property_dict['comments'] is None else \
@@ -771,6 +936,18 @@ class OntologyProperty(OntologyObject):
 
     @classmethod
     def new(cls, kind: PropertyType) -> 'OntologyProperty':
+        """
+        Create new ontology property.
+        Parameters
+        ----------
+        kind: PropertyType
+            Kind of property.
+
+        Returns
+        -------
+        instance: OntologyProperty
+            New ontology property.
+        """
         return OntologyProperty(kind, '', '',
                                 OntologyPropertyReference.parse('http://www.w3.org/2002/07/owl#topObjectProperty'))
 
@@ -781,7 +958,6 @@ class EntityProperty(abc.ABC):
     --------------
     Abstract class for the different types of properties.
     """
-    pass
 
 
 class DataProperty(EntityProperty):
@@ -831,6 +1007,19 @@ class DataProperty(EntityProperty):
 
     @staticmethod
     def create_from_dict(data_property_struct: dict):
+        """
+        Create data property from dictionary.
+
+        Parameters
+        ----------
+        data_property_struct: dict
+            Dictionary containing data property information.
+
+        Returns
+        -------
+        instance: DataProperty
+            Data property instance.
+        """
         if CONTENT_TAG not in data_property_struct or \
                 LOCALE_TAG not in data_property_struct \
                 and DATA_PROPERTY_TAG not in data_property_struct:
@@ -840,8 +1029,7 @@ class DataProperty(EntityProperty):
         if DATA_TYPE_TAG in data_property_struct and data_property_struct[DATA_TYPE_TAG] is not None:
             if data_property_struct[DATA_TYPE_TAG] not in INVERSE_DATA_PROPERTY_TYPE_MAPPING:
                 raise ValueError(f"DataProperty data type is not supported. Type: {data_type}")
-            else:
-                data_type = INVERSE_DATA_PROPERTY_TYPE_MAPPING[data_property_struct[DATA_TYPE_TAG]]
+            data_type = INVERSE_DATA_PROPERTY_TYPE_MAPPING[data_property_struct[DATA_TYPE_TAG]]
         return DataProperty(data_property_struct[CONTENT_TAG],
                             OntologyPropertyReference.parse(data_property_type),
                             data_property_struct[LOCALE_TAG], data_type)
@@ -859,6 +1047,19 @@ class DataProperty(EntityProperty):
 
     @staticmethod
     def create_from_list(param: list[dict]) -> list['DataProperty']:
+        """
+        Create data property list from dictionary list.
+
+        Parameters
+        ----------
+        param: list[dict]
+            List of dictionaries containing data property information.
+
+        Returns
+        -------
+        instances: list[DataProperty]
+            List of data property instances.
+        """
         return [DataProperty.create_from_dict(p) for p in param]
 
 
@@ -897,10 +1098,24 @@ class ObjectProperty(EntityProperty):
 
     @property
     def outgoing_relations(self) -> list[Union[str, 'ThingObject']]:
+        """Outgoing relation"""
         return self.__outgoing
 
     @staticmethod
     def create_from_dict(relation_struct: dict[str, Any]) -> tuple[OntologyPropertyReference, 'ObjectProperty']:
+        """
+        Create object property from dictionary.
+
+        Parameters
+        ----------
+        relation_struct: dict[str, Any]
+            Dictionary containing object property information.
+
+        Returns
+        -------
+        relation_type: OntologyPropertyReference
+            OntologyPropertyReference type
+        """
         relation_type: OntologyPropertyReference = \
             OntologyPropertyReference.parse(relation_struct[RELATION_TAG])
         incoming: list[Union[str, ThingObject]] = []
@@ -950,6 +1165,18 @@ class ObjectProperty(EntityProperty):
 
     @staticmethod
     def create_from_list(param: list[dict]) -> dict[OntologyPropertyReference, 'ObjectProperty']:
+        """
+        Create object property list from dictionary list.
+        Parameters
+        ----------
+        param: list[dict]
+            List of dictionaries containing object property information.
+
+        Returns
+        -------
+        instances: dict[OntologyPropertyReference, ObjectProperty]
+            Dictionary of object property instances.
+        """
         return dict([ObjectProperty.create_from_dict(p) for p in param])
 
 
@@ -1005,6 +1232,20 @@ class Ontology:
         return list(self.__classes.values())
 
     def __check_hierarchy__(self, clz: OntologyClassReference, domain: OntologyClassReference) -> bool:
+        """
+        Check if class is in domain.
+        Parameters
+        ----------
+        clz: OntologyClassReference
+            Class reference
+        domain: OntologyClassReference
+            Domain reference
+
+        Returns
+        -------
+        result: bool
+            True if class is in domain.
+        """
         current_clz: Optional[OntologyClass] = self.get_class(clz)
         while current_clz is not None:
             if current_clz.reference == domain:
@@ -1730,6 +1971,18 @@ class ThingObject(abc.ABC):
 
     @staticmethod
     def from_import_dict(entity: dict[str, Any]) -> 'ThingObject':
+        """Creates a ThingObject from a dict.
+
+        Parameters
+        ----------
+        entity: dict[str, Any]
+            Dictionary that contains the data of the entity
+
+        Returns
+        -------
+        instance: ThingObject
+            ThingObject that is created from the dict
+        """
         labels: list[Label] = []
         alias: list[Label] = []
         descriptions: list[Description] = []
@@ -1778,6 +2031,18 @@ class ThingObject(abc.ABC):
 
     @staticmethod
     def from_dict(entity: dict[str, Any]) -> 'ThingObject':
+        """Creates a ThingObject from a dict.
+
+        Parameters
+        ----------
+        entity: dict[str, Any]
+            Dictionary that contains the data of the entity
+
+        Returns
+        -------
+        instance: ThingObject
+            ThingObject that is created from the dict
+        """
         labels: list[Label] = []
         alias: list[Label] = []
         descriptions: list[Description] = []
@@ -1880,7 +2145,7 @@ class ThingObject(abc.ABC):
                     self.add_data_property(DataProperty(value, data_property_type, language_code))
         if OBJECT_PROPERTIES_TAG in state:
             for object_property in state[OBJECT_PROPERTIES_TAG].values():
-                prop, obj = ObjectProperty.create_from_dict(object_property)
+                _, obj = ObjectProperty.create_from_dict(object_property)
                 self.add_relation(obj)
         # Finally, retrieve rights
         if TENANT_RIGHTS_TAG in state:
@@ -1937,6 +2202,18 @@ class InflectionSetting(abc.ABC):
 
     @staticmethod
     def from_dict(entity: dict[str, Any]) -> 'InflectionSetting':
+        """
+        Create inflection setting from dictionary.
+        Parameters
+        ----------
+        entity: dict[str, Any]
+            Entity dictionary
+
+        Returns
+        -------
+        instance: InflectionSetting
+            Inflection setting instance
+        """
         concept_class: str = ''
         inflection_setting: str = ''
         case_sensitive: bool = False
@@ -1951,6 +2228,11 @@ class InflectionSetting(abc.ABC):
 
 # -------------------------------------------------- Encoder -----------------------------------------------------------
 class ThingEncoder(JSONEncoder):
+    """
+    Thing encoder
+    -------------
+    Encoder for ThingObject, Label and Description objects.
+    """
     def default(self, o):
         if isinstance(o, Label):
             return o.__dict__()

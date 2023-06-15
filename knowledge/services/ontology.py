@@ -76,7 +76,7 @@ class OntologyService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}',
-                                          headers=headers, verify=self.verify_calls)
+                                          headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
         if response.ok:
             return OntologyContext.from_dict(response.json())
         return None
@@ -103,10 +103,11 @@ class OntologyService(WacomServiceAPIClient):
         }
         response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}'
                                           f'/metadata',
-                                          headers=headers, verify=self.verify_calls)
+                                          headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
         if response.ok:
             return [InflectionSetting.from_dict(c) for c in response.json() if c.get('concept') is not None
                     and not c.get('concept').startswith('http')]
+        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
 
     def concepts(self, auth_key: str, context: str) -> list[tuple[OntologyClassReference, OntologyClassReference]]:
         """Retrieve all concept classes.
@@ -169,7 +170,7 @@ class OntologyService(WacomServiceAPIClient):
         context_url: str = urllib.parse.quote_plus(context)
         response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/'
                                           f'{context_url}/{OntologyService.PROPERTIES_ENDPOINT}',
-                                          headers=headers, verify=self.verify_calls)
+                                          headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
         # Return empty list if the NOT_FOUND is reported
         if response.status_code == HTTPStatus.NOT_FOUND:
             return []
@@ -634,6 +635,22 @@ class OntologyService(WacomServiceAPIClient):
                                     f'Response code:={response.status_code}, exception:= {response.text}')
 
     def remove_context(self, auth_key: str, name: str, force: bool = False):
+        """Remove context.
+
+        Parameters
+        ----------
+        auth_key: str
+            Auth key from user.
+        name: str
+            Name of the context
+        force: bool (default:= False)
+            Force removal of context
+
+        Returns
+        -------
+        result: dict[str, str]
+            Result from the service
+        """
         headers: dict[str, str] = {
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'

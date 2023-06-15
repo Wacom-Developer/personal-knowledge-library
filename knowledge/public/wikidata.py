@@ -95,6 +95,17 @@ class WikidataProperty:
 
     @classmethod
     def create_from_dict(cls, prop_dict: dict[str, Any]) -> 'WikidataProperty':
+        """Create a property from a dictionary.
+        Parameters
+        ----------
+        prop_dict: dict[str, Any]
+            Property dictionary.
+
+        Returns
+        -------
+        instance: WikidataProperty
+            Instance of WikidataProperty.
+        """
         return WikidataProperty(prop_dict[PID_TAG], prop_dict.get(LABEL_TAG))
 
     def __repr__(self):
@@ -117,22 +128,43 @@ class WikidataSearchResult:
 
     @property
     def qid(self) -> str:
+        """QID of the search result."""
         return self.__qid
 
     @property
     def label(self) -> Label:
+        """Label of the search result."""
         return self.__label
 
     @property
     def description(self) -> Optional[Description]:
+        """Description of the search result."""
         return self.__description
 
     @property
     def repository(self) -> str:
+        """Repository of the search result."""
         return self.__repository
+
+    @property
+    def aliases(self) -> list[str]:
+        """Aliases of the search result."""
+        return self.__aliases
 
     @classmethod
     def from_dict(cls, search_result: dict[str, Any]) -> 'WikidataSearchResult':
+        """
+        Create a search result from a dictionary.
+        Parameters
+        ----------
+        search_result: dict[str, Any]
+            Search result dictionary.
+
+        Returns
+        -------
+        WikidataSearchResult
+            Instance of WikidataSearchResult.
+        """
         qid: str = search_result[ID_TAG]
         display: dict[str, Any] = search_result[DISPLAY_TAG]
         label: Label = Label(content=display[LABEL_TAG]['value'],
@@ -334,10 +366,12 @@ class SiteLinks:
         Source of sitelinks.
     """
 
-    def __init__(self, source: str):
+    def __init__(self, source: str,
+                 urls: Union[dict[str, str], None] = None,
+                 titles: Union[dict[str, str], None] = None):
         self.__source: str = source
-        self.__urls: dict[str, str] = {}
-        self.__title: dict[str, str] = {}
+        self.__urls: dict[str, str] = {} if urls is None else urls
+        self.__title: dict[str, str] = {} if titles is None else titles
 
     @property
     def urls(self) -> dict[str, str]:
@@ -374,10 +408,8 @@ class SiteLinks:
         instance: SiteLinks
             SiteLinks instance.
         """
-        site: SiteLinks = SiteLinks(source=entity_dict[SOURCE_TAG])
-        site.__urls = entity_dict[URLS_TAG]
-        site.__title = entity_dict[TITLES_TAG]
-        return site
+        return SiteLinks(source=entity_dict[SOURCE_TAG], urls=entity_dict.get(URLS_TAG),
+                         titles=entity_dict.get(TITLES_TAG))
 
     def __dict__(self):
         return {
@@ -403,6 +435,12 @@ class WikidataThing:
 
     Parameters
     ----------
+    revision: str
+        Revision of the entity
+    qid: str
+        QID for entity. For new entities the URI is None, as the knowledge graph backend assigns this.
+    modified: datetime
+        Last modified date
     label: list[Label]
         List of labels
     description: list[Description] (optional)
@@ -479,6 +517,7 @@ class WikidataThing:
 
     @property
     def description_languages(self) -> list[str]:
+        """All available languages for a description."""
         return list(self.__description.keys())
 
     def add_label(self, label: str, language_code: str):
@@ -586,23 +625,23 @@ class WikidataThing:
             img = claim.literals[0]['value']
             if isinstance(img, dict) and 'image_url' in img:
                 return img['image_url']
-            else:
-                extension: str = ''
-                conversion: str = ''
-                fixed_img: str = img.replace(' ', '_')
-                if fixed_img.lower().endswith('svg'):
-                    extension: str = '.png'
-                if fixed_img.lower().endswith('tif') or fixed_img.lower().endswith('tiff'):
-                    extension: str = '.jpg'
-                    conversion: str = 'lossy-page1-'
-                hash_img: str = hashlib.md5(fixed_img.encode('utf-8')).hexdigest()
-                url_img_part: str = urllib.parse.quote_plus(fixed_img)
-                return f'https://upload.wikimedia.org/wikipedia/commons/thumb/' \
-                       f'{hash_img[0]}/{hash_img[:2]}/{url_img_part}/{dpi}px-{conversion + url_img_part + extension}'
+            extension: str = ''
+            conversion: str = ''
+            fixed_img: str = img.replace(' ', '_')
+            if fixed_img.lower().endswith('svg'):
+                extension: str = '.png'
+            if fixed_img.lower().endswith('tif') or fixed_img.lower().endswith('tiff'):
+                extension: str = '.jpg'
+                conversion: str = 'lossy-page1-'
+            hash_img: str = hashlib.md5(fixed_img.encode('utf-8')).hexdigest()
+            url_img_part: str = urllib.parse.quote_plus(fixed_img)
+            return f'https://upload.wikimedia.org/wikipedia/commons/thumb/' \
+                   f'{hash_img[0]}/{hash_img[:2]}/{url_img_part}/{dpi}px-{conversion + url_img_part + extension}'
         return None
 
     @property
     def instance_of(self) -> list[WikidataClass]:
+        """Instance of."""
         claim: Optional[Claim] = self.claims.get(INSTANCE_OF_PROPERTY)
         if claim:
             return [WikidataClass(li['value'].get('id')) for li in claim.literals if 'value' in li]
@@ -739,7 +778,7 @@ class WikidataThing:
                         val: dict[str, Any] = {}
                         if data_type == 'monolingualtext':
                             val = data_value['value']
-                        elif data_type in ['string', 'external-id', 'url']:
+                        elif data_type in {'string', 'external-id', 'url'}:
                             val = data_value['value']
                         elif data_type == 'commonsMedia':
                             val = {
@@ -757,10 +796,10 @@ class WikidataThing:
                             val = {
                                 'id': data_value['value']['id']
                             }
-                        elif data_type in ['geo-shape', 'wikibase-property']:
+                        elif data_type in {'geo-shape', 'wikibase-property'}:
                             # Not supported
                             val = data_value['value']
-                        elif data_type in ['globe-coordinate', 'globecoordinate']:
+                        elif data_type in {'globe-coordinate', 'globecoordinate'}:
                             val = {
                                 'longitude': data_value['value'].get('longitude'),
                                 'latitude': data_value['value'].get('latitude'),
@@ -768,7 +807,7 @@ class WikidataThing:
                                 'globe': data_value['value'].get('globe'),
                                 'precision': data_value['value'].get('precision')
                             }
-                        elif data_type in ["wikibase-entityid", 'wikibase-item']:
+                        elif data_type in {"wikibase-entityid", 'wikibase-item'}:
                             val = {
                                 'id': data_value['value']['id']
                             }
@@ -820,14 +859,17 @@ class WikidataThing:
 
     @property
     def claims(self) -> dict[str, Claim]:
+        """ Returns the claims. """
         return self.__claims
 
     @property
     def claims_dict(self) -> dict[str, Claim]:
+        """ Returns the claims as a dictionary. """
         return dict([(p, c) for p, c in self.__claims.items()])
 
     @property
     def claim_properties(self) -> list[WikidataProperty]:
+        """ Returns the list of properties of the claims. """
         return [p.pid for p in self.__claims.values()]
 
     def add_claim(self, pid: str, claim: Claim):
@@ -888,8 +930,22 @@ class WikidataThing:
             self.__sitelinks[wiki_source] = SiteLinks.create_from_dict(site_link)
 
 
-def detect_cycle(super_class_qid: str, cycle_detector: list[tuple[str, str]]):
-    return Any(e[0] == super_class_qid for e in cycle_detector)
+def detect_cycle(super_class_qid: str, cycle_detector: list[tuple[str, str]]) -> bool:
+    """
+    Detects if there is a cycle in the super class hierarchy.
+    Parameters
+    ----------
+    super_class_qid: str
+        Super class QID
+    cycle_detector: list[tuple[str, str]]
+        List of tuples of the form (subclass_qid, super_class_qid)
+
+    Returns
+    -------
+    cycle: bool
+        True if there is a cycle, False otherwise.
+    """
+    return any(e[0] == super_class_qid for e in cycle_detector)
 
 
 class WikiDataAPIClient(ABC):
@@ -941,6 +997,18 @@ class WikiDataAPIClient(ABC):
 
     @staticmethod
     def superclasses(qid: str) -> Optional[WikidataClass]:
+        """
+        Returns the superclasses of the given QID.
+        Parameters
+        ----------
+        qid: str
+            Wikidata QID
+
+        Returns
+        -------
+        wikidata_classes: Optional[WikidataClass]
+            Wikidata class
+        """
         query: str = f'''SELECT ?class ?classLabel ?superclass ?superclassLabel
         WHERE
         {{
