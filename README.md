@@ -1,9 +1,7 @@
-# Wacom Personal Knowledge Library
+# Wacom Private Knowledge Library
 
-The library and the cloud services are still under development. 
-The required access tokens are only available for selected partner companies.
-
-> :warning:  Its is still under development, so **we do not recommend using it yet for production environments**. Moreover, it is not following any formal QA and release process, yet. :fire:
+The required tenant API key is only available for selected partner companies.
+Please contact your Wacom representative for more information.
 
 ## Introduction
 
@@ -17,7 +15,7 @@ In the domain of digital ink this means:
 The following illustration shows the different layers of knowledge:
 ![Levels of ink knowledge layers](https://github.com/Wacom-Developer/personal-knowledge-library/blob/main/assets/knowledge-levels.png)
 
-For handling semantics, Wacom introduced the Wacom Personal Knowledge (WPK) cloud service to manage personal ontologies and its associated personal knowledge graph.
+For handling semantics, Wacom introduced the Wacom Private Knowledge (WPK) cloud service to manage personal ontologies and its associated personal knowledge graph.
 
 This library provide simplified access to Wacom's personal knowledge cloud service.
 It contains:
@@ -38,11 +36,37 @@ It contains:
 - Add entities to knowledge graph
 - Access object properties
 
+**Search service:**
+
+- Search for entities for labels and descriptions with a given language
+- Search for literals (data properties) 
+- Search for relations (object properties)
+
+**Group service:**
+
+- List all groups
+- Add groups, modify groups, delete groups
+- Add users and entities to groups
+
+**Ontology service:**
+
+- List all Ontology structures
+- Modify Ontology structures
+
+**Named Entity Linking service:**
+
+- Linking words to knowledge entities from graph in a given text (Ontology-based Named Entity Linking)
+
+**Wikidata connector:**
+
+- Import entities from Wikidata
+- Mapping Wikidata entities to WPK entities
+
 # Technology stack
 
 ## Domain Knowledge
 
-The tasks of the ontology within Wacom's personal knowledge system is to formalised the domain the technology is used in, such as education-, smart home-, or creative domein.
+The tasks of the ontology within Wacom's private knowledge system is to formalised the domain the technology is used in, such as education-, smart home-, or creative domein.
 The domain model will be the foundation for the entities collected within the knowledge graph, describing real world concepts in a formal language understood by artificial intelligence system:
 
 - Foundation for structured data, knowledge representation as concepts and relations among concepts
@@ -67,6 +91,28 @@ An ontology defines (specifies) the concepts, relationships, and other distincti
 
 # Functionality
 
+## Import Format
+
+For importing entities into the knowledge graph, the tools/import_entities.py script can be used.
+
+The ThingObject support a NDJSON based import format, where the individual JSON files can contain the following structure.
+
+| Field name             | Subfield name | Data Structure | Description                                                                                    |
+|------------------------|---------------|----------------|------------------------------------------------------------------------------------------------|
+| source_reference_id    |               | str            | A unique identifier for the entity used in the source system                                  |
+| source_system          |               | str            | The source system describes the original source of the entity, such as wikidata, youtube, ... |
+| image                  |               | str            | A string representing the URL of the entity's icon.                                           |
+| labels                 |               | array          | An array of label objects, where each object has the following fields:                       |
+|                        | value         | str            | A string representing the label text in the specified locale.                                |
+|                        | locale        | str            | A string combining the ISO-3166 country code and the ISO-639 language code (e.g., "en-US").  |
+|                        | isMain        | bool           | A boolean flag indicating if this label is the main label for the entity (true) or an alias (false). |
+| descriptions           |               | array          | An array of description objects, where each object has the following fields:                 |
+|                        | description   | str            | A string representing the description text in the specified locale.                          |
+|                        | locale        | str            | A string combining the ISO-3166 country code and the ISO-639 language code (e.g., "en-US").  |
+| type                   |               | str            | A string representing the IRI of the ontology class for this entity.                         |
+| literals               |               | array[map]     | An array of data property objects, where each object has the following fields:               |
+
+
 ## Access API
 
 The personal knowledge graph backend is implement as a multi-tenancy system.
@@ -75,7 +121,7 @@ Thus, several tenants can be logically separated from each other and different o
 ![Tenant concept](https://github.com/Wacom-Developer/personal-knowledge-library/blob/main/assets/tenant-concept.png)
 
 In general, a tenant with their users, groups, and entities are logically separated.
-Physically the entities are store in the same instance of the Wacom Personal Knowledge (WPK) backend database system.
+Physically the entities are store in the same instance of the Wacom Private Knowledge (WPK) backend database system.
 
 The user management is rather limited, each organisation must provide their own authentication service and user management.
 The backend only has a reference of the user (*“shadow user”*) by an **external user id**.
@@ -151,7 +197,7 @@ This samples shows how to work with graph service.
 
 ```python
 import argparse
-from typing import Optional, List, Dict
+from typing import Optional
 
 from knowledge.base.entity import LanguageCode, Description, Label
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, ThingObject, ObjectProperty
@@ -176,13 +222,14 @@ CREATED: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:core
 HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:creative#hasArtstyle')
 
 
-def print_entity(entity: ThingObject, list_idx: int, auth_key: str, client: WacomKnowledgeService, short: bool = False):
+def print_entity(display_entity: ThingObject, list_idx: int, auth_key: str, client: WacomKnowledgeService,
+                 short: bool = False):
     """
     Printing entity details.
 
     Parameters
     ----------
-    entity: ThingObject
+    display_entity: ThingObject
         Entity with properties
     list_idx: int
         Index with a list
@@ -193,19 +240,19 @@ def print_entity(entity: ThingObject, list_idx: int, auth_key: str, client: Waco
     short: bool
         Short summary
     """
-    print(f'[{list_idx}] : {entity.uri} <{entity.concept_type.iri}>')
-    if len(entity.label) > 0:
+    print(f'[{list_idx}] : {display_entity.uri} <{display_entity.concept_type.iri}>')
+    if len(display_entity.label) > 0:
         print('    | [Labels]')
-        for la in entity.label:
+        for la in display_entity.label:
             print(f'    |     |- "{la.content}"@{la.language_code}')
         print('    |')
     if not short:
-        if len(entity.alias) > 0:
+        if len(display_entity.alias) > 0:
             print('    | [Alias]')
-            for la in entity.alias:
+            for la in display_entity.alias:
                 print(f'    |     |- "{la.content}"@{la.language_code}')
             print('    |')
-        if len(entity.data_properties) > 0:
+        if len(display_entity.data_properties) > 0:
             print('    | [Attributes]')
             for data_property, labels in entity.data_properties.items():
                 print(f'    |    |- {data_property.iri}:')
@@ -213,7 +260,7 @@ def print_entity(entity: ThingObject, list_idx: int, auth_key: str, client: Waco
                     print(f'    |    |-- "{li.value}"@{li.language_code}')
             print('    |')
 
-        relations_obj: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key,
+        relations_obj: dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key,
                                                                                           uri=entity.uri)
         if len(relations_obj) > 0:
             print('    | [Relations]')
@@ -226,11 +273,11 @@ def print_entity(entity: ThingObject, list_idx: int, auth_key: str, client: Waco
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
+    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Private Knowledge.",
                         required=True)
-    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
+    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Private Knowledge.",
                         required=True)
-    parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com',
+    parser.add_argument("-i", "--instance", default='https://private-knowledge.wacom.com',
                         help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
@@ -250,16 +297,16 @@ if __name__ == '__main__':
                                                                     language_code=LanguageCode('en_US'), limit=1000)
     leo: Optional[ThingObject] = None
     s_idx: int = 1
-    for entity in res_entities:
+    for res_entity in res_entities:
         #  Entity must be a person and the label match with full string
-        if entity.concept_type == PERSON_CLASS and LEONARDO_DA_VINCI in [l.content for l in entity.label]:
-            leo = entity
+        if res_entity.concept_type == PERSON_CLASS and LEONARDO_DA_VINCI in [la.content for la in res_entity.label]:
+            leo = res_entity
             break
 
     print('-----------------------------------------------------------------------------------------------------------')
     print(' What artwork exists in the knowledge graph.')
     print('-----------------------------------------------------------------------------------------------------------')
-    relations_dict: Dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(auth_key=user_token,
+    relations_dict: dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(auth_key=user_token,
                                                                                                  uri=leo.uri)
     print(f' Artwork of {leo.label}')
     print('-----------------------------------------------------------------------------------------------------------')
@@ -273,17 +320,17 @@ if __name__ == '__main__':
     print('-----------------------------------------------------------------------------------------------------------')
 
     # Main labels for entity
-    artwork_labels: List[Label] = [
+    artwork_labels: list[Label] = [
         Label('Ginevra Gherardini', LanguageCode('en_US')),
         Label('Ginevra Gherardini', LanguageCode('de_DE'))
     ]
     # Alias labels for entity
-    artwork_alias: List[Label] = [
+    artwork_alias: list[Label] = [
         Label("Ginevra", LanguageCode('en_US')),
         Label("Ginevra", LanguageCode('de_DE'))
     ]
     # Topic description
-    artwork_description: List[Description] = [
+    artwork_description: list[Description] = [
         Description('Oil painting of Mona Lisa\' sister', LanguageCode('en_US')),
         Description('Ölgemälde von Mona Lisa\' Schwester', LanguageCode('de_DE'))
     ]
@@ -386,7 +433,7 @@ if __name__ == '__main__':
         pulled_entities: int = len(entities)
         if pulled_entities == 0:
             break
-        delete_uris: List[str] = [e.uri for e in entities]
+        delete_uris: list[str] = [e.uri for e in entities]
         print(f'Cleanup. Delete entities: {delete_uris}')
         knowledge_client.delete_entities(auth_key=user_token, uris=delete_uris, force=True)
         page_number += 1
@@ -400,13 +447,17 @@ Performing Named Entity Linking (NEL) on text and Universal Ink Model.
 
 ```python
 import argparse
-from typing import List, Dict
+
+import urllib3
 
 from knowledge.base.entity import LanguageCode
 from knowledge.base.ontology import OntologyPropertyReference, ThingObject, ObjectProperty
 from knowledge.nel.base import KnowledgeGraphEntity
 from knowledge.nel.engine import WacomEntityLinkingEngine
 from knowledge.services.graph import WacomKnowledgeService
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 
 LANGUAGE_CODE: LanguageCode = LanguageCode("en_US")
 TEXT: str = "Leonardo da Vinci painted the Mona Lisa."
@@ -439,7 +490,7 @@ def print_entity(entity: KnowledgeGraphEntity, list_idx: int, auth_key: str, cli
         for la in thing.alias:
             print(f'    |     |- "{la.content}"@{la.language_code}')
         print('    |')
-    relations: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key, uri=thing.uri)
+    relations: dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key, uri=thing.uri)
     if len(thing.data_properties) > 0:
         print('    | [Attributes]')
         for data_property, labels in thing.data_properties.items():
@@ -458,11 +509,11 @@ def print_entity(entity: KnowledgeGraphEntity, list_idx: int, auth_key: str, cli
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
+    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Private Knowledge.",
                         required=True)
-    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
+    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Private Knowledge.",
                         required=True)
-    parser.add_argument("-i", "--instance", default="https://stage-private-knowledge.wacom.com", help="URL of instance")
+    parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
@@ -477,7 +528,7 @@ if __name__ == '__main__':
     )
     # Use special tenant for testing:  Unit-test tenant
     user_token, refresh_token, expiration_time = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
-    entities: List[KnowledgeGraphEntity] = nel_client.\
+    entities: list[KnowledgeGraphEntity] = nel_client.\
         link_personal_entities(auth_key=user_token, text=TEXT,
                                language_code=LANGUAGE_CODE)
     idx: int = 1
@@ -496,7 +547,7 @@ The sample shows, how access to entities can be shared with a group of users or 
 
 ```python
 import argparse
-from typing import List
+
 from knowledge.base.entity import LanguageCode, Label, Description
 from knowledge.base.ontology import OntologyClassReference, ThingObject
 from knowledge.services.base import WacomServiceException
@@ -509,15 +560,22 @@ TOPIC_CLASS: OntologyClassReference = OntologyClassReference('wacom', 'core', 'T
 
 
 def create_entity() -> ThingObject:
+    """Create a new entity.
+
+    Returns
+    -------
+    entity: ThingObject
+        Entity object
+    """
     # Main labels for entity
-    topic_labels: List[Label] = [
+    topic_labels: list[Label] = [
         Label('Hidden', LanguageCode('en_US')),
         Label('Versteckt', LanguageCode('de_DE')),
         Label('隠れた', LanguageCode('ja_JP'))
     ]
 
     # Topic description
-    topic_description: List[Description] = [
+    topic_description: list[Description] = [
         Description('Hidden entity to explain access management.', LanguageCode('en_US')),
         Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
     ]
@@ -528,11 +586,11 @@ def create_entity() -> ThingObject:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
+    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Private Knowledge.",
                         required=True)
-    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
+    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Private Knowledge.",
                         required=True)
-    parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com',
+    parser.add_argument("-i", "--instance", default='https://private-knowledge.wacom.com',
                         help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
@@ -544,11 +602,11 @@ if __name__ == '__main__':
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=args.instance)
     # Group Management
     group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
-    admin_token, refresh_token, expiration_time  = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    admin_token, refresh_token, expiration_time = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     # Now, we create a users
-    u1, u1_token = user_management.create_user(TENANT_KEY, "u1")
-    u2, u2_token = user_management.create_user(TENANT_KEY, "u2")
-    u3, u3_token = user_management.create_user(TENANT_KEY, "u3")
+    u1, u1_token, _, _ = user_management.create_user(TENANT_KEY, "u1")
+    u2, u2_token, _, _ = user_management.create_user(TENANT_KEY, "u2")
+    u3, u3_token, _, _ = user_management.create_user(TENANT_KEY, "u3")
 
     # Now, let's create an entity
     thing: ThingObject = create_entity()
@@ -610,12 +668,26 @@ if __name__ == '__main__':
 The samples show how the ontology can be extended and new entities can be added using the added classes.
 
 ```python
+# -*- coding: utf-8 -*-
+# Copyright © 2021-2022 Wacom Authors. All Rights Reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language_code governing permissions and
+#  limitations under the License.
 import argparse
-from typing import List, Optional
+from typing import Optional
 
-from knowledge.base.entity import OntologyContext, Label, LanguageCode, Description
+from knowledge.base.entity import Label, LanguageCode, Description
 from knowledge.base.ontology import DataPropertyType, OntologyClassReference, OntologyPropertyReference, ThingObject, \
-    DataProperty
+    DataProperty, OntologyContext
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
 
@@ -633,13 +705,20 @@ STAGE_NAME: OntologyPropertyReference = OntologyPropertyReference.parse("demo:cr
 
 
 def create_artist() -> ThingObject:
+    """
+    Create a new artist entity.
+    Returns
+    -------
+    instance: ThingObject
+        Artist entity
+    """
     # Main labels for entity
-    topic_labels: List[Label] = [
+    topic_labels: list[Label] = [
         Label('Gian Giacomo Caprotti', LanguageCode('en_US'))
     ]
 
     # Topic description
-    topic_description: List[Description] = [
+    topic_description: list[Description] = [
         Description('Hidden entity to explain access management.', LanguageCode('en_US')),
         Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
     ]
@@ -655,44 +734,42 @@ def create_artist() -> ThingObject:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
+    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Private Knowledge.",
                         required=True)
-    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
+    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Private Knowledge.",
                         required=True)
-    parser.add_argument("-i", "--instance", default="https://stage-private-knowledge.wacom.com", help="URL of instance")
+    parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom Ontology REST API Client
     ontology_client: OntologyService = OntologyService(service_url=args.instance)
-    admin_token, refresh_token, expiration_time  = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    admin_token, refresh_token, expiration_time = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Ontology Creation Demo",
         service_url=args.instance)
-    contexts: List[OntologyContext] = ontology_client.contexts(admin_token)
-    if len(contexts) == 0:
+    context: Optional[OntologyContext] = ontology_client.context(admin_token)
+    if context is None:
         # First, create a context for the ontology
         ontology_client.create_context(admin_token, name=CONTEXT_NAME, base_uri=f'demo:{CONTEXT_NAME}')
         context_name: str = CONTEXT_NAME
     else:
-        context_name: str = contexts[0].context
+        context_name: str = context.context
     # Creating a class which is a subclass of a person
-    ontology_client.create_concept(admin_token, CONTEXT_NAME, reference=ARTIST_TYPE, subclass_of=PERSON_TYPE)
+    ontology_client.create_concept(admin_token, context_name, reference=ARTIST_TYPE, subclass_of=PERSON_TYPE)
 
     # Object properties
-    ontology_client.create_object_property(auth_key=admin_token, context=CONTEXT_NAME,
-                                           reference=IS_INSPIRED_BY, domains_cls=[ARTIST_TYPE], 
-                                           ranges_cls=[PERSON_TYPE],
-                                           inverse_of=None, subproperty_of=None)
+    ontology_client.create_object_property(auth_key=admin_token, context=context_name,
+                                           reference=IS_INSPIRED_BY, domains_cls=[ARTIST_TYPE],
+                                           ranges_cls=[PERSON_TYPE], inverse_of=None, subproperty_of=None)
     # Data properties
-    ontology_client.create_data_property(auth_key=admin_token, context=CONTEXT_NAME,
+    ontology_client.create_data_property(auth_key=admin_token, context=context_name,
                                          reference=STAGE_NAME,
                                          domains_cls=[ARTIST_TYPE],
                                          ranges_cls=[DataPropertyType.STRING],
                                          subproperty_of=None)
-
     # Commit the changes of the ontology. This is very important to confirm changes.
-    ontology_client.commit(admin_token, CONTEXT_NAME)
+    ontology_client.commit(admin_token, context_name)
     # Trigger graph service. After the update the ontology is available and the new entities can be created
     knowledge_client.ontology_update(admin_token)
 
@@ -708,6 +785,7 @@ if __name__ == '__main__':
     artist_student: ThingObject = create_artist()
     artist_student_uri: str = knowledge_client.create_entity(admin_token, artist_student)
     knowledge_client.create_relation(admin_token, artist_student_uri, IS_INSPIRED_BY, leo.uri)
+
 ```
 
 ## Tools
@@ -725,7 +803,7 @@ Listing the entities for tenant.
 **Parameters:**
 
 - _-i INSTANCE, --instance INSTANCE_ - URL of instance
-- _-u USER, --user USER_ - External ID to identify user of the Wacom Personal Knowledge 
+- _-u USER, --user USER_ - External ID to identify user of the Wacom Private Knowledge 
 - _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
 - _-r, --relations (optional)_ -  Requesting the relations for each entity
 
@@ -741,42 +819,48 @@ Dump all entities of a user to a ndjson file.
 
 - _-i INSTANCE, --instance INSTANCE_ - URL of instance. (default:=https://private-
                         knowledge.wacom.com)
-- _-u USER, --user USER_ - External ID to identify user of the Wacom Personal Knowledge 
+- _-u USER, --user USER_ - External ID to identify user of the Wacom Private Knowledge 
 - _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
 - _-r, --relations (optional)_ -  Requesting the relations for each entity
 - _-a, --all (optional)_ - All entities the user as access to, otherwise only his own entities are dumped.
 - _-p, --images (optional)_ - Include the images in the dump.
 - _-d DUMP, --dump DUMP_ -  Defines the location of the dump path.
  
-### Push entities script
+### Import entities script
 
 Pushing entities to knowledge graph.
 
 ```bash
->> python push_entities.py [-h] [-u USER] [-t TENANT] [-r] [-i INSTANCE]
+>> python import_entities.py [-h] [-u USER] [-t TENANT] [-g GROUP_NAME] [-r] [-i INSTANCE]
 ```
 
 **Parameters:**
 
 - _-i INSTANCE, --instance INSTANCE_ - URL of instance
-- _-u USER, --user USER_ - External ID to identify user of the Wacom Personal Knowledge 
+- _-u USER, --user USER_ - External ID to identify user of the Wacom Private Knowledge 
 - _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
 - _-i CACHE, --cache CACHE_ - Path to entities that must be imported.
-  
-### Reset
+- _-g GROUP_NAME, --group_id GROUP_NAME_ - Group name where the entities will be assigned to. 
+- _-p , --public_ - Group name where the entities will be assigned to.
 
-Resets a tenant by removing entities, groups, and users. 
+### Wikidata scrapper
 
 ```bash
->> python reset.py [-h] [-u USER] [-t TENANT] [-i INSTANCE]
+usage: wikidata_scrapper.py [-h] -u USER -t TENANT [-i INSTANCE] [-c CACHE]
+                            [-m MAPPING] [-d DEPTH]
+                            [-l LANGUAGES [LANGUAGES ...]]
+wikidata_scrapper.py: error: the following arguments are required: -u/--user, -t/--tenant
 ```
 
 **Parameters:**
 
 - _-i INSTANCE, --instance INSTANCE_ - URL of instance
-- _-u USER, --user USER_ - External ID to identify user of the Wacom Personal Knowledge 
+- _-u USER, --user USER_ - External ID to identify user of the Wacom Private Knowledge
 - _-t TENANT, --tenant TENANT_ - Tenant key to identify tenant
-- _-i CACHE, --cache CACHE_ - Path to entities that must be imported.  
+- _-c CACHE, --cache CACHE_ - Path to entities that must are exports in import format.
+- _-m MAPPING, --mapping MAPPING_ - Mapping file to configure the wikidata mapping.
+- _-d DEPTH, --depth DEPTH_ - Depth of the graph to be scrapped.
+- _-l LANGUAGES [LANGUAGES ...], --languages LANGUAGES [LANGUAGES ...]_ - Languages to be scrapped.
   
 # Documentation
 

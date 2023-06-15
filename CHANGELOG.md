@@ -1,3 +1,12 @@
+2023/6/15 - RELEASE 1.0.0
+==========================
+- Improve the wikidata scrapping 
+- Refactoring typing
+- pylint fixes
+- Adding some helper functions for the entity management
+- Fixing issues with unit tests
+- Move Ontology classes to the ontology module
+
 2023/5/23 - RELEASE 0.9.6
 ==========================
 - Improve the session management
