@@ -812,7 +812,8 @@ Listing the entities for tenant.
 Dump all entities of a user to a ndjson file. 
 
 ```bash
->> python  export_entities.py [-h] -u USER -t TENANT [-r] [-a] [-p] [-d DUMP] [-i INSTANCE]
+>> python export_entities.py [-h] -u USER -t TENANT [-r] [-a] [-p] [-d DUMP]
+                              [-c CONCEPT_TYPE] [-i INSTANCE]
 ```
 
 **Parameters:**

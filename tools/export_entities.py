@@ -2,7 +2,7 @@
 # Copyright © 2023 Wacom. All rights reserved.
 import argparse
 from pathlib import Path
-from typing import Union, Dict
+from typing import Union, Dict, List
 
 import ndjson
 import requests
@@ -14,7 +14,6 @@ from knowledge.base.ontology import OntologyClassReference, DataProperty, SYSTEM
 from knowledge.base.ontology import ThingObject
 from knowledge.services.graph import WacomKnowledgeService
 
-THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
 EN_US: LanguageCode = LanguageCode('en_US')
 
 
@@ -85,10 +84,11 @@ if __name__ == '__main__':
                         help="All entities the user as access to, otherwise only his own entities are dumped.")
     parser.add_argument("-p", "--images", action="store_true", help="Include the images in the dump.")
     parser.add_argument("-d", "--dump", default='dump.ndjson', help="Defines the location of the dump path.")
+    parser.add_argument("-c", "--concept_type", default='wacom:core#Thing', help="Concept type to filter.")
     parser.add_argument("-i", "--instance", default='https://private-knowledge.wacom.com',
                         help="URL of instance. (default:=https://private-knowledge.wacom.com)")
     args = parser.parse_args()
-
+    filter_type: OntologyClassReference = OntologyClassReference.parse(args.concept_type)
     # Wacom personal knowledge REST API Client
     wacom_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Wacom Knowledge Listing",
@@ -112,7 +112,7 @@ if __name__ == '__main__':
         while True:
             # pull
             entities, total_number, next_page_id = wacom_client.listing(user_auth_key,
-                                                                        THING_OBJECT,
+                                                                        filter_by_type=filter_type,
                                                                         page_id=next_page_id, limit=1000,
                                                                         estimate_count=True)
             if args.relations:
@@ -148,5 +148,5 @@ if __name__ == '__main__':
                 if isinstance(e, ThingObject):
                     pbar.set_description(f'Export entity: {e.label_lang(LanguageCode("en_US"))}')
                 # Write entity to cache file
-                writer.writerow(e.__dict__())
+                writer.writerow(e.__import_format_dict__())
             page_number += 1
