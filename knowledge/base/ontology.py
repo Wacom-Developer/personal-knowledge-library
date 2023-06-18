@@ -2150,6 +2150,8 @@ class ThingObject(abc.ABC):
         # Finally, retrieve rights
         if TENANT_RIGHTS_TAG in state:
             self.tenant_access_right = TenantAccessRight.parse(state[TENANT_RIGHTS_TAG])
+        else:
+            self.tenant_access_right = TenantAccessRight()
 
     def __hash__(self):
         return 0
