@@ -1,3 +1,9 @@
+2023/6/18 - RELEASE 1.0.3
+==========================
+- Minor fixe: State of thing object did not handle tenant access rights
+- Adding support for fix ontology endpoint 
+- Adding support for url data type in wikidata
+
 2023/6/15 - RELEASE 1.0.2
 ==========================
 - Minor fix: Update entity did ignore the sendToNEL flag
