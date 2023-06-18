@@ -855,7 +855,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         raise WacomServiceException(f'Failed to list the entities (since:= {page_id}, limit:={limit}). '
                                     f'Response code:={response.status_code}, exception:= {response.content}')
 
-    def ontology_update(self, auth_key: str):
+    def ontology_update(self, auth_key: str, fix: bool = False, max_retries: int = 3, backoff_factor: float = 0.1):
         """
         Update the ontology.
 
@@ -866,22 +866,34 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ----------
         auth_key: str
             Auth key from user
+        fix: bool [default:=False]
+            Fix the ontology if tenant is in inconsistent state.
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a.
 
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code and commit failed.
         """
-        url: str = f'{self.service_base_url}{WacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}'
+        url: str = f'{self.service_base_url}{WacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}{"/fix" if fix else ""}'
         # Header with auth token
         headers: dict = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.patch(url, headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
-        if not response.ok:
-            raise WacomServiceException(f'Ontology update fails. '
-                                        f'Response code:={response.status_code}, exception:= {response.content}')
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=[502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.patch(url, headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
+            if not response.ok:
+                raise WacomServiceException(f'Ontology update fails. '
+                                            f'Response code:={response.status_code}, exception:= {response.content}')
 
     def search_all(self, auth_key: str, search_term: str, language_code: LanguageCode,
                    types: List[OntologyClassReference], limit: int = 30, next_page_id: str = None) \
