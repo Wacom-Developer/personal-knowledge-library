@@ -109,6 +109,8 @@ def convert_dict(structure: Dict[str, Any], locale: str) -> Optional[str]:
             return None
         elif structure_type == 'globe-coordinate' and isinstance(value, dict):
             return f'{value["latitude"]},{value["longitude"]}'
+        elif structure_type == 'url' and isinstance(value, str):
+            return value
     raise NotImplementedError()
 
 
@@ -188,15 +190,18 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
             property_type: OntologyPropertyReference = OntologyPropertyReference.parse(prop.iri)
             for locale in supported_locales:
                 for c in cl.literals:
-                    if isinstance(c, dict):
-                        content: Optional[str] = convert_dict(c, locale)
-                        if get_mapping_configuration().check_data_property_range(property_type, content):
-                            thing.add_data_property(DataProperty(content=content,
-                                                                 property_ref=property_type,
+                    try:
+                        if isinstance(c, dict):
+                            content: Optional[str] = convert_dict(c, locale)
+                            if get_mapping_configuration().check_data_property_range(property_type, content):
+                                thing.add_data_property(DataProperty(content=content,
+                                                                     property_ref=property_type,
+                                                                     language_code=LanguageCode(locale)))
+                        elif isinstance(c, (str, float, int)):
+                            thing.add_data_property(DataProperty(content=c, property_ref=property_type,
                                                                  language_code=LanguageCode(locale)))
-                    elif isinstance(c, (str, float, int)):
-                        thing.add_data_property(DataProperty(content=c, property_ref=property_type,
-                                                             language_code=LanguageCode(locale)))
+                    except NotImplementedError as e:
+                        import_warnings.append({'qid': qid, 'pid': pid, 'error': str(e)})
     for relation in all_relations.get(qid, []):
         prop: Optional[PropertyConfiguration] = get_mapping_configuration().guess_property(relation['predicate']['pid'],
                                                                                            thing.concept_type)
