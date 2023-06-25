@@ -1986,13 +1986,31 @@ class ThingObject(abc.ABC):
         labels: List[Label] = []
         alias: List[Label] = []
         descriptions: List[Description] = []
-
+        main_labels: Dict[str, bool] = {}
         for label in entity[LABELS_TAG]:
             if label[LOCALE_TAG] in SUPPORTED_LOCALES:
                 if label[IS_MAIN_TAG]:
-                    labels.append(Label.create_from_dict(label))
+                    main_label: Label = Label.create_from_dict(label)
+                    main_labels[label[LOCALE_TAG]] = True
+                    labels.append(main_label)
                 else:
-                    alias.append(Label.create_from_dict(label))
+                    alias_label: Label = Label.create_from_dict(label)
+                    if alias_label.language_code not in main_labels:
+                        main_labels[alias_label.language_code] = False
+                    alias.append(alias_label)
+        for lang_code, is_main in main_labels.items():
+            if not is_main:
+                la_idx: int = 0
+                while la_idx < len(alias):
+                    # Fix things where there is no main label
+                    if alias[la_idx].language_code == lang_code:
+                        al: Label = alias[la_idx]
+                        labels.append(Label(al.content, al.language_code, main=True))
+                        del alias[la_idx]
+                    else:
+                        la_idx += 1
+
+
 
         for desc in entity[DESCRIPTIONS_TAG]:
             if desc[LOCALE_TAG] in SUPPORTED_LOCALES:
