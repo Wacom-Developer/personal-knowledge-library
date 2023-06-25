@@ -105,4 +105,4 @@ class UserFlow(TestCase):
             if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
                 logging.info(f'Clean user {u_i.external_user_id}')
                 cls.user_management.delete_user(cls.tenant_api_key,
-                                                external_id=u_i.external_user_id, internal_id=u_i.id)
+                                                external_id=u_i.external_user_id, internal_id=u_i.id, force=True)
