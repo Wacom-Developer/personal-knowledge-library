@@ -187,6 +187,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                              uri=e[URI_TAG])
             thing.group_ids = e.get(GROUP_IDS_TAG, [])
             thing.owner_id = e.get(OWNER_ID_TAG)
+            thing.use_for_nel = e.get(SEND_TO_NEL_TAG, False)
             # Set the alias
             thing.alias = aliases
             # Configure data properties
