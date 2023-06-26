@@ -1,3 +1,9 @@
+2023/6/26 - RELEASE 1.0.4
+==========================
+- Minor fix: sendToNEL flag parse in entity pull
+- Automatically fix issue with only alias for a language code defined in entity
+
+
 2023/6/18 - RELEASE 1.0.3
 ==========================
 - Minor fixe: State of thing object did not handle tenant access rights
