@@ -222,6 +222,6 @@ class EntityFlow(TestCase):
                 logging.info(f'Clean user {u_i.external_user_id}')
                 try:
                     self.user_management.delete_user(self.tenant_api_key,
-                                                     external_id=u_i.external_user_id, internal_id=u_i.id)
+                                                     external_id=u_i.external_user_id, internal_id=u_i.id, force=True)
                 except WacomServiceException as we:
                     logging.error(f'Error during user deletion: {we}')
