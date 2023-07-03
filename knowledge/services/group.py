@@ -13,7 +13,7 @@ from knowledge.base.ontology import NAME_TAG
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG
 # -------------------------------------- Constant flags ----------------------------------------------------------------
-from knowledge.services.users import User
+from knowledge.services.users import User, FORCE_TAG, LIMIT_TAG, OFFSET_TAG
 
 GROUP_USER_RIGHTS_TAG: str = "groupUserRights"
 JOIN_KEY_PARAM: str = "joinKey"
@@ -259,7 +259,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
                 raise WacomServiceException(f'Update of group failed.'
                                             f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def delete_group(self, auth_key: str, group_id: str):
+    def delete_group(self, auth_key: str, group_id: str, force: bool = False):
         """
          Delete a group.
 
@@ -269,6 +269,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
              User key.
          group_id: str
              ID of the group.
+        force: bool (Default = False)
+            If True, the group will be deleted even if it is not empty.
 
          Raises
         ------
@@ -279,18 +281,22 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
+        params: Dict[str, str] = {
+            FORCE_TAG: str(force).lower()
+        }
         mount_point: str = \
             'https://' if self.service_url.startswith('https') else 'http://'
         with requests.Session() as session:
             retries: Retry = Retry(backoff_factor=0.1,
                                    status_forcelist=[500, 502, 503, 504])
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
+            response: Response = session.delete(url, headers=headers, params=params,
+                                                verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if not response.ok:
                 raise WacomServiceException(f'Deletion of group failed.'
                                             f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def listing_groups(self, auth_key: str, admin: bool = False) -> List[Group]:
+    def listing_groups(self, auth_key: str, admin: bool = False, limit: int = 20, offset: int = 0) -> List[Group]:
         """
         Listing all groups configured for this instance.
 
@@ -302,6 +308,10 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         admin: bool (default:= False)
             Uses admin privilege to show all groups of the tenant.
             Requires user to have the role: TenantAdmin
+        limit: int (default:= 20)
+            Maximum number of groups to return.
+        offset: int (default:= 0)
+            Offset of the first group to return.
 
         Returns
         -------
@@ -309,8 +319,11 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             List of groups.
         """
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}'
+        params: Dict[str, int] = {}
         if admin:
             url += '/admin'
+            params[LIMIT_TAG] = limit
+            params[OFFSET_TAG] = offset
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -320,7 +333,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             retries: Retry = Retry(backoff_factor=0.1,
                                    status_forcelist=[500, 502, 503, 504])
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
+            response: Response = session.get(url, headers=headers, params=params,
+                                             verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if response.ok:
                 groups: List[Dict[str, Any]] = response.json()
                 return [Group.parse(g) for g in groups]
