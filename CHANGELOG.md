@@ -1,3 +1,8 @@
+2023/7/03 - RELEASE 1.0.5
+==========================
+- Ontology configuration file can be now defined as parameter
+- Adding support for force parameter in delete group
+
 2023/6/26 - RELEASE 1.0.4
 ==========================
 - Minor fix: sendToNEL flag parse in entity pull
