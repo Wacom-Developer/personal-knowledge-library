@@ -2,6 +2,8 @@
 # Copyright © 2023 Wacom. All rights reserved.
 import enum
 import json
+import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -486,7 +488,7 @@ mapping_configuration: Optional[MappingConfiguration] = None
 taxonomy_cache: Optional[Dict[str, WikidataClass]] = None
 
 
-def load_configuration():
+def load_configuration(configuration: Path = CONFIGURATION_FILE):
     """
     Loads the configuration.
 
@@ -495,10 +497,11 @@ def load_configuration():
     ValueError
         If the configuration file is not found.
     """
-    global mapping_configuration, taxonomy_cache
-    if CONFIGURATION_FILE.exists():
+    global mapping_configuration
+    if configuration.exists():
         configuration = json.loads(CONFIGURATION_FILE.open('r').read())
         mapping_configuration = build_configuration(configuration)
+
     else:
         raise ValueError(f'Configuration file {CONFIGURATION_FILE} not found.')
 
@@ -514,7 +517,7 @@ def get_mapping_configuration() -> MappingConfiguration:
     """
     global mapping_configuration
     if mapping_configuration is None:
-        load_configuration()
+        raise ValueError('Please load configuration')
     return mapping_configuration
 
 
