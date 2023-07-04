@@ -1,3 +1,8 @@
+2023/7/04 - RELEASE 1.0.6
+==========================
+- Improve handling of the ontology configuration file
+- Handle aliases and labels in wikidata to thing mapping
+
 2023/7/03 - RELEASE 1.0.5
 ==========================
 - Ontology configuration file can be now defined as parameter
@@ -7,7 +12,6 @@
 ==========================
 - Minor fix: sendToNEL flag parse in entity pull
 - Automatically fix issue with only alias for a language code defined in entity
-
 
 2023/6/18 - RELEASE 1.0.3
 ==========================

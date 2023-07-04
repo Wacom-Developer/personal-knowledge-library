@@ -16,7 +16,7 @@ __license__ = "Wacom"
 __maintainer__ = ["Markus Weber"]
 __email__ = "markus.weber@wacom.com"
 __status__ = "beta"
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 # Create the Logger
 logger: Union[logging.Logger, None] = None
