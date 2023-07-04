@@ -6,6 +6,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
+
 from typing import Dict, Any, List, Optional
 
 from rdflib import Graph, RDFS, URIRef
@@ -25,8 +26,9 @@ DOMAIN_PROPERTIES: str = "domain"
 CLASSES: str = "classes"
 CONTEXT_NAME: str = 'core'
 CWD: Path = Path(__file__).parent
-CONFIGURATION_FILE: Path = CWD / '../../pkl-cache/ontology_mapping.json'
-TAXONOMY_FILE: Path = CWD / '../../pkl-cache/taxonomy_cache.json'
+CONFIGURATION_FILE: Path = Path('./.pkl-cache/ontology_mapping.json')
+TAXONOMY_PATH: Path = Path('.pkl-cache')
+
 ontology_graph: Graph = Graph()
 
 
@@ -464,12 +466,17 @@ def build_configuration(mapping: Dict[str, Any]) -> MappingConfiguration:
     return conf
 
 
-def update_taxonomy_cache():
+def update_taxonomy_cache(path: Path = TAXONOMY_PATH):
     """
     Updates the taxonomy cache.
+
+    Parameters
+    ----------
+    path: Path
+        The path to the cache file.
     """
-    with open(TAXONOMY_FILE, 'w', encoding='uft-8') as fp_taxonomy:
-        fp_taxonomy.write(json.dumps(taxonomy_cache, indent=2, cls=WikidataClassEncoder))
+    with open(path, 'w', encoding='uft-8') as fp_taxonomy_write:
+        fp_taxonomy_write.write(json.dumps(taxonomy_cache, indent=2, cls=WikidataClassEncoder))
 
 
 def register_ontology(rdf_str: str):
@@ -499,11 +506,11 @@ def load_configuration(configuration: Path = CONFIGURATION_FILE):
     """
     global mapping_configuration
     if configuration.exists():
-        configuration = json.loads(CONFIGURATION_FILE.open('r').read())
+        configuration = json.loads(configuration.open('r').read())
         mapping_configuration = build_configuration(configuration)
 
     else:
-        raise ValueError(f'Configuration file {CONFIGURATION_FILE} not found.')
+        raise ValueError(f'Configuration file {configuration} not found.')
 
 
 def get_mapping_configuration() -> MappingConfiguration:
@@ -522,12 +529,13 @@ def get_mapping_configuration() -> MappingConfiguration:
 
 
 if taxonomy_cache is None:
-    if TAXONOMY_FILE.exists():
-        try:
-            taxonomy = json.loads(TAXONOMY_FILE.open('r').read())
-        except json.decoder.JSONDecodeError:
-            taxonomy = {}
-        taxonomy_cache = {}
+    taxonomy_cache = {}
+    if TAXONOMY_PATH.exists():
+        with TAXONOMY_PATH.open('r', encoding='utf-8') as fp_taxonomy:
+            try:
+                taxonomy = json.loads(fp_taxonomy.read())
+            except json.JSONDecodeError:
+                taxonomy = {}
         for qid, data in taxonomy.items():
             if data:
                 taxonomy_cache[qid] = WikidataClass.create_from_dict(data)

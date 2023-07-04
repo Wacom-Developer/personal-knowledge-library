@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2023 Wacom. All rights reserved.
 import os
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from unittest import TestCase
 
@@ -84,7 +85,6 @@ class WikidataFlow(TestCase):
     external_id: str = os.environ.get('ADMIN_EXTERNAL_ID')
 
     def setUp(self):
-
         admin_token, refresh, expire = self.knowledge_client.request_user_token(self.tenant_api_key, self.external_id)
         context: Optional[OntologyContext] = self.ontology_client.context(admin_token)
         if not context:
@@ -97,7 +97,8 @@ class WikidataFlow(TestCase):
             # Register ontology
             register_ontology(rdf_export)
             # Load configuration
-            load_configuration()
+            load_configuration(Path(__file__).parent.parent / 'pkl-cache' / 'ontology_mapping.json')
+
 
     def test_1_wikidata(self):
         # Q762 is Leonardo da Vinci and Q12418 is Mona Lisa
