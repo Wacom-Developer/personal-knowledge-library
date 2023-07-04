@@ -2,7 +2,7 @@
 # Copyright © 2023 Wacom. All rights reserved.
 import logging
 from datetime import datetime
-from typing import Optional, Any, List, Dict, Tuple
+from typing import Optional, Any, List, Dict, Tuple, Set
 
 from knowledge.base.entity import Label, LanguageCode, Description
 from knowledge.base.ontology import ThingObject, DataProperty, SYSTEM_SOURCE_SYSTEM, SYSTEM_SOURCE_REFERENCE_ID, \
@@ -147,10 +147,23 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
     """
     import_warnings: List[Dict[str, Any]] = []
     qid: str = wikidata_thing.qid
-    labels: List[Label] = [la for la in wikidata_thing.label.values() if str(la.language_code) in supported_locales]
+    labels: List[Label] = []
+    aliases: List[Label] = []
+    # Make sure that the main label are added to labels and aliases to aliases.
+    main_languages: Set[str] = set()
+    for la in wikidata_thing.label.values():
+        if str(la.language_code) in supported_locales:
+            if str(la.language_code) not in main_languages:
+                main_languages.add(str(la.language_code))
+                labels.append(Label(content=la.content, language_code=la.language_code, main=True))
+
     for lang, aliases in wikidata_thing.aliases.items():
         if str(lang) in supported_locales:
-            labels.extend([a for a in aliases])
+            if str(lang) not in main_languages:
+                main_languages.add(str(lang))
+                labels.append(Label(content=aliases[0].content, language_code=LanguageCode(lang), main=True))
+            else:
+                aliases.append(Label(content=aliases[0].content, language_code=LanguageCode(lang), main=False))
     descriptions: List[Description] = []
     if 'wiki' in wikidata_thing.sitelinks and pull_wikipedia:
         for lang, title in wikidata_thing.sitelinks['wiki'].titles.items():
@@ -167,6 +180,7 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
     thing: ThingObject = ThingObject(label=labels,
                                      description=descriptions,
                                      icon=wikidata_thing.image(dpi=500))
+    thing.alias = aliases
     thing.add_source_system(DataProperty(content='wikidata', property_ref=SYSTEM_SOURCE_SYSTEM,
                                          language_code=LanguageCode('en_US')))
     thing.add_source_reference_id(DataProperty(content=qid, property_ref=SYSTEM_SOURCE_REFERENCE_ID,
