@@ -2,11 +2,8 @@
 # Copyright © 2023 Wacom. All rights reserved.
 import enum
 import json
-import logging
-import os
 from datetime import datetime
 from pathlib import Path
-
 from typing import Dict, Any, List, Optional
 
 from rdflib import Graph, RDFS, URIRef
@@ -506,9 +503,9 @@ def load_configuration(configuration: Path = CONFIGURATION_FILE):
     """
     global mapping_configuration
     if configuration.exists():
-        configuration = json.loads(configuration.open('r').read())
-        mapping_configuration = build_configuration(configuration)
-
+        with configuration.open('r', encoding='utf-8') as fp_configuration:
+            configuration = json.loads(fp_configuration.read())
+            mapping_configuration = build_configuration(configuration)
     else:
         raise ValueError(f'Configuration file {configuration} not found.')
 

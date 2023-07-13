@@ -1,3 +1,8 @@
+2023/7/13 - RELEASE 1.0.7
+==========================
+- Minor fix: Unclosed file handle
+- Ontology configuration update
+
 2023/7/04 - RELEASE 1.0.6
 ==========================
 - Improve handling of the ontology configuration file
