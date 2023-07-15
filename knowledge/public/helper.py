@@ -359,6 +359,9 @@ def __waiting_multi_request__(
             raise WikiDataAPIException(f"Request failed with status code : {response.status_code}. URL:= {url}")
         entity_dict_full: Dict[str, Any] = response.json()
         results: List[Dict[str, Any]] = []
+        # If no entities found
+        if "entities" not in entity_dict_full:
+            return results
         for qid, e in entity_dict_full["entities"].items():
             if qid not in entity_ids:
                 logger.warning(f"Wikidata redirect detected. "
