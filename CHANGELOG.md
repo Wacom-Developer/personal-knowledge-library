@@ -1,3 +1,7 @@
+2023/7/13 - RELEASE 1.0.8
+==========================
+- Minor fix: No entities returned from Wikidata
+- 
 2023/7/13 - RELEASE 1.0.7
 ==========================
 - Minor fix: Unclosed file handle
