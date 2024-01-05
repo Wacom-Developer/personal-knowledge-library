@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-23 Wacom. All rights reserved.
+# Copyright © 2021-24 Wacom. All rights reserved.
 import abc
 from enum import Enum
 from typing import Optional, List
 
-from knowledge.base.entity import LanguageCode
+from knowledge.base.language import LocaleCode, EN_US
 from knowledge.base.ontology import THING_CLASS, OntologyClassReference
 from knowledge.services.base import WacomServiceAPIClient, RESTAPIClient
 
@@ -223,7 +223,7 @@ class KnowledgeGraphEntity(NamedEntity):
 
     @property
     def relevant_type(self) -> OntologyClassReference:
-        """"Most relevant ontology type. That likes to Wacom's personal knowledge base ontology."""
+        """Most relevant ontology type. That likes to Wacom's personal knowledge base ontology."""
         return self.__relevant_type
 
     @relevant_type.setter
@@ -269,7 +269,7 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
     """
     PersonalEntityLinkingProcessor
     ------------------------------
-    Service that links entities to a entities in a personal knowledge graph.
+    Service that links entities to entities in a personal knowledge graph.
 
     Parameters
     ----------
@@ -287,7 +287,8 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
         self.__supported_languages: List[str] = supported_languages if supported_languages else []
 
     @abc.abstractmethod
-    def link_personal_entities(self, auth_key: str, text: str, language_code: LanguageCode = 'en_US') \
+    def link_personal_entities(self, text: str, language_code: LocaleCode = EN_US, auth_key: Optional[str] = None,
+                               max_retries: int = 5) \
             -> List[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
@@ -295,13 +296,14 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key identifying a user within the Wacom personal knowledge service.
         text: str
             Text where the entities shall be tagged in.
         language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
-
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
+        auth_key: Optional[str] (default:=None)
+            Auth key identifying a user within the Wacom personal knowledge service.
+        max_retries: int (default:=5)
+            Maximum number of retries, if the service is not available.
         Returns
         -------
         entities: List[KnowledgeGraphEntity]
@@ -314,13 +316,13 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
         """List of supported languages."""
         return self.__supported_languages
 
-    def is_language_supported(self, language_code: LanguageCode) -> bool:
+    def is_language_supported(self, language_code: LocaleCode) -> bool:
         """Is the language_code code supported by the engine.
 
         Parameters
         -----------
-        language_code: str
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+        language_code: LocaleCode
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
 
         Returns
         -------
@@ -349,14 +351,14 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
         Verifies all HTTPS calls and the associated certificate.
     """
 
-    def __init__(self, service_url: str, supported_languages: List[LanguageCode] = None,
+    def __init__(self, service_url: str, supported_languages: List[LocaleCode] = None,
                  verify_calls: bool = False):
         super().__init__(application_name='Named Entity Linking', service_url=service_url, service_endpoint="graph",
                          verify_calls=verify_calls)
-        self.__supported_languages: List[LanguageCode] = supported_languages if supported_languages else []
+        self.__supported_languages: List[LocaleCode] = supported_languages if supported_languages else []
 
     @abc.abstractmethod
-    def named_entities(self, text: str, language_code: LanguageCode = 'en_US') -> List[NamedEntity]:
+    def named_entities(self, text: str, language_code: LocaleCode = EN_US) -> List[NamedEntity]:
         """
         Performs Named Entity Recognition on a text.
 
@@ -364,8 +366,8 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
         ----------
         text: str
             Text where the entities shall be tagged in.
-        language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+        language_code: LocaleCode (default:= 'en_US')
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
 
         Returns
         -------
@@ -375,17 +377,17 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
         raise NotImplementedError
 
     @property
-    def supported_language(self) -> List[LanguageCode]:
+    def supported_language(self) -> List[LocaleCode]:
         """List of supported languages."""
         return self.__supported_languages
 
-    def is_language_supported(self, language_code: LanguageCode) -> bool:
+    def is_language_supported(self, language_code: LocaleCode) -> bool:
         """Is the language_code code supported by the engine.
 
         Parameters
         ----------
         language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
 
         Returns
         -------
@@ -419,7 +421,7 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
         self.__supported_languages: List[str] = supported_languages if supported_languages else []
 
     @abc.abstractmethod
-    def link_public_entities(self, text: str, language_code: LanguageCode = 'en_US') -> List[KnowledgeGraphEntity]:
+    def link_public_entities(self, text: str, language_code: LocaleCode = EN_US) -> List[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities within a large public knowledge graph.
 
@@ -428,7 +430,7 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
         text: str
             Text where the entities shall be tagged in.
         language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
 
         Returns
         -------
@@ -442,14 +444,14 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
         """List of supported languages."""
         return self.__supported_languages
 
-    def is_language_supported(self, language_code: str) -> bool:
+    def is_language_supported(self, language_code: LocaleCode) -> bool:
         """
         Is the language_code code supported by the engine.
 
         Parameters
         ----------
-        language_code: LanguageCode
-            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>, e.g., en_US.
+        language_code: LocaleCode
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
 
         Returns
         -------

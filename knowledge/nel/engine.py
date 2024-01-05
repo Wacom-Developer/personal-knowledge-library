@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-2023 Wacom. All rights reserved.
+# Copyright © 2021-2024 Wacom. All rights reserved.
 from typing import Optional, List, Dict
 
 import requests
 from requests import Response
 from requests.adapters import HTTPAdapter, Retry
 
-from knowledge.base.entity import LOCALE_TAG, LanguageCode, TEXT_TAG
+from knowledge.base.entity import LOCALE_TAG, TEXT_TAG
+from knowledge.base.language import LocaleCode, DE_DE, EN_US, JA_JP
 from knowledge.base.ontology import OntologyClassReference
 from knowledge.nel.base import PersonalEntityLinkingProcessor, EntitySource, KnowledgeSource, \
     KnowledgeGraphEntity, EntityType
-from knowledge.services.base import WacomServiceException
+from knowledge.services.base import WacomServiceException, handle_error
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG
 
 
@@ -27,17 +28,13 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
     """
     SERVICE_ENDPOINT: str = 'graph/v1/nel/text'
     SERVICE_URL: str = 'https://private-knowledge.wacom.com'
-    LANGUAGES: List[LanguageCode] = [
-        LanguageCode('de_DE'),
-        LanguageCode('en_US'),
-        LanguageCode('ja_JP')
-    ]
+    LANGUAGES: List[LocaleCode] = [DE_DE, EN_US, JA_JP]
 
     def __init__(self, service_url: str = SERVICE_URL, service_endpoint: str = SERVICE_ENDPOINT):
         self.__service_endpoint: str = service_endpoint
         super().__init__(supported_languages=WacomEntityLinkingEngine.LANGUAGES, service_url=service_url)
 
-    def link_personal_entities(self, auth_key: str, text: str, language_code: LanguageCode = 'en_US',
+    def link_personal_entities(self, text: str, language_code: LocaleCode = EN_US, auth_key: Optional[str] = None,
                                max_retries: int = 5) -> List[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
@@ -45,12 +42,12 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key identifying a user within the Wacom personal knowledge service.
         text: str
             Text where the entities shall be tagged in.
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         max_retries: int
             Maximum number of retries, if the service is not available.
 
@@ -64,6 +61,8 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
         WacomServiceException
             If the Named Entity Linking service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         named_entities: List[KnowledgeGraphEntity] = []
         url: str = f'{self.service_url}/{self.__service_endpoint}'
         headers: Dict[str, str] = {
@@ -110,5 +109,5 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
                     ne.relevant_type = OntologyClassReference.parse(e['type'])
                     named_entities.append(ne)
                 return named_entities
-        raise WacomServiceException(f'Named entity linking for text:={text}@{language_code}. '
-                                    f'Response code:={response.status_code}, exception:= {response.content}')
+        handle_error(f'Named entity linking for text:={text}@{language_code}. ', response)
+
