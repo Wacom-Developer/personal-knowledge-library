@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom. All rights reserved.
+# Copyright © 2021-2024 Wacom. All rights reserved.
 import abc
 import enum
-from typing import NewType, Any, List, Dict
+from typing import Any, List, Dict, Union
 
-#  ---------------------------------------- Type definitions -----------------------------------------------------------
-LanguageCode = NewType("LanguageCode", str)
-LocaleCode = NewType("LocaleCode", str)
-ReferenceId = NewType("ReferenceId", str)
+from knowledge.base.language import LocaleCode, LanguageCode, EN_US
 
 
 #  ---------------------------------------- Exceptions -----------------------------------------------------------------
@@ -20,7 +17,6 @@ class KnowledgeException(Exception):
 
 
 #  ---------------------------------------- Constants ------------------------------------------------------------------
-VND_WACOM_INK_MODEL: str = 'application/vnd.wacom-knowledge.model'
 RDF_SYNTAX_NS_TYPE: str = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
 RDF_SCHEMA_COMMENT: str = 'http://www.w3.org/2000/01/rdf-schema#comment'
 RDF_SCHEMA_LABEL: str = 'http://www.w3.org/2000/01/rdf-schema#label'
@@ -88,7 +84,7 @@ class LocalizedContent(abc.ABC):
     """
     Localized content
     -----------------
-    Content that is multi-lingual.
+    Content that is multilingual.
 
     Parameters
     ----------
@@ -98,9 +94,9 @@ class LocalizedContent(abc.ABC):
         ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
     """
 
-    def __init__(self, content: str, language_code: LanguageCode = 'en_US'):
+    def __init__(self, content: str, language_code: Union[LocaleCode, LanguageCode]):
         self.__content: str = content
-        self.__language_code: LanguageCode = language_code
+        self.__language_code: Union[LocaleCode, LanguageCode] = language_code
 
     @property
     def content(self) -> str:
@@ -112,8 +108,8 @@ class LocalizedContent(abc.ABC):
         self.__content = value
 
     @property
-    def language_code(self) -> LanguageCode:
-        """Language code of the content."""
+    def language_code(self) -> Union[LocaleCode, LanguageCode]:
+        """Locale """
         return self.__language_code
 
     def __repr__(self):
@@ -124,19 +120,19 @@ class Label(LocalizedContent):
     """
     Label
     -----
-    Label that is multi-lingual.
+    Label that is multilingual.
 
     Parameters
     ----------
     content: str
         Content value
-    language_code: LanguageCode (default:= 'en_US')
-        Language code of content
+    language_code: LocaleCode (default:= 'en_US')
+        ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
     main: bool (default:=False)
         Main content
     """
 
-    def __init__(self, content: str, language_code: LanguageCode = 'en_US', main: bool = False):
+    def __init__(self, content: str, language_code: LocaleCode = EN_US, main: bool = False):
         self.__main: bool = main
         super().__init__(content, language_code)
 
@@ -162,15 +158,15 @@ class Label(LocalizedContent):
         Returns
         -------
         instance: Label
-            Label instance.
+            The Label instance.
         """
         if tag_name not in dict_label:
             raise ValueError("Dict is does not contain a localized label.")
         if locale_name not in dict_label:
             raise ValueError("Dict is does not contain a language code")
         if IS_MAIN_TAG in dict_label:
-            return Label(dict_label[tag_name], dict_label[locale_name], dict_label[IS_MAIN_TAG])
-        return Label(dict_label[tag_name], dict_label[locale_name])
+            return Label(dict_label[tag_name], LocaleCode(dict_label[locale_name]), dict_label[IS_MAIN_TAG])
+        return Label(dict_label[tag_name], LocaleCode(dict_label[locale_name]))
 
     @staticmethod
     def create_from_list(param: List[dict]) -> List[LOCALIZED_CONTENT_TAG]:
@@ -201,7 +197,7 @@ class Description(LocalizedContent):
     """
     Description
     -----------
-    Description that is multi-lingual.
+    Description that is multilingual.
 
     Parameters
     ----------
@@ -211,7 +207,7 @@ class Description(LocalizedContent):
         Language code of content
     """
 
-    def __init__(self, description: str, language_code: LanguageCode = 'en_US'):
+    def __init__(self, description: str, language_code: LocaleCode = EN_US):
         super().__init__(description, language_code)
 
     @staticmethod
@@ -232,11 +228,11 @@ class Description(LocalizedContent):
         Returns
         -------
         instance: Description
-            Description instance.
+            The description instance.
         """
         if tag_name not in dict_description or locale_name not in dict_description:
             raise ValueError("Dict is does not contain a localized label.")
-        return Description(dict_description[tag_name], dict_description[locale_name])
+        return Description(dict_description[tag_name], LocaleCode(dict_description[locale_name]))
 
     @staticmethod
     def create_from_list(param: List[Dict[str, Any]]) -> List['Description']:

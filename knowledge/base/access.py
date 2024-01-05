@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-23 Wacom. All rights reserved.
+# Copyright © 2021-24 Wacom. All rights reserved.
 from typing import List
 
 
@@ -20,7 +20,7 @@ class AccessRight:
     WRITE: str = "Write"
     DELETE: str = "Delete"
 
-    def __init__(self, read: bool = False, write: bool = False, delete: bool = False):
+    def __init__(self, read: bool, write: bool, delete: bool):
         self.__read: bool = read
         self.__write: bool = write
         self.__delete: bool = delete
