@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-23 Wacom. All rights reserved.
+# Copyright © 2021-24 Wacom. All rights reserved.
 import urllib.parse
 from http import HTTPStatus
 from typing import Any, Optional, Dict, Tuple, List
@@ -24,6 +24,7 @@ KIND_TAG: str = "kind"
 LABELS_TAG: str = "labels"
 LANGUAGE_CODE: str = 'lang'
 NAME_TAG: str = "name"
+CONTEXT_TAG: str = "context"
 RANGE_TAG: str = "ranges"
 SUB_CLASS_OF_TAG: str = "subClassOf"
 SUB_PROPERTY_OF_TAG: str = "subPropertyOf"
@@ -579,7 +580,9 @@ class OntologyService(WacomServiceAPIClient):
             raise WacomServiceException(f'Deletion of property: {reference.iri} failed. '
                                         f'Response code:={response.status_code}, exception:= {response.text}')
 
-    def create_context(self, auth_key: str, name: str, base_uri: Optional[str] = None, icon: Optional[str] = None,
+    def create_context(self, auth_key: str, name: str, context: Optional[str] = None,
+                       base_uri: Optional[str] = None,
+                       icon: Optional[str] = None,
                        labels: List[OntologyLabel] = None, comments: List[Comment] = None) -> Dict[str, str]:
         """Create context.
 
@@ -594,6 +597,8 @@ class OntologyService(WacomServiceAPIClient):
             Base URI
         name: str
             Name of the context
+        context:  Optional[str] (default:= None)
+            Context of ontology
         icon: Optional[str] (default:= None)
             Icon representing the concept
         labels: Optional[List[OntologyLabel]] (default:= None)
@@ -615,13 +620,20 @@ class OntologyService(WacomServiceAPIClient):
             USER_AGENT_TAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
+        if base_uri is None:
+            base_uri = f'wacom:{name}#'
+        if not base_uri.endswith('#'):
+            base_uri += '#'
+
         payload: Dict[str, Any] = {
-            BASE_URI_TAG: base_uri if base_uri is not None else f'wacom:{name}',
+            BASE_URI_TAG: base_uri,
             NAME_TAG: name,
             LABELS_TAG: [],
             COMMENTS_TAG: [],
             ICON_TAG: icon
         }
+        if context is not None:
+            payload[CONTEXT_TAG] = context
         for label in labels if labels is not None else []:
             payload[LABELS_TAG].append({TEXT_TAG: label.content, LANGUAGE_CODE: label.language_code})
         for comment in comments if comments is not None else []:

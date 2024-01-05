@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-23 Wacom. All rights reserved.
+# Copyright © 2021-24 Wacom. All rights reserved.
 from typing import List, Dict
 
 import requests
 from requests import Response
 
-from knowledge.services import USER_AGENT_STR
+from knowledge.services import USER_AGENT_STR, DEFAULT_TIMEOUT
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, USER_AGENT_HEADER_FLAG, \
     CONTENT_TYPE_HEADER_FLAG
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG
 
-DEFAULT_TIMEOUT: int = 60
 
 class TenantManagementServiceAPI(WacomServiceAPIClient):
     """

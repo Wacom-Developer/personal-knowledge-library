@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-23 Wacom. All rights reserved.
+# Copyright © 2021-24 Wacom. All rights reserved.
 import enum
 from datetime import datetime
 from typing import Any, Union, Dict, List, Tuple

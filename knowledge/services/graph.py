@@ -1,65 +1,39 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-23 Wacom. All rights reserved.
+# Copyright © 2021-24 Wacom. All rights reserved.
 import enum
 import json
 import os
 import urllib
 from pathlib import Path
-from typing import Any, Optional, List, Dict, Tuple
+from typing import Any, Optional, List, Dict, Tuple, Iterator
 from urllib.parse import urlparse
 
+import orjson
 import requests
 from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 from knowledge.base.access import TenantAccessRight
-from knowledge.base.entity import LanguageCode, DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, IMAGE_TAG, \
+from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, IMAGE_TAG, \
     DESCRIPTION_TAG, TYPE_TAG, URI_TAG, LABELS_TAG, IS_MAIN_TAG, DESCRIPTIONS_TAG, RELATIONS_TAG, SEND_TO_NEL_TAG, \
     LOCALE_TAG, EntityStatus, Label, Description, URIS_TAG, FORCE_TAG
+from knowledge.base.language import LocaleCode, SUPPORTED_LOCALES
 from knowledge.base.ontology import DataProperty, OntologyPropertyReference, ThingObject, OntologyClassReference, \
-    ObjectProperty
-from knowledge.services import USER_AGENT_STR
-from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, AUTHORIZATION_HEADER_FLAG, \
-    USER_AGENT_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG
-
-# ------------------------------------------------- Constants ----------------------------------------------------------
-ACTIVATION_TAG: str = 'activation'
-SEARCH_TERM: str = 'searchTerm'
-LANGUAGE_PARAMETER: str = 'language'
-TYPES_PARAMETER: str = 'types'
-LIMIT_PARAMETER: str = 'limit'
-LITERAL_PARAMETER: str = 'Literal'
-VALUE: str = 'Value'
-SEARCH_PATTERN_PARAMETER: str = 'SearchPattern'
-LISTING: str = 'listing'
-TOTAL_COUNT: str = 'estimatedCount'
-TARGET: str = 'target'
-OBJECT: str = 'object'
-PREDICATE: str = 'predicate'
-SUBJECT: str = 'subject'
-LIMIT: str = 'limit'
-OBJECT_URI: str = 'objectUri'
-RELATION_URI: str = 'relationUri'
-SUBJECT_URI: str = 'subjectUri'
-NEXT_PAGE_ID_TAG: str = 'nextPageId'
-TENANT_RIGHTS_TAG: str = 'tenantRights'
-GROUP_IDS_TAG: str = 'groupIds'
-OWNER_ID_TAG: str = 'ownerId'
-VISIBILITY_TAG: str = 'visibility'
-ESTIMATE_COUNT: str = 'estimateCount'
-
-RELATION_TAG: str = 'relation'
-APPLICATION_JSON_HEADER: str = 'application/json'
-DEFAULT_TIMEOUT: int = 60
+    ObjectProperty, EN_US
+from knowledge.services import USER_AGENT_STR, AUTHORIZATION_HEADER_FLAG, GROUP_IDS_TAG, OWNER_ID_TAG, \
+    TENANT_RIGHTS_TAG, APPLICATION_JSON_HEADER, RELATION_TAG, TARGET, ACTIVATION_TAG, PREDICATE, OBJECT, SUBJECT, \
+    LIMIT_PARAMETER, ESTIMATE_COUNT, VISIBILITY_TAG, NEXT_PAGE_ID_TAG, LISTING, TOTAL_COUNT, SEARCH_TERM, \
+    LANGUAGE_PARAMETER, TYPES_PARAMETER, LIMIT, VALUE, LITERAL_PARAMETER, SEARCH_PATTERN_PARAMETER, SUBJECT_URI, \
+    RELATION_URI, OBJECT_URI, DEFAULT_TIMEOUT
+from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, \
+    USER_AGENT_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG, handle_error
 
 MIME_TYPE: Dict[str, str] = {
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.png': 'image/png'
 }
-
-SUPPORTED_LANGUAGES: List[str] = ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'ru_RU']
 
 
 # ------------------------------- Enum ---------------------------------------------------------------------------------
@@ -141,7 +115,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                  service_endpoint: str = 'graph/v1'):
         super().__init__(application_name, service_url, service_endpoint)
 
-    def entity(self, auth_key: str, uri: str) -> ThingObject:
+    def entity(self, uri: str, auth_key: Optional[str] = None) -> ThingObject:
         """
         Retrieve entity information from personal knowledge, using the  URI as identifier.
 
@@ -149,10 +123,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key identifying a user within the Wacom personal knowledge service.
         uri: str
             URI of entity
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -164,6 +138,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code or the entity is not found in the knowledge graph
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
@@ -195,7 +171,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 for data_property in e[DATA_PROPERTIES_TAG]:
                     data_property_type: OntologyPropertyReference = \
                         OntologyPropertyReference.parse(data_property[DATA_PROPERTY_TAG])
-                    language_code: LanguageCode = data_property[LOCALE_TAG]
+                    language_code: LocaleCode = LocaleCode(data_property[LOCALE_TAG])
                     value: str = data_property[VALUE_TAG]
                     thing.add_data_property(DataProperty(value, data_property_type, language_code))
             # Tenant rights
@@ -204,11 +180,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             else:
                 thing.tenant_access_right = TenantAccessRight()
             return thing
-        raise WacomServiceException(f'Retrieving of entity content failed. URI:={uri}. '
-                                    f'Response code:={response.status_code}, exception:= {response.content}')
+        handle_error(f'Retrieving of entity content failed. URI:={uri}.', response)
 
-    def delete_entities(self, auth_key: str, uris: List[str], force: bool = False, max_retries: int = 3,
-                        backoff_factor: float = 0.1):
+    def delete_entities(self, uris: List[str], force: bool = False, auth_key: Optional[str] = None,
+                        max_retries: int = 3, backoff_factor: float = 0.1):
         """
         Delete a list of entities.
 
@@ -233,6 +208,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         if len(uris) > 100:
             raise WacomServiceException("Please delete less than 100 entities.")
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}'
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
@@ -250,22 +227,21 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.delete(url, headers=headers, params=params, verify=self.verify_calls)
             if not response.ok:
-                raise WacomServiceException(f'Deletion of entities failed.'
-                                            f'Response code:={response.status_code}, exception:= {response.content}')
+                handle_error(f'Deletion of entities failed.', response)
 
-    def delete_entity(self, auth_key: str, uri: str, force: bool = False, max_retries: int = 3,
+    def delete_entity(self, uri: str, force: bool = False, auth_key: Optional[str] = None, max_retries: int = 3,
                       backoff_factor: float = 0.1):
         """
         Deletes an entity.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         uri: str
             URI of entity
         force: bool
             Force deletion process
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         max_retries: int
             Maximum number of retries
         backoff_factor: float
@@ -277,6 +253,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
@@ -291,19 +269,18 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             response: Response = session.delete(url, headers=headers, params={FORCE_TAG: force},
                                                 verify=self.verify_calls)
             if not response.ok:
-                raise WacomServiceException(f'Deletion of entity (URI:={uri}) failed.'
-                                            f'Response code:={response.status_code}, exception:= {response.content}')
+                handle_error(f'Deletion of entity (URI:={uri}) failed.', response)
 
-    def exists(self, auth_key: str, uri: str) -> bool:
+    def exists(self, uri: str, auth_key: Optional[str] = None) -> bool:
         """
         Check if entity exists in knowledge graph.
 
         Parameters
         ----------
-        auth_key: str -
-            User token
         uri: str -
             URI for entity
+        auth_key: Optional[str]
+            Auth key from user
 
         Returns
         -------
@@ -311,7 +288,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Flag if entity does exist
         """
         try:
-            obj: ThingObject = self.entity(auth_key, uri)
+            obj: ThingObject = self.entity(uri, auth_key=auth_key)
             return obj is not None
         except WacomServiceException:
             return False
@@ -361,7 +338,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                     literals.append({
                         VALUE_TAG: li.value,
                         LOCALE_TAG: li.language_code
-                        if li.language_code and li.language_code in SUPPORTED_LANGUAGES else "en_US",
+                        if li.language_code and li.language_code in SUPPORTED_LOCALES else EN_US,
                         DATA_PROPERTY_TAG: li.data_property_type.iri
                     })
         payload: Dict[str, Any] = {
@@ -375,18 +352,19 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             payload[TENANT_RIGHTS_TAG] = entity.tenant_access_right.to_list()
         return payload
 
-    def create_entity_bulk(self, auth_key: str, entities: List[ThingObject], batch_size: int = 10) -> List[ThingObject]:
+    def create_entity_bulk(self, entities: List[ThingObject], batch_size: int = 10, auth_key: Optional[str] = None) \
+            -> List[ThingObject]:
         """
         Creates entity in graph.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         entities: List[ThingObject]
             Entities
         batch_size: int
             Batch size
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -417,21 +395,22 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                     if entities[bulk_idx + idx].image is not None and entities[bulk_idx + idx].image != '':
                         self.set_entity_image_url(auth_key, uri, entities[bulk_idx + idx].image)
                     entities[bulk_idx + idx].uri = response_dict[URIS_TAG][idx]
-
+            else:
+                handle_error(f'Pushing entity failed.', response)
         return entities
 
-    def create_entity(self, auth_key: str, entity: ThingObject, max_retries: int = 3, backoff_factor: float = 0.1,
-                      ignore_image: bool = False) \
+    def create_entity(self, entity: ThingObject, auth_key: Optional[str] = None, max_retries: int = 3,
+                      backoff_factor: float = 0.1, ignore_image: bool = False) \
             -> str:
         """
         Creates entity in graph.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         entity: ThingObject
             Entity object that needs to be created
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         max_retries: int
             Maximum number of retries
         backoff_factor: float
@@ -451,6 +430,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}'
         # Header info
         headers: Dict[str, str] = {
@@ -470,26 +451,30 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             if response.ok and not ignore_image:
                 uri: str = response.json()[URI_TAG]
                 # Set image
-                if entity.image is not None and entity.image.startswith('file:'):
-                    p = urlparse(entity.image)
-                    self.set_entity_image_local(auth_key, uri, Path(p.path))
-                elif entity.image is not None and entity.image != '':
-                    self.set_entity_image_url(auth_key, uri, entity.image)
+                try:
+                    if entity.image is not None and entity.image.startswith('file:'):
+                        p = urlparse(entity.image)
+                        self.set_entity_image_local(uri, Path(p.path), auth_key=auth_key)
+                    elif entity.image is not None and entity.image != '':
+                        self.set_entity_image_url(uri, entity.image, auth_key=auth_key)
+                except WacomServiceException as _:
+                    pass
+            if response.ok:
+                uri: str = response.json()[URI_TAG]
                 return uri
-        raise WacomServiceException(f'Pushing entity failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.content}. '
-                                    f'Payload: \n{json.dumps(payload, indent=4)}')
+            handle_error(f'Pushing entity failed.', response)
 
-    def update_entity(self, auth_key: str, entity: ThingObject, max_retries: int = 3, backoff_factor: float = 0.1):
+    def update_entity(self, entity: ThingObject, auth_key: Optional[str] = None, max_retries: int = 3,
+                      backoff_factor: float = 0.1):
         """
         Updates entity in graph.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         entity: ThingObject
             entity object
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         max_retries: int
             Maximum number of retries
         backoff_factor: float
@@ -501,6 +486,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         uri: str = entity.uri
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
         # Header info
@@ -519,20 +506,18 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             response: Response = session.patch(url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT,
                                                verify=self.verify_calls)
             if not response.ok:
-                raise WacomServiceException(f'Pushing entity failed. '
-                                            f'Response code:={response.status_code}, exception:= {response.content}. '
-                                            f'Payload: \n{json.dumps(payload, indent=4)}')
+                handle_error(f'Updating entity failed.', response)
 
-    def relations(self, auth_key: str, uri: str) -> Dict[OntologyPropertyReference, ObjectProperty]:
+    def relations(self, uri: str, auth_key: Optional[str] = None) -> Dict[OntologyPropertyReference, ObjectProperty]:
         """
         Retrieve the relations (object properties) of an entity.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         uri: str
             Entity URI of the source
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -544,6 +529,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{urllib.parse.quote(uri)}/relations'
         headers: dict = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
@@ -559,22 +546,20 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             if response.ok:
                 rel: list = response.json().get(RELATIONS_TAG)
                 return ObjectProperty.create_from_list(rel)
-        raise WacomServiceException(f'Failed to pull relations. '
-                                    f'Response code:={response.status_code}, exception:= {response.content}')
+        handle_error(f'Retrieving relations failed.', response)
 
-    def labels(self, auth_key: str, uri: str, locale: str = 'en_US') -> List[Label]:
+    def labels(self, uri: str, locale: LocaleCode = EN_US, auth_key: Optional[str] = None) -> List[Label]:
         """
         Extract list labels of entity.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         uri: str
             Entity URI of the source
-        locale: str
+        locale: LocaleCode  [default:= EN_US]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
-
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         Returns
         -------
         labels: List[Label]
@@ -585,6 +570,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/labels'
         headers: dict = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
@@ -598,22 +585,20 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             if LABELS_TAG in response_dict:
                 return [Label.create_from_dict(label) for label in response_dict[LABELS_TAG]]
             return []
-        raise WacomServiceException(f'Failed to pull literals. Response code:={response.status_code}, '
-                                    'exception:= {response.content}')
+        handle_error(f'Retrieving labels failed.', response)
 
-    def literals(self, auth_key: str, uri: str, locale: str = 'en_US') -> List[DataProperty]:
+    def literals(self, uri: str, locale: LocaleCode = EN_US, auth_key: Optional[str] = None) -> List[DataProperty]:
         """
         Collect all literals of entity.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         uri: str
             Entity URI of the source
-        locale: str
+        locale: LocaleCode  [default:= EN_US]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
-
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         Returns
         -------
         labels: List[DataProperty]
@@ -624,6 +609,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/literals'
         headers: dict = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
@@ -639,26 +626,29 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         raise WacomServiceException(f'Failed to pull literals. Response code:={response.status_code}, '
                                     f'exception:= {response.content}')
 
-    def create_relation(self, auth_key: str, source: str, relation: OntologyPropertyReference, target: str):
+    def create_relation(self, source: str, relation: OntologyPropertyReference, target: str,
+                        auth_key: Optional[str] = None):
         """
         Creates a relation for an entity to a source entity.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         source: str
             Entity URI of the source
         relation: OntologyPropertyReference
             ObjectProperty property
         target: str
             Entity URI of the target
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation'
         headers: dict = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
@@ -676,31 +666,31 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.post(url, params=params, headers=headers, verify=self.verify_calls)
             if not response.ok:
-                raise WacomServiceException(f'Create relations failed. '
-                                            f'Response code:={response.status_code}, exception:= {response.content}. '
-                                            f'URL: {url}'
-                                            f'Parameters: \n{json.dumps(params, indent=4)}')
+                handle_error(f'Creation of relation failed.', response)
 
-    def remove_relation(self, auth_key: str, source: str, relation: OntologyPropertyReference, target: str):
+    def remove_relation(self, source: str, relation: OntologyPropertyReference, target: str,
+                        auth_key: Optional[str] = None):
         """
         Removes a relation.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         source: str
             Entity uri of the source
         relation: OntologyPropertyReference
             ObjectProperty property
         target: str
             Entity uri of the target
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation'
         params: Dict[str, str] = {
             RELATION_TAG: relation.iri,
@@ -714,23 +704,21 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         response: Response = requests.delete(url, params=params, headers=headers, timeout=DEFAULT_TIMEOUT,
                                              verify=self.verify_calls)
         if not response.ok:
-            raise WacomServiceException(f'Deletion of relation failed. '
-                                        f'Response code:={response.status_code}, exception:= {response.content}')
+            handle_error(f'Removal of relation failed.', response)
 
-    def activations(self, auth_key: str, uris: List[str], depth: int) \
+    def activations(self, uris: List[str], depth: int, auth_key: Optional[str] = None) \
             -> Tuple[Dict[str, ThingObject], List[Tuple[str, OntologyPropertyReference, str]]]:
         """
         Spreading activation, retrieving the entities related to an entity.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key for user
         uris: List[str]
             List of URIS for entity.
         depth: int
             Depth of activations
-
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         Returns
         -------
         entity_map: Dict[str, ThingObject]
@@ -743,6 +731,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code, and activation failed.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ACTIVATIONS_ENDPOINT}'
 
         headers: Dict[str, str] = {
@@ -750,10 +740,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         params: dict = {
-            'uris': uris,
+            URIS_TAG: uris,
             ACTIVATION_TAG: depth
         }
-
         response: Response = requests.get(url, headers=headers, params=params, timeout=DEFAULT_TIMEOUT,
                                           verify=self.verify_calls)
         if response.ok:
@@ -767,20 +756,17 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 if r[SUBJECT] in things:
                     things[r[SUBJECT]].add_relation(ObjectProperty(relation, outgoing=[r[OBJECT]]))
             return things, relations
-        raise WacomServiceException(f'Activation failed, uris:= {uris} activation:={depth}). '
-                                    f'Response code:={response.status_code}, exception:= {response.content}')
+        handle_error(f'Activation failed. uris:= {uris} activation:={depth}).', response)
 
-    def listing(self, auth_key: str, filter_type: OntologyClassReference, page_id: Optional[str] = None,
-                limit: int = 30, locale: Optional[LanguageCode] = None, visibility: Optional[Visibility] = None,
-                estimate_count: bool = False, max_retries: int = 3, backoff_factor: float = 0.1) \
-            -> Tuple[List[ThingObject], int, str]:
+    def listing(self, filter_type: OntologyClassReference, page_id: Optional[str] = None,
+                limit: int = 30, locale: Optional[LocaleCode] = None, visibility: Optional[Visibility] = None,
+                estimate_count: bool = False, auth_key: Optional[str] = None,
+                max_retries: int = 3, backoff_factor: float = 0.1) -> Tuple[List[ThingObject], int, str]:
         """
         List all entities visible to users.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         filter_type: OntologyClassReference
             Filtering with entity
         page_id: Optional[str]
@@ -793,6 +779,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Filter the entities based on its visibilities
         estimate_count: bool [default:=False]
             Request an estimate of the entities in a tenant.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         max_retries: int
             Maximum number of retries
         backoff_factor: float
@@ -813,6 +801,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.LISTING_ENDPOINT}'
         # Header with auth token
         headers: Dict[str, str] = {
@@ -852,11 +842,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                         thing.status_flag = EntityStatus.SYNCED
                         entities.append(thing)
                 return entities, estimated_total_number, next_page_id
+        handle_error(f'Failed to list the entities (since:= {page_id}, limit:={limit}).', response)
 
-        raise WacomServiceException(f'Failed to list the entities (since:= {page_id}, limit:={limit}). '
-                                    f'Response code:={response.status_code}, exception:= {response.content}')
-
-    def ontology_update(self, auth_key: str, fix: bool = False, max_retries: int = 3, backoff_factor: float = 0.1):
+    def ontology_update(self, fix: bool = False, auth_key: Optional[str] = None,
+                        max_retries: int = 3, backoff_factor: float = 0.1):
         """
         Update the ontology.
 
@@ -865,20 +854,22 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         fix: bool [default:=False]
             Fix the ontology if tenant is in inconsistent state.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         max_retries: int
             Maximum number of retries
         backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a.
+            A backoff factor to apply between attempts after the second try.
 
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code and commit failed.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}{"/fix" if fix else ""}'
         # Header with auth token
         headers: dict = {
@@ -893,11 +884,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.patch(url, headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
             if not response.ok:
-                raise WacomServiceException(f'Ontology update fails. '
-                                            f'Response code:={response.status_code}, exception:= {response.content}')
+                handle_error(f'Ontology update fails.', response)
 
-    def search_all(self, auth_key: str, search_term: str, language_code: LanguageCode,
-                   types: List[OntologyClassReference], limit: int = 30, next_page_id: str = None) \
+    def search_all(self, search_term: str, language_code: LocaleCode, types: List[OntologyClassReference],
+                   limit: int = 30, next_page_id: str = None, auth_key: Optional[str] = None) \
             -> Tuple[List[ThingObject], str]:
         """Search term in labels, literals and description.
 
@@ -907,7 +897,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Auth key from user
         search_term: str
             Search term.
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         types: List[OntologyClassReference]
             Limits the types for search.
@@ -928,6 +918,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -944,26 +936,24 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                           verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
-        raise WacomServiceException(f'Search on labels {search_term} failed. '
-                                    f'{parameters}'
-                                    f'Response code:={response.status_code}, exception:= {response.content}')
+        handle_error(f'Search on labels {search_term} failed. ', response)
 
-    def search_labels(self, auth_key: str, search_term: str, language_code: LanguageCode, limit: int = 30,
-                      next_page_id: str = None) -> Tuple[List[ThingObject], str]:
+    def search_labels(self, search_term: str, language_code: LocaleCode, limit: int = 30,
+                      next_page_id: str = None, auth_key: Optional[str] = None) -> Tuple[List[ThingObject], str]:
         """Search for matches in labels.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         search_term: str
             Search term.
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         limit: int  (default:= 30)
             Size of the page for pagination.
         next_page_id: str (default:=None)
             ID of the next page within pagination.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -977,6 +967,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_LABELS_ENDPOINT}'
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -987,37 +980,36 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             LIMIT: limit,
             NEXT_PAGE_ID_TAG: next_page_id
         }
-        url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_LABELS_ENDPOINT}'
         response: Response = requests.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
                                           verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
-        raise WacomServiceException(f'Search on labels {search_term} failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.content}')
+        handle_error(f'Search on labels {search_term} failed. ', response)
 
-    def search_literal(self, auth_key: str, search_term: str, literal: OntologyPropertyReference,
+    def search_literal(self, search_term: str, literal: OntologyPropertyReference,
                        pattern: SearchPattern = SearchPattern.REGEX,
-                       language_code: LanguageCode = LanguageCode('en_US'),
-                       limit: int = 30, next_page_id: str = None) -> Tuple[List[ThingObject], str]:
+                       language_code: LocaleCode = EN_US,
+                       limit: int = 30, next_page_id: str = None, auth_key: Optional[str] = None) \
+            -> Tuple[List[ThingObject], str]:
         """
         Search for matches in literals.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         search_term: str
             Search term.
         literal: OntologyPropertyReference
             Literal used for the search
         pattern: SearchPattern (default:= SearchPattern.REGEX)
             Search pattern. The chosen search pattern must fit the type of the entity.
-        language_code: LanguageCode
+        language_code: LocaleCode (default:= EN_US)
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         limit: int (default:= 30)
             Size of the page for pagination.
         next_page_id: str (default:=None)
             ID of the next page within pagination.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -1031,6 +1023,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
        WacomServiceException
            If the graph service returns an error code.
        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_LITERALS_ENDPOINT}'
         parameters: Dict[str, Any] = {
             VALUE: search_term,
@@ -1047,22 +1041,20 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                           verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
-        raise WacomServiceException(f'Search on labels {search_term} failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.content}')
+        handle_error(f'Search on literals {search_term} failed. ', response)
 
-    def search_relation(self, auth_key: str, relation: OntologyPropertyReference,
-                        language_code: LanguageCode, subject_uri: str = None, object_uri: str = None,
-                        limit: int = 30, next_page_id: str = None) -> Tuple[List[ThingObject], str]:
+    def search_relation(self, relation: OntologyPropertyReference, language_code: LocaleCode,
+                        subject_uri: str = None, object_uri: str = None,
+                        limit: int = 30, next_page_id: str = None, auth_key: Optional[str] = None) \
+            -> Tuple[List[ThingObject], str]:
         """
         Search for matches in literals.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         relation: OntologyPropertyReference
             Search term.
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         subject_uri: str (default:=None)
             URI of the subject
@@ -1072,6 +1064,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Size of the page for pagination.
         next_page_id: str (default:=None)
             ID of the next page within pagination.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -1085,6 +1079,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
        WacomServiceException
            If the graph service returns an error code.
        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_RELATION_ENDPOINT}'
         parameters: Dict[str, Any] = {
             SUBJECT_URI: subject_uri,
@@ -1097,31 +1093,29 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         headers: dict = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-
         response = requests.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
                                 verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
-        raise WacomServiceException(f'Search on: subject:={subject_uri}, relation {relation.iri}, '
-                                    f'object:= {object_uri} failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.content}')
+        handle_error(f'Search on: subject:={subject_uri}, relation {relation.iri}, '
+                     f'object:= {object_uri} failed. ', response)
 
-    def search_description(self, auth_key: str, search_term: str, language_code: LanguageCode, limit: int = 30,
-                           next_page_id: str = None) -> Tuple[List[ThingObject], str]:
+    def search_description(self, search_term: str, language_code: LocaleCode, limit: int = 30,
+                           next_page_id: str = None, auth_key: Optional[str] = None) -> Tuple[List[ThingObject], str]:
         """Search for matches in description.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         search_term: str
             Search term.
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         limit: int  (default:= 30)
             Size of the page for pagination.
         next_page_id: str (default:=None)
             ID of the next page within pagination.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -1135,6 +1129,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_DESCRIPTION_ENDPOINT}'
         parameters: Dict[str, Any] = {
             SEARCH_TERM: search_term,
@@ -1145,13 +1141,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         headers: dict = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-
         response = requests.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
                                 verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
-        raise WacomServiceException(f'Search on labels {search_term} failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.content}')
+        handle_error(f'Search on labels {search_term}@{language_code} failed. ', response)
 
     @staticmethod
     def __search_results__(response: Dict[str, Any]) -> Tuple[List[ThingObject], str]:
@@ -1160,39 +1154,39 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             results.append(ThingObject.from_dict(elem))
         return results, response[NEXT_PAGE_ID_TAG]
 
-    def set_entity_image_local(self, auth_key: str, entity_uri: str, path: Path) -> str:
+    def set_entity_image_local(self, entity_uri: str, path: Path, auth_key: Optional[str] = None) -> str:
         """Setting the image of the entity.
-       The image is stored locally.
+        The image is stored locally.
 
-       Parameters
-       ----------
-       auth_key: str
-           Auth key from user
-       entity_uri: str
+        Parameters
+        ----------
+        entity_uri: str
            URI of the entity.
-       path: Path
+        path: Path
            The path of image.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
-       Returns
-       -------
-       image_id: str
+
+        Returns
+        -------
+        image_id: str
            ID of uploaded image
 
-       Raises
-       ------
-       WacomServiceException
+        Raises
+        ------
+        WacomServiceException
            If the graph service returns an error code.
-       """
+        """
         with path.open('rb') as fp:
             image_bytes: bytes = fp.read()
             file_name: str = str(path.absolute())
             _, file_extension = os.path.splitext(file_name.lower())
             mime_type = MIME_TYPE[file_extension]
+            return self.set_entity_image(entity_uri, image_bytes, file_name, mime_type, auth_key=auth_key)
 
-            return self.set_entity_image(auth_key, entity_uri, image_bytes, file_name, mime_type)
-
-    def set_entity_image_url(self, auth_key: str, entity_uri: str, image_url: str, file_name: Optional[str] = None,
-                             mime_type: Optional[str] = None) -> str:
+    def set_entity_image_url(self, entity_uri: str, image_url: str, file_name: Optional[str] = None,
+                             mime_type: Optional[str] = None, auth_key: Optional[str] = None) -> str:
         """Setting the image of the entity.
         The image for the URL is downloaded and then pushed to the backend.
 
@@ -1208,6 +1202,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Name of  the file. If None the name is extracted from URL.
         mime_type: str (default:=None)
             Mime type.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -1230,45 +1226,45 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 if mime_type is None:
                     _, file_extension = os.path.splitext(file_name.lower())
                     if file_extension not in MIME_TYPE:
-                        raise WacomServiceException(f'Creation of entity image failed. Mime-type cannot be '
-                                                    f'identified or is not supported.'
-                                                    f'Response code:={response.status_code}, '
-                                                    f'exception:= {response.content}')
+                        handle_error(f'Creation of entity image failed. Mime-type cannot be identified or is not '
+                                     f'supported.', response)
                     mime_type = MIME_TYPE[file_extension]
 
-                return self.set_entity_image(auth_key, entity_uri, image_bytes, file_name, mime_type)
+                return self.set_entity_image(entity_uri, image_bytes, file_name, mime_type, auth_key=auth_key)
         if not response.ok:
             raise WacomServiceException(f'Creation of entity image failed'
                                         f'Response code:={response.status_code}, exception:= {response.content}')
 
-    def set_entity_image(self, auth_key: str, entity_uri: str, image_byte: bytes, file_name: str = 'icon.jpg',
-                         mime_type: str = 'image/jpeg') -> str:
+    def set_entity_image(self, entity_uri: str, image_byte: bytes, file_name: str = 'icon.jpg',
+                         mime_type: str = 'image/jpeg', auth_key: Optional[str] = None) -> str:
         """Setting the image of the entity.
-       The image for the URL is downloaded and then pushed to the backend.
+        The image for the URL is downloaded and then pushed to the backend.
 
-       Parameters
-       ----------
-       auth_key: str
-           Auth key from user
-       entity_uri: str
+        Parameters
+        ----------
+        entity_uri: str
            URI of the entity.
-       image_byte: bytes
+        image_byte: bytes
            Binary encoded image.
-       file_name: str (default:=None)
+        file_name: str (default:=None)
            Name of  the file. If None the name is extracted from URL.
-       mime_type: str (default:=None)
+        mime_type: str (default:=None)
            Mime type.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
-       Returns
-       -------
-       image_id: str
+        Returns
+        -------
+        image_id: str
            ID of uploaded image
 
-       Raises
-       ------
-       WacomServiceException
+        Raises
+        ------
+        WacomServiceException
            If the graph service returns an error code.
-       """
+        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: dict = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -1279,5 +1275,4 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         response = requests.patch(url, headers=headers, files=files, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
         if response.ok:
             return response.json()['imageId']
-        raise WacomServiceException(f'Creation of entity image failed'
-                                    f'Response code:={response.status_code}, exception:= {response.content}')
+        handle_error(f'Creation of entity image failed.', response)

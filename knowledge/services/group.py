@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-23 Wacom. All rights reserved.
+# Copyright © 2021-24 Wacom. All rights reserved.
 import urllib.parse
 from typing import List, Any, Optional, Dict
 
@@ -10,17 +10,12 @@ from urllib3 import Retry
 
 from knowledge.base.access import GroupAccessRight
 from knowledge.base.ontology import NAME_TAG
-from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
+from knowledge.services import GROUP_USER_RIGHTS_TAG, DEFAULT_TIMEOUT, JOIN_KEY_PARAM, USER_TO_ADD_PARAM, \
+    USER_TO_REMOVE_PARAM, FORCE_PARAM, APPLICATION_JSON_HEADER
+from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, handle_error
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG
 # -------------------------------------- Constant flags ----------------------------------------------------------------
 from knowledge.services.users import User, FORCE_TAG, LIMIT_TAG, OFFSET_TAG
-
-GROUP_USER_RIGHTS_TAG: str = "groupUserRights"
-JOIN_KEY_PARAM: str = "joinKey"
-USER_TO_ADD_PARAM: str = "userToAddId"
-USER_TO_REMOVE_PARAM: str = "userToRemoveId"
-FORCE_PARAM: str = "force"
-DEFAULT_TIMEOUT: int = 30
 
 
 class Group:
@@ -95,7 +90,7 @@ class Group:
         Returns
         -------
         instance: Group
-            Group object
+            The group object
         """
         tenant_id: str = param.get('tenantId')
         owner_id: str = param.get('ownerId')
@@ -168,23 +163,24 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
     """"Endpoint for all group related functionality."""
 
     def __init__(self, service_url: str = WacomServiceAPIClient.SERVICE_URL, service_endpoint: str = 'graph/v1'):
-        super().__init__("GroupManagementServiceAPI", service_url=service_url, service_endpoint=service_endpoint)
+        super().__init__("GroupManagementServiceAPI", service_url=service_url,
+                         service_endpoint=service_endpoint)
 
     # ------------------------------------------ Groups handling ------------------------------------------------------
 
-    def create_group(self, auth_key: str, name: str, rights: GroupAccessRight = GroupAccessRight(read=True)) \
-            -> Group:
+    def create_group(self, name: str, rights: GroupAccessRight = GroupAccessRight(read=True),
+                     auth_key: Optional[str] = None) -> Group:
         """
         Creates a group.
 
         Parameters
         ----------
-        auth_key: str
-            User key.
         name: str
             Name of the tenant
         rights: GroupAccessRight
             Access rights
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -196,10 +192,12 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _= self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
-            CONTENT_TYPE_HEADER_FLAG: 'application/json'
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
         }
         payload: Dict[str, str] = {
             NAME_TAG: name,
@@ -215,33 +213,34 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
                                               timeout=DEFAULT_TIMEOUT)
             if response.ok:
                 return Group.parse(response.json())
-            raise WacomServiceException(f'Creation of group failed.'
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+            handle_error('Creating of group failed.', response, payload=payload, headers=headers)
 
-    def update_group(self, auth_key: str, group_id: str, name: str, rights: GroupAccessRight = GroupAccessRight):
+    def update_group(self, group_id: str, name: str, rights: GroupAccessRight = GroupAccessRight,
+                     auth_key: Optional[str] = None):
         """
         Updates a group.
 
         Parameters
         ----------
-        auth_key: str
-            User key.
         group_id: str
             ID of the group.
         name: str
             Name of the tenant
         rights: GroupAccessRight
             Access rights
-
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _= self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
-            CONTENT_TYPE_HEADER_FLAG: 'application/json'
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
         }
         payload: Dict[str, str] = {
             NAME_TAG: name,
@@ -256,27 +255,28 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             response: Response = session.patch(url, headers=headers, json=payload, verify=self.verify_calls,
                                                timeout=DEFAULT_TIMEOUT)
             if not response.ok:
-                raise WacomServiceException(f'Update of group failed.'
-                                            f'Response code:={response.status_code}, exception:= {response.text}')
+                handle_error('Update of group failed.', response, payload=payload, headers=headers)
 
-    def delete_group(self, auth_key: str, group_id: str, force: bool = False):
+    def delete_group(self, group_id: str, force: bool = False, auth_key: Optional[str] = None):
         """
-         Delete a group.
+        Delete a group.
 
-         Parameters
-         ----------
-         auth_key: str
-             User key.
-         group_id: str
-             ID of the group.
+        Parameters
+        ----------
+        group_id: str
+         ID of the group.
         force: bool (Default = False)
-            If True, the group will be deleted even if it is not empty.
+        If True, the group will be deleted even if it is not empty.
+        auth_key: Optional[str]
+        If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
-         Raises
+        Raises
         ------
         WacomServiceException
-            If the tenant service returns an error code.
+        If the tenant service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _= self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -293,18 +293,15 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             response: Response = session.delete(url, headers=headers, params=params,
                                                 verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if not response.ok:
-                raise WacomServiceException(f'Deletion of group failed.'
-                                            f'Response code:={response.status_code}, exception:= {response.text}')
+                handle_error('Deletion of group failed.', response, parameters=params, headers=headers)
 
-    def listing_groups(self, auth_key: str, admin: bool = False, limit: int = 20, offset: int = 0) -> List[Group]:
+    def listing_groups(self, admin: bool = False, limit: int = 20, offset: int = 0, auth_key: Optional[str] = None)\
+            -> List[Group]:
         """
         Listing all groups configured for this instance.
 
         Parameters
         ----------
-        auth_key: str
-            API key for authentication
-
         admin: bool (default:= False)
             Uses admin privilege to show all groups of the tenant.
             Requires user to have the role: TenantAdmin
@@ -312,12 +309,16 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             Maximum number of groups to return.
         offset: int (default:= 0)
             Offset of the first group to return.
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
         user:  List[Groups]
             List of groups.
         """
+        if auth_key is None:
+            auth_key, _= self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}'
         params: Dict[str, int] = {}
         if admin:
@@ -338,18 +339,17 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             if response.ok:
                 groups: List[Dict[str, Any]] = response.json()
                 return [Group.parse(g) for g in groups]
-        raise WacomServiceException(f'Listing of group failed.'
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+            handle_error('Listing of groups failed.', response, parameters=params, headers=headers)
 
-    def group(self, auth_key: str, group_id: str) -> GroupInfo:
+    def group(self, group_id: str, auth_key: Optional[str] = None) -> GroupInfo:
         """Get a group.
 
         Parameters
         ----------
-        auth_key: str
-            API key for user.
         group_id: str
             Group ID
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -361,6 +361,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _= self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -369,26 +371,27 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         if response.ok:
             group: Dict[str, Any] = response.json()
             return GroupInfo.parse(group)
-        raise WacomServiceException(f'Getting of group information failed.'
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+        handle_error('Getting of group information failed.', response, headers=headers)
 
-    def join_group(self, auth_key: str, group_id: str, join_key: str):
+    def join_group(self, group_id: str, join_key: str, auth_key: Optional[str] = None):
         """User joining a group with his auth token.
 
         Parameters
         ----------
-        auth_key: str
-            API key for user.
         group_id: str
             Group ID
         join_key: str
             Key which is used to join the group.
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _= self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/join'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -399,41 +402,38 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
                                            timeout=DEFAULT_TIMEOUT)
         if not response.ok:
-            raise WacomServiceException(f'Joining the group failed.'
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+            handle_error('Joining of group failed.', response, parameters=params, headers=headers)
 
-    def leave_group(self, auth_key: str, group_id: str):
+    def leave_group(self, group_id: str, auth_key: Optional[str] = None):
         """User leaving a group with his auth token.
 
         Parameters
         ----------
-        auth_key: str
-            API key for user.
         group_id: str
             Group ID
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _= self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/leave'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-
         response: Response = requests.post(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
-            raise WacomServiceException(f'Leaving group failed.'
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+            handle_error('Leaving of group failed.', response, headers=headers)
 
-    def add_user_to_group(self, auth_key: str, group_id: str, user_id: str):
+    def add_user_to_group(self, group_id: str, user_id: str, auth_key: Optional[str] = None):
         """Adding a user to group.
 
         Parameters
         ----------
-        auth_key: str
-            API key for user.
         group_id: str
             Group ID
         user_id: str
@@ -444,6 +444,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _= self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/user/add'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -454,28 +456,29 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
                                            timeout=DEFAULT_TIMEOUT)
         if not response.ok:
-            raise WacomServiceException(f'Adding of user to group failed.'
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+            handle_error('Adding of user to group failed.', response, parameters=params, headers=headers)
 
-    def remove_user_from_group(self, auth_key: str, group_id: str, user_id: str, force: bool = False):
+    def remove_user_from_group(self, group_id: str, user_id: str, force: bool = False, auth_key: Optional[str] = None):
         """Remove a user from group.
 
         Parameters
         ----------
-        auth_key: str
-            API key for user.
         group_id: str
             Group ID
         user_id: str
             User who is remove from the group
         force: bool
             If true remove user and entities owned by the user if any
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _= self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/user/remove'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -487,16 +490,13 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
                                            timeout=DEFAULT_TIMEOUT)
         if not response.ok:
-            raise WacomServiceException(f'Removing of user from group failed. URL: {url}'
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+            handle_error('Removing of user from group failed.', response, parameters=params, headers=headers)
 
-    def add_entity_to_group(self, auth_key: str, group_id: str, entity_uri: str):
+    def add_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None):
         """Adding an entity to group.
 
         Parameters
         ----------
-        auth_key: str
-            API key for user.
         group_id: str
             Group ID
         entity_uri: str
@@ -507,6 +507,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _= self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/entity/{uri}/add'
         headers: Dict[str, str] = {
@@ -520,26 +522,27 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.post(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if not response.ok:
-                raise WacomServiceException(f'Adding of entity to group failed.'
-                                            f'Response code:={response.status_code}, exception:= {response.text}')
+                handle_error('Adding of entity to group failed.', response, headers=headers)
 
-    def remove_entity_to_group(self, auth_key: str, group_id: str, entity_uri: str):
+    def remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None):
         """Remove an entity from group.
 
         Parameters
         ----------
-        auth_key: str
-            API key for user.
         group_id: str
             Group ID
         entity_uri: str
             URI of entity
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
+        if auth_key is None:
+            auth_key, _= self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/entity/{uri}/remove'
         headers: Dict[str, str] = {
@@ -553,5 +556,4 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.post(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if not response.ok:
-                raise WacomServiceException(f'Removing of entity to group failed.'
-                                            f'Response code:={response.status_code}, exception:= {response.text}')
+                handle_error('Removing of entity from group failed.', response, headers=headers)
