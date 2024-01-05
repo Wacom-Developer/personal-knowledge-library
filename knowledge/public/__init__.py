@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2022-2023 Wacom. All rights reserved.
+# Copyright © 2022-2024 Wacom. All rights reserved.
 """Mapping of Wikidata property ids to its string."""
 import json
 from pathlib import Path

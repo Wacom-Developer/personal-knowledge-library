@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2023 Wacom. All rights reserved.
+# Copyright © 2023-24 Wacom. All rights reserved.
 import hashlib
 import multiprocessing
 import urllib
@@ -17,12 +17,12 @@ from urllib3 import Retry
 from knowledge import logger
 from knowledge.base.entity import Description, DESCRIPTIONS_TAG, Label, LanguageCode, LABELS_TAG, REPOSITORY_TAG, \
     DISPLAY_TAG, DESCRIPTION_TAG
-from knowledge.base.ontology import LANGUAGE_LOCALE_MAPPING, EN_US
 from knowledge.public import PROPERTY_MAPPING, INSTANCE_OF_PROPERTY, IMAGE_PROPERTY
 from knowledge.public.helper import __waiting_request__, __waiting_multi_request__, QID_TAG, REVISION_TAG, \
     PID_TAG, LABEL_TAG, CLAIMS_TAG, LABEL_VALUE_TAG, WIKIDATA_LANGUAGE_TAG, ALIASES_TAG, MODIFIED_TAG, \
     ONTOLOGY_TYPES_TAG, SITELINKS_TAG, parse_date, ID_TAG, LAST_REVID_TAG, wikidate, WikiDataAPIException, \
     WIKIDATA_SPARQL_URL, SOURCE_TAG, URLS_TAG, TITLES_TAG, image_url, WIKIDATA_SEARCH_URL, SUPERCLASSES_TAG, API_LIMIT
+from knowledge.base.language import LANGUAGE_LOCALE_MAPPING, EN_US, LocaleCode
 
 # Constants
 QUALIFIERS_TAG: str = "QUALIFIERS"
@@ -168,8 +168,8 @@ class WikidataSearchResult:
         qid: str = search_result[ID_TAG]
         display: Dict[str, Any] = search_result[DISPLAY_TAG]
         label: Label = Label(content=display[LABEL_TAG]['value'],
-                             language_code=LanguageCode(LANGUAGE_LOCALE_MAPPING.get(display[LABEL_TAG]['language'],
-                                                                                    EN_US)))
+                             language_code=LANGUAGE_LOCALE_MAPPING.get(LanguageCode(display[LABEL_TAG]['language']),
+                                                                       EN_US))
         description: Optional[Description] = None
         if DESCRIPTION_TAG in display:
             description: Description = Description(description=display[DESCRIPTION_TAG]['value'],
@@ -210,7 +210,7 @@ class WikidataClass:
     "gender" (Q48277) is a property that can be used to describe the gender of a person.
     - **Instances**: These are individual items that belong to a class. For example, Barack Obama (Q76) is an instance
     of the "person" (Q215627) class.
-    - **Metaclasses**: These are classes that are used to group together other classes based on their properties or
+    - **Meta-classes**: These are classes that are used to group together other classes based on their properties or
     characteristics. For example, the "monotypic taxon" (Q310890) class groups together classes that represent
     individual species of organisms.
 
@@ -247,10 +247,23 @@ class WikidataClass:
 
     @property
     def superclasses(self) -> List['WikidataClass']:
+        """Superclasses."""
         return self.__superclasses
 
     @classmethod
     def create_from_dict(cls, class_dict: Dict[str, Any]) -> 'WikidataClass':
+        """
+        Create a class from a dictionary.
+        Parameters
+        ----------
+        class_dict: Dict[str, Any]
+            Class dictionary.
+
+        Returns
+        -------
+        instance: WikidataClass
+            Instance of WikidataClass.
+        """
         wiki_cls: WikidataClass = cls(class_dict[QID_TAG], class_dict.get(LABEL_TAG))
         for superclass in class_dict.get(SUPERCLASSES_TAG, []):
             wiki_cls.__superclasses.append(WikidataClass.create_from_dict(superclass))
@@ -266,14 +279,6 @@ class WikidataClass:
 
     def __repr__(self):
         return f'<WikidataClass:={self.qid}]>'
-
-    """
-    def __str__(self, padding: str = ''):
-        ret: str = f'{padding}|-- {self.qid} ({self.label})\n'
-        for parent in self.superclasses:
-            ret += parent.__str__(padding + '|   ')
-        return ret
-    """
 
 
 class Claim:
@@ -291,7 +296,7 @@ class Claim:
     - Predicate: The property that describes the statement
     - Object: The value of the property for the given item
 
-    For example, a claim could be "Barack Obama (subject) has a birth-date (predicate) of August 4, 1961 (object)."
+    For example, a claim could be "Barack Obama (subject) has a birthdate (predicate) of August 4, 1961 (object)."
     Claims in Wikidata help to organize information and provide a structured way to represent knowledge that can
     be easily queried, analyzed, and visualized.
     """
@@ -349,11 +354,11 @@ class SiteLinks:
     SiteLinks
     ---------
     Sitelinks in Wikidata are links between items in Wikidata and pages on external websites, such as Wikipedia,
-    Wikimedia Commons, and other Wikimedia projects. A sitelink connects a Wikidata item to a specific page on an
+    Wikimedia Commons, and other Wikimedia projects. A site-link connects a Wikidata item to a specific page on an
     external website that provides more information about the topic represented by the item.
 
     For example, a Wikidata item about a particular city might have sitelinks to the corresponding page on the English,
-    French, and German Wikipedia sites. Each sitelink connects the Wikidata item to a specific page on the external
+    French, and German Wikipedia sites. Each site-link connects the Wikidata item to a specific page on the external
     website that provides more detailed information about the city.
 
     Sitelinks in Wikidata help to connect and integrate information across different languages and projects,
@@ -406,7 +411,7 @@ class SiteLinks:
         Returns
         -------
         instance: SiteLinks
-            SiteLinks instance.
+            The SiteLinks instance.
         """
         return SiteLinks(source=entity_dict[SOURCE_TAG], urls=entity_dict.get(URLS_TAG),
                          titles=entity_dict.get(TITLES_TAG))
@@ -503,7 +508,7 @@ class WikidataThing:
 
     @property
     def alias_languages(self) -> List[str]:
-        """All available languages for a aliaes."""
+        """All available languages for a aliases."""
         return list(self.__aliases.keys())
 
     @property
@@ -530,7 +535,7 @@ class WikidataThing:
         language_code: str
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         """
-        self.__label[language_code] = Label(label, LanguageCode(language_code), True)
+        self.__label[language_code] = Label(label, LocaleCode(language_code), True)
 
     def label_lang(self, language_code: str) -> Optional[Label]:
         """
@@ -558,7 +563,7 @@ class WikidataThing:
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         """
         self.__description[language_code] = Description(description=description,
-                                                        language_code=LanguageCode(language_code))
+                                                        language_code=LocaleCode(language_code))
 
     def description_lang(self, language_code: str) -> Optional[Description]:
         """
@@ -602,7 +607,7 @@ class WikidataThing:
         """
         if language_code not in self.__aliases:
             self.aliases[language_code] = []
-        self.__aliases[language_code].append(Label(alias, LanguageCode(language_code), False))
+        self.__aliases[language_code].append(Label(alias, LocaleCode(language_code), False))
 
     def image(self, dpi: int = 500) -> Optional[str]:
         """
@@ -730,23 +735,23 @@ class WikidataThing:
             for label in entity_dict[LABELS_TAG].values():
                 if supported_languages is None or label[WIKIDATA_LANGUAGE_TAG] in supported_languages:
                     la_content: str = label[LABEL_VALUE_TAG]
-                    la_lang: str = label[WIKIDATA_LANGUAGE_TAG]
+                    la_lang: LanguageCode = LanguageCode(label[WIKIDATA_LANGUAGE_TAG])
                     if la_lang in LANGUAGE_LOCALE_MAPPING:
                         la: Label = Label(content=la_content,
-                                          language_code=LanguageCode(LANGUAGE_LOCALE_MAPPING[la_lang]), main=True)
+                                          language_code=LANGUAGE_LOCALE_MAPPING[la_lang], main=True)
                         labels[la.language_code] = la
         else:
-            labels['en_US'] = Label('No Label', LanguageCode('en_US'))
+            labels['en_US'] = Label('No Label', EN_US)
         if ALIASES_TAG in entity_dict:
             # Extract the aliases
             for alias in entity_dict[ALIASES_TAG].values():
                 if supported_languages is None or alias[WIKIDATA_LANGUAGE_TAG] in supported_languages:
                     for a in alias:
                         la_content: str = a[LABEL_VALUE_TAG]
-                        la_lang: str = a[WIKIDATA_LANGUAGE_TAG]
+                        la_lang: LanguageCode = LanguageCode(a[WIKIDATA_LANGUAGE_TAG])
                         if la_lang in LANGUAGE_LOCALE_MAPPING:
                             la: Label = Label(content=la_content,
-                                              language_code=LanguageCode(LANGUAGE_LOCALE_MAPPING[la_lang]), main=False)
+                                              language_code=LANGUAGE_LOCALE_MAPPING[la_lang], main=False)
                             if la.language_code not in aliases:
                                 aliases[la.language_code] = []
                             aliases[la.language_code].append(la)
@@ -755,10 +760,10 @@ class WikidataThing:
             for desc in entity_dict[DESCRIPTIONS_TAG].values():
                 if supported_languages is None or desc[WIKIDATA_LANGUAGE_TAG] in supported_languages:
                     desc_content: str = desc[LABEL_VALUE_TAG]
-                    desc_lang: str = desc[WIKIDATA_LANGUAGE_TAG]
+                    desc_lang: LanguageCode = LanguageCode(desc[WIKIDATA_LANGUAGE_TAG])
                     if desc_lang in LANGUAGE_LOCALE_MAPPING:
                         de: Description = Description(description=desc_content,
-                                                      language_code=LanguageCode(LANGUAGE_LOCALE_MAPPING[desc_lang]))
+                                                      language_code=LANGUAGE_LOCALE_MAPPING[desc_lang])
                         descriptions[de.language_code] = de
         # Initiate the wikidata thing
         thing: WikidataThing = WikidataThing(qid=entity_dict[ID_TAG], revision=entity_dict[LAST_REVID_TAG],
@@ -865,7 +870,7 @@ class WikidataThing:
     @property
     def claims_dict(self) -> Dict[str, Claim]:
         """ Returns the claims as a dictionary. """
-        return dict([(p, c) for p, c in self.__claims.items()])
+        return dict(list(self.__claims.items()))
 
     @property
     def claim_properties(self) -> List[WikidataProperty]:
@@ -1035,7 +1040,8 @@ class WikiDataAPIClient(ABC):
         return wikidata_classes.get(qid)
 
     @staticmethod
-    def search_term(search_term: str, language: str, url: str = WIKIDATA_SEARCH_URL) -> List[WikidataSearchResult]:
+    def search_term(search_term: str, language: LanguageCode, url: str = WIKIDATA_SEARCH_URL) \
+            -> List[WikidataSearchResult]:
         """
         Search for a term in the WikiData.
         Parameters
@@ -1157,7 +1163,7 @@ class WikiDataAPIClient(ABC):
         pulled: List[WikidataThing] = []
         if len(qids) == 0:
             return []
-        jobs: List[List[str]] = [ch for ch in chunks(list(qids), API_LIMIT)]
+        jobs: List[List[str]] = list(chunks(list(qids), API_LIMIT))
         num_processes: int = min(len(jobs), multiprocessing.cpu_count())
         if num_processes > 1:
             with Pool(processes=num_processes) as pool:

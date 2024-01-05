@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2023 Wacom. All rights reserved.
+# Copyright © 2023-24 Wacom. All rights reserved.
 import hashlib
 import math
 import urllib
@@ -273,7 +273,7 @@ def __waiting_request__(
     entity_id: str
         Entity QID
     base_url: Base URL
-        Base URL
+        The base URL
     Returns
     -------
     result_dict: Dict[str, Any]
@@ -324,7 +324,7 @@ def __waiting_multi_request__(
     entity_ids: List[str]
         Entity QID
     base_url: Base URL
-        Base URL
+        The base URL
     Returns
     -------
     result_dict: Dict[str, Any]
@@ -333,9 +333,11 @@ def __waiting_multi_request__(
     ------
     ValueError - Empty list or to many entities
     """
-    if not (0 < len(entity_ids) <= API_LIMIT):
-        raise ValueError(f"Number of entities must be within [1, {API_LIMIT}]. Number of QIDs: {len(entity_ids)}")
-    query: str = '|'.join(entity_ids)
+    checked_entity_ids: List[str] = [e for e in entity_ids if e.startswith('Q')]
+    if not (0 < len(checked_entity_ids) <= API_LIMIT):
+        raise ValueError(f"Number of entities must be within [1, {API_LIMIT}]. "
+                         f"Number of QIDs: {len(checked_entity_ids)}")
+    query: str = '|'.join(checked_entity_ids)
     url: str = f"{base_url}{query}&format=json"
 
     # Define the retry policy

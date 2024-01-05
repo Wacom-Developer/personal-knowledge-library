@@ -80,12 +80,40 @@ def wikidata_relations_extractor(wikidata: Dict[str, WikidataThing]) -> Dict[str
         Relations map.
     """
     relations: Dict[str, List[Dict[str, Any]]] = {}
-    quis: Set[str] = set(wikidata.keys())
+    qids: Set[str] = set(wikidata.keys())
     num_processes: int = min(len(wikidata), multiprocessing.cpu_count())
     with multiprocessing.Pool(processes=num_processes) as pool:
         # Wikidata thing is not support in multiprocessing
         with tqdm(total=round(len(wikidata) / num_processes), desc='Check Wikidata relations.') as pbar:
-            for qid, rels in pool.map(functools.partial(__relations__, wikidata=quis),
+            for qid, rels in pool.map(functools.partial(__relations__, wikidata=qids),
+                                      [e.__dict__() for e in wikidata.values()]):
+                relations[qid] = rels
+                pbar.update(1)
+    return relations
+
+
+def wikidata_relations_extractor_qids(wikidata: Dict[str, WikidataThing], qids: Set[str])\
+        -> Dict[str, List[Dict[str, Any]]]:
+    """Extracts relations from Wikidata.
+
+    Parameters
+    ----------
+    wikidata: Dict[str, WikidataThing]
+        Wikidata map
+    qids: Set[str]
+        Set of unique QIDs
+
+    Returns
+    -------
+    relations: Dict[str, List[Dict[str, Any]]]
+        Relations map.
+    """
+    relations: Dict[str, List[Dict[str, Any]]] = {}
+    num_processes: int = min(len(wikidata), multiprocessing.cpu_count())
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        # Wikidata thing is not support in multiprocessing
+        with tqdm(total=round(len(wikidata) / num_processes), desc='Check Wikidata relations.') as pbar:
+            for qid, rels in pool.map(functools.partial(__relations__, wikidata=qids),
                                       [e.__dict__() for e in wikidata.values()]):
                 relations[qid] = rels
                 pbar.update(1)

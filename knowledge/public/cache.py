@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2023 Wacom. All rights reserved.
+# Copyright © 2023-24 Wacom. All rights reserved.
 from pathlib import Path
 from typing import Optional, Dict
 
@@ -84,7 +84,7 @@ def load_cache(cache: Path):
     Parameters
     ----------
     cache: Path
-        Path to the cache file.
+        The path to the cache file.
     """
     if cache.exists():
         with cache.open('r') as r:
