@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-2022 Wacom Authors. All Rights Reserved.
+# Copyright © 2021-2024 Wacom Authors. All Rights Reserved.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,11 +15,10 @@
 import argparse
 from typing import Optional, Tuple, List
 
-from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, OntologyClass, OntologyProperty,\
-    Ontology, OntologyContext
+from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, OntologyClass, OntologyProperty, \
+    Ontology, OntologyContext, ontology_import
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
-from knowledge.utils.rdf import ontology_import
 
 CONTEXT_NAME: str = "core"
 RESOURCE: str = "http://www.w3.org/2000/01/rdf-schema#Resource"

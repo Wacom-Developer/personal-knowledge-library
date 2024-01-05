@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom Authors. All Rights Reserved.
+# Copyright © 2021-24 Wacom Authors. All Rights Reserved.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from typing import List, Dict
 
 import urllib3
 
-from knowledge.base.entity import LanguageCode
+from knowledge.base.language import EN_US
 from knowledge.base.ontology import OntologyPropertyReference, ThingObject, ObjectProperty
 from knowledge.nel.base import KnowledgeGraphEntity
 from knowledge.nel.engine import WacomEntityLinkingEngine
@@ -26,7 +26,6 @@ from knowledge.services.graph import WacomKnowledgeService
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-LANGUAGE_CODE: LanguageCode = LanguageCode("en_US")
 TEXT: str = "Leonardo da Vinci painted the Mona Lisa."
 
 
@@ -46,7 +45,8 @@ def print_entity(entity: KnowledgeGraphEntity, list_idx: int, auth_key: str, cli
         Knowledge graph client
     """
     thing: ThingObject = knowledge_client.entity(auth_key=user_token, uri=entity.entity_source.uri)
-    print(f'[{list_idx}] - {e.ref_text} [{e.start_idx}-{e.end_idx}] : {thing.uri} <{thing.concept_type.iri}>')
+    print(f'[{list_idx}] - {entity.ref_text} [{entity.start_idx}-{entity.end_idx}] : {thing.uri}'
+          f' <{thing.concept_type.iri}>')
     if len(thing.label) > 0:
         print('    | [Labels]')
         for la in thing.label:
@@ -96,11 +96,10 @@ if __name__ == '__main__':
     # Use special tenant for testing:  Unit-test tenant
     user_token, refresh_token, expiration_time = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     entities: List[KnowledgeGraphEntity] = nel_client.\
-        link_personal_entities(auth_key=user_token, text=TEXT,
-                               language_code=LANGUAGE_CODE)
+        link_personal_entities(text=TEXT, language_code=EN_US, auth_key=user_token)
     idx: int = 1
     print('-----------------------------------------------------------------------------------------------------------')
-    print(f'Text: "{TEXT}"@{LANGUAGE_CODE}')
+    print(f'Text: "{TEXT}"@{EN_US}')
     print('-----------------------------------------------------------------------------------------------------------')
     for e in entities:
         print_entity(e, idx, user_token, knowledge_client)

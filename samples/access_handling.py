@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom Authors. All Rights Reserved.
+# Copyright © 2021-24 Wacom Authors. All Rights Reserved.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
 import argparse
 from typing import List
 
-from knowledge.base.entity import LanguageCode, Label, Description
+from knowledge.base.entity import Label, Description
+from knowledge.base.language import EN_US, DE_DE, JA_JP
 from knowledge.base.ontology import OntologyClassReference, ThingObject
 from knowledge.services.base import WacomServiceException
 from knowledge.services.graph import WacomKnowledgeService
@@ -36,15 +37,15 @@ def create_entity() -> ThingObject:
     """
     # Main labels for entity
     topic_labels: List[Label] = [
-        Label('Hidden', LanguageCode('en_US')),
-        Label('Versteckt', LanguageCode('de_DE')),
-        Label('隠れた', LanguageCode('ja_JP'))
+        Label('Hidden', EN_US),
+        Label('Versteckt', DE_DE),
+        Label('隠れた', JA_JP),
     ]
 
     # Topic description
     topic_description: List[Description] = [
-        Description('Hidden entity to explain access management.', LanguageCode('en_US')),
-        Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
+        Description('Hidden entity to explain access management.', EN_US),
+        Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', DE_DE)
     ]
     # Topic
     topic_object: ThingObject = ThingObject(label=topic_labels, concept_type=TOPIC_CLASS, description=topic_description)
@@ -77,9 +78,9 @@ if __name__ == '__main__':
 
     # Now, let's create an entity
     thing: ThingObject = create_entity()
-    entity_uri: str = knowledge_client.create_entity(u1_token, thing)
+    entity_uri: str = knowledge_client.create_entity(thing, auth_key=u1_token)
     # Only user 1 can access the entity from cloud storage
-    my_thing: ThingObject = knowledge_client.entity(u1_token, entity_uri)
+    my_thing: ThingObject = knowledge_client.entity(entity_uri, auth_key=u1_token)
     print(f'User is the owner of {my_thing.owner}')
     # Now only user 1 has access to the personal entity
     knowledge_client.entity(u1_token, entity_uri)
@@ -88,13 +89,15 @@ if __name__ == '__main__':
         knowledge_client.entity(u2_token, entity_uri)
     except WacomServiceException as we:
         print(f"Expected exception as user 2 has no access to the personal entity of user 1. Exception: {we}")
+        print(f"Status code: {we.status_code}")
+        print(f"Response text: {we.service_response}")
     # Try to access the entity
     try:
         knowledge_client.entity(u3_token, entity_uri)
     except WacomServiceException as we:
         print(f"Expected exception as user 3 has no access to the personal entity of user 1. Exception: {we}")
     # Now, user 1 creates a group
-    g: Group = group_management.create_group(u1_token, "test-group")
+    g: Group = group_management.create_group("test-group", auth_key=u1_token)
     # Shares the join key with user 2 and user 2 joins
     group_management.join_group(u2_token, g.id, g.join_key)
     # Share entity with group
@@ -114,15 +117,15 @@ if __name__ == '__main__':
         knowledge_client.entity(u2_token, entity_uri)
     except WacomServiceException as we:
         print(f"Expected exception as user 2 has no access to the personal entity of user 1. Exception: {we}")
-    group_management.leave_group(u2_token, group_id=g.id)
+    group_management.leave_group(group_id=g.id, auth_key=u2_token)
     # Now, share the entity with the whole tenant
     my_thing.tenant_access_right.read = True
-    knowledge_client.update_entity(u1_token, my_thing)
+    knowledge_client.update_entity(my_thing, auth_key=u1_token)
     # Now, all users can access the entity
     knowledge_client.entity(u2_token, entity_uri)
     knowledge_client.entity(u3_token, entity_uri)
     # Finally, clean up
-    knowledge_client.delete_entity(u1_token, entity_uri, force=True)
+    knowledge_client.delete_entity(entity_uri, force=True, auth_key=u1_token)
     # Remove users
     user_management.delete_user(TENANT_KEY, u1.external_user_id, u1.id)
     user_management.delete_user(TENANT_KEY, u2.external_user_id, u2.id)

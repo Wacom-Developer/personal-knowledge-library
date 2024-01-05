@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-2022 Wacom Authors. All Rights Reserved.
+# Copyright © 2021-2024 Wacom Authors. All Rights Reserved.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
 import argparse
 from typing import Optional, List
 
-from knowledge.base.entity import Label, LanguageCode, Description
+from knowledge.base.entity import Label, Description
+from knowledge.base.language import EN_US, DE_DE
 from knowledge.base.ontology import DataPropertyType, OntologyClassReference, OntologyPropertyReference, ThingObject, \
     DataProperty, OntologyContext
 from knowledge.services.graph import WacomKnowledgeService
@@ -44,18 +45,18 @@ def create_artist() -> ThingObject:
     """
     # Main labels for entity
     topic_labels: List[Label] = [
-        Label('Gian Giacomo Caprotti', LanguageCode('en_US'))
+        Label('Gian Giacomo Caprotti', EN_US),
     ]
 
     # Topic description
     topic_description: List[Description] = [
-        Description('Hidden entity to explain access management.', LanguageCode('en_US')),
-        Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
+        Description('Hidden entity to explain access management.', EN_US),
+        Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', DE_DE)
     ]
 
     data_property: DataProperty = DataProperty(content='Salaj',
                                                property_ref=STAGE_NAME,
-                                               language_code=LanguageCode('en_US'))
+                                               language_code=EN_US)
     # Topic
     artist: ThingObject = ThingObject(label=topic_labels, concept_type=ARTIST_TYPE, description=topic_description)
     artist.add_data_property(data_property)
@@ -104,7 +105,7 @@ if __name__ == '__main__':
     knowledge_client.ontology_update(admin_token)
 
     res_entities, next_search_page = knowledge_client.search_labels(auth_key=admin_token, search_term=LEONARDO_DA_VINCI,
-                                                                    language_code=LanguageCode('en_US'), limit=1000)
+                                                                    language_code=EN_US, limit=1000)
     leo: Optional[ThingObject] = None
     for entity in res_entities:
         #  Entity must be a person and the label match with full string
@@ -113,5 +114,5 @@ if __name__ == '__main__':
             break
 
     artist_student: ThingObject = create_artist()
-    artist_student_uri: str = knowledge_client.create_entity(admin_token, artist_student)
-    knowledge_client.create_relation(admin_token, artist_student_uri, IS_INSPIRED_BY, leo.uri)
+    artist_student_uri: str = knowledge_client.create_entity(artist_student, auth_key=admin_token)
+    knowledge_client.create_relation(artist_student_uri, IS_INSPIRED_BY, leo.uri, auth_key=admin_token)

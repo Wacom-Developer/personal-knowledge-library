@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021 Wacom Authors. All Rights Reserved.
+# Copyright © 2021-24 Wacom Authors. All Rights Reserved.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
 import argparse
 from typing import Optional, Dict, List
 
-from knowledge.base.entity import LanguageCode, Description, Label
+from knowledge.base.entity import Description, Label
+from knowledge.base.language import LocaleCode, EN_US, DE_DE
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, ThingObject, ObjectProperty
 from knowledge.services.graph import WacomKnowledgeService
 
@@ -101,16 +102,15 @@ if __name__ == '__main__':
     # Wacom personal knowledge REST API Client
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
                                                                     service_url=args.instance)
-    # Use special tenant for testing:  Unit-test tenant
-    user_token, refresh_token, expiration_time = knowledge_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    knowledge_client.login(args.tenant, args.user)
     page_id: Optional[str] = None
     page_number: int = 1
     entity_count: int = 0
     print('-----------------------------------------------------------------------------------------------------------')
     print(' First step: Find Leonardo da Vinci in the knowledge graph.')
     print('-----------------------------------------------------------------------------------------------------------')
-    res_entities, next_search_page = knowledge_client.search_labels(auth_key=user_token, search_term=LEONARDO_DA_VINCI,
-                                                                    language_code=LanguageCode('en_US'), limit=1000)
+    res_entities, next_search_page = knowledge_client.search_labels(search_term=LEONARDO_DA_VINCI,
+                                                                    language_code=LocaleCode('en_US'), limit=1000)
     leo: Optional[ThingObject] = None
     s_idx: int = 1
     for res_entity in res_entities:
@@ -122,8 +122,7 @@ if __name__ == '__main__':
     print('-----------------------------------------------------------------------------------------------------------')
     print(' What artwork exists in the knowledge graph.')
     print('-----------------------------------------------------------------------------------------------------------')
-    relations_dict: Dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(auth_key=user_token,
-                                                                                                 uri=leo.uri)
+    relations_dict: Dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(uri=leo.uri)
     print(f' Artwork of {leo.label}')
     print('-----------------------------------------------------------------------------------------------------------')
     idx: int = 1
@@ -137,18 +136,18 @@ if __name__ == '__main__':
 
     # Main labels for entity
     artwork_labels: List[Label] = [
-        Label('Ginevra Gherardini', LanguageCode('en_US')),
-        Label('Ginevra Gherardini', LanguageCode('de_DE'))
+        Label('Ginevra Gherardini', EN_US),
+        Label('Ginevra Gherardini', DE_DE)
     ]
     # Alias labels for entity
     artwork_alias: List[Label] = [
-        Label("Ginevra", LanguageCode('en_US')),
-        Label("Ginevra", LanguageCode('de_DE'))
+        Label("Ginevra", EN_US),
+        Label("Ginevra", DE_DE)
     ]
     # Topic description
     artwork_description: List[Description] = [
-        Description('Oil painting of Mona Lisa\' sister', LanguageCode('en_US')),
-        Description('Ölgemälde von Mona Lisa\' Schwester', LanguageCode('de_DE'))
+        Description('Oil painting of Mona Lisa\' sister', EN_US),
+        Description('Ölgemälde von Mona Lisa\' Schwester', DE_DE)
     ]
     # Topic
     artwork_object: ThingObject = ThingObject(label=artwork_labels, concept_type=ARTWORK_CLASS,
@@ -157,44 +156,41 @@ if __name__ == '__main__':
     artwork_object.alias = artwork_alias
     print(f' Create: {artwork_object}')
     # Create artwork
-    artwork_entity_uri: str = knowledge_client.create_entity(user_token, artwork_object)
+    artwork_entity_uri: str = knowledge_client.create_entity(artwork_object)
     print(f' Entity URI: {artwork_entity_uri}')
     # Create relation between Leonardo da Vinci and artwork
-    knowledge_client.create_relation(auth_key=user_token, source=leo.uri, relation=IS_CREATOR,
-                                     target=artwork_entity_uri)
+    knowledge_client.create_relation(source=leo.uri, relation=IS_CREATOR, target=artwork_entity_uri)
 
-    relations_dict = knowledge_client.relations(auth_key=user_token, uri=artwork_entity_uri)
+    relations_dict = knowledge_client.relations(uri=artwork_entity_uri)
     for ontology_property, object_property in relations_dict.items():
         print(f'  {object_property}')
     # You will see that wacom:core#isCreatedBy is automatically inferred as relation as it is the inverse property of
     # wacom:core#created.
 
     # Now, more search options
-    res_entities, next_search_page = knowledge_client.search_description(user_token, 'Michelangelo\'s Sistine Chapel',
-                                                                         LanguageCode('en_US'), limit=1000)
+    res_entities, next_search_page = knowledge_client.search_description('Michelangelo\'s Sistine Chapel',
+                                                                         EN_US, limit=1000)
     print('-----------------------------------------------------------------------------------------------------------')
     print(' Search results.  Description: "Michelangelo\'s Sistine Chapel"')
     print('-----------------------------------------------------------------------------------------------------------')
     s_idx: int = 1
     for e in res_entities:
-        print_entity(e, s_idx, user_token, knowledge_client)
+        print_entity(e, s_idx, knowledge_client)
 
     # Now, let's search all artwork that has the art style self-portrait
-    res_entities, next_search_page = knowledge_client.search_labels(auth_key=user_token,
-                                                                    search_term=SELF_PORTRAIT_STYLE,
-                                                                    language_code=LanguageCode('en_US'), limit=1000)
+    res_entities, next_search_page = knowledge_client.search_labels(search_term=SELF_PORTRAIT_STYLE,
+                                                                    language_code=EN_US, limit=1000)
     art_style: Optional[ThingObject] = None
     s_idx: int = 1
     for entity in res_entities:
         #  Entity must be a person and the label match with full string
-        if entity.concept_type == ART_STYLE_CLASS and SELF_PORTRAIT_STYLE in [l.content for l in entity.label]:
+        if entity.concept_type == ART_STYLE_CLASS and SELF_PORTRAIT_STYLE in [la.content for la in entity.label]:
             art_style = entity
             break
-    res_entities, next_search_page = knowledge_client.search_relation(auth_key=user_token,
-                                                                      subject_uri=None,
+    res_entities, next_search_page = knowledge_client.search_relation(subject_uri=None,
                                                                       relation=HAS_ART_STYLE,
                                                                       object_uri=art_style.uri,
-                                                                      language_code=LanguageCode('en_US'))
+                                                                      language_code=EN_US)
     print('-----------------------------------------------------------------------------------------------------------')
     print(' Search results.  Relation: relation:=has_topic  object_uri:= unknown')
     print('-----------------------------------------------------------------------------------------------------------')
@@ -204,9 +200,7 @@ if __name__ == '__main__':
         s_idx += 1
 
     # Finally, the activation function retrieving the related identities to a pre-defined depth.
-    entities, relations = knowledge_client.activations(auth_key=user_token,
-                                                       uris=[leo.uri],
-                                                       depth=1)
+    entities, relations = knowledge_client.activations(auth_key=user_token, uris=[leo.uri], depth=1)
     print('-----------------------------------------------------------------------------------------------------------')
     print(f'Activation.  URI: {leo.uri}')
     print('-----------------------------------------------------------------------------------------------------------')
@@ -244,8 +238,8 @@ if __name__ == '__main__':
     # Delete all personal entities for this user
     while True:
         # pull
-        entities, total_number, next_page_id = knowledge_client.listing(user_token, THING_OBJECT, page_id=page_id,
-                                                                        limit=100)
+        entities, total_number, next_page_id = knowledge_client.listing(THING_OBJECT, page_id=page_id,
+                                                                        limit=100, auth_key=user_token)
         pulled_entities: int = len(entities)
         if pulled_entities == 0:
             break
