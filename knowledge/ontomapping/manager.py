@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2023 Wacom. All rights reserved.
+# Copyright © 2023-24 Wacom. All rights reserved.
 import logging
+import time
 from datetime import datetime
 from typing import Optional, Any, List, Dict, Tuple, Set
 
 from knowledge.base.entity import Label, LanguageCode, Description
 from knowledge.base.ontology import ThingObject, DataProperty, SYSTEM_SOURCE_SYSTEM, SYSTEM_SOURCE_REFERENCE_ID, \
-    OntologyClassReference, OntologyPropertyReference, ObjectProperty, LANGUAGE_LOCALE_MAPPING, LOCALE_LANGUAGE_MAPPING
+    OntologyClassReference, OntologyPropertyReference, ObjectProperty
 from knowledge.ontomapping import ClassConfiguration, TOPIC_CLASS, taxonomy_cache, \
     PropertyConfiguration, PropertyType, get_mapping_configuration
 from knowledge.public.cache import pull_wikidata_object
 from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient, WikidataClass, WikidataProperty
+from knowledge.base.language import LOCALE_LANGUAGE_MAPPING, LocaleCode, LANGUAGE_LOCALE_MAPPING, EN_US
 from knowledge.utils.wikipedia import get_wikipedia_summary
 
 
@@ -104,7 +106,7 @@ def convert_dict(structure: Dict[str, Any], locale: str) -> Optional[str]:
         elif structure_type == 'string':
             return value
         elif structure_type == 'monolingualtext' and isinstance(value, dict):
-            if LOCALE_LANGUAGE_MAPPING.get(locale) == value['language']:
+            if LOCALE_LANGUAGE_MAPPING.get(LocaleCode(locale)) == LanguageCode(value['language']):
                 return value['text']
             return None
         elif structure_type == 'globe-coordinate' and isinstance(value, dict):
@@ -115,7 +117,8 @@ def convert_dict(structure: Dict[str, Any], locale: str) -> Optional[str]:
 
 
 def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, Any], supported_locales: List[str],
-                      all_wikidata_objects: Dict[str, WikidataThing], pull_wikipedia: bool = False)\
+                      all_wikidata_objects: Dict[str, WikidataThing], pull_wikipedia: bool = False,
+                      guess_concept_type: bool = True)\
         -> Tuple[ThingObject, List[Dict[str, Any]]]:
     """
     Converts a Wikidata thing to a ThingObject.
@@ -137,6 +140,9 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
     pull_wikipedia: bool
         Pull Wikipedia summary.
 
+    guess_concept_type: bool
+        Guess the concept type (queries all super types from Wikidata).
+
     Returns
     -------
     thing: ThingObject
@@ -147,56 +153,67 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
     """
     import_warnings: List[Dict[str, Any]] = []
     qid: str = wikidata_thing.qid
-    labels: List[Label] = []
-    aliases: List[Label] = []
+    labels_entity: List[Label] = []
+    aliases_entity: List[Label] = []
     # Make sure that the main label are added to labels and aliases to aliases.
     main_languages: Set[str] = set()
+    t1: float = time.perf_counter()
     for la in wikidata_thing.label.values():
         if str(la.language_code) in supported_locales:
             if str(la.language_code) not in main_languages:
                 main_languages.add(str(la.language_code))
-                labels.append(Label(content=la.content, language_code=la.language_code, main=True))
-
+                labels_entity.append(Label(content=la.content, language_code=la.language_code, main=True))
+            else:
+                aliases_entity.append(Label(content=la.content, language_code=la.language_code, main=False))
     for lang, aliases in wikidata_thing.aliases.items():
         if str(lang) in supported_locales:
             if str(lang) not in main_languages:
                 main_languages.add(str(lang))
-                labels.append(Label(content=aliases[0].content, language_code=LanguageCode(lang), main=True))
+                labels_entity.append(Label(content=aliases[0].content, language_code=LocaleCode(lang), main=True))
+                for alias in aliases[1:]:
+                    aliases_entity.append(Label(content=alias.content, language_code=LocaleCode(lang), main=False))
             else:
-                aliases.append(Label(content=aliases[0].content, language_code=LanguageCode(lang), main=False))
+                for alias in aliases:
+                    aliases_entity.append(Label(content=alias.content, language_code=LocaleCode(lang), main=False))
+    t2: float = time.perf_counter()
     descriptions: List[Description] = []
     if 'wiki' in wikidata_thing.sitelinks and pull_wikipedia:
         for lang, title in wikidata_thing.sitelinks['wiki'].titles.items():
-            locale: str = LANGUAGE_LOCALE_MAPPING.get(lang, "NOT_SUPPORTED")
-            if locale in supported_locales:
-                try:
-                    descriptions.append(Description(description=get_wikipedia_summary(title, lang),
-                                                    language_code=LanguageCode(locale)))
-                except Exception as e:
-                    logging.error(f'Failed to get Wikipedia summary for {title} ({lang}): {e}')
+            if str(lang) in supported_locales:
+                locale: LocaleCode = LANGUAGE_LOCALE_MAPPING.get(LanguageCode(lang), EN_US)
+                if locale in supported_locales:
+                    try:
+                        descriptions.append(Description(description=get_wikipedia_summary(title, lang),
+                                                        language_code=LocaleCode(locale)))
+                    except Exception as e:
+                        logging.error(f'Failed to get Wikipedia summary for {title} ({lang}): {e}')
     if len(descriptions) == 0:
         descriptions = [de for de in wikidata_thing.description.values()]
+    t3: float = time.perf_counter()
     # Create the thing
-    thing: ThingObject = ThingObject(label=labels,
+    thing: ThingObject = ThingObject(label=labels_entity,
                                      description=descriptions,
                                      icon=wikidata_thing.image(dpi=500))
-    thing.alias = aliases
+    thing.alias = aliases_entity
     thing.add_source_system(DataProperty(content='wikidata', property_ref=SYSTEM_SOURCE_SYSTEM,
-                                         language_code=LanguageCode('en_US')))
+                                         language_code=EN_US))
     thing.add_source_reference_id(DataProperty(content=qid, property_ref=SYSTEM_SOURCE_REFERENCE_ID,
-                                               language_code=LanguageCode('en_US')))
+                                               language_code=EN_US))
     thing.add_data_property(DataProperty(content=datetime.utcnow().isoformat(),
                                          property_ref=OntologyPropertyReference.parse('wacom:core#lastUpdate')))
+    t4: float = time.perf_counter()
     class_types: List[str] = wikidata_thing.ontology_types
-    for cls in wikidata_thing.instance_of:
-        hierarchy: WikidataClass = wikidata_taxonomy(cls.qid)
-        if hierarchy:
-            class_types.extend(flatten(hierarchy))
+    if guess_concept_type:
+        for cls in wikidata_thing.instance_of:
+            hierarchy: WikidataClass = wikidata_taxonomy(cls.qid)
+            if hierarchy:
+                class_types.extend(flatten(hierarchy))
     class_configuration: Optional[ClassConfiguration] = get_mapping_configuration().guess_classed(class_types)
     if class_configuration:
         thing.concept_type = class_configuration.concept_type
     else:
         thing.concept_type = OntologyClassReference.parse(TOPIC_CLASS)
+    t5: float = time.perf_counter()
     relation_props: Dict[OntologyPropertyReference, List[str]] = {}
     for pid, cl in wikidata_thing.claims.items():
         prop: Optional[PropertyConfiguration] = get_mapping_configuration().guess_property(pid, thing.concept_type)
@@ -210,12 +227,13 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
                             if get_mapping_configuration().check_data_property_range(property_type, content):
                                 thing.add_data_property(DataProperty(content=content,
                                                                      property_ref=property_type,
-                                                                     language_code=LanguageCode(locale)))
+                                                                     language_code=LocaleCode(locale)))
                         elif isinstance(c, (str, float, int)):
                             thing.add_data_property(DataProperty(content=c, property_ref=property_type,
-                                                                 language_code=LanguageCode(locale)))
+                                                                 language_code=LocaleCode(locale)))
                     except NotImplementedError as e:
                         import_warnings.append({'qid': qid, 'pid': pid, 'error': str(e)})
+    t6: float = time.perf_counter()
     for relation in all_relations.get(qid, []):
         prop: Optional[PropertyConfiguration] = get_mapping_configuration().guess_property(relation['predicate']['pid'],
                                                                                            thing.concept_type)
@@ -250,5 +268,8 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
                                         'target_classes': target_thing.ontology_types})
     for p, lst in relation_props.items():
         thing.add_relation(ObjectProperty(p, outgoing=lst))
-
+    t7: float = time.perf_counter()
+    logging.debug(f'Wikidata to Thing: {t2 - t1} seconds for labels, {t3 - t2} seconds for descriptions, '
+                  f'{t4 - t3} seconds for sources, {t5 - t4} seconds for class types, {t6 - t5} seconds for data '
+                  f'properties, {t7 - t6} seconds for object properties')
     return thing, import_warnings
