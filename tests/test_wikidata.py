@@ -7,15 +7,15 @@ from unittest import TestCase
 
 import pytest
 
-from knowledge.base.ontology import SUPPORTED_LOCALES, ThingObject, OntologyPropertyReference, SUPPORTED_LANGUAGES, \
-    OntologyContext
-from knowledge.ontomapping import register_ontology, load_configuration, get_mapping_configuration
+from knowledge.base.ontology import OntologyPropertyReference, OntologyContext
+from knowledge.ontomapping import register_ontology, load_configuration
 from knowledge.ontomapping.manager import wikidata_to_thing
 from knowledge.public.relations import wikidata_relations_extractor
-from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient
+from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient, WikidataSearchResult
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI
+from knowledge.base.language import SUPPORTED_LOCALES, SUPPORTED_LANGUAGES, EN_US, EN
 from knowledge.utils.wikipedia import get_wikipedia_summary, get_wikipedia_summary_image
 
 # Configuration
@@ -99,7 +99,6 @@ class WikidataFlow(TestCase):
             # Load configuration
             load_configuration(Path(__file__).parent.parent / 'pkl-cache' / 'ontology_mapping.json')
 
-
     def test_1_wikidata(self):
         # Q762 is Leonardo da Vinci and Q12418 is Mona Lisa
         entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(["Q762", "Q12418"])
@@ -148,4 +147,37 @@ class WikidataFlow(TestCase):
                             image_url = get_wikipedia_summary_image(title=title, lang=lang)
                             self.assertIsNotNone(image_url)
 
+    def test_5_labels(self):
+        entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(["Q5582", "Q1028181", "Q19363211", ""])
+        wikidata_things: Dict[str, WikidataThing] = dict([(e.qid, e) for e in entities])
+        relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(wikidata_things)
+
+        van_gogh, import_warnings = wikidata_to_thing(wikidata_things["Q5582"], all_relations=relations,
+                                                      supported_locales=SUPPORTED_LOCALES,
+                                                      pull_wikipedia=True,
+                                                      all_wikidata_objects=wikidata_things)
+        check_lang: List[str] = []
+
+        for la in van_gogh.label:
+            if str(la.language_code) not in check_lang:
+                check_lang.append(str(la.language_code))
+            else:
+                raise ValueError(f"There are more than one main label for {la.language_code}")
+            if not la.main:
+                raise ValueError(f"There is a label is not tagged as main. {la}")
+        for al in van_gogh.alias:
+            if str(al.language_code) not in check_lang:
+                raise ValueError(f"There is an alias with a language code {al.language_code} "
+                                 f"that is not in the main labels.")
+
+            if al.main:
+                raise ValueError(f"Label is not alias. {al}")
+
+    def test_6_search(self):
+        """Test the search functionality."""
+        search_results: List[WikidataSearchResult] = WikiDataAPIClient.search_term("Leonardo Da Vinci", EN)
+        self.assertGreaterEqual(len(search_results), 1)
+        qids: List[str] = [sr.qid for sr in search_results]
+        if 'Q762' not in qids:
+            raise ValueError("Q762 (Leonardo Da Vinci) is not in the search results.")
 

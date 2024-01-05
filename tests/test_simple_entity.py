@@ -9,7 +9,8 @@ from unittest import TestCase
 import pytest
 from faker import Faker
 
-from knowledge.base.entity import LanguageCode, Label
+from knowledge.base.entity import Label
+from knowledge.base.language import JA_JP, EN_US, DE_DE, BG_BG, FR_FR, IT_IT, ES_ES
 from knowledge.base.ontology import ThingObject, OntologyClassReference, OntologyPropertyReference, DataProperty, \
     ObjectProperty
 from knowledge.services.graph import WacomKnowledgeService
@@ -28,10 +29,9 @@ def create_thing() -> ThingObject:
         Thing object with random data.
     """
     thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse('wacom:core#Person'))
-    for lang in ['ja_JP', 'en_US', 'de_DE', 'bg_BG', 'fr_FR', 'it_IT', 'es_ES', 'ru_RU']:
-        fake: Faker = Faker(lang)
+    for lang_inst in [JA_JP, EN_US, DE_DE, BG_BG, FR_FR, IT_IT, ES_ES]:
+        fake: Faker = Faker(lang_inst)
         name: str = fake.name()
-        lang_inst: LanguageCode = LanguageCode(lang)
         thing.add_label(name, lang_inst)
         thing.add_description(fake.text(), lang_inst)
         names: List[str] = name.split()
@@ -99,8 +99,8 @@ def cache_class(request):
 @pytest.mark.usefixtures("cache_class")
 class EntityFlow(TestCase):
     """
-    Testing the entity flow
-    ---------------------
+    Testing the async client flows
+    ------------------------------
     - Create user
     - Push entity
     - Get entity
@@ -137,34 +137,39 @@ class EntityFlow(TestCase):
     def test_2_push_entity(self):
         """Push entity."""
         thing: ThingObject = create_thing()
-        uri_thing: str = self.knowledge_client.create_entity(self.cache.token, thing)
+        self.knowledge_client.login(self.tenant_api_key, self.cache.external_id)
+        uri_thing: str = self.knowledge_client.create_entity(thing)
         self.cache.thing_uri = uri_thing
 
     def test_3_get_entity(self):
         """Get entity."""
-        full_entity: ThingObject = self.knowledge_client.entity(self.cache.token, self.cache.thing_uri)
+        self.knowledge_client.login(self.tenant_api_key, self.cache.external_id)
+        full_entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri)
         # Entity must not be empty
         self.assertIsNotNone(full_entity)
 
     def test_4_update_entity(self):
         """Update entity. """
-        full_entity: ThingObject = self.knowledge_client.entity(self.cache.token, self.cache.thing_uri)
+        full_entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri)
         # Entity must not be empty
         self.assertIsNotNone(full_entity)
 
     def test_5_literal_entity(self):
         """Pull literals from the entity."""
-        literals: List[DataProperty] = self.knowledge_client.literals(self.cache.token, self.cache.thing_uri)
+        self.knowledge_client.login(self.tenant_api_key, self.cache.external_id)
+        literals: List[DataProperty] = self.knowledge_client.literals(self.cache.thing_uri)
         self.assertIsNotNone(literals)
 
     def test_6_labels_entity(self):
         """Pull labels from the entity."""
-        labels: List[Label] = self.knowledge_client.labels(self.cache.token, self.cache.thing_uri)
+        self.knowledge_client.login(self.tenant_api_key, self.cache.external_id)
+        labels: List[Label] = self.knowledge_client.labels(self.cache.thing_uri)
         self.assertIsNotNone(labels)
 
     def test_7_relations_entity(self):
         """Pull relations from the entity."""
         # Pull relations if configured
+        self.knowledge_client.login(self.tenant_api_key, self.cache.external_id)
         relations: Dict[OntologyPropertyReference, ObjectProperty] = \
             self.knowledge_client.relations(auth_key=self.cache.token, uri=self.cache.thing_uri)
         # Assert relations are
@@ -173,7 +178,8 @@ class EntityFlow(TestCase):
 
     def test_8_delete_entity(self):
         """Delete the entity."""
-        self.knowledge_client.delete_entity(self.cache.token, self.cache.thing_uri, force=True)
+        self.knowledge_client.login(self.tenant_api_key, self.cache.external_id)
+        self.knowledge_client.delete_entity(self.cache.thing_uri, force=True)
 
     def teardown_class(self):
         """Clean up the test environment."""

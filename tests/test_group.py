@@ -10,7 +10,7 @@ from unittest import TestCase
 import pytest
 from faker import Faker
 
-from knowledge.base.entity import LanguageCode
+from knowledge.base.language import JA_JP, EN_US, DE_DE
 from knowledge.base.ontology import ThingObject, OntologyClassReference
 from knowledge.services.base import WacomServiceException
 from knowledge.services.graph import WacomKnowledgeService
@@ -23,10 +23,9 @@ THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', '
 
 def create_thing() -> ThingObject:
     thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse('wacom:core#Person'))
-    for lang in ['ja_JP', 'en_US', 'de_DE']:
-        fake: Faker = Faker(lang)
+    for lang_inst in [JA_JP, EN_US, DE_DE]:
+        fake: Faker = Faker(lang_inst)
         name: str = fake.name()
-        lang_inst: LanguageCode = LanguageCode(lang)
         thing.add_label(name, lang_inst)
         thing.add_description(fake.text(), lang_inst)
     return thing
@@ -160,29 +159,30 @@ class GroupFlow(TestCase):
     def test_2_push_entity(self):
         """ Push entity."""
         thing: ThingObject = create_thing()
-        uri_thing: str = self.knowledge_client.create_entity(self.cache.token, thing)
+        uri_thing: str = self.knowledge_client.create_entity(thing, auth_key=self.cache.token)
         self.cache.thing_uri = uri_thing
-        self.knowledge_client.set_entity_image_local(self.cache.token, uri_thing,
-                                                     Path(__file__).parent / '..' / 'assets' / 'dummy.png')
+        self.knowledge_client.set_entity_image_local(uri_thing,
+                                                     Path(__file__).parent / '..' / 'assets' / 'dummy.png',
+                                                     auth_key=self.cache.token)
 
     def test_3_create_group(self):
         """ Create group."""
         # Now, user 1 creates a group
-        g: Group = self.group_management.create_group(self.cache.token, "qa-test-group")
+        g: Group = self.group_management.create_group("qa-test-group", auth_key=self.cache.token)
         self.cache.group_id = g.id
         self.cache.join_key = g.join_key
 
     def test_4_join_group(self):
         """ Join group."""
-        self.knowledge_client.entity(self.cache.token, self.cache.thing_uri)
+        self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token)
         try:
-            self.knowledge_client.entity(self.cache.token_2, self.cache.thing_uri)
+            self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
             self.fail("User 2 should not have access to the entity.")
         except WacomServiceException as we:
             logging.error(we)
         # Shares the join key with user 2 and user 2 joins
-        self.group_management.join_group(self.cache.token_2, self.cache.group_id, self.cache.join_key)
-        groups: List[Group] = self.group_management.listing_groups(self.cache.token_2)
+        self.group_management.join_group(self.cache.group_id, self.cache.join_key, auth_key=self.cache.token_2)
+        groups: List[Group] = self.group_management.listing_groups(auth_key=self.cache.token_2)
         self.assertEqual(len(groups), 1, "User 2 should only be in 1 group.")
 
     def test_5_add_user(self):
@@ -191,56 +191,56 @@ class GroupFlow(TestCase):
         info, token, _, _ = self.user_management.create_user(self.tenant_api_key, external_id=external_id_3,
                                                              meta_data={'account-type': 'qa-test'},
                                                              roles=[UserRole.USER])
-        self.group_management.add_user_to_group(self.cache.token, self.cache.group_id, info.id)
+        self.group_management.add_user_to_group(self.cache.group_id, info.id, auth_key=self.cache.token)
 
     def test_6_add_entity_to_group(self):
         """ Add entity to group."""
         # Adding entity to group
-        groups: List[Group] = self.group_management.listing_groups(self.cache.token_2)
-        self.group_management.add_entity_to_group(self.cache.token, groups[0].id, self.cache.thing_uri)
-        entity: ThingObject = self.knowledge_client.entity(self.cache.token, self.cache.thing_uri)
+        groups: List[Group] = self.group_management.listing_groups(auth_key=self.cache.token_2)
+        self.group_management.add_entity_to_group(groups[0].id, self.cache.thing_uri, auth_key=self.cache.token)
+        entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token)
         self.assertEqual(groups[0].id, entity.group_ids[0])
-        self.knowledge_client.entity(self.cache.token_2, self.cache.thing_uri)
-        self.group_management.remove_user_from_group(self.cache.token, self.cache.group_id, self.cache.internal_id_2,
-                                                     force=True)
+        self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
+        self.group_management.remove_user_from_group(self.cache.group_id, self.cache.internal_id_2,
+                                                     force=True, auth_key=self.cache.token)
         try:
-            self.knowledge_client.entity(self.cache.token_2, self.cache.thing_uri)
+            self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
             self.fail("User 2 should not have access to the entity.")
         except WacomServiceException as we:
             pass
-        groups: List[Group] = self.group_management.listing_groups(self.cache.token_2)
+        groups: List[Group] = self.group_management.listing_groups(auth_key=self.cache.token_2)
         self.assertEqual(len(groups), 0)
-        self.group_management.join_group(self.cache.token_2, self.cache.group_id, self.cache.join_key)
-        groups: List[Group] = self.group_management.listing_groups(self.cache.token_2)
+        self.group_management.join_group(self.cache.group_id, self.cache.join_key, auth_key=self.cache.token_2)
+        groups: List[Group] = self.group_management.listing_groups(auth_key=self.cache.token_2)
         self.assertEqual(groups[0].id, entity.group_ids[0])
-        self.knowledge_client.entity(self.cache.token_2, self.cache.thing_uri)
+        self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
 
     def test_7_public_entity(self):
         """ Public entity."""
-        full_entity: ThingObject = self.knowledge_client.entity(self.cache.token, self.cache.thing_uri)
+        full_entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token)
         self.assertIsNotNone(full_entity)
         # Entity must not be empty
         full_entity.tenant_access_right.read = True
-        self.knowledge_client.update_entity(self.cache.token, full_entity)
-        pull_entity: ThingObject = self.knowledge_client.entity(self.cache.token_2, self.cache.thing_uri)
+        self.knowledge_client.update_entity(full_entity, auth_key=self.cache.token)
+        pull_entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
         self.assertIsNotNone(pull_entity)
         # This must fail
         try:
-            self.knowledge_client.update_entity(self.cache.token_2, pull_entity)
+            self.knowledge_client.update_entity(pull_entity, auth_key=self.cache.token_2)
             self.fail("User 2 should not have access to the entity.")
         except WacomServiceException as we:
             pass
         full_entity.tenant_access_right.write = True
-        self.knowledge_client.update_entity(self.cache.token, full_entity)
+        self.knowledge_client.update_entity(full_entity, auth_key=self.cache.token)
         # Now we should have access
-        pull_entity: ThingObject = self.knowledge_client.entity(self.cache.token_2, self.cache.thing_uri)
+        pull_entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
         self.assertIsNotNone(pull_entity)
-        pull_entity.add_alias("Alias", LanguageCode('en_US'))
-        self.knowledge_client.update_entity(self.cache.token_2, pull_entity)
+        pull_entity.add_alias("Alias", EN_US)
+        self.knowledge_client.update_entity(pull_entity, auth_key=self.cache.token_2)
 
     def test_8_delete_entity(self):
         """ Delete entity."""
-        self.knowledge_client.delete_entity(self.cache.token, self.cache.thing_uri, force=True)
+        self.knowledge_client.delete_entity(self.cache.thing_uri, force=True, auth_key=self.cache.token)
 
     def teardown_class(self):
         """ Clean up."""

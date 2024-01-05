@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2023 Wacom. All rights reserved.
+# Copyright © 2023-24 Wacom. All rights reserved.
 import logging
 import os
 import uuid
@@ -10,6 +10,7 @@ import pytest
 from ontospy import Ontospy
 
 from knowledge.base.entity import LanguageCode
+from knowledge.base.language import EN_US
 from knowledge.base.ontology import ThingObject, OntologyClassReference, OntologyPropertyReference, \
     SYSTEM_SOURCE_REFERENCE_ID
 from knowledge.services.graph import WacomKnowledgeService, SearchPattern
@@ -89,40 +90,40 @@ class SearchFlow(TestCase):
         self.cache.token = token
 
     def test_2_search_labels(self):
-        res_entities, next_search_page = self.knowledge_client.search_labels(auth_key=self.cache.token,
-                                                                             search_term=LEONARDO_DA_VINCI,
-                                                                             language_code=LanguageCode('en_US'),
-                                                                             limit=1000)
+        res_entities, next_search_page = self.knowledge_client.search_labels(search_term=LEONARDO_DA_VINCI,
+                                                                             language_code=EN_US,
+                                                                             limit=1000,
+                                                                             auth_key=self.cache.token)
 
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_3_search_description(self):
-        res_entities, next_search_page = self.knowledge_client.search_description(self.cache.token,
-                                                                                  'Michelangelo\'s Sistine Chapel',
-                                                                                  LanguageCode('en_US'), limit=1000)
+        res_entities, next_search_page = self.knowledge_client.search_description('Michelangelo\'s Sistine Chapel',
+                                                                                  EN_US, limit=1000,
+                                                                                  auth_key=self.cache.token)
 
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_4_search_relations(self):
         art_style: Optional[ThingObject] = None
-        results, _ = self.knowledge_client.search_labels(self.cache.token, "portrait", LanguageCode('en_US'),
-                                                         limit=1)
+        results, _ = self.knowledge_client.search_labels("portrait", EN_US,
+                                                         limit=1, auth_key=self.cache.token)
         for entity in results:
             art_style = entity
-        res_entities, next_search_page = self.knowledge_client.search_relation(auth_key=self.cache.token,
-                                                                               subject_uri=None,
-                                                                               relation=HAS_ART_STYLE,
+        self.assertIsNotNone(art_style)
+        res_entities, next_search_page = self.knowledge_client.search_relation(relation=HAS_ART_STYLE,
                                                                                object_uri=art_style.uri,
-                                                                               language_code=LanguageCode('en_US'))
+                                                                               language_code=EN_US,
+                                                                               auth_key=self.cache.token)
 
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_5_search_literals(self):
-        res_entities, next_search_page = self.knowledge_client.search_literal(auth_key=self.cache.token,
-                                                                              search_term="Q762",
+        res_entities, next_search_page = self.knowledge_client.search_literal(search_term="Q762",
                                                                               pattern=SearchPattern.REGEX,
                                                                               literal=SYSTEM_SOURCE_REFERENCE_ID,
-                                                                              language_code=LanguageCode('en_US'))
+                                                                              language_code=EN_US,
+                                                                              auth_key=self.cache.token)
 
         self.assertGreaterEqual(len(res_entities), 1)
 
