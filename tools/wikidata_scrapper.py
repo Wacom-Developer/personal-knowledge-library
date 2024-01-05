@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2023 Wacom. All rights reserved.
+# Copyright © 2023-24 Wacom. All rights reserved.
 import argparse
 import json
 import os
@@ -12,9 +12,10 @@ from tqdm import tqdm
 
 from knowledge import logger
 from knowledge.base.entity import LanguageCode, IMAGE_TAG, STATUS_FLAG_TAG, Description, Label
-from knowledge.base.ontology import ThingObject, OntologyContext, OntologyClassReference, LANGUAGE_LOCALE_MAPPING
+from knowledge.base.language import LANGUAGE_LOCALE_MAPPING, LocaleCode
+from knowledge.base.ontology import ThingObject, OntologyContext, OntologyClassReference
 from knowledge.ontomapping import get_mapping_configuration, register_ontology, PropertyConfiguration, PropertyType, \
-    update_taxonomy_cache, load_configuration
+    load_configuration, ClassConfiguration
 from knowledge.ontomapping.manager import wikidata_to_thing, wikidata_taxonomy
 from knowledge.public.relations import wikidata_relations_extractor
 from knowledge.public.wikidata import WikiDataAPIClient, WikidataThing, WikidataClass
@@ -37,29 +38,18 @@ ENTITY_LIST_MODE: str = 'entity-list'
 SPARQL_QUERY_MODE: str = 'query'
 CLASS_MAPPING: str = 'class-mapping'
 
-# Mapping to map the simple language_code code to a default language_code / country code
-language_code_mapping: Dict[str, LanguageCode] = {
-    'en': LanguageCode('en_US'),
-    'ja': LanguageCode('ja_JP'),
-    'de': LanguageCode('de_DE'),
-    'bg': LanguageCode('bg_BG'),
-    'zh': LanguageCode('zh_CN'),
-    'fr': LanguageCode('fr_FR'),
-    'it': LanguageCode('it_IT')
-}
-
 
 # ----------------------------------------------- Helper functions -----------------------------------------------------
-def update_language_code(lang: str) -> LanguageCode:
+def update_language_code(lang: LanguageCode) -> LocaleCode:
     """ Update the language_code code to a default language_code / country code
     Parameters
     ----------
-    lang: str
+    lang: LanguageCode
         Language code.
 
     Returns
     -------
-    language_code: LanguageCode
+    language_code: LocaleCode
         Language code.
 
     Raises
@@ -67,9 +57,9 @@ def update_language_code(lang: str) -> LanguageCode:
     ValueError
         If the language_code code is not supported.
     """
-    if lang not in language_code_mapping:
+    if lang not in LANGUAGE_LOCALE_MAPPING:
         raise ValueError(f'Language code {lang} not supported.')
-    return language_code_mapping[lang]
+    return LANGUAGE_LOCALE_MAPPING[lang]
 
 
 def localized_list_description(entity_dict: Dict[str, str]) -> List[Description]:
@@ -85,7 +75,7 @@ def localized_list_description(entity_dict: Dict[str, str]) -> List[Description]
     descriptions: List[Description]
         List of descriptions.
     """
-    return [Description(cont, update_language_code(lang)) for lang, cont in entity_dict.items()]
+    return [Description(cont, update_language_code(LanguageCode(lang))) for lang, cont in entity_dict.items()]
 
 
 def localized_list_label(entity_dict: Dict[str, str]) -> List[Label]:
@@ -102,7 +92,8 @@ def localized_list_label(entity_dict: Dict[str, str]) -> List[Label]:
     labels: List[Label]
         List of labels.
     """
-    return [Label(cont, update_language_code(lang), main=True) for lang, cont in entity_dict.items() if cont != '']
+    return [Label(cont, update_language_code(LanguageCode(lang)), main=True)
+            for lang, cont in entity_dict.items() if cont != '']
 
 
 def localized_flatten_alias_list(entity_dict: Dict[str, List[str]]) -> List[Label]:
@@ -122,7 +113,7 @@ def localized_flatten_alias_list(entity_dict: Dict[str, List[str]]) -> List[Labe
     for language, items in entity_dict.items():
         for i in items:
             if i != '':
-                flatten.append(Label(i, update_language_code(language), main=False))
+                flatten.append(Label(i, update_language_code(LanguageCode(language)), main=False))
     return flatten
 
 
@@ -222,7 +213,7 @@ def load_cache(cache: Path) -> Dict[str, WikidataThing]:
     Parameters
     ----------
     cache: Path
-        Path to the cache file.
+        The path to the cache file.
 
     Returns
     -------
@@ -274,7 +265,7 @@ def check_missing_qids(entities: List[WikidataThing]) -> Set[str]:
             if hierarchy:
                 wiki_classes.update([c.qid for c in hierarchy.superclasses])
                 wiki_classes.add(hierarchy.qid)
-        class_conf = get_mapping_configuration().guess_classed(list(wiki_classes))
+        class_conf: Optional[ClassConfiguration] = get_mapping_configuration().guess_classed(list(wiki_classes))
         if class_conf:
             properties: List[PropertyConfiguration] = get_mapping_configuration(). \
                 property_for(class_conf.concept_type, PropertyType.OBJECT_PROPERTY)
@@ -312,9 +303,9 @@ def main(mapping: Path, cache: Path, languages: List[str] = None, max_depth: int
     Arguments
     ---------
     mapping: Path
-        Path to mapping file
+        The path to mapping file
     cache: Path
-        Path to cache file with ThingObjects
+        The path to cache file with ThingObjects
     languages: List[str]
         List of languages
     max_depth: int
@@ -385,7 +376,6 @@ def main(mapping: Path, cache: Path, languages: List[str] = None, max_depth: int
         logger.info(f"Retrieved {len(all_wikidata_things)} entities. Cache for {len(qid_references)} entities. "
                     f"Depth {depth} (max {max_depth}).")
         # Cache more taxonomy
-        update_taxonomy_cache()
         depth += 1
     relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(all_wikidata_things)
     logger.info(f"{len(all_wikidata_things)} entities are imported.")
@@ -435,12 +425,14 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
-    parser.add_argument("-i", "--instance", default='https://stage-private-knowledge.wacom.com',
+    parser.add_argument("-i", "--instance", default='https://private-knowledge.wacom.com',
                         help="URL of instance")
-    parser.add_argument("-c", "--cache", help="Path to output directory.")
-    parser.add_argument("-m", "--mapping", help="Ontology mappings.")
-    parser.add_argument("-d", "--depth", help="Depth of crawling, if -1 depth it is infinite.", default=4, type=int)
-    parser.add_argument("-l", "--languages", nargs='+', default=['en'], help="List of languages to import")
+    parser.add_argument("-o", "--output", type=Path, help="Path to output directory.")
+    parser.add_argument("-m", "--mapping", type=Path, help="Ontology mappings.")
+    parser.add_argument("-d", "--depth", help="Depth of crawling, if -1 depth it is infinite.", default=4,
+                        type=int)
+    parser.add_argument("-l", "--languages", nargs='+', default=['en'],
+                        help="List of languages to import")
     args = parser.parse_args()
     # Configure the ontology for tenant
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(service_url=args.instance,
@@ -457,12 +449,11 @@ if __name__ == '__main__':
         # Register ontology
         register_ontology(rdf_export)
         # Load configuration
-        load_configuration()
+        load_configuration(Path('pkl-cache/ontology_mapping.json'))
     # ------------------------------------------------------------------------------------------------------------------
-    cache_path: Path = Path(args.cache)
+    cache_path: Path = Path(args.output)
     if not os.path.exists(cache_path.parent):
         cache_path.parent.mkdir(parents=True, exist_ok=True)
     mapping_path: Path = Path(args.mapping)
     if mapping_path.exists():
         main(mapping_path, cache_path, args.languages, max_depth=args.depth)
-
