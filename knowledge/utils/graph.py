@@ -78,7 +78,7 @@ def things_iter(wacom_client: WacomKnowledgeService, user_token: str, refresh_to
     next_page_id: Optional[str] = None
     if tenant_api_key is not None and external_user_id is not None:
         # First login
-        wacom_client.login(tenant_id=tenant_api_key, external_user_id=external_user_id)
+        wacom_client.login(tenant_api_key=tenant_api_key, external_user_id=external_user_id)
     else:
         wacom_client.register_token(user_token, refresh_token)
     while True:
