@@ -39,7 +39,7 @@ CREATED: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:core
 HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:creative#hasArtstyle')
 
 
-def print_entity(display_entity: ThingObject, list_idx: int, auth_key: str, client: WacomKnowledgeService,
+def print_entity(display_entity: ThingObject, list_idx: int, client: WacomKnowledgeService,
                  short: bool = False):
     """
     Printing entity details.
@@ -50,8 +50,6 @@ def print_entity(display_entity: ThingObject, list_idx: int, auth_key: str, clie
         Entity with properties
     list_idx: int
         Index with a list
-    auth_key: str
-        Authorization key
     client: WacomKnowledgeService
         Knowledge graph client
     short: bool
@@ -71,20 +69,20 @@ def print_entity(display_entity: ThingObject, list_idx: int, auth_key: str, clie
             print('    |')
         if len(display_entity.data_properties) > 0:
             print('    | [Attributes]')
-            for data_property, labels in entity.data_properties.items():
+            for data_property, labels in display_entity.data_properties.items():
                 print(f'    |    |- {data_property.iri}:')
                 for li in labels:
                     print(f'    |    |-- "{li.value}"@{li.language_code}')
             print('    |')
 
-        relations_obj: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key,
-                                                                                          uri=entity.uri)
+        relations_obj: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(uri=display_entity.uri)
         if len(relations_obj) > 0:
             print('    | [Relations]')
-            for re in relations_obj.values():
+            for idx, re in enumerate(relations_obj.values()):
+                last: bool = idx == len(relations_obj) - 1
                 print(f'    |--- {re.relation.iri}: ')
-                print(f'           |- [Incoming]: {re.incoming_relations} ')
-                print(f'           |- [Outgoing]: {re.outgoing_relations}')
+                print(f'    {"|" if not last else " "}       |- [Incoming]: {re.incoming_relations} ')
+                print(f'    {"|" if not last else " "}       |- [Outgoing]: {re.outgoing_relations}')
         print()
 
 
@@ -196,17 +194,17 @@ if __name__ == '__main__':
     print('-----------------------------------------------------------------------------------------------------------')
     s_idx: int = 1
     for e in res_entities:
-        print_entity(e, s_idx, user_token, knowledge_client, short=True)
+        print_entity(e, s_idx, knowledge_client, short=True)
         s_idx += 1
 
     # Finally, the activation function retrieving the related identities to a pre-defined depth.
-    entities, relations = knowledge_client.activations(auth_key=user_token, uris=[leo.uri], depth=1)
+    entities, relations = knowledge_client.activations(uris=[leo.uri], depth=1)
     print('-----------------------------------------------------------------------------------------------------------')
     print(f'Activation.  URI: {leo.uri}')
     print('-----------------------------------------------------------------------------------------------------------')
     s_idx: int = 1
     for e in res_entities:
-        print_entity(e, s_idx, user_token, knowledge_client)
+        print_entity(e, s_idx, knowledge_client)
         s_idx += 1
     # All relations
     print('-----------------------------------------------------------------------------------------------------------')
@@ -219,8 +217,7 @@ if __name__ == '__main__':
     idx: int = 1
     while True:
         # pull
-        entities, total_number, next_page_id = knowledge_client.listing(user_token, ART_STYLE_CLASS, page_id=page_id,
-                                                                        limit=100)
+        entities, total_number, next_page_id = knowledge_client.listing(ART_STYLE_CLASS, page_id=page_id, limit=100)
         pulled_entities: int = len(entities)
         entity_count += pulled_entities
         print('-------------------------------------------------------------------------------------------------------')
@@ -228,7 +225,7 @@ if __name__ == '__main__':
               f'Next page id: {next_page_id}')
         print('-------------------------------------------------------------------------------------------------------')
         for e in entities:
-            print_entity(e, idx, user_token, knowledge_client)
+            print_entity(e, idx, knowledge_client)
             idx += 1
         if pulled_entities == 0:
             break
@@ -239,13 +236,13 @@ if __name__ == '__main__':
     while True:
         # pull
         entities, total_number, next_page_id = knowledge_client.listing(THING_OBJECT, page_id=page_id,
-                                                                        limit=100, auth_key=user_token)
+                                                                        limit=100)
         pulled_entities: int = len(entities)
         if pulled_entities == 0:
             break
         delete_uris: List[str] = [e.uri for e in entities]
         print(f'Cleanup. Delete entities: {delete_uris}')
-        knowledge_client.delete_entities(auth_key=user_token, uris=delete_uris, force=True)
+        knowledge_client.delete_entities(uris=delete_uris, force=True)
         page_number += 1
         page_id = next_page_id
     print('-----------------------------------------------------------------------------------------------------------')
