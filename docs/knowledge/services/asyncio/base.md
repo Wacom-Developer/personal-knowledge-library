@@ -1,11 +1,36 @@
-Module knowledge.services.base
-==============================
+Module knowledge.services.asyncio.base
+======================================
+
+Variables
+---------
+
+    
+`cached_resolver: knowledge.services.asyncio.base.CachedResolver`
+:   Cached resolver for aiohttp.
 
 Functions
 ---------
 
     
-`handle_error(message: str, response: requests.models.Response, parameters: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None)`
+`cached_getaddrinfo(host: str, *args, **kwargs) ‑> Any`
+:   Cached address information.
+    
+    Parameters
+    ----------
+    host: str
+        Hostname
+    args: Any
+        Additional arguments
+    kwargs: Any
+        Additional keyword arguments
+    
+    Returns
+    -------
+    addr_info: Any
+        Address information
+
+    
+`handle_error(message: str, response: aiohttp.client_reqrep.ClientResponse, parameters: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None)`
 :   Handles an error response.
     
     Parameters
@@ -29,45 +54,13 @@ Functions
 Classes
 -------
 
-`RESTAPIClient(service_url: str, verify_calls: bool = False)`
-:   Abstract REST API client
-    ------------------------
-    REST API client handling the service url.
-    
-    Arguments
-    ---------
-    service_url: str
-        Service URL for service
-    verify_calls: bool (default:= False)
-        Flag if the service calls should be verified
-
-    ### Ancestors (in MRO)
-
-    * abc.ABC
-
-    ### Descendants
-
-    * knowledge.nel.base.PublicEntityLinkingProcessor
-    * knowledge.services.asyncio.base.AsyncServiceAPIClient
-    * knowledge.services.base.WacomServiceAPIClient
-
-    ### Instance variables
-
-    `service_url: str`
-    :   Service URL.
-
-    `verify_calls`
-    :   Certificate verification activated.
-
-`WacomServiceAPIClient(application_name: str, service_url: str, service_endpoint: str, auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True)`
-:   Wacom Service API Client
-    ------------------------
+`AsyncServiceAPIClient(application_name: str = 'Async Knowledge Client', service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1', auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True)`
+:   Async Wacom Service API Client
+    ------------------------------
     Abstract class for Wacom service APIs.
     
     Parameters
     ----------
-    application_name: str
-        Name of the application using the service
     service_url: str
         URL of the service
     service_endpoint: str
@@ -84,13 +77,9 @@ Classes
 
     ### Descendants
 
-    * knowledge.nel.base.NamedEntityRecognitionProcessor
-    * knowledge.nel.base.PersonalEntityLinkingProcessor
-    * knowledge.services.graph.WacomKnowledgeService
-    * knowledge.services.group.GroupManagementServiceAPI
-    * knowledge.services.ontology.OntologyService
-    * knowledge.services.tenant.TenantManagementServiceAPI
-    * knowledge.services.users.UserManagementServiceAPI
+    * knowledge.services.asyncio.graph.AsyncWacomKnowledgeService
+    * knowledge.services.asyncio.group.AsyncGroupManagementServiceAPI
+    * knowledge.services.asyncio.users.AsyncUserManagementService
 
     ### Class variables
 
@@ -111,7 +100,7 @@ Classes
 
     ### Instance variables
 
-    `application_name`
+    `application_name: str`
     :   Application name.
 
     `auth_endpoint: str`
@@ -211,13 +200,13 @@ Classes
             Session. The session is stored in the token manager and the client is using the session id for further
             calls.
 
-    `request_user_token(self, tenant_key: str, external_id: str) ‑> Tuple[str, str, datetime.datetime]`
+    `request_user_token(self, tenant_api_key: str, external_id: str) ‑> Tuple[str, str, datetime.datetime]`
     :   Login as user by using the tenant key and its external user id.
         
         Parameters
         ----------
-        tenant_key: str
-            Tenant key
+        tenant_api_key: str
+            Tenant api key
         external_id: str
             External id.
         
@@ -235,36 +224,20 @@ Classes
         WacomServiceException
             Exception if service returns HTTP error code.
 
-`WacomServiceException(message: str, headers: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None, method: Optional[str] = None, url: Optional[str] = None, service_response: Optional[str] = None, status_code: int = 500)`
-:   Exception thrown if Wacom service fails.
+`CachedResolver()`
+:   CachedResolver
+    ==============
+    Cached resolver for aiohttp.
 
     ### Ancestors (in MRO)
 
-    * builtins.Exception
-    * builtins.BaseException
+    * aiohttp.abc.AbstractResolver
+    * abc.ABC
 
-    ### Instance variables
+    ### Methods
 
-    `headers: Optional[Dict[str, Any]]`
-    :   Headers of the exception.
+    `close(self) ‑> None`
+    :   Release resolver
 
-    `message: str`
-    :   Message of the exception.
-
-    `method: Optional[str]`
-    :   Method of the exception.
-
-    `params: Optional[Dict[str, Any]]`
-    :   Parameters of the exception.
-
-    `payload: Optional[Dict[str, Any]]`
-    :   Payload of the exception.
-
-    `service_response: Optional[requests.models.Response]`
-    :   Service response.
-
-    `status_code: int`
-    :   Status code of the exception.
-
-    `url: Optional[str]`
-    :   URL of the exception.
+    `resolve(self, host: str, port: int = 0, family: int = 2)`
+    :   Return IP address for given hostname

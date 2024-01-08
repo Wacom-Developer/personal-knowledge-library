@@ -1,59 +1,10 @@
-Module knowledge.services.users
-===============================
+Module knowledge.services.asyncio.users
+=======================================
 
 Classes
 -------
 
-`User(tenant_id: str, user_id: str, external_user_id: str, meta_data: Dict[str, Any], user_roles: List[knowledge.services.users.UserRole])`
-:   User
-    -----
-    In Personal Knowledge backend is linking a user to a shadow user which is used within the personal knowledge graph.
-    
-    Parameters
-    ----------
-    tenant_id: str
-        Tenant id
-    user_id: str
-        User id
-    external_user_id: str
-        External user id, referencing the user to authentication system.
-    meta_data: Dict[str, Any]
-        Metadata associated with user.
-    user_roles: List[UserRole]
-        List of user roles.
-
-    ### Static methods
-
-    `parse(param: Dict[str, Any]) ‑> knowledge.services.users.User`
-    :   Parse user from dictionary.
-        Parameters
-        ----------
-        param: Dict[str, Any]
-            Dictionary containing user information.
-        
-        Returns
-        -------
-        user: User
-            Instance of user.
-
-    ### Instance variables
-
-    `external_user_id: str`
-    :   External user id, referencing to external user authentication.
-
-    `id: str`
-    :   User id.
-
-    `meta_data: Dict[str, Any]`
-    :   Meta data for user.
-
-    `tenant_id: str`
-    :   Tenant ID.
-
-    `user_roles: List[knowledge.services.users.UserRole]`
-    :   List of user roles
-
-`UserManagementServiceAPI(service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
+`AsyncUserManagementService(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
 :   User-Management Service API
     -----------------------------
     
@@ -63,6 +14,8 @@ Classes
     
     Parameters
     ----------
+    application_name: str
+        Name of the application
     service_url: str
         URL of the service
     service_endpoint: str
@@ -70,7 +23,7 @@ Classes
 
     ### Ancestors (in MRO)
 
-    * knowledge.services.base.WacomServiceAPIClient
+    * knowledge.services.asyncio.base.AsyncServiceAPIClient
     * knowledge.services.base.RESTAPIClient
     * abc.ABC
 
@@ -186,20 +139,3 @@ Classes
         ------
         WacomServiceException
             If the tenant service returns an error code.
-
-`UserRole(*args, **kwds)`
-:   UserRole
-    --------
-    Roles of the users in
-
-    ### Ancestors (in MRO)
-
-    * enum.Enum
-
-    ### Class variables
-
-    `ADMIN`
-    :   TenantAdmin has access to all entities independent of the access rights.
-
-    `USER`
-    :   User only has control over his personal entities.

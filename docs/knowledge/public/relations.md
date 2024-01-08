@@ -31,3 +31,19 @@ Functions
     -------
     relations: Dict[str, List[Dict[str, Any]]]
         Relations map.
+
+    
+`wikidata_relations_extractor_qids(wikidata: Dict[str, knowledge.public.wikidata.WikidataThing], qids: Set[str]) ‑> Dict[str, List[Dict[str, Any]]]`
+:   Extracts relations from Wikidata.
+    
+    Parameters
+    ----------
+    wikidata: Dict[str, WikidataThing]
+        Wikidata map
+    qids: Set[str]
+        Set of unique QIDs
+    
+    Returns
+    -------
+    relations: Dict[str, List[Dict[str, Any]]]
+        Relations map.

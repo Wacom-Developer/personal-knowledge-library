@@ -1,84 +1,10 @@
-Module knowledge.services.group
-===============================
+Module knowledge.services.asyncio.group
+=======================================
 
 Classes
 -------
 
-`Group(tenant_id: str, group_id: str, owner: str, name: str, join_key: str, rights: knowledge.base.access.GroupAccessRight)`
-:   Group
-    -----
-    In Personal Knowledge backend users can be logically grouped.
-    
-    Parameters
-    ----------
-    tenant_id: str
-        Tenant id
-    group_id: str
-        Group id
-    owner: str
-        User id who has created the group.
-    name: str
-        Name of the group.
-    join_key: str
-        Key which is required to join the group
-    rights: GroupAccessRight
-        Access right for group
-
-    ### Descendants
-
-    * knowledge.services.group.GroupInfo
-
-    ### Static methods
-
-    `parse(param: Dict[str, Any]) ‑> knowledge.services.group.Group`
-    :   Parse group from dictionary.
-        
-        Arguments
-        ---------
-        param: Dict[str, Any]
-            Dictionary containing group information.
-        
-        Returns
-        -------
-        instance: Group
-            The group object
-
-    ### Instance variables
-
-    `group_access_rights: knowledge.base.access.GroupAccessRight`
-    :   Rights for group.
-
-    `id: str`
-    :   Group id.
-
-    `join_key: str`
-    :   Key for joining the group.
-
-    `name: str`
-    :   Name of the group.
-
-    `owner_id: Optional[str]`
-    :   Owner id (internal id) of the user, who owns the group.
-
-    `tenant_id: str`
-    :   Tenant ID.
-
-`GroupInfo(tenant_id: str, group_id: str, owner: str, name: str, join_key: str, rights: knowledge.base.access.GroupAccessRight, group_users: List[knowledge.services.users.User])`
-:   Group Information
-    -----------------
-    Provides additional information on the group.
-    Users within the group are listed.
-
-    ### Ancestors (in MRO)
-
-    * knowledge.services.group.Group
-
-    ### Instance variables
-
-    `group_users: List`
-    :   List of all users that are part of the group.
-
-`GroupManagementServiceAPI(service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
+`AsyncGroupManagementServiceAPI(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
 :   Group Management Service API
     -----------------------------
     The service is managing groups.
@@ -98,7 +24,7 @@ Classes
 
     ### Ancestors (in MRO)
 
-    * knowledge.services.base.WacomServiceAPIClient
+    * knowledge.services.asyncio.base.AsyncServiceAPIClient
     * knowledge.services.base.RESTAPIClient
     * abc.ABC
 
@@ -120,7 +46,6 @@ Classes
             Entity URI
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
         Raises
         ------
         WacomServiceException
@@ -148,6 +73,8 @@ Classes
         
         Parameters
         ----------
+        auth_key: str
+            User key.
         name: str
             Name of the tenant
         rights: GroupAccessRight
@@ -168,19 +95,19 @@ Classes
     `delete_group(self, group_id: str, force: bool = False, auth_key: Optional[str] = None)`
     :   Delete a group.
         
-        Parameters
-        ----------
-        group_id: str
-         ID of the group.
-        force: bool (Default = False)
-        If True, the group will be deleted even if it is not empty.
-        auth_key: Optional[str]
-        If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+         Parameters
+         ----------
+         group_id: str
+             ID of the group.
+         force: bool (Default = False)
+            If True, the group will be deleted even if it is not empty.
+         auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Raises
         ------
         WacomServiceException
-        If the tenant service returns an error code.
+            If the tenant service returns an error code.
 
     `group(self, group_id: str, auth_key: Optional[str] = None) ‑> knowledge.services.group.GroupInfo`
     :   Get a group.
@@ -253,6 +180,11 @@ Classes
         -------
         user:  List[Groups]
             List of groups.
+        
+        Raises
+        ------
+        WacomServiceException
+            If the tenant service returns an error code.
 
     `remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None)`
     :   Remove an entity from group.
@@ -295,6 +227,8 @@ Classes
         
         Parameters
         ----------
+        auth_key: str
+            User key.
         group_id: str
             ID of the group.
         name: str
@@ -303,6 +237,7 @@ Classes
             Access rights
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        
         Raises
         ------
         WacomServiceException

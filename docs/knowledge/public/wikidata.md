@@ -46,7 +46,7 @@ Classes
     - Predicate: The property that describes the statement
     - Object: The value of the property for the given item
     
-    For example, a claim could be "Barack Obama (subject) has a birth-date (predicate) of August 4, 1961 (object)."
+    For example, a claim could be "Barack Obama (subject) has a birthdate (predicate) of August 4, 1961 (object)."
     Claims in Wikidata help to organize information and provide a structured way to represent knowledge that can
     be easily queried, analyzed, and visualized.
 
@@ -70,11 +70,11 @@ Classes
 :   SiteLinks
     ---------
     Sitelinks in Wikidata are links between items in Wikidata and pages on external websites, such as Wikipedia,
-    Wikimedia Commons, and other Wikimedia projects. A sitelink connects a Wikidata item to a specific page on an
+    Wikimedia Commons, and other Wikimedia projects. A site-link connects a Wikidata item to a specific page on an
     external website that provides more information about the topic represented by the item.
     
     For example, a Wikidata item about a particular city might have sitelinks to the corresponding page on the English,
-    French, and German Wikipedia sites. Each sitelink connects the Wikidata item to a specific page on the external
+    French, and German Wikipedia sites. Each site-link connects the Wikidata item to a specific page on the external
     website that provides more detailed information about the city.
     
     Sitelinks in Wikidata help to connect and integrate information across different languages and projects,
@@ -99,7 +99,7 @@ Classes
         Returns
         -------
         instance: SiteLinks
-            SiteLinks instance.
+            The SiteLinks instance.
 
     ### Instance variables
 
@@ -151,7 +151,7 @@ Classes
         instance: WikidataThing
             Single wikidata thing
 
-    `search_term(search_term: str, language: str, url: str = 'https://www.wikidata.org/w/api.php') ‑> List[knowledge.public.wikidata.WikidataSearchResult]`
+    `search_term(search_term: str, language: knowledge.base.language.LanguageCode, url: str = 'https://www.wikidata.org/w/api.php') ‑> List[knowledge.public.wikidata.WikidataSearchResult]`
     :   Search for a term in the WikiData.
         Parameters
         ----------
@@ -209,7 +209,7 @@ Classes
     "gender" (Q48277) is a property that can be used to describe the gender of a person.
     - **Instances**: These are individual items that belong to a class. For example, Barack Obama (Q76) is an instance
     of the "person" (Q215627) class.
-    - **Metaclasses**: These are classes that are used to group together other classes based on their properties or
+    - **Meta-classes**: These are classes that are used to group together other classes based on their properties or
     characteristics. For example, the "monotypic taxon" (Q310890) class groups together classes that represent
     individual species of organisms.
     
@@ -224,7 +224,16 @@ Classes
     ### Static methods
 
     `create_from_dict(class_dict: Dict[str, Any]) ‑> knowledge.public.wikidata.WikidataClass`
-    :
+    :   Create a class from a dictionary.
+        Parameters
+        ----------
+        class_dict: Dict[str, Any]
+            Class dictionary.
+        
+        Returns
+        -------
+        instance: WikidataClass
+            Instance of WikidataClass.
 
     ### Instance variables
 
@@ -235,7 +244,7 @@ Classes
     :   Property id.
 
     `superclasses: List[knowledge.public.wikidata.WikidataClass]`
-    :
+    :   Superclasses.
 
 `WikidataProperty(pid: str, label: Optional[str] = None)`
 :   WikidataProperty
@@ -365,7 +374,7 @@ Classes
     ### Instance variables
 
     `alias_languages: List[str]`
-    :   All available languages for a aliaes.
+    :   All available languages for a aliases.
 
     `aliases: Dict[str, List[knowledge.base.entity.Label]]`
     :   Alternative labels of the concept.
@@ -451,7 +460,7 @@ Classes
         language_code: str
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `alias_lang(self, language_code: LanguageCode) ‑> List[knowledge.base.entity.Label]`
+    `alias_lang(self, language_code: knowledge.base.language.LanguageCode) ‑> List[knowledge.base.entity.Label]`
     :   Get alias for language_code code.
         
         Parameters

@@ -39,7 +39,7 @@ Functions
     Parameters
     ----------
     cache: Path
-        Path to the cache file.
+        The path to the cache file.
 
     
 `number_of_cached_objects() ‑> int`

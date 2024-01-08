@@ -4,5 +4,5 @@ Module knowledge.utils
 
 Sub-modules
 -----------
-* knowledge.utils.rdf
+* knowledge.utils.graph
 * knowledge.utils.wikipedia

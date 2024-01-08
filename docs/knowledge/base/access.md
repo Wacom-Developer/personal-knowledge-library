@@ -4,7 +4,7 @@ Module knowledge.base.access
 Classes
 -------
 
-`AccessRight(read: bool = False, write: bool = False, delete: bool = False)`
+`AccessRight(read: bool, write: bool, delete: bool)`
 :   Access rights for entities within a tenant.
     
     Parameters
@@ -71,17 +71,6 @@ Classes
 
     * knowledge.base.access.AccessRight
 
-    ### Class variables
-
-    `DELETE: str`
-    :
-
-    `READ: str`
-    :
-
-    `WRITE: str`
-    :
-
     ### Static methods
 
     `parse(param: List[str]) ‑> knowledge.base.access.GroupAccessRight`
@@ -114,17 +103,6 @@ Classes
     ### Ancestors (in MRO)
 
     * knowledge.base.access.AccessRight
-
-    ### Class variables
-
-    `DELETE: str`
-    :
-
-    `READ: str`
-    :
-
-    `WRITE: str`
-    :
 
     ### Static methods
 

@@ -152,7 +152,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_context(self, auth_key: str, name: str, base_uri: Optional[str] = None, icon: Optional[str] = None, labels: List[knowledge.base.ontology.OntologyLabel] = None, comments: List[knowledge.base.ontology.Comment] = None) ‑> Dict[str, str]`
+    `create_context(self, auth_key: str, name: str, context: Optional[str] = None, base_uri: Optional[str] = None, icon: Optional[str] = None, labels: List[knowledge.base.ontology.OntologyLabel] = None, comments: List[knowledge.base.ontology.Comment] = None) ‑> Dict[str, str]`
     :   Create context.
         
         **Remark:**
@@ -166,6 +166,8 @@ Classes
             Base URI
         name: str
             Name of the context
+        context:  Optional[str] (default:= None)
+            Context of ontology
         icon: Optional[str] (default:= None)
             Icon representing the concept
         labels: Optional[List[OntologyLabel]] (default:= None)

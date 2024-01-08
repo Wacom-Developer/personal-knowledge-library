@@ -4,10 +4,10 @@ Module knowledge.base.entity
 Classes
 -------
 
-`Description(description: str, language_code: LanguageCode = 'en_US')`
+`Description(description: str, language_code: knowledge.base.language.LocaleCode = 'en_US')`
 :   Description
     -----------
-    Description that is multi-lingual.
+    Description that is multilingual.
     
     Parameters
     ----------
@@ -38,7 +38,7 @@ Classes
         Returns
         -------
         instance: Description
-            Description instance.
+            The description instance.
 
     `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.entity.Description]`
     :   Create a list of descriptions from a list of dictionaries.
@@ -53,7 +53,7 @@ Classes
         instance: List[Description]
             List of description instances.
 
-`EntityStatus(value, names=None, *, module=None, qualname=None, type=None, start=1)`
+`EntityStatus(*args, **kwds)`
 :   Entity Status
     -------------
     Status of the entity synchronization (client and knowledge graph).
@@ -84,17 +84,17 @@ Classes
     * builtins.Exception
     * builtins.BaseException
 
-`Label(content: str, language_code: LanguageCode = 'en_US', main: bool = False)`
+`Label(content: str, language_code: knowledge.base.language.LocaleCode = 'en_US', main: bool = False)`
 :   Label
     -----
-    Label that is multi-lingual.
+    Label that is multilingual.
     
     Parameters
     ----------
     content: str
         Content value
-    language_code: LanguageCode (default:= 'en_US')
-        Language code of content
+    language_code: LocaleCode (default:= 'en_US')
+        ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
     main: bool (default:=False)
         Main content
 
@@ -119,7 +119,7 @@ Classes
         Returns
         -------
         instance: Label
-            Label instance.
+            The Label instance.
 
     `create_from_list(param: List[dict]) ‑> List[knowledge.base.entity.LocalizedContent]`
     :   Create a list of labels from a list of dictionaries.
@@ -139,10 +139,10 @@ Classes
     `main: bool`
     :   Flag if the content is the  main content or an alias.
 
-`LocalizedContent(content: str, language_code: LanguageCode = 'en_US')`
+`LocalizedContent(content: str, language_code: Union[knowledge.base.language.LocaleCode, knowledge.base.language.LanguageCode])`
 :   Localized content
     -----------------
-    Content that is multi-lingual.
+    Content that is multilingual.
     
     Parameters
     ----------
@@ -167,8 +167,8 @@ Classes
     `content: str`
     :   String representation of the content.
 
-    `language_code: LanguageCode`
-    :   Language code of the content.
+    `language_code: Union[knowledge.base.language.LocaleCode, knowledge.base.language.LanguageCode]`
+    :   Locale
 
 `ServiceException(*args, **kwargs)`
 :   Service exception.

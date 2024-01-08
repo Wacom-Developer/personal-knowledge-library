@@ -18,4 +18,5 @@ Sub-modules
 -----------
 * knowledge.base.access
 * knowledge.base.entity
+* knowledge.base.language
 * knowledge.base.ontology

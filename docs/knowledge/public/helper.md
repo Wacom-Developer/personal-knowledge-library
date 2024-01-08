@@ -48,7 +48,7 @@ Functions
 Classes
 -------
 
-`Precision(value, names=None, *, module=None, qualname=None, type=None, start=1)`
+`Precision(*args, **kwds)`
 :   Precision enum for date.
 
     ### Ancestors (in MRO)

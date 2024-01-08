@@ -49,7 +49,7 @@ Functions
         Hierarchy.
 
     
-`wikidata_to_thing(wikidata_thing: knowledge.public.wikidata.WikidataThing, all_relations: Dict[str, Any], supported_locales: List[str], all_wikidata_objects: Dict[str, knowledge.public.wikidata.WikidataThing], pull_wikipedia: bool = False) ‑> Tuple[knowledge.base.ontology.ThingObject, List[Dict[str, Any]]]`
+`wikidata_to_thing(wikidata_thing: knowledge.public.wikidata.WikidataThing, all_relations: Dict[str, Any], supported_locales: List[str], all_wikidata_objects: Dict[str, knowledge.public.wikidata.WikidataThing], pull_wikipedia: bool = False, guess_concept_type: bool = True) ‑> Tuple[knowledge.base.ontology.ThingObject, List[Dict[str, Any]]]`
 :   Converts a Wikidata thing to a ThingObject.
     
     Parameters
@@ -68,6 +68,9 @@ Functions
     
     pull_wikipedia: bool
         Pull Wikipedia summary.
+    
+    guess_concept_type: bool
+        Guess the concept type (queries all super types from Wikidata).
     
     Returns
     -------

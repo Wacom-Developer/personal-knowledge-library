@@ -44,7 +44,7 @@ Functions
         True if the date string is an ISO date, otherwise False.
 
     
-`load_configuration()`
+`load_configuration(configuration: pathlib.Path = PosixPath('.pkl-cache/ontology_mapping.json'))`
 :   Loads the configuration.
     
     Raises
@@ -74,8 +74,13 @@ Functions
         Subclasses of the ontology class.
 
     
-`update_taxonomy_cache()`
+`update_taxonomy_cache(path: pathlib.Path = PosixPath('.pkl-cache'))`
 :   Updates the taxonomy cache.
+    
+    Parameters
+    ----------
+    path: Path
+        The path to the cache file.
 
 Classes
 -------
@@ -251,7 +256,7 @@ Classes
     `type: knowledge.ontomapping.PropertyType`
     :   Property type.
 
-`PropertyType(value, names=None, *, module=None, qualname=None, type=None, start=1)`
+`PropertyType(*args, **kwds)`
 :   Property type
 
     ### Ancestors (in MRO)
@@ -283,7 +288,7 @@ Classes
     
     If check_circular is true, then lists, dicts, and custom encoded
     objects will be checked for circular references during encoding to
-    prevent an infinite recursion (which would cause an OverflowError).
+    prevent an infinite recursion (which would cause an RecursionError).
     Otherwise, no such check takes place.
     
     If allow_nan is true, then NaN, Infinity, and -Infinity will be
