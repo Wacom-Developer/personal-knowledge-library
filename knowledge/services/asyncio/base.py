@@ -5,21 +5,21 @@ import json
 import logging
 import socket
 import ssl
-from datetime import timezone, datetime
-from typing import Any, Tuple, Dict, Optional
+from datetime import datetime
+from typing import Any, Tuple, Dict, Optional, Union
 
 import aiohttp
-import jwt
 import orjson
 from aiohttp import ClientTimeout
 from cachetools import TTLCache
 from dateutil.parser import parse, ParserError
 
-from knowledge.services import USER_AGENT_STR, DEFAULT_TOKEN_REFRESH_TIME, USER_AGENT_HEADER_FLAG, TENANT_API_KEY, \
+from knowledge import __version__
+from knowledge.services import USER_AGENT_HEADER_FLAG, TENANT_API_KEY, \
     CONTENT_TYPE_HEADER_FLAG, REFRESH_TOKEN_TAG, DEFAULT_TIMEOUT, EXPIRATION_DATE_TAG, ACCESS_TOKEN_TAG, \
     APPLICATION_JSON_HEADER, EXTERNAL_USER_ID
 from knowledge.services.base import WacomServiceException, RESTAPIClient
-
+from knowledge.services.session import TokenManager, Session, PermanentSession, RefreshableSession, TimedSession
 
 # A cache for storing DNS resolutions
 dns_cache: TTLCache = TTLCache(maxsize=100, ttl=300)  # Adjust size and ttl as needed
@@ -133,12 +133,14 @@ class AsyncServiceAPIClient(RESTAPIClient):
     STAGING_SERVICE_URL: str = 'https://stage-private-knowledge.wacom.com'
     """Staging service URL"""
 
-    def __init__(self, service_url: str, service_endpoint: str,
+    def __init__(self, application_name: str = "Async Knowledge Client",
+                 service_url: str = SERVICE_URL, service_endpoint: str = 'graph/v1',
                  auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True):
         self.__service_endpoint: str = service_endpoint
         self.__auth_service_endpoint: str = auth_service_endpoint
-        self.__auth_key: Optional[str] = None
-        self.__refresh_token: Optional[str] = None
+        self.__application_name: str = application_name
+        self.__token_manager: TokenManager = TokenManager()
+        self.__current_session_id: Optional[str] = None
         super().__init__(service_url, verify_calls)
 
     @property
@@ -147,39 +149,74 @@ class AsyncServiceAPIClient(RESTAPIClient):
         # This is in graph service REST API
         return f'{self.service_url}/{self.__auth_service_endpoint}/{self.USER_LOGIN_ENDPOINT}'
 
-    async def handle_token(self, force_refresh: bool = False, refresh_time: float = DEFAULT_TOKEN_REFRESH_TIME) \
-            -> Tuple[str, str]:
+    @property
+    def application_name(self) -> str:
+        """Application name."""
+        return self.__application_name
+
+    @property
+    def user_agent(self) -> str:
+        """User agent."""
+        return (f"Personal Knowledge Library({self.application_name})/{__version__}"
+                f"(+https://github.com/Wacom-Developer/personal-knowledge-library)")
+
+    @property
+    def current_session(self) -> Session:
+        """Current session.
+
+        Returns
+        -------
+        session: Union[TimedSession, RefreshableSession, PermanentSession]
+            Current session
+
+        Raises
+        ------
+        WacomServiceException
+            Exception if no session is available.
+        """
+        if self.__current_session_id is None:
+            raise WacomServiceException('No session set. Please login first.')
+        session: Session = self.__token_manager.get_session(self.__current_session_id)
+        if session is None:
+            raise WacomServiceException(f'Unknown session id:= {self.__current_session_id}. Please login first.')
+        return session
+
+    async def handle_token(self, force_refresh: bool = False, force_refresh_timeout: float = 120) -> Tuple[str, str]:
         """
         Handles the token and refreshes it if needed.
 
         Parameters
         ----------
-        force_refresh: bool (Default:= False)
-            Flag if token should be refreshed.
-        refresh_time: float (Default:= DEFAULT_TOKEN_REFRESH_TIME)
-            Refresh time in seconds. Default is 360 seconds = 6 minutes
-
+        force_refresh: bool
+            Force refresh token
+        force_refresh_timeout: int
+            Force refresh timeout
         Returns
         -------
-        auth_key: str
-            Authentication key for identifying the user for the service calls.
-        refresh_key: str
-            Refresh token
-
-        Raises
-        ------
-        WacomServiceException
-            Exception if service returns HTTP error code.
+        user_token: str
+            The user token
+        refresh_token: str
+            The refresh token
         """
-        if self.__auth_key is None:
+        # The session is not set
+        if self.current_session is None:
             raise WacomServiceException('Authentication key is not set. Please login first.')
+
+        # The token expired and is not refreshable
+        if not self.current_session.refreshable and self.current_session.expired:
+            raise WacomServiceException('Authentication key is expired and cannot be refreshed. Please login again.')
+
+        # The token is not refreshable and the force refresh flag is set
+        if not self.current_session.refreshable and force_refresh:
+            raise WacomServiceException('Authentication key is not refreshable. Please login again.')
+
         # Refresh token if needed
-        expires_in: float = await self.expires_in(self.__auth_key)
-        if expires_in < refresh_time or force_refresh:
-            if self.__refresh_token is None:
-                raise WacomServiceException('Refresh token is not set. Please login first.')
-            self.__auth_key, self.__refresh_token, expr = await self.refresh_token(self.__refresh_token)
-        return self.__auth_key, self.__refresh_token
+        if (self.current_session.refreshable and
+                (self.current_session.expires_in < force_refresh_timeout or force_refresh)):
+            auth_key, refresh_token, _ = self.refresh_token(self.current_session.refresh_token)
+            self.current_session.refresh_session(auth_key, refresh_token)
+            return auth_key, refresh_token
+        return self.current_session.auth_token, self.current_session.refresh_token
 
     @staticmethod
     def __async_session__() -> aiohttp.ClientSession:
@@ -202,14 +239,14 @@ class AsyncServiceAPIClient(RESTAPIClient):
             connector=connector
         )
 
-    async def request_user_token(self, tenant_key: str, external_id: str) -> Tuple[str, str, datetime]:
+    async def request_user_token(self, tenant_api_key: str, external_id: str) -> Tuple[str, str, datetime]:
         """
         Login as user by using the tenant key and its external user id.
 
         Parameters
         ----------
-        tenant_key: str
-            Tenant key
+        tenant_api_key: str
+            Tenant api key
         external_id: str
             External id.
 
@@ -228,8 +265,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
             Exception if service returns HTTP error code.
         """
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
-            TENANT_API_KEY: tenant_key,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            TENANT_API_KEY: tenant_api_key,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
         }
         payload: dict = {
@@ -273,7 +310,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         """
         url: str = f'{self.service_base_url}/{AsyncServiceAPIClient.USER_REFRESH_ENDPOINT}/'
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
         payload: Dict[str, str] = {
@@ -292,25 +329,33 @@ class AsyncServiceAPIClient(RESTAPIClient):
         raise WacomServiceException(f'Refresh failed. '
                                     f'Response code:={response.status}, exception:= {response.text}')
 
-    async def login(self, tenant_key: str, external_user_id: str):
+    async def login(self, tenant_api_key: str, external_user_id: str) -> PermanentSession:
         """ Login as user by using the tenant id and its external user id.
         Parameters
         ----------
-        tenant_key: str
+        tenant_api_key: str
             Tenant id
         external_user_id: str
             External user id
+        Returns
+        -------
+        session: PermanentSession
+            Session. The session is stored in the token manager and the client is using the session id for further
+            calls.
         """
-        auth_key, refresh_token, exp = await self.request_user_token(tenant_key, external_user_id)
-        self.__auth_key = auth_key
-        self.__refresh_token = refresh_token
+        auth_key, refresh_token, exp = await self.request_user_token(tenant_api_key, external_user_id)
+        session: PermanentSession = self.__token_manager.add_session(auth_token=auth_key, refresh_token=refresh_token,
+                                                                     tenant_api_key=tenant_api_key,
+                                                                     external_user_id=external_user_id)
+        self.__current_session_id = session.id
+        return session
 
     async def logout(self):
         """ Logout user."""
-        self.__auth_key = None
-        self.__refresh_token = None
+        self.__current_session_id = None
 
-    async def register_token(self, auth_key: str, refresh_token: Optional[str] = None):
+    async def register_token(self, auth_key: str, refresh_token: Optional[str] = None) \
+            -> Union[RefreshableSession, TimedSession]:
         """ Register token.
         Parameters
         ----------
@@ -318,62 +363,18 @@ class AsyncServiceAPIClient(RESTAPIClient):
             Authentication key for identifying the user for the service calls.
         refresh_token: str
             Refresh token
-        """
-        self.__auth_key = auth_key
-        self.__refresh_token = refresh_token
-
-    @staticmethod
-    async def unpack_token(auth_token: str) -> Dict[str, Any]:
-        """Unpacks the token.
-
-        Parameters
-        ----------
-        auth_token: str
-            Authentication token
 
         Returns
         -------
-        token_dict: Dict[str, Any]
-            Token dictionary
+        session: Union[RefreshableSession, TimedSession]
+            Session. The session is stored in the token manager and the client is using the session id for further
+            calls.
         """
-        return jwt.decode(auth_token, options={"verify_signature": False})
-
-    @staticmethod
-    async def expired(auth_token: str) -> bool:
-        """
-        Checks if token is expired.
-
-        Parameters
-        ----------
-        auth_token: str
-            Authentication token
-
-        Returns
-        -------
-        expired: bool
-            Flag if token is expired
-        """
-        return await AsyncServiceAPIClient.expires_in(auth_token) > 0.
-
-    @staticmethod
-    async def expires_in(auth_token: str) -> float:
-        """
-        Returns the seconds when the token expires.
-
-        Parameters
-        ----------
-        auth_token: str
-            Authentication token
-
-        Returns
-        -------
-        expired_in: float
-            Seconds until token is expired
-        """
-        token_dict: Dict[str, Any] = await AsyncServiceAPIClient.unpack_token(auth_token)
-        timestamp: datetime = datetime.now(tz=timezone.utc)
-        expiration_time: datetime = datetime.fromtimestamp(token_dict['exp'], tz=timezone.utc)
-        return expiration_time.timestamp() - timestamp.timestamp()
+        session = self.__token_manager.add_session(auth_token=auth_key, refresh_token=refresh_token)
+        self.__current_session_id = session.id
+        if isinstance(session, RefreshableSession) or isinstance(session, TimedSession):
+            return session
+        raise WacomServiceException(f'Wrong session type:= {type(session)}.')
 
     @property
     def service_endpoint(self):
@@ -384,4 +385,3 @@ class AsyncServiceAPIClient(RESTAPIClient):
     def service_base_url(self):
         """Service endpoint."""
         return f'{self.service_url}/{self.service_endpoint}'
-

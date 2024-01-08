@@ -2,16 +2,18 @@
 # Copyright © 2021-24 Wacom. All rights reserved.
 from abc import ABC
 from datetime import timezone, datetime
-from typing import Any, Tuple, Dict, Optional
+from typing import Any, Tuple, Dict, Optional, Union
 
 import jwt
 import requests
 from dateutil.parser import parse, ParserError
 from requests import Response
 
-from knowledge.services import USER_AGENT_STR, USER_AGENT_HEADER_FLAG, TENANT_API_KEY, CONTENT_TYPE_HEADER_FLAG, \
+from knowledge.services import USER_AGENT_HEADER_FLAG, TENANT_API_KEY, CONTENT_TYPE_HEADER_FLAG, \
     REFRESH_TOKEN_TAG, EXPIRATION_DATE_TAG, ACCESS_TOKEN_TAG, APPLICATION_JSON_HEADER, EXTERNAL_USER_ID
 from knowledge.services import DEFAULT_TIMEOUT
+from knowledge.services.session import TokenManager, Session, RefreshableSession, TimedSession, PermanentSession
+from knowledge import __version__
 
 
 class WacomServiceException(Exception):
@@ -164,11 +166,11 @@ class WacomServiceAPIClient(RESTAPIClient):
 
     def __init__(self, application_name: str, service_url: str, service_endpoint: str,
                  auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True):
-        self.__auth_key: Optional[str] = None
-        self.__refresh_token: Optional[str] = None
         self.__application_name: str = application_name
         self.__service_endpoint: str = service_endpoint
         self.__auth_service_endpoint: str = auth_service_endpoint
+        self.__token_manager: TokenManager = TokenManager()
+        self.__current_session_id: Optional[str] = None
         super().__init__(service_url, verify_calls)
 
     @property
@@ -176,6 +178,27 @@ class WacomServiceAPIClient(RESTAPIClient):
         """Authentication endpoint."""
         # This is in graph service REST API
         return f'{self.service_url}/{self.__auth_service_endpoint}/{self.USER_LOGIN_ENDPOINT}'
+
+    @property
+    def current_session(self) -> Session:
+        """Current session.
+
+        Returns
+        -------
+        session: Union[TimedSession, RefreshableSession, PermanentSession]
+            Current session
+
+        Raises
+        ------
+        WacomServiceException
+            Exception if no session is available.
+        """
+        if self.__current_session_id is None:
+            raise WacomServiceException('No session set. Please login first.')
+        session: Session = self.__token_manager.get_session(self.__current_session_id)
+        if session is None:
+            raise WacomServiceException(f'Unknown session id:= {self.__current_session_id}. Please login first.')
+        return session
 
     def request_user_token(self, tenant_key: str, external_id: str) -> Tuple[str, str, datetime]:
         """
@@ -204,7 +227,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         """
         url: str = f'{self.auth_endpoint}'
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             TENANT_API_KEY: tenant_key,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
         }
@@ -225,25 +248,33 @@ class WacomServiceAPIClient(RESTAPIClient):
                 handle_error(f'Parsing of response failed. {e}', response)
         handle_error(f'User login failed.', response)
 
-    def login(self, tenant_id: str, external_user_id: str):
+    def login(self, tenant_api_key: str, external_user_id: str) -> PermanentSession:
         """ Login as user by using the tenant id and its external user id.
         Parameters
         ----------
-        tenant_id: str
+        tenant_api_key: str
             Tenant id
         external_user_id: str
             External user id
+        Returns
+        -------
+        session: PermanentSession
+            Session. The session is stored in the token manager and the client is using the session id for further
+            calls.
         """
-        auth_key, refresh_token, exp = self.request_user_token(tenant_id, external_user_id)
-        self.__auth_key = auth_key
-        self.__refresh_token = refresh_token
+        auth_key, refresh_token, exp = self.request_user_token(tenant_api_key, external_user_id)
+        session: PermanentSession = self.__token_manager.add_session(auth_token=auth_key, refresh_token=refresh_token,
+                                                                     tenant_api_key=tenant_api_key,
+                                                                     external_user_id=external_user_id)
+        self.__current_session_id = session.id
+        return session
 
     def logout(self):
         """ Logout user."""
-        self.__auth_key = None
-        self.__refresh_token = None
+        self.__current_session_id = None
 
-    def register_token(self, auth_key: str, refresh_token: Optional[str] = None):
+    def register_token(self, auth_key: str, refresh_token: Optional[str] = None) \
+            -> Union[RefreshableSession, TimedSession]:
         """ Register token.
         Parameters
         ----------
@@ -251,9 +282,18 @@ class WacomServiceAPIClient(RESTAPIClient):
             Authentication key for identifying the user for the service calls.
         refresh_token: str
             Refresh token
+
+        Returns
+        -------
+        session: Union[RefreshableSession, TimedSession]
+            Session. The session is stored in the token manager and the client is using the session id for further
+            calls.
         """
-        self.__auth_key = auth_key
-        self.__refresh_token = refresh_token
+        session = self.__token_manager.add_session(auth_token=auth_key, refresh_token=refresh_token)
+        self.__current_session_id = session.id
+        if isinstance(session, RefreshableSession) or isinstance(session, TimedSession):
+            return session
+        raise WacomServiceException(f'Wrong session type:= {type(session)}.')
 
     def refresh_token(self, refresh_token: str) -> Tuple[str, str, datetime]:
         """
@@ -280,8 +320,8 @@ class WacomServiceAPIClient(RESTAPIClient):
         """
         url: str = f'{self.service_base_url}/{WacomServiceAPIClient.USER_REFRESH_ENDPOINT}/'
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
-            CONTENT_TYPE_HEADER_FLAG: 'application/json'
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
         }
         payload: Dict[str, str] = {
             REFRESH_TOKEN_TAG: refresh_token
@@ -314,67 +354,31 @@ class WacomServiceAPIClient(RESTAPIClient):
         refresh_token: str
             The refresh token
         """
-        if self.__auth_key is None:
+        # The session is not set
+        if self.current_session is None:
             raise WacomServiceException('Authentication key is not set. Please login first.')
+
+        # The token expired and is not refreshable
+        if not self.current_session.refreshable and self.current_session.expired:
+            raise WacomServiceException('Authentication key is expired and cannot be refreshed. Please login again.')
+
+        # The token is not refreshable and the force refresh flag is set
+        if not self.current_session.refreshable and force_refresh:
+            raise WacomServiceException('Authentication key is not refreshable. Please login again.')
+
         # Refresh token if needed
-        if WacomServiceAPIClient.expires_in(self.__auth_key) < force_refresh_timeout or force_refresh:
-            if self.__refresh_token is None:
-                raise WacomServiceException('Refresh token is not set. Please login first.')
-            self.__auth_key, self.__refresh_token, _ = self.refresh_token(self.__refresh_token)
-        return self.__auth_key, self.__refresh_token
-
-    @staticmethod
-    def unpack_token(auth_token: str) -> Dict[str, Any]:
-        """Unpacks the token.
-
-        Parameters
-        ----------
-        auth_token: str
-            Authentication token
-
-        Returns
-        -------
-        token_dict: Dict[str, Any]
-            Token dictionary
-        """
-        return jwt.decode(auth_token, options={"verify_signature": False})
-
-    @staticmethod
-    def expired(auth_token: str) -> bool:
-        """
-        Checks if token is expired.
-
-        Parameters
-        ----------
-        auth_token: str
-            Authentication token
-
-        Returns
-        -------
-        expired: bool
-            Flag if token is expired
-        """
-        return WacomServiceAPIClient.expires_in(auth_token) > 0.
-
-    @staticmethod
-    def expires_in(auth_token: str) -> float:
-        """
-        Returns the seconds when the token expires.
-
-        Parameters
-        ----------
-        auth_token: str
-            Authentication token
-
-        Returns
-        -------
-        expired_in: float
-            Seconds until token is expired
-        """
-        token_dict: Dict[str, Any] = WacomServiceAPIClient.unpack_token(auth_token)
-        timestamp: datetime = datetime.now(tz=timezone.utc)
-        expiration_time: datetime = datetime.fromtimestamp(token_dict['exp'], tz=timezone.utc)
-        return expiration_time.timestamp() - timestamp.timestamp()
+        if (self.current_session.refreshable and
+                (self.current_session.expires_in < force_refresh_timeout or force_refresh)):
+            auth_key, refresh_token, _ = self.refresh_token(self.current_session.refresh_token)
+            self.current_session.refresh_session(auth_key, refresh_token)
+            return auth_key, refresh_token
+        return self.current_session.auth_token, self.current_session.refresh_token
+    
+    @property
+    def user_agent(self) -> str:
+        """User agent."""
+        return (f"Personal Knowledge Library({self.application_name})/{__version__}"
+                f"(+https://github.com/Wacom-Developer/personal-knowledge-library)")
 
     @property
     def service_endpoint(self):

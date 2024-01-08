@@ -165,7 +165,7 @@ async def async_things_iter(async_client: AsyncWacomKnowledgeService, user_token
     next_page_id: Optional[str] = None
     if tenant_api_key is not None and external_user_id is not None:
         # First login
-        await async_client.login(tenant_key=tenant_api_key, external_user_id=external_user_id)
+        await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_user_id)
     else:
         await async_client.register_token(user_token, refresh_token)
     while True:
@@ -174,6 +174,6 @@ async def async_things_iter(async_client: AsyncWacomKnowledgeService, user_token
         if len(things) == 0:
             return
         for obj in things:
-            user_token, refresh_token = await async_client.handle_token(refresh_time=force_refresh_timeout)
+            user_token, refresh_token = await async_client.handle_token(force_refresh_timeout=force_refresh_timeout)
             if obj.owner or not only_own:
                 yield obj, user_token, refresh_token
