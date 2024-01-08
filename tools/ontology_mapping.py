@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2023 Wacom. All rights reserved.
+# Copyright © 2023-24 Wacom. All rights reserved.
 import argparse
 import json
 from pathlib import Path
@@ -8,16 +8,11 @@ from ontospy import Ontospy, OntoProperty
 from rdflib import URIRef
 
 from knowledge.base.ontology import OntologyContext
+from knowledge.ontomapping import CLASSES, DATA_PROPERTIES, OBJECT_PROPERTIES, DOMAIN_PROPERTIES, WIKIDATA_TYPES, \
+    DBPEDIA_TYPES, CONTEXT_NAME
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
 
-DBPEDIA_TYPES: str = "dbpedia_types"
-WIKIDATA_TYPES: str = "wikidata_types"
-OBJECT_PROPERTIES: str = "object_properties"
-DATA_PROPERTIES: str = "data_properties"
-DOMAIN_PROPERTIES: str = "domain"
-CLASSES: str = "classes"
-CONTEXT_NAME: str = 'core'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
