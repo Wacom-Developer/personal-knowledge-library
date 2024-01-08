@@ -7,6 +7,7 @@ from unittest import TestCase
 
 import pytest
 
+from knowledge.base.language import SUPPORTED_LOCALES, SUPPORTED_LANGUAGES, EN
 from knowledge.base.ontology import OntologyPropertyReference, OntologyContext
 from knowledge.ontomapping import register_ontology, load_configuration
 from knowledge.ontomapping.manager import wikidata_to_thing
@@ -14,8 +15,7 @@ from knowledge.public.relations import wikidata_relations_extractor
 from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient, WikidataSearchResult
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
-from knowledge.services.users import UserManagementServiceAPI
-from knowledge.base.language import SUPPORTED_LOCALES, SUPPORTED_LANGUAGES, EN_US, EN
+from knowledge.services.users import UserManagementServiceAPI, UserRole
 from knowledge.utils.wikipedia import get_wikipedia_summary, get_wikipedia_summary_image
 
 # Configuration
@@ -40,6 +40,7 @@ def cache_class(request):
         """
         Class to store data for the test cases.
         """
+        WIKIDATA_QIDS: List[str] = ["Q5582", "Q1028181", "Q19363211", ""]
 
         def __init__(self):
             self.__wikidata_things: Dict[str, WikidataThing] = {}
@@ -82,10 +83,15 @@ class WikidataFlow(TestCase):
     tenant_api_key: str = os.environ.get('TENANT_API_KEY')
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get('INSTANCE'))
     ontology_client: OntologyService = OntologyService(service_url=os.environ.get('INSTANCE'))
-    external_id: str = os.environ.get('ADMIN_EXTERNAL_ID')
+    external_id: Optional[str] = None
 
     def setUp(self):
+        for user in self.user_management.listing_users(self.tenant_api_key):
+            if UserRole.ADMIN in user.user_roles:
+                self.external_id = user.external_user_id
+
         admin_token, refresh, expire = self.knowledge_client.request_user_token(self.tenant_api_key, self.external_id)
+
         context: Optional[OntologyContext] = self.ontology_client.context(admin_token)
         if not context:
             import sys
@@ -148,7 +154,7 @@ class WikidataFlow(TestCase):
                             self.assertIsNotNone(image_url)
 
     def test_5_labels(self):
-        entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(["Q5582", "Q1028181", "Q19363211", ""])
+        entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(self.cache.WIKIDATA_QIDS)
         wikidata_things: Dict[str, WikidataThing] = dict([(e.qid, e) for e in entities])
         relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(wikidata_things)
 
@@ -180,4 +186,3 @@ class WikidataFlow(TestCase):
         qids: List[str] = [sr.qid for sr in search_results]
         if 'Q762' not in qids:
             raise ValueError("Q762 (Leonardo Da Vinci) is not in the search results.")
-

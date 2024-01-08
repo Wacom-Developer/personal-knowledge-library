@@ -81,11 +81,14 @@ def create_faulty_thing() -> ThingObject:
 
 # ----------------------------------------------------------------------------------------------------------------------
 instance: str = os.environ.get('INSTANCE')
-async_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(service_url=instance,
+async_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(application_name="Async client test",
+                                                                      service_url=instance,
                                                                       service_endpoint="graph/v1")
-group_management: AsyncGroupManagementServiceAPI = AsyncGroupManagementServiceAPI(service_url=instance,
+group_management: AsyncGroupManagementServiceAPI = AsyncGroupManagementServiceAPI(application_name="Async client test",
+                                                                                  service_url=instance,
                                                                                   service_endpoint="graph/v1")
-user_management: AsyncUserManagementService = AsyncUserManagementService(service_url=instance,
+user_management: AsyncUserManagementService = AsyncUserManagementService(application_name="Async client test",
+                                                                         service_url=instance,
                                                                          service_endpoint="graph/v1")
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -126,7 +129,7 @@ async def test_02_push_entity():
     """Push entity."""
     global tenant_api_key, external_id, dummy_image
     thing: ThingObject = create_thing(OntologyClassReference.parse('wacom:core#Person'))
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     thing_uri: str = await async_client.create_entity(thing)
     assert thing_uri is not None
     new_thing: ThingObject = await async_client.entity(thing_uri)
@@ -148,9 +151,9 @@ async def test_02_push_entity():
         assert isinstance(e, WacomServiceException)
 
 
-async def _test_03_get_entity():
+async def test_03_get_entity():
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     """Get entity."""
     count: int = await async_count_things(async_client, user_token, THING_OBJECT, visibility=Visibility.PRIVATE)
@@ -166,10 +169,10 @@ async def _test_03_get_entity():
         assert full_entity is not None
 
 
-async def _test_04_update_entity():
+async def test_04_update_entity():
     """Update entity. """
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
     async for thing, user_token, refresh_token in async_things_iter(async_client, user_token, refresh_token,
@@ -178,13 +181,19 @@ async def _test_04_update_entity():
         # Entity must not be empty
         assert full_entity is not None
         # Update entity
-        full_entity.add_data_property(DataProperty(datetime.now().isoformat(), LAST_UPDATE_DATE))
+        update_time: str = datetime.now().isoformat()
+        full_entity.add_data_property(DataProperty(update_time, LAST_UPDATE_DATE))
+        await async_client.update_entity(full_entity, auth_key=user_token)
+        # Pull entity again
+        full_entity_2: ThingObject = await async_client.entity(full_entity.uri)
+        assert full_entity_2 is not None
+        assert full_entity_2.data_properties.get(LAST_UPDATE_DATE)[0].value == update_time
 
 
-async def _test_05_literal_entity():
+async def test_05_literal_entity():
     """Pull literals from the entity."""
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
     async for thing, user_token, refresh_token in async_things_iter(async_client, user_token, refresh_token,
@@ -202,10 +211,10 @@ async def _test_05_literal_entity():
             assert isinstance(e, WacomServiceException)
 
 
-async def _test_06_labels_entity():
+async def test_06_labels_entity():
     """Pull labels from the entity."""
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
     async for thing, user_token, refresh_token in async_things_iter(async_client, user_token, refresh_token,
@@ -223,10 +232,10 @@ async def _test_06_labels_entity():
             assert isinstance(e, WacomServiceException)
 
 
-async def _test_07_relations_entity():
+async def test_07_relations_entity():
     """Pull relations from the entity."""
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
     async for thing, user_token, refresh_token in async_things_iter(async_client, user_token, refresh_token,
@@ -247,10 +256,10 @@ async def _test_07_relations_entity():
         assert len(relations) == 1
 
 
-async def _test_08_delete_entity():
+async def test_08_delete_entity():
     """Delete the entity."""
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
     async for thing, user_token, refresh_token in async_things_iter(async_client, user_token, refresh_token,
@@ -259,10 +268,10 @@ async def _test_08_delete_entity():
         await async_client.delete_entity(full_entity.uri, force=True, auth_key=user_token)
 
 
-async def _test_09_search_labels():
+async def test_09_search_labels():
     """Search for labels."""
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     res_entities, next_search_page = await async_client.search_labels(search_term=LEONARDO_DA_VINCI,
                                                                       language_code=EN_US,
                                                                       limit=10)
@@ -271,23 +280,23 @@ async def _test_09_search_labels():
                                                                       language_code=EN_US,
                                                                       exact_match=True,
                                                                       limit=10)
-    assert len(res_entities) == 1
+    assert len(res_entities) >= 1
 
 
-async def _test_10_search_description():
+async def test_10_search_description():
     """Test the search for descriptions."""
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     res_entities, next_search_page = await async_client.search_description('Michelangelo\'s Sistine Chapel',
                                                                            EN_US, limit=10)
 
     assert len(res_entities) >= 1
 
 
-async def _test_11_search_relations():
+async def test_11_search_relations():
     """Test the search for relations."""
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     art_style: Optional[ThingObject] = None
     results, _ = await async_client.search_labels("portrait", EN_US, limit=1)
     for entity in results:
@@ -320,10 +329,10 @@ async def _test_11_search_relations():
         assert isinstance(e, WacomServiceException)
 
 
-async def _test_12_search_literals():
+async def test_12_search_literals():
     """Test the search for literals."""
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     res_entities, next_search_page = await async_client.search_literal(search_term=LEONARDO_QID,
                                                                        pattern=SearchPattern.REGEX,
                                                                        literal=SYSTEM_SOURCE_REFERENCE_ID,
@@ -332,35 +341,35 @@ async def _test_12_search_literals():
     assert len(res_entities) >= 1
 
 
-async def _test_13_search_literals():
+async def test_13_named_entity_linking():
     """Test the search for literals."""
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
-    user_token, refresh_token = await async_client.handle_token()
-    async for entity, user_token, refresh_token in async_things_iter(async_client,
-                                                                     user_token=user_token,
-                                                                     refresh_token=refresh_token,
-                                                                     concept_type=THING_OBJECT):
-        for lang in [EN_US, JA_JP, DE_DE]:
-
-            label_lang: Optional[Label] = entity.label_lang(lang)
-            if label_lang:
-
-                res_entities, next_search_page = await async_client.link_personal_entities(text=label_lang.content,
-                                                                                           language_code=JA_JP)
-
-                assert len(res_entities) >= 1
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    leo: Optional[ThingObject] = None
+    search_results, _ = await async_client.search_labels(LEONARDO_DA_VINCI, EN_US, limit=1)
+    for entity in search_results:
+        leo = entity
+        break
+    assert leo is not None
+    for label_lang in leo.label:
+        res_entities = await async_client.link_personal_entities(text=label_lang.content,
+                                                                 language_code=label_lang.language_code)
+        assert len(res_entities) >= 1
 
 
-async def _test_14_activations():
+async def test_14_activations():
     """Test activations."""
     global tenant_api_key, external_id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
-    user_token, refresh_token = await async_client.handle_token()
-    async for entity, user_token, refresh_token in async_things_iter(async_client, concept_type=THING_OBJECT,
-                                                                     user_token=user_token,
-                                                                     refresh_token=refresh_token):
-        await async_client.activations([entity.uri], depth=1)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    leo_uri: Optional[str] = None
+    search_results, _ = await async_client.search_labels(LEONARDO_DA_VINCI, EN_US, limit=1)
+    for entity in search_results:
+        leo_uri = entity.uri
+        break
+    assert leo_uri is not None
+    things, relations = await async_client.activations([leo_uri], depth=2)
+    assert len(things) > 0
+    assert len(relations) > 0
 
 
 async def test_15_create_group_users():
@@ -380,20 +389,15 @@ async def test_16_group_flows():
     """ Create group."""
     # Now, user 1 creates a group
     global tenant_api_key, external_id, external_id_2
-    await group_management.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await group_management.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     # User 1 creates a group
     new_group: Group = await group_management.create_group("qa-test-group")
     # User 2 joins the group
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
-    user_token, refresh_token = await async_client.handle_token()
-    thing: Optional[ThingObject] = None
-    async for entity, user_token, refresh_token in async_things_iter(async_client, concept_type=THING_OBJECT,
-                                                                     user_token=user_token,
-                                                                     refresh_token=refresh_token, only_own=True):
-        thing = entity
-        break
-    assert thing is not None
-    second_user_token, second_refresh_token, _ = await async_client.request_user_token(tenant_key=tenant_api_key,
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    thing: ThingObject = create_thing(OntologyClassReference.parse('wacom:core#Person'))
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    thing.uri = await async_client.create_entity(thing)
+    second_user_token, second_refresh_token, _ = await async_client.request_user_token(tenant_api_key=tenant_api_key,
                                                                                        external_id=external_id_2)
     try:
         await async_client.entity(thing.uri, auth_key=second_user_token)
@@ -401,7 +405,7 @@ async def test_16_group_flows():
     except WacomServiceException as we:
         assert we.status_code == 403
     group: Optional[Group] = None
-    groups: List[Group] = await group_management.listing_groups(auth_key=user_token)
+    groups: List[Group] = await group_management.listing_groups()
     for gr in groups:
         if gr.name == "qa-test-group":
             group = gr
@@ -417,14 +421,14 @@ async def test_16_group_flows():
     info, token, _, _ = await user_management.create_user(tenant_api_key, external_id=external_id_3,
                                                           meta_data={'account-type': 'qa-test'},
                                                           roles=[UserRole.USER])
-    await group_management.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await group_management.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     groups: List[Group] = await group_management.listing_groups()
     assert len(groups) == 1
     group: Group = groups[0]
     await group_management.add_user_to_group(group.id, info.id)
     # Adding entity to group
-    await group_management.login(tenant_key=tenant_api_key, external_user_id=external_id_2)
-    user_token, refresh_token, _ = await group_management.request_user_token(tenant_key=tenant_api_key,
+    await group_management.login(tenant_api_key=tenant_api_key, external_user_id=external_id_2)
+    user_token, refresh_token, _ = await group_management.request_user_token(tenant_api_key=tenant_api_key,
                                                                              external_id=external_id)
     groups: List[Group] = await group_management.listing_groups()
     thing_uri: Optional[str] = None
@@ -440,18 +444,20 @@ async def test_16_group_flows():
     await group_management.add_entity_to_group(group.id, thing_uri, auth_key=user_token)
     entity: ThingObject = await async_client.entity(thing_uri)
     assert groups[0].id == entity.group_ids[0]
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id_2)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id_2)
     await async_client.entity(thing_uri)
     user_2_id = await user_management.user_internal_id(tenant_api_key, external_id=external_id_2)
+    # Now user 1 removes user 2 from the group
+    await group_management.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     await group_management.remove_user_from_group(group.id, user_2_id, force=True)
     try:
-        await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id_2)
+        await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id_2)
         await async_client.entity(thing_uri)
         raise AssertionError("User 2 should not have access to the entity.")
     except WacomServiceException as we:
         assert isinstance(we, WacomServiceException)
         assert we.status_code == 403
-    await group_management.login(tenant_key=tenant_api_key, external_user_id=external_id_2)
+    await group_management.login(tenant_api_key=tenant_api_key, external_user_id=external_id_2)
     # Now user 2 has no groups anymore
     groups: List[Group] = await group_management.listing_groups()
     assert len(groups) == 0
@@ -459,7 +465,7 @@ async def test_16_group_flows():
     await group_management.join_group(new_group.id, new_group.join_key)
     groups: List[Group] = await group_management.listing_groups()
     assert new_group.id == groups[0].id
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id_2)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id_2)
     # Now user 2 has access again
     await async_client.entity(thing_uri)
 
@@ -468,7 +474,7 @@ async def test_17_public_entity():
     """ Public entity."""
     global tenant_api_key, external_id, external_id_2
     thing: Optional[ThingObject] = None
-    user_token, refresh_token, _ = await async_client.request_user_token(tenant_key=tenant_api_key,
+    user_token, refresh_token, _ = await async_client.request_user_token(tenant_api_key=tenant_api_key,
                                                                          external_id=external_id)
     async for entity, user_token, refresh_token in async_things_iter(async_client, concept_type=THING_OBJECT,
                                                                      user_token=user_token,
@@ -480,7 +486,7 @@ async def test_17_public_entity():
     # Entity must not be empty
     thing.tenant_access_right.read = True
     await async_client.update_entity(thing, auth_key=user_token)
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id_2)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id_2)
     pull_entity: ThingObject = await async_client.entity(thing.uri)
     assert pull_entity is not None
     # This must fail
@@ -491,14 +497,13 @@ async def test_17_public_entity():
         assert isinstance(we, WacomServiceException)
         assert we.status_code == 403
     thing.tenant_access_right.write = True
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     await async_client.update_entity(thing)
     # Now we should have access
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id_2)
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id_2)
     pull_entity: ThingObject = await async_client.entity(thing.uri)
     assert pull_entity is not None
     pull_entity.add_alias("Alias", EN_US)
-    await async_client.login(tenant_key=tenant_api_key, external_user_id=external_id_2)
     await async_client.update_entity(pull_entity)
 
 

@@ -13,9 +13,10 @@ from knowledge.base.entity import Label
 from knowledge.base.language import JA_JP, EN_US, DE_DE, BG_BG, FR_FR, IT_IT, ES_ES
 from knowledge.base.ontology import ThingObject, OntologyClassReference, OntologyPropertyReference, DataProperty, \
     ObjectProperty
-from knowledge.services.graph import WacomKnowledgeService
+from knowledge.services.graph import WacomKnowledgeService, Visibility
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
+from knowledge.utils.graph import count_things
 
 THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
 
@@ -179,7 +180,12 @@ class EntityFlow(TestCase):
     def test_8_delete_entity(self):
         """Delete the entity."""
         self.knowledge_client.login(self.tenant_api_key, self.cache.external_id)
+        before_entities = count_things(self.knowledge_client, self.cache.token, THING_OBJECT,
+                                       visibility=Visibility.PRIVATE)
         self.knowledge_client.delete_entity(self.cache.thing_uri, force=True)
+        after_entities = count_things(self.knowledge_client, self.cache.token, THING_OBJECT,
+                                      visibility=Visibility.PRIVATE)
+        self.assertLess(after_entities, before_entities)
 
     def teardown_class(self):
         """Clean up the test environment."""
