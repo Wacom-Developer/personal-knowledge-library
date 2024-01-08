@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-2022 Wacom. All rights reserved.
+# Copyright © 2021-2024 Wacom. All rights reserved.
 import argparse
-from typing import Union, Dict, List
+from typing import Union, Dict
 
-from knowledge.base.ontology import OntologyClassReference, ThingObject
+from knowledge.base.ontology import OntologyClassReference
 from knowledge.services.graph import WacomKnowledgeService
+from knowledge.services.session import PermanentSession
+from knowledge.utils.graph import things_iter, count_things
 
 THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
 
@@ -49,44 +51,33 @@ if __name__ == '__main__':
     # Wacom personal knowledge REST API Client
     wacom_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
                                                                 service_url=args.instance)
-    user_auth_key, refresh_token, expiration_time = wacom_client.request_user_token(args.tenant, args.user)
+    session: PermanentSession = wacom_client.login(args.tenant, args.user)
     next_page_id: Union[str, None] = None
     page_number: int = 1
     entity_count: int = 0
     types_count: Dict[str, int] = {}
     languages_count: Dict[str, int] = {}
-    dump_entities: List[ThingObject] = []
-    idx: int = 1
-    while True:
-        # pull
-        entities, total_number, next_page_id = wacom_client.listing(user_auth_key, THING_OBJECT, page_id=next_page_id,
-                                                                    limit=100, estimate_count=True)
-        pulled_entities: int = len(entities)
-        entity_count += pulled_entities
-        print('---------------------------------------------------------------------------------------------------')
-        print(f' Page: {page_number} Number of entities: {len(entities)}  ({entity_count}/{total_number}) '
-              f'Next page id: {next_page_id}')
-        print('---------------------------------------------------------------------------------------------------')
-        for e in entities:
-            print(f'[{idx}] : {e}')
-            wacom_client.entity(user_auth_key, e.uri)
+    total_number: int = count_things(wacom_client, session.auth_token, THING_OBJECT)
+    for idx, (thing, auth_token, refresh_token) in enumerate(things_iter(wacom_client,
+                                                                         session.auth_token, session.refresh_token,
+                                                                         THING_OBJECT)):
+            print(f'[{idx}] : {thing}')
+            wacom_client.entity(thing.uri)
             # Pull relations if configured
             if args.relations:
-                relations = wacom_client.relations(auth_key=user_auth_key, uri=e.uri)
-                e.object_properties = relations
+                relations = wacom_client.relations(uri=thing.uri)
+                thing.object_properties = relations
                 for re in relations.values():
                     print(f' |- {re.relation.iri}: [Incoming]: {re.incoming_relations} |'
                           f' [Outgoing] : {re.outgoing_relations}')
-            if e.concept_type.iri not in types_count:
-                types_count[e.concept_type.iri] = 0
-            types_count[e.concept_type.iri] += 1
-            for label in e.label:
+            if thing.concept_type.iri not in types_count:
+                types_count[thing.concept_type.iri] = 0
+            types_count[thing.concept_type.iri] += 1
+            for label in thing.label:
                 if label.language_code not in languages_count:
                     languages_count[label.language_code] = 0
                 languages_count[label.language_code] += 1
             idx += 1
 
-        if pulled_entities == 0:
-            print_summary(total_number, types_count, languages_count)
-            break
-        page_number += 1
+    print_summary(total_number, types_count, languages_count)
+
