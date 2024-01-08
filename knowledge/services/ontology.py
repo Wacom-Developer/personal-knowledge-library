@@ -9,7 +9,7 @@ from requests import Response
 
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, OntologyProperty, OntologyClass, \
     PropertyType, THING_CLASS, DataPropertyType, InflectionSetting, Comment, OntologyContext, OntologyLabel
-from knowledge.services import USER_AGENT_STR
+from knowledge.services import USER_AGENT_HEADER_FLAG
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG
 
@@ -73,7 +73,7 @@ class OntologyService(WacomServiceAPIClient):
             Context of the Ontology
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}',
@@ -99,7 +99,7 @@ class OntologyService(WacomServiceAPIClient):
             List of inflection settings.
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}'
@@ -129,7 +129,7 @@ class OntologyService(WacomServiceAPIClient):
             List of ontology classes. Tuple<Classname, Superclass>
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/' \
@@ -165,7 +165,7 @@ class OntologyService(WacomServiceAPIClient):
             List of ontology contexts
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         context_url: str = urllib.parse.quote_plus(context)
@@ -205,7 +205,7 @@ class OntologyService(WacomServiceAPIClient):
             Instance of the concept
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         context_url: str = urllib.parse.quote_plus(context)
@@ -239,7 +239,7 @@ class OntologyService(WacomServiceAPIClient):
             Instance of the property
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         context_url: str = urllib.parse.quote_plus(context)
@@ -287,7 +287,7 @@ class OntologyService(WacomServiceAPIClient):
             If the ontology service returns an error code, exception is thrown.
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         payload: Dict[str, Any] = {
@@ -347,7 +347,7 @@ class OntologyService(WacomServiceAPIClient):
             If the ontology service returns an error code, exception is thrown.
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         payload: Dict[str, Any] = {
@@ -391,7 +391,7 @@ class OntologyService(WacomServiceAPIClient):
             If the ontology service returns an error code, exception is thrown.
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         context_url: str = urllib.parse.quote_plus(context)
@@ -449,7 +449,7 @@ class OntologyService(WacomServiceAPIClient):
             If the ontology service returns an error code, exception is thrown.
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         payload: Dict[str, Any] = {
@@ -521,7 +521,7 @@ class OntologyService(WacomServiceAPIClient):
             If the ontology service returns an error code, exception is thrown.
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         payload: Dict[str, Any] = {
@@ -569,7 +569,7 @@ class OntologyService(WacomServiceAPIClient):
             If the ontology service returns an error code, exception is thrown.
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         context_url: str = urllib.parse.quote_plus(context)
@@ -617,7 +617,7 @@ class OntologyService(WacomServiceAPIClient):
             If the ontology service returns an error code, exception is thrown.
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         if base_uri is None:
@@ -664,7 +664,7 @@ class OntologyService(WacomServiceAPIClient):
             Result from the service
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{name}{"/force" if force else ""}'
@@ -686,7 +686,7 @@ class OntologyService(WacomServiceAPIClient):
             Name of the context.
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         context_url: str = urllib.parse.quote_plus(context)
@@ -713,7 +713,7 @@ class OntologyService(WacomServiceAPIClient):
             Ontology as RDFS / OWL  ontology
         """
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         context_url: str = urllib.parse.quote_plus(context)

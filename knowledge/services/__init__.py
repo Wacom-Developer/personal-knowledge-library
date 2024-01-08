@@ -3,11 +3,6 @@
 """
 This package contains the services for the knowledge graph functionality.
 """
-from knowledge import __version__
-
-USER_AGENT_STR: str = f"Personal Knowledge Library/{__version__}" \
-                      "(+https://github.com/Wacom-Developer/personal-knowledge-library)"
-
 # ------------------------------------------------- Constants ----------------------------------------------------------
 USER_AGENT_HEADER_FLAG: str = 'User-Agent'
 AUTHORIZATION_HEADER_FLAG: str = 'Authorization'
@@ -59,7 +54,7 @@ DEFAULT_TOKEN_REFRESH_TIME: int = 360
 Refresh token time in seconds. 360 seconds = 6 minutes
 """
 
-__all__ = ['base', 'graph', 'ontology', 'tenant', 'users', 'USER_AGENT_STR', 'USER_AGENT_HEADER_FLAG',
+__all__ = ['base', 'graph', 'ontology', 'tenant', 'users', 'USER_AGENT_HEADER_FLAG',
            'AUTHORIZATION_HEADER_FLAG', 'CONTENT_TYPE_HEADER_FLAG', 'TENANT_API_KEY', 'REFRESH_TOKEN_TAG',
            'EXPIRATION_DATE_TAG', 'ACCESS_TOKEN_TAG', 'ACTIVATION_TAG', 'SEARCH_TERM', 'LANGUAGE_PARAMETER',
            'TYPES_PARAMETER', 'LIMIT_PARAMETER', 'LITERAL_PARAMETER', 'VALUE', 'SEARCH_PATTERN_PARAMETER', 'LISTING',
@@ -67,7 +62,7 @@ __all__ = ['base', 'graph', 'ontology', 'tenant', 'users', 'USER_AGENT_STR', 'US
            'SUBJECT_URI', 'NEXT_PAGE_ID_TAG', 'TENANT_RIGHTS_TAG', 'GROUP_IDS_TAG', 'OWNER_ID_TAG', 'VISIBILITY_TAG',
            'ESTIMATE_COUNT', 'GROUP_USER_RIGHTS_TAG', 'JOIN_KEY_PARAM', 'USER_TO_ADD_PARAM', 'USER_TO_REMOVE_PARAM',
            'FORCE_PARAM', 'RELATION_TAG', 'APPLICATION_JSON_HEADER', 'DEFAULT_TIMEOUT', 'ENTITIES_TAG', 'RESULT_TAG',
-           'EXACT_MATCH']
+           'EXACT_MATCH', 'DEFAULT_TOKEN_REFRESH_TIME', 'EXTERNAL_USER_ID']
 
 from knowledge.services import base
 from knowledge.services import graph

@@ -5,9 +5,9 @@ from typing import List, Dict
 import requests
 from requests import Response
 
-from knowledge.services import USER_AGENT_STR, DEFAULT_TIMEOUT
-from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, USER_AGENT_HEADER_FLAG, \
-    CONTENT_TYPE_HEADER_FLAG
+from knowledge.services import DEFAULT_TIMEOUT
+from knowledge.services.base import WacomServiceAPIClient, USER_AGENT_HEADER_FLAG, \
+    CONTENT_TYPE_HEADER_FLAG, handle_error
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG
 
 
@@ -79,7 +79,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{TenantManagementServiceAPI.TENANT_ENDPOINT}'
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {self.__tenant_management_token}',
             CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
@@ -90,7 +90,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
                                            verify=self.verify_calls)
         if response.ok:
             return response.json()
-        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+        handle_error("Creation of tenant failed.", response)
 
     def listing_tenant(self) -> List[Dict[str, str]]:
         """
@@ -117,11 +117,11 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{TenantManagementServiceAPI.TENANT_ENDPOINT}'
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {self.__tenant_management_token}'
         }
         response: Response = requests.get(url, headers=headers, data={}, timeout=DEFAULT_TIMEOUT,
                                           verify=self.verify_calls)
         if response.ok:
             return response.json()
-        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+        handle_error("Listing of tenant failed.", response)

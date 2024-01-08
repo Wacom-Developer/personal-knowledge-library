@@ -22,7 +22,7 @@ from knowledge.services import SUBJECT_URI, RELATION_URI, OBJECT_URI, LANGUAGE_P
     LISTING, TOTAL_COUNT, SEARCH_TERM, TYPES_PARAMETER, APPLICATION_JSON_HEADER, SUBJECT, OBJECT, PREDICATE, \
     LIMIT_PARAMETER, ESTIMATE_COUNT, TARGET, ACTIVATION_TAG, SEARCH_PATTERN_PARAMETER, LITERAL_PARAMETER, VALUE, \
     GROUP_IDS_TAG, NEXT_PAGE_ID_TAG, ENTITIES_TAG, RESULT_TAG, EXACT_MATCH
-from knowledge.services import USER_AGENT_STR, AUTHORIZATION_HEADER_FLAG
+from knowledge.services import AUTHORIZATION_HEADER_FLAG
 from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, USER_AGENT_HEADER_FLAG, \
     CONTENT_TYPE_HEADER_FLAG, DEFAULT_TIMEOUT
@@ -44,6 +44,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
 
     Parameters
     ----------
+    application_name: str
+        Name of the application
     service_url: str
         URL of the service
     service_endpoint: str
@@ -55,6 +57,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
     ENTITY_IMAGE_ENDPOINT: str = 'entity/image/'
     ACTIVATIONS_ENDPOINT: str = 'entity/activations'
     LISTING_ENDPOINT: str = 'entity/types'
+    NAMED_ENTITY_LINKING_ENDPOINT: str = 'nel/text'
     RELATION_ENDPOINT: str = 'entity/{}/relation'
     RELATIONS_ENDPOINT: str = 'entity/{}/relations'
     SEARCH_LABELS_ENDPOINT: str = "semantic-search/labels"
@@ -64,9 +67,9 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
     SEARCH_RELATION_ENDPOINT: str = "semantic-search/relation"
     ONTOLOGY_UPDATE_ENDPOINT: str = 'ontology-update'
 
-    def __init__(self, service_url: str = WacomServiceAPIClient.SERVICE_URL,
+    def __init__(self, application_name: str, service_url: str = WacomServiceAPIClient.SERVICE_URL,
                  service_endpoint: str = 'graph/v1'):
-        super().__init__(service_url, service_endpoint)
+        super().__init__(application_name=application_name, service_url=service_url, service_endpoint=service_endpoint)
 
     async def entity(self, uri: str, auth_key: Optional[str] = None) -> ThingObject:
         """
@@ -95,7 +98,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         async with AsyncServiceAPIClient.__async_session__() as session:
@@ -204,7 +207,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         async with AsyncServiceAPIClient.__async_session__() as session:
             headers: Dict[str, str] = {
-                USER_AGENT_HEADER_FLAG: USER_AGENT_STR
+                USER_AGENT_HEADER_FLAG: self.user_agent
             }
             async with session.get(image_url, headers=headers, verify_ssl=self.verify_calls) as response:
                 if response.ok:
@@ -286,7 +289,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             raise WacomServiceException("Please delete less than 100 entities.")
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}'
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         params: Dict[str, Any] = {
@@ -322,7 +325,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         async with (AsyncServiceAPIClient.__async_session__() as session):
@@ -437,7 +440,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_BULK_ENDPOINT}'
         # Header info
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -485,7 +488,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         # Header info
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -520,18 +523,20 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
         uri: str = entity.uri
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
         # Header info
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         payload: Dict[str, Any] = await AsyncWacomKnowledgeService.__entity__(entity)
         async with AsyncServiceAPIClient.__async_session__() as session:
-            with session.patch(url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT,
-                               verify_ssl=self.verify_calls) as response:
+            async with session.patch(url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT,
+                                     verify_ssl=self.verify_calls) as response:
                 if not response.ok:
                     await handle_error(f'Update of entity failed. URI:={uri}.', response, payload=payload,
                                        headers=headers)
@@ -564,7 +569,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         url: str = (f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{urllib.parse.quote(uri)}'
                     f'/relations')
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         async with AsyncServiceAPIClient.__async_session__() as session:
@@ -601,7 +606,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/labels'
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         async with AsyncServiceAPIClient.__async_session__() as session:
@@ -640,7 +645,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/literals'
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         async with AsyncServiceAPIClient.__async_session__() as session:
@@ -677,7 +682,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation'
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         params: dict = {
@@ -719,7 +724,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             TARGET: target
         }
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         async with AsyncServiceAPIClient.__async_session__() as session:
@@ -759,7 +764,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ACTIVATIONS_ENDPOINT}'
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         params: dict = {
@@ -825,7 +830,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         # Header with auth token
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         # Parameter with filtering and limit
@@ -884,7 +889,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                     f'{"/fix" if fix else ""}')
         # Header with auth token
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         async with AsyncServiceAPIClient.__async_session__() as session:
@@ -928,7 +933,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         if auth_key is None:
             auth_key, _ = await self.handle_token()
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         parameters: Dict[str, Any] = {
@@ -985,7 +990,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.SEARCH_LABELS_ENDPOINT}'
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         parameters: Dict[str, Any] = {
@@ -1216,10 +1221,11 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         if auth_key is None:
             auth_key, _ = await self.handle_token()
         named_entities: List[KnowledgeGraphEntity] = []
-        url: str = f'{self.service_url}/{self.__service_endpoint}'
+        url: str = f'{self.service_base_url}{self.NAMED_ENTITY_LINKING_ENDPOINT}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
-            CONTENT_TYPE_HEADER_FLAG: 'application/json'
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
         }
         payload: Dict[str, str] = {
             LOCALE_TAG: language_code,

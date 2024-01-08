@@ -12,7 +12,7 @@ from knowledge.base.access import GroupAccessRight
 from knowledge.base.ontology import NAME_TAG
 from knowledge.services import GROUP_USER_RIGHTS_TAG, DEFAULT_TIMEOUT, JOIN_KEY_PARAM, USER_TO_ADD_PARAM, \
     USER_TO_REMOVE_PARAM, FORCE_PARAM, APPLICATION_JSON_HEADER
-from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, handle_error
+from knowledge.services.base import WacomServiceAPIClient, handle_error
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG
 # -------------------------------------- Constant flags ----------------------------------------------------------------
 from knowledge.services.users import User, FORCE_TAG, LIMIT_TAG, OFFSET_TAG
@@ -193,7 +193,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         if auth_key is None:
-            auth_key, _= self.handle_token()
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
@@ -236,7 +236,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         if auth_key is None:
-            auth_key, _= self.handle_token()
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
@@ -276,7 +276,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         If the tenant service returns an error code.
         """
         if auth_key is None:
-            auth_key, _= self.handle_token()
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -318,7 +318,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             List of groups.
         """
         if auth_key is None:
-            auth_key, _= self.handle_token()
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}'
         params: Dict[str, int] = {}
         if admin:
@@ -362,7 +362,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         if auth_key is None:
-            auth_key, _= self.handle_token()
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -391,7 +391,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         if auth_key is None:
-            auth_key, _= self.handle_token()
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/join'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -420,7 +420,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         if auth_key is None:
-            auth_key, _= self.handle_token()
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/leave'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -438,6 +438,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             Group ID
         user_id: str
             User who is added to the group
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Raises
         ------
@@ -445,7 +447,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         if auth_key is None:
-            auth_key, _= self.handle_token()
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/user/add'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -478,7 +480,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         if auth_key is None:
-            auth_key, _= self.handle_token()
+            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/user/remove'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -501,6 +503,8 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             Group ID
         entity_uri: str
             Entity URI
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Raises
         ------
@@ -508,7 +512,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         if auth_key is None:
-            auth_key, _= self.handle_token()
+            auth_key, _ = self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/entity/{uri}/add'
         headers: Dict[str, str] = {
@@ -542,7 +546,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         if auth_key is None:
-            auth_key, _= self.handle_token()
+            auth_key, _ = self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/entity/{uri}/remove'
         headers: Dict[str, str] = {

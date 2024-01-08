@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-24 Wacom. All rights reserved.
 import enum
-import json
 import os
 import urllib
 from pathlib import Path
-from typing import Any, Optional, List, Dict, Tuple, Iterator
+from typing import Any, Optional, List, Dict, Tuple
 from urllib.parse import urlparse
 
-import orjson
 import requests
 from requests import Response
 from requests.adapters import HTTPAdapter
@@ -21,7 +19,7 @@ from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_
 from knowledge.base.language import LocaleCode, SUPPORTED_LOCALES
 from knowledge.base.ontology import DataProperty, OntologyPropertyReference, ThingObject, OntologyClassReference, \
     ObjectProperty, EN_US
-from knowledge.services import USER_AGENT_STR, AUTHORIZATION_HEADER_FLAG, GROUP_IDS_TAG, OWNER_ID_TAG, \
+from knowledge.services import AUTHORIZATION_HEADER_FLAG, GROUP_IDS_TAG, OWNER_ID_TAG, \
     TENANT_RIGHTS_TAG, APPLICATION_JSON_HEADER, RELATION_TAG, TARGET, ACTIVATION_TAG, PREDICATE, OBJECT, SUBJECT, \
     LIMIT_PARAMETER, ESTIMATE_COUNT, VISIBILITY_TAG, NEXT_PAGE_ID_TAG, LISTING, TOTAL_COUNT, SEARCH_TERM, \
     LANGUAGE_PARAMETER, TYPES_PARAMETER, LIMIT, VALUE, LITERAL_PARAMETER, SEARCH_PATTERN_PARAMETER, SUBJECT_URI, \
@@ -111,7 +109,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
     SEARCH_RELATION_ENDPOINT: str = "semantic-search/relation"
     ONTOLOGY_UPDATE_ENDPOINT: str = 'ontology-update'
 
-    def __init__(self, application_name: str, service_url: str = WacomServiceAPIClient.SERVICE_URL,
+    def __init__(self, application_name: str = "Knowledge Client",
+                 service_url: str = WacomServiceAPIClient.SERVICE_URL,
                  service_endpoint: str = 'graph/v1'):
         super().__init__(application_name, service_url, service_endpoint)
 
@@ -142,7 +141,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         response: Response = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
@@ -212,7 +211,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}'
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         params: Dict[str, Any] = {
@@ -257,7 +256,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
@@ -379,7 +378,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_BULK_ENDPOINT}'
         # Header info
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -435,7 +434,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}'
         # Header info
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -492,7 +491,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}'
         # Header info
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -533,7 +532,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{urllib.parse.quote(uri)}/relations'
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         mount_point: str = \
@@ -574,7 +573,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/labels'
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         response: Response = requests.get(url, headers=headers,  params={
@@ -613,7 +612,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/literals'
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
 
@@ -651,7 +650,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation'
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         params: dict = {
@@ -697,7 +696,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             TARGET: target
         }
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         # Get response
@@ -736,7 +735,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ACTIVATIONS_ENDPOINT}'
 
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         params: dict = {
@@ -806,7 +805,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f'{self.service_base_url}{WacomKnowledgeService.LISTING_ENDPOINT}'
         # Header with auth token
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         # Parameter with filtering and limit
@@ -873,7 +872,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}{"/fix" if fix else ""}'
         # Header with auth token
         headers: dict = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
@@ -921,7 +920,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         if auth_key is None:
             auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         parameters: Dict[str, Any] = {
@@ -971,7 +970,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.SEARCH_LABELS_ENDPOINT}'
         headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: USER_AGENT_STR,
+            USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         parameters: Dict[str, Any] = {
@@ -1217,7 +1216,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         with requests.session() as session:
             headers: Dict[str, str] = {
-                USER_AGENT_HEADER_FLAG: USER_AGENT_STR
+                USER_AGENT_HEADER_FLAG: self.user_agent
             }
             response: Response = session.get(image_url, headers=headers)
             if response.ok:

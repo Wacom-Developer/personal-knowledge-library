@@ -8,7 +8,6 @@ import requests
 from dateutil.parser import parse, ParserError
 from requests import Response
 
-from knowledge.services import USER_AGENT_STR
 from knowledge.services.asyncio.base import AsyncServiceAPIClient
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
 from knowledge.services.users import UserRole, USER_AGENT_TAG, TENANT_API_KEY_FLAG, OFFSET_TAG, LIMIT_TAG, User, \
@@ -27,6 +26,8 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
 
     Parameters
     ----------
+    application_name: str
+        Name of the application
     service_url: str
         URL of the service
     service_endpoint: str
@@ -35,8 +36,9 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
 
     USER_DETAILS_ENDPOINT: str = f'{WacomServiceAPIClient.USER_ENDPOINT}/internal-id'
 
-    def __init__(self, service_url: str = WacomServiceAPIClient.SERVICE_URL, service_endpoint: str = 'graph/v1'):
-        super().__init__(service_url=service_url, service_endpoint=service_endpoint)
+    def __init__(self, application_name: str, service_url: str = WacomServiceAPIClient.SERVICE_URL,
+                 service_endpoint: str = 'graph/v1'):
+        super().__init__(application_name=application_name, service_url=service_url, service_endpoint=service_endpoint)
 
     # ------------------------------------------ Users handling --------------------------------------------------------
 
@@ -73,7 +75,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{AsyncUserManagementService.USER_ENDPOINT}'
         headers: dict = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key,
             CONTENT_TYPE_FLAG: 'application/json'
         }
@@ -121,7 +123,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{AsyncUserManagementService.USER_ENDPOINT}'
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key,
             CONTENT_TYPE_FLAG: 'application/json'
         }
@@ -160,7 +162,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{AsyncUserManagementService.USER_ENDPOINT}'
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key
         }
         params: Dict[str, str] = {
@@ -195,7 +197,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{AsyncUserManagementService.USER_DETAILS_ENDPOINT}'
         headers: dict = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key
         }
         parameters: Dict[str, str] = {
@@ -228,7 +230,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{AsyncUserManagementService.USER_ENDPOINT}'
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key
         }
         params: Dict[str, str] = {

@@ -8,7 +8,6 @@ import requests
 from dateutil.parser import parse, ParserError
 from requests import Response
 
-from knowledge.services import USER_AGENT_STR
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
 
 # -------------------------------------- Constant flags ----------------------------------------------------------------
@@ -187,7 +186,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}'
         headers: dict = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key,
             CONTENT_TYPE_FLAG: 'application/json'
         }
@@ -235,7 +234,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}'
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key,
             CONTENT_TYPE_FLAG: 'application/json'
         }
@@ -274,7 +273,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}'
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key
         }
         params: Dict[str, str] = {
@@ -309,7 +308,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{UserManagementServiceAPI.USER_DETAILS_ENDPOINT}'
         headers: dict = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key
         }
         parameters: Dict[str, str] = {
@@ -342,7 +341,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f'{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}'
         headers: Dict[str, str] = {
-            USER_AGENT_TAG: USER_AGENT_STR,
+            USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key
         }
         params: Dict[str, str] = {
