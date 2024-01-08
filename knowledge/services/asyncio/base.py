@@ -231,7 +231,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         global cached_resolver
         timeout: ClientTimeout = ClientTimeout(total=60)
         ssl_context: ssl.SSLContext = ssl.create_default_context()
-        connector: aiohttp.TCPConnector = aiohttp.TCPConnector(ssl_context=ssl_context, limit_per_host=10,
+        connector: aiohttp.TCPConnector = aiohttp.TCPConnector(ssl=ssl_context, limit_per_host=10,
                                                                resolver=cached_resolver)
         return aiohttp.ClientSession(
             json_serialize=lambda x: orjson.dumps(x).decode(),
