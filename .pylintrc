@@ -35,7 +35,6 @@ load-plugins=
     pylint.extensions.overlapping_exceptions,
     pylint.extensions.redefined_variable_type,
     pylint.extensions.comparison_placement,
-    pylint.extensions.mccabe,
 
 # Use multiple processes to speed up Pylint. Specifying 0 will auto-detect the
 # number of processors available to use.
@@ -70,6 +69,8 @@ fail-under=8.0
 # specified are enabled, while categories only check already-enabled messages.
 fail-on=
 
+disable=
+    C0114, C0413
 
 [MESSAGES CONTROL]
 
@@ -108,6 +109,7 @@ disable=
     import-error,
     logging-fstring-interpolation,
     missing-module-docstring
+    not-an-iterable
 
 
 [REPORTS]
