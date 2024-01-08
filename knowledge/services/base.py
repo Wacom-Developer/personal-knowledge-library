@@ -200,14 +200,14 @@ class WacomServiceAPIClient(RESTAPIClient):
             raise WacomServiceException(f'Unknown session id:= {self.__current_session_id}. Please login first.')
         return session
 
-    def request_user_token(self, tenant_key: str, external_id: str) -> Tuple[str, str, datetime]:
+    def request_user_token(self, tenant_api_key: str, external_id: str) -> Tuple[str, str, datetime]:
         """
         Login as user by using the tenant key and its external user id.
 
         Parameters
         ----------
-        tenant_key: str
-            Tenant key
+        tenant_api_key: str
+            Tenant API key
         external_id: str
             External id.
 
@@ -228,7 +228,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         url: str = f'{self.auth_endpoint}'
         headers: dict = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
-            TENANT_API_KEY: tenant_key,
+            TENANT_API_KEY: tenant_api_key,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
         }
         payload: dict = {

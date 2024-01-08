@@ -83,50 +83,58 @@ if __name__ == '__main__':
     my_thing: ThingObject = knowledge_client.entity(entity_uri, auth_key=u1_token)
     print(f'User is the owner of {my_thing.owner}')
     # Now only user 1 has access to the personal entity
-    knowledge_client.entity(u1_token, entity_uri)
+    knowledge_client.entity(entity_uri, auth_key=u1_token)
     # Try to access the entity
     try:
-        knowledge_client.entity(u2_token, entity_uri)
+        knowledge_client.entity(entity_uri, auth_key=u2_token)
     except WacomServiceException as we:
         print(f"Expected exception as user 2 has no access to the personal entity of user 1. Exception: {we}")
         print(f"Status code: {we.status_code}")
         print(f"Response text: {we.service_response}")
     # Try to access the entity
     try:
-        knowledge_client.entity(u3_token, entity_uri)
+        knowledge_client.entity(entity_uri, auth_key=u3_token)
     except WacomServiceException as we:
         print(f"Expected exception as user 3 has no access to the personal entity of user 1. Exception: {we}")
     # Now, user 1 creates a group
     g: Group = group_management.create_group("test-group", auth_key=u1_token)
     # Shares the join key with user 2 and user 2 joins
-    group_management.join_group(u2_token, g.id, g.join_key)
+    group_management.join_group(g.id, g.join_key, auth_key=u2_token)
     # Share entity with group
-    group_management.add_entity_to_group(u1_token, g.id, entity_uri)
+    group_management.add_entity_to_group(g.id, entity_uri, auth_key=u1_token)
     # Now, user 2 should have access
-    other_thing: ThingObject = knowledge_client.entity(u2_token, entity_uri)
+    other_thing: ThingObject = knowledge_client.entity(entity_uri, auth_key=u2_token)
     print(f'User 2 is the owner of the thing: {other_thing.owner}')
     # Try to access the entity
     try:
-        knowledge_client.entity(u3_token, entity_uri)
+        knowledge_client.entity(entity_uri, auth_key=u3_token)
     except WacomServiceException as we:
         print(f"Expected exception as user 3 still has no access to the personal entity of user 1. Exception: {we}")
+        print(f"URL: {we.url}, method: {we.method}")
+        print(f"Status code: {we.status_code}")
+        print(f"Response text: {we.service_response}")
+        print(f"Message: {we.message}")
     # Un-share the entity
-    group_management.remove_entity_to_group(u1_token, g.id, entity_uri)
+    group_management.remove_entity_to_group(g.id, entity_uri, auth_key=u1_token)
     # Now, again no access
     try:
-        knowledge_client.entity(u2_token, entity_uri)
+        knowledge_client.entity(entity_uri, auth_key=u2_token)
     except WacomServiceException as we:
         print(f"Expected exception as user 2 has no access to the personal entity of user 1. Exception: {we}")
+        print(f"URL: {we.url}, method: {we.method}")
+        print(f"Status code: {we.status_code}")
+        print(f"Response text: {we.service_response}")
+        print(f"Message: {we.message}")
     group_management.leave_group(group_id=g.id, auth_key=u2_token)
     # Now, share the entity with the whole tenant
     my_thing.tenant_access_right.read = True
     knowledge_client.update_entity(my_thing, auth_key=u1_token)
     # Now, all users can access the entity
-    knowledge_client.entity(u2_token, entity_uri)
-    knowledge_client.entity(u3_token, entity_uri)
+    knowledge_client.entity(entity_uri, auth_key=u2_token)
+    knowledge_client.entity(entity_uri, auth_key=u3_token)
     # Finally, clean up
     knowledge_client.delete_entity(entity_uri, force=True, auth_key=u1_token)
     # Remove users
-    user_management.delete_user(TENANT_KEY, u1.external_user_id, u1.id)
-    user_management.delete_user(TENANT_KEY, u2.external_user_id, u2.id)
-    user_management.delete_user(TENANT_KEY, u3.external_user_id, u3.id)
+    user_management.delete_user(TENANT_KEY, u1.external_user_id, u1.id, force=True)
+    user_management.delete_user(TENANT_KEY, u2.external_user_id, u2.id, force=True)
+    user_management.delete_user(TENANT_KEY, u3.external_user_id, u3.id, force=True)
