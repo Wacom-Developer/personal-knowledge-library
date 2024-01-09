@@ -24,7 +24,7 @@ if __name__ == '__main__':
     datatypes: Dict[str, int] = {}
     mapping_file: Path = Path(args.mapping)
     if mapping_file.exists():
-        with mapping_file.open('r') as fp:
+        with mapping_file.open('r', encoding='utf-8') as fp:
             mapping: Dict[str, Any] = json.loads(fp.read())
     else:
         mapping: Dict[str, Any] = {
@@ -37,11 +37,12 @@ if __name__ == '__main__':
                                                                     application_name="Ontology")
 
     ontology_client: OntologyService = OntologyService(service_url=args.instance)
+    ontology_client.login(args.tenant, args.user)
     admin_token, refresh, expire = knowledge_client.request_user_token(args.tenant, args.user)
     context: OntologyContext = ontology_client.context(admin_token)
     if not context:
         # First, create a context for the ontology
-        ontology_client.create_context(admin_token, name=CONTEXT_NAME, base_uri=f'wacom:{CONTEXT_NAME}')
+        ontology_client.create_context(name=CONTEXT_NAME, base_uri=f'wacom:{CONTEXT_NAME}')
         context_name: str = CONTEXT_NAME
     else:
         context_name: str = context.context
@@ -101,5 +102,5 @@ if __name__ == '__main__':
                 "domains": [str(d.uri) for d in c.domains],
                 "ranges": [str(r.uri) for r in c.ranges]
             }
-    with Path(args.mapping).open("w") as fp:
+    with Path(args.mapping).open("w", encoding='utf-8') as fp:
         fp.write(json.dumps(mapping, indent=2))
