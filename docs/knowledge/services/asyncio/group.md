@@ -4,7 +4,7 @@ Module knowledge.services.asyncio.group
 Classes
 -------
 
-`AsyncGroupManagementServiceAPI(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
+`AsyncGroupManagementService(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
 :   Group Management Service API
     -----------------------------
     The service is managing groups.
@@ -121,8 +121,8 @@ Classes
         
         Returns
         -------
-        group: Group
-            Instance of the group
+        group: GroupInfo
+            Instance of the group information.
         
         Raises
         ------

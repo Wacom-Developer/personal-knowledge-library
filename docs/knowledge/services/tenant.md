@@ -56,13 +56,12 @@ Classes
         Returns
         -------
         tenant_dict: Dict[str, str]
-        
-        Newly created tenant structure.
-        >>>     {
-        >>>       "id": "<Tenant-ID>",
-        >>>       "apiKey": "<Tenant-API-Key>",
-        >>>       "name": "<Tenant-Name>"
-        >>>    }
+            Newly created tenant structure.
+            >>>     {
+            >>>       "id": "<Tenant-ID>",
+            >>>       "apiKey": "<Tenant-API-Key>",
+            >>>       "name": "<Tenant-Name>"
+            >>>    }
         
         Raises
         ------

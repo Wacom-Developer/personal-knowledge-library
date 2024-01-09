@@ -460,12 +460,12 @@ Classes
         language_code: str
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `alias_lang(self, language_code: knowledge.base.language.LanguageCode) ‑> List[knowledge.base.entity.Label]`
+    `alias_lang(self, language_code: str) ‑> List[knowledge.base.entity.Label]`
     :   Get alias for language_code code.
         
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: str
             Requested language_code code
         Returns
         -------

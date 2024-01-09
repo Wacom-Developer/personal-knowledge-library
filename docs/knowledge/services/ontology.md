@@ -44,17 +44,17 @@ Classes
 
     ### Methods
 
-    `commit(self, auth_key: str, context: str)`
+    `commit(self, context: str, auth_key: Optional[str] = None)`
     :   Commit the ontology.
         
         Parameters
         ----------
-        auth_key: str
-            User token (must have TenantAdmin) role
         context: str
             Name of the context.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
-    `concept(self, auth_key: str, context: str, concept_name: str) ‑> knowledge.base.ontology.OntologyClass`
+    `concept(self, context: str, concept_name: str, auth_key: Optional[str] = None) ‑> knowledge.base.ontology.OntologyClass`
     :   Retrieve a concept instance.
         
         **Remark:**
@@ -62,19 +62,19 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Name of the context
         concept_name: str
             IRI of the concept
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Returns
         -------
         instance: OntologyClass
             Instance of the concept
 
-    `concepts(self, auth_key: str, context: str) ‑> List[Tuple[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.OntologyClassReference]]`
+    `concepts(self, context: str, auth_key: Optional[str] = None) ‑> List[Tuple[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.OntologyClassReference]]`
     :   Retrieve all concept classes.
         
         **Remark:**
@@ -92,35 +92,35 @@ Classes
         concepts: List[Tuple[OntologyClassReference, OntologyClassReference]]
             List of ontology classes. Tuple<Classname, Superclass>
 
-    `context(self, auth_key: str) ‑> Optional[knowledge.base.ontology.OntologyContext]`
+    `context(self, auth_key: Optional[str] = None) ‑> Optional[knowledge.base.ontology.OntologyContext]`
     :   Getting the information on the context.
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
+        auth_key: Optional[str] [default:= None]
+            Auth
         
         Returns
         -------
         context_description: Optional[OntologyContext]
             Context of the Ontology
 
-    `context_metadata(self, auth_key: str, context: str) ‑> List[knowledge.base.ontology.InflectionSetting]`
+    `context_metadata(self, context: str, auth_key: Optional[str] = None) ‑> List[knowledge.base.ontology.InflectionSetting]`
     :   Getting the meta-data on the context.
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Name of the context.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Returns
         -------
         list_inflection_settings: List[InflectionSetting]
             List of inflection settings.
 
-    `create_concept(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyClassReference, subclass_of: knowledge.base.ontology.OntologyClassReference = wacom:core#Thing, icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None) ‑> Dict[str, str]`
+    `create_concept(self, context: str, reference: knowledge.base.ontology.OntologyClassReference, subclass_of: knowledge.base.ontology.OntologyClassReference = wacom:core#Thing, icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None, auth_key: Optional[str] = None) ‑> Dict[str, str]`
     :   Create concept class.
         
         **Remark:**
@@ -128,8 +128,6 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         reference: OntologyClassReference
@@ -142,6 +140,8 @@ Classes
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         Returns
         -------
         result: Dict[str, str]
@@ -152,7 +152,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_context(self, auth_key: str, name: str, context: Optional[str] = None, base_uri: Optional[str] = None, icon: Optional[str] = None, labels: List[knowledge.base.ontology.OntologyLabel] = None, comments: List[knowledge.base.ontology.Comment] = None) ‑> Dict[str, str]`
+    `create_context(self, name: str, context: Optional[str] = None, base_uri: Optional[str] = None, icon: Optional[str] = None, labels: List[knowledge.base.ontology.OntologyLabel] = None, comments: List[knowledge.base.ontology.Comment] = None, auth_key: Optional[str] = None) ‑> Dict[str, str]`
     :   Create context.
         
         **Remark:**
@@ -160,13 +160,11 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         base_uri: str
             Base URI
         name: str
             Name of the context
-        context:  Optional[str] (default:= None)
+        context: Optional[str] [default:= None]
             Context of ontology
         icon: Optional[str] (default:= None)
             Icon representing the concept
@@ -174,7 +172,8 @@ Classes
             Labels for the context
         comments: Optional[List[Comment]] (default:= None)
             Comments for the context
-        
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         Returns
         -------
         result: Dict[str, str]
@@ -185,7 +184,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_data_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.DataPropertyType], subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None) ‑> Dict[str, str]`
+    `create_data_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.DataPropertyType], subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None, auth_key: Optional[str] = None) ‑> Dict[str, str]`
     :   Create data property.
         
         **Remark:**
@@ -193,8 +192,6 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         reference: OntologyPropertyReference
@@ -211,6 +208,8 @@ Classes
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Returns
         -------
@@ -222,7 +221,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_object_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.OntologyClassReference], inverse_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None) ‑> Dict[str, str]`
+    `create_object_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.OntologyClassReference], inverse_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None, auth_key: Optional[str] = None) ‑> Dict[str, str]`
     :   Create property.
         
         **Remark:**
@@ -230,8 +229,6 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         reference: OntologyPropertyReference
@@ -250,6 +247,8 @@ Classes
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Returns
         -------
@@ -261,7 +260,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `delete_concept(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyClassReference)`
+    `delete_concept(self, context: str, reference: knowledge.base.ontology.OntologyClassReference, auth_key: Optional[str] = None)`
     :   Delete concept class.
         
         **Remark:**
@@ -269,19 +268,19 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         reference: OntologyClassReference
             Name of the concept
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Raises
         ------
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `delete_property(self, auth_key: str, context: str, reference: knowledge.base.ontology.OntologyPropertyReference)`
+    `delete_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, auth_key: Optional[str] = None)`
     :   Delete property.
         
         **Remark:**
@@ -289,19 +288,19 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         reference: OntologyPropertyReference
             Name of the property
+        auth_key: Optional[str] [default:= None]
+            If auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Raises
         ------
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `properties(self, auth_key: str, context: str) ‑> List[Tuple[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.OntologyPropertyReference]]`
+    `properties(self, context: str, auth_key: Optional[str] = None) ‑> List[Tuple[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.OntologyPropertyReference]]`
     :   List all properties.
         
         **Remark:**
@@ -309,17 +308,17 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Name of the context
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Returns
         -------
         contexts: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]
             List of ontology contexts
 
-    `property(self, auth_key: str, context: str, property_name: str) ‑> knowledge.base.ontology.OntologyProperty`
+    `property(self, context: str, property_name: str, auth_key: Optional[str] = None) ‑> knowledge.base.ontology.OntologyProperty`
     :   Retrieve a property instance.
         
         **Remark:**
@@ -327,51 +326,50 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Name of the context
         property_name: str
             IRI of the property
+        auth_key: Optional[str] [default:= None]
+            If auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Returns
         -------
         instance: OntologyProperty
             Instance of the property
 
-    `rdf_export(self, auth_key: str, context: str) ‑> str`
+    `rdf_export(self, context: str, auth_key: Optional[str] = None) ‑> str`
     :   Export RDF.
         
         Parameters
         ----------
-        auth_key: str
-            User token (must have TenantAdmin) role
         context: str
             Name of the context.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Returns
         -------
         rdf: str
             Ontology as RDFS / OWL  ontology
 
-    `remove_context(self, auth_key: str, name: str, force: bool = False)`
+    `remove_context(self, name: str, force: bool = False, auth_key: Optional[str] = None)`
     :   Remove context.
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         name: str
             Name of the context
         force: bool (default:= False)
             Force removal of context
-        
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         Returns
         -------
         result: Dict[str, str]
             Result from the service
 
-    `update_concept(self, auth_key: str, context: str, name: str, subclass_of: Optional[str], icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None) ‑> Dict[str, str]`
+    `update_concept(self, context: str, name: str, subclass_of: Optional[str], icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None, auth_key: Optional[str] = None) ‑> Dict[str, str]`
     :   Update concept class.
         
         **Remark:**
@@ -379,8 +377,6 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         name: str
@@ -393,6 +389,8 @@ Classes
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Returns
         -------

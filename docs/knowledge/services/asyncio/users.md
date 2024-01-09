@@ -5,9 +5,8 @@ Classes
 -------
 
 `AsyncUserManagementService(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
-:   User-Management Service API
-    -----------------------------
-    
+:   Async User-Management Service API
+    ---------------------------------
     Functionality:
         - List all users
         - Create / update / delete users

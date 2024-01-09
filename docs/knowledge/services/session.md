@@ -187,6 +187,19 @@ Classes
         session: Union[RefreshableSession, TimedSession, PermanentSession]
             Depending on the session type, the session is returned.
 
+    `has_session(self, session_id: str) ‑> bool`
+    :   Check if a session exists.
+        
+        Parameters
+        ----------
+        session_id: str
+            Session id.
+        
+        Returns
+        -------
+        available: bool
+            True if the session exists, otherwise False.
+
     `remove_session(self, session_id: str)`
     :   Remove a session by its id.
         

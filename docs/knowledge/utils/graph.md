@@ -6,7 +6,7 @@ Functions
 
     
 `async_count_things(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, user_token: str, concept_type: knowledge.base.ontology.OntologyClassReference, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None) ‑> int`
-:   Counts the number of things.
+:   Async counting of things given a concept type.
     
     Parameters
     ----------
@@ -55,10 +55,11 @@ Functions
         The tenant API key
     external_user_id: Optional[str] [default:= None]
         The external user ID
+    
     Returns
     -------
     AsyncIterator[ThingObject]
-        Iterator of things
+        Asynchronous Iterator of things
 
     
 `count_things(wacom_client: knowledge.services.graph.WacomKnowledgeService, user_token: str, concept_type: knowledge.base.ontology.OntologyClassReference, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None) ‑> int`
@@ -115,3 +116,34 @@ Functions
     -------
     Iterator[ThingObject]
         Iterator of things
+
+    
+`things_session_iter(wacom_client: knowledge.services.graph.WacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: Optional[knowledge.services.graph.Visibility] = None, locale: Optional[knowledge.base.language.LocaleCode] = None, only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360) ‑> Iterator[Tuple[knowledge.base.ontology.ThingObject, str, str]]`
+:   Iterates over all things using the current session configured for client.
+    
+    Parameters
+    ----------
+    wacom_client: WacomKnowledgeService
+        The Wacom Knowledge Service
+    concept_type: OntologyClassReference
+        The class type
+    visibility: Optional[Visibility] [default:= None]
+        The visibility
+    locale: Optional[LocaleCode] [default:= None]
+        Only entities with this labels having a given locale
+    only_own: bool [default:= False]
+        Only own things
+    fetch_size: int [default:= 100]
+        Fetch size.
+    force_refresh_timeout: int [default:= 360]
+        Force refresh timeout
+    
+    Returns
+    -------
+    Iterator[ThingObject]
+        Iterator of things
+    
+    Raises
+    ------
+    ValueError
+        If no session is configured for client

@@ -5,7 +5,21 @@ Functions
 ---------
 
     
-`handle_error(message: str, response: requests.models.Response, parameters: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None)`
+`format_exception(exception: knowledge.services.base.WacomServiceException) ‑> str`
+:   Formats the exception.
+    
+    Parameters
+    ----------
+    exception: WacomServiceException
+        Exception
+    
+    Returns
+    -------
+    formatted_exception: str
+        Formatted exception
+
+    
+`handle_error(message: str, response: requests.models.Response, parameters: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) ‑> knowledge.services.base.WacomServiceException`
 :   Handles an error response.
     
     Parameters
@@ -21,10 +35,10 @@ Functions
     headers: Optional[Dict[str, str]] (Default:= None)
         Headers
     
-    Raises
-    ------
+    Returns
+    -------
     WacomServiceException
-        Exception if service returns HTTP error code.
+        Returns the generated exception.
 
 Classes
 -------
@@ -87,7 +101,7 @@ Classes
     * knowledge.nel.base.NamedEntityRecognitionProcessor
     * knowledge.nel.base.PersonalEntityLinkingProcessor
     * knowledge.services.graph.WacomKnowledgeService
-    * knowledge.services.group.GroupManagementServiceAPI
+    * knowledge.services.group.GroupManagementService
     * knowledge.services.ontology.OntologyService
     * knowledge.services.tenant.TenantManagementServiceAPI
     * knowledge.services.users.UserManagementServiceAPI
@@ -211,13 +225,13 @@ Classes
             Session. The session is stored in the token manager and the client is using the session id for further
             calls.
 
-    `request_user_token(self, tenant_key: str, external_id: str) ‑> Tuple[str, str, datetime.datetime]`
+    `request_user_token(self, tenant_api_key: str, external_id: str) ‑> Tuple[str, str, datetime.datetime]`
     :   Login as user by using the tenant key and its external user id.
         
         Parameters
         ----------
-        tenant_key: str
-            Tenant key
+        tenant_api_key: str
+            Tenant API key
         external_id: str
             External id.
         
@@ -234,6 +248,13 @@ Classes
         ------
         WacomServiceException
             Exception if service returns HTTP error code.
+
+    `use_session(self, session_id: str)`
+    :   Use session.
+        Parameters
+        ----------
+        session_id: str
+            Session id
 
 `WacomServiceException(message: str, headers: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None, method: Optional[str] = None, url: Optional[str] = None, service_response: Optional[str] = None, status_code: int = 500)`
 :   Exception thrown if Wacom service fails.

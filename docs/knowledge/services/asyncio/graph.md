@@ -125,22 +125,24 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `create_entity_bulk(self, auth_key: str, entities: List[knowledge.base.ontology.ThingObject], batch_size: int = 10) ‑> List[knowledge.base.ontology.ThingObject]`
+    `create_entity_bulk(self, entities: List[knowledge.base.ontology.ThingObject], batch_size: int = 10, ignore_images: bool = False, auth_key: Optional[str] = None) ‑> List[knowledge.base.ontology.ThingObject]`
     :   Creates entity in graph.
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         entities: List[ThingObject]
             Entities
         batch_size: int
             Batch size
+        ignore_images: bool
+            Do not automatically upload images
+        auth_key: Optional[str]
+            If auth key is not set, the client auth key will be used.
         
         Returns
         -------
-        uri: str
-            URI of entity
+        uris: List[ThingObject]
+            List of ThingObjects with URI
         
         Raises
         ------

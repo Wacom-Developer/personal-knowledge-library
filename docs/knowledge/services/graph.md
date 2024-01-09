@@ -180,7 +180,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `create_entity_bulk(self, entities: List[knowledge.base.ontology.ThingObject], batch_size: int = 10, auth_key: Optional[str] = None) ‑> List[knowledge.base.ontology.ThingObject]`
+    `create_entity_bulk(self, entities: List[knowledge.base.ontology.ThingObject], batch_size: int = 10, ignore_images: bool = False, auth_key: Optional[str] = None) ‑> List[knowledge.base.ontology.ThingObject]`
     :   Creates entity in graph.
         
         Parameters
@@ -189,13 +189,15 @@ Classes
             Entities
         batch_size: int
             Batch size
+        ignore_images: bool
+            Ignore images
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         
         Returns
         -------
-        uri: str
-            URI of entity
+        things: List[ThingObject]
+            List of entities with URI
         
         Raises
         ------
@@ -226,12 +228,12 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         uris: List[str]
             List of URI of entities. **Remark:** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         max_retries: int
             Maximum number of retries
         backoff_factor: float

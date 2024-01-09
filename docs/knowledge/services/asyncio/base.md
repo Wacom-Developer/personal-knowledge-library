@@ -30,7 +30,7 @@ Functions
         Address information
 
     
-`handle_error(message: str, response: aiohttp.client_reqrep.ClientResponse, parameters: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None)`
+`handle_error(message: str, response: aiohttp.client_reqrep.ClientResponse, parameters: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) ‑> knowledge.services.base.WacomServiceException`
 :   Handles an error response.
     
     Parameters
@@ -46,10 +46,10 @@ Functions
     headers: Optional[Dict[str, str]] (Default:= None)
         Headers
     
-    Raises
-    ------
+    Returns
+    -------
     WacomServiceException
-        Exception if service returns HTTP error code.
+        Create exception.
 
 Classes
 -------
@@ -78,7 +78,7 @@ Classes
     ### Descendants
 
     * knowledge.services.asyncio.graph.AsyncWacomKnowledgeService
-    * knowledge.services.asyncio.group.AsyncGroupManagementServiceAPI
+    * knowledge.services.asyncio.group.AsyncGroupManagementService
     * knowledge.services.asyncio.users.AsyncUserManagementService
 
     ### Class variables
@@ -223,6 +223,13 @@ Classes
         ------
         WacomServiceException
             Exception if service returns HTTP error code.
+
+    `use_session(self, session_id: str)`
+    :   Use session.
+        Parameters
+        ----------
+        session_id: str
+            Session id
 
 `CachedResolver()`
 :   CachedResolver
