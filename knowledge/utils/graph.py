@@ -36,6 +36,57 @@ def count_things(wacom_client: WacomKnowledgeService, user_token: str, concept_t
     return total
 
 
+def things_session_iter(wacom_client: WacomKnowledgeService,concept_type: OntologyClassReference,
+                        visibility: Optional[Visibility] = None,
+                        locale: Optional[LocaleCode] = None, only_own: bool = False, fetch_size: int = 100,
+                        force_refresh_timeout: int = 360) \
+        -> Iterator[Tuple[ThingObject, str, str]]:
+    """
+    Iterates over all things using the current session configured for client.
+
+    Parameters
+    ----------
+    wacom_client: WacomKnowledgeService
+        The Wacom Knowledge Service
+    concept_type: OntologyClassReference
+        The class type
+    visibility: Optional[Visibility] [default:= None]
+        The visibility
+    locale: Optional[LocaleCode] [default:= None]
+        Only entities with this labels having a given locale
+    only_own: bool [default:= False]
+        Only own things
+    fetch_size: int [default:= 100]
+        Fetch size.
+    force_refresh_timeout: int [default:= 360]
+        Force refresh timeout
+
+    Returns
+    -------
+    Iterator[ThingObject]
+        Iterator of things
+
+    Raises
+    ------
+    ValueError
+        If no session is configured for client
+    """
+    next_page_id: Optional[str] = None
+    if wacom_client.current_session is None:
+        raise ValueError("No session configured for client")
+    while True:
+        # Refresh token if needed
+        things, _, next_page_id = wacom_client.listing(concept_type, visibility=visibility, locale=locale,
+                                                       limit=fetch_size, page_id=next_page_id)
+        if len(things) == 0:
+            return
+        for obj in things:
+            # Refresh token if needed
+            if obj.owner or not only_own:
+                wacom_client.handle_token(force_refresh_timeout=force_refresh_timeout)
+                yield obj
+
+
 def things_iter(wacom_client: WacomKnowledgeService, user_token: str, refresh_token: str,
                 concept_type: OntologyClassReference, visibility: Optional[Visibility] = None,
                 locale: Optional[LocaleCode] = None, only_own: bool = False, fetch_size: int = 100,
