@@ -14,7 +14,7 @@ from knowledge.base.language import JA_JP, EN_US, DE_DE
 from knowledge.base.ontology import ThingObject, OntologyClassReference
 from knowledge.services.base import WacomServiceException
 from knowledge.services.graph import WacomKnowledgeService
-from knowledge.services.group import GroupManagementServiceAPI, Group
+from knowledge.services.group import GroupManagementService, Group
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
 
@@ -131,7 +131,7 @@ class GroupFlow(TestCase):
                                                                     service_url=os.environ.get('INSTANCE'))
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get('INSTANCE'))
     ontology: OntologyService = OntologyService(service_url=os.environ.get('INSTANCE'))
-    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=os.environ.get('INSTANCE'))
+    group_management: GroupManagementService = GroupManagementService(service_url=os.environ.get('INSTANCE'))
 
     '''User management service.'''
     tenant_api_key: str = os.environ.get('TENANT_API_KEY')

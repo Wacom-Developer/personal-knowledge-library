@@ -16,7 +16,7 @@ from knowledge import logger, __version__
 from knowledge.base.ontology import OntologyPropertyReference, ThingObject, ObjectProperty, OntologyClassReference
 from knowledge.services.base import WacomServiceException, USER_AGENT_HEADER_FLAG
 from knowledge.services.graph import WacomKnowledgeService
-from knowledge.services.group import GroupManagementServiceAPI, Group
+from knowledge.services.group import GroupManagementService, Group
 from knowledge.services.session import PermanentSession
 from knowledge.utils.graph import things_session_iter
 
@@ -176,7 +176,7 @@ def imported_uris_own(client: WacomKnowledgeService) -> Dict[str, str]:
     return session
 
 
-def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, cache_file: Path, user: str,
+def main(client: WacomKnowledgeService, management: GroupManagementService, cache_file: Path, user: str,
          public: bool, group_name: Optional[str]):
     """
     Main function to import the things.
@@ -184,7 +184,7 @@ def main(client: WacomKnowledgeService, management: GroupManagementServiceAPI, c
     ----------
     client: WacomKnowledgeService
         The client to use.
-    management: GroupManagementServiceAPI
+    management: GroupManagementService
         The management client to use.
     cache_file: Path
         The cache file.
@@ -318,7 +318,7 @@ if __name__ == '__main__':
     wacom_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Push Entities",
         service_url=args.instance)
-    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
+    group_management: GroupManagementService = GroupManagementService(service_url=args.instance)
     permanent_session: PermanentSession = group_management.login(args.tenant, args.user)
     wacom_client.use_session(permanent_session.id)
     if cache_path.exists():

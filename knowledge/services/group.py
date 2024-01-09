@@ -139,7 +139,7 @@ class GroupInfo(Group):
                f'number of users:={len(self.group_users)}]>'
 
 
-class GroupManagementServiceAPI(WacomServiceAPIClient):
+class GroupManagementService(WacomServiceAPIClient):
     """
     Group Management Service API
     -----------------------------
@@ -163,7 +163,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
     """"Endpoint for all group related functionality."""
 
     def __init__(self, service_url: str = WacomServiceAPIClient.SERVICE_URL, service_endpoint: str = 'graph/v1'):
-        super().__init__("GroupManagementServiceAPI", service_url=service_url,
+        super().__init__("GroupManagementService", service_url=service_url,
                          service_endpoint=service_endpoint)
 
     # ------------------------------------------ Groups handling ------------------------------------------------------
@@ -194,7 +194,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
@@ -237,7 +237,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
@@ -277,7 +277,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -319,7 +319,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}'
         params: Dict[str, int] = {}
         if admin:
             url += '/admin'
@@ -363,7 +363,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -392,7 +392,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/join'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/join'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -421,7 +421,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/leave'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/leave'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -448,7 +448,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/user/add'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/user/add'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -481,7 +481,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/user/remove'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/user/remove'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -514,7 +514,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         if auth_key is None:
             auth_key, _ = self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/entity/{uri}/add'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/entity/{uri}/add'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -548,7 +548,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         if auth_key is None:
             auth_key, _ = self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/entity/{uri}/remove'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/entity/{uri}/remove'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }

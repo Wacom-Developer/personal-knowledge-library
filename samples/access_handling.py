@@ -20,7 +20,7 @@ from knowledge.base.language import EN_US, DE_DE, JA_JP
 from knowledge.base.ontology import OntologyClassReference, ThingObject
 from knowledge.services.base import WacomServiceException
 from knowledge.services.graph import WacomKnowledgeService
-from knowledge.services.group import GroupManagementServiceAPI, Group
+from knowledge.services.group import GroupManagementService, Group
 from knowledge.services.users import UserManagementServiceAPI
 
 # ------------------------------- User credential ----------------------------------------------------------------------
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     # User Management
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=args.instance)
     # Group Management
-    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
+    group_management: GroupManagementService = GroupManagementService(service_url=args.instance)
     admin_token, refresh_token, expiration_time = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     # Now, we create a users
     u1, u1_token, _, _ = user_management.create_user(TENANT_KEY, "u1")

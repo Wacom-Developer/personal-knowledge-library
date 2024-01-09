@@ -14,7 +14,7 @@ from knowledge.base.language import EN_US
 from knowledge.base.ontology import ThingObject, OntologyClassReference, OntologyPropertyReference, \
     SYSTEM_SOURCE_REFERENCE_ID
 from knowledge.services.graph import WacomKnowledgeService, SearchPattern
-from knowledge.services.group import GroupManagementServiceAPI
+from knowledge.services.group import GroupManagementService
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
 
@@ -72,7 +72,7 @@ class SearchFlow(TestCase):
                                                                     service_url=os.environ.get('INSTANCE'))
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get('INSTANCE'))
     ontology: OntologyService = OntologyService(service_url=os.environ.get('INSTANCE'))
-    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=os.environ.get('INSTANCE'))
+    group_management: GroupManagementService = GroupManagementService(service_url=os.environ.get('INSTANCE'))
 
     '''User management service.'''
     tenant_api_key: str = os.environ.get('TENANT_API_KEY')

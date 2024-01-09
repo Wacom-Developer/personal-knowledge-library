@@ -15,7 +15,7 @@ from knowledge.base.ontology import ThingObject, OntologyClassReference, Ontolog
     ObjectProperty, LAST_UPDATE_DATE, SYSTEM_SOURCE_REFERENCE_ID
 from knowledge.ontomapping import IS_RELATED
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
-from knowledge.services.asyncio.group import AsyncGroupManagementServiceAPI
+from knowledge.services.asyncio.group import AsyncGroupManagementService
 from knowledge.services.asyncio.users import AsyncUserManagementService
 from knowledge.services.base import WacomServiceException
 from knowledge.services.graph import Visibility, SearchPattern
@@ -84,9 +84,9 @@ instance: str = os.environ.get('INSTANCE')
 async_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(application_name="Async client test",
                                                                       service_url=instance,
                                                                       service_endpoint="graph/v1")
-group_management: AsyncGroupManagementServiceAPI = AsyncGroupManagementServiceAPI(application_name="Async client test",
-                                                                                  service_url=instance,
-                                                                                  service_endpoint="graph/v1")
+group_management: AsyncGroupManagementService = AsyncGroupManagementService(application_name="Async client test",
+                                                                            service_url=instance,
+                                                                            service_endpoint="graph/v1")
 user_management: AsyncUserManagementService = AsyncUserManagementService(application_name="Async client test",
                                                                          service_url=instance,
                                                                          service_endpoint="graph/v1")

@@ -11,12 +11,12 @@ from knowledge.services import GROUP_USER_RIGHTS_TAG, JOIN_KEY_PARAM, USER_TO_AD
     USER_TO_REMOVE_PARAM, FORCE_PARAM, APPLICATION_JSON_HEADER, USER_AGENT_HEADER_FLAG
 from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG
-from knowledge.services.group import Group, GroupManagementServiceAPI, GroupInfo
+from knowledge.services.group import Group, GroupManagementService, GroupInfo
 # -------------------------------------- Constant flags ----------------------------------------------------------------
 from knowledge.services.users import FORCE_TAG, LIMIT_TAG, OFFSET_TAG
 
 
-class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
+class AsyncGroupManagementService(AsyncServiceAPIClient):
     """
     Group Management Service API
     -----------------------------
@@ -73,7 +73,7 @@ class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
@@ -114,7 +114,7 @@ class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
@@ -149,7 +149,7 @@ class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             USER_AGENT_HEADER_FLAG: self.user_agent
@@ -191,7 +191,7 @@ class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}'
         params: Dict[str, int] = {
             LIMIT_TAG: str(limit),
             OFFSET_TAG: str(offset)
@@ -231,7 +231,7 @@ class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             USER_AGENT_HEADER_FLAG: self.user_agent
@@ -262,7 +262,7 @@ class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/join'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/join'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             USER_AGENT_HEADER_FLAG: self.user_agent
@@ -293,7 +293,7 @@ class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/leave'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/leave'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             USER_AGENT_HEADER_FLAG: self.user_agent
@@ -322,7 +322,7 @@ class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/user/add'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/user/add'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             USER_AGENT_HEADER_FLAG: self.user_agent
@@ -358,7 +358,7 @@ class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/user/remove'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/user/remove'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             USER_AGENT_HEADER_FLAG: self.user_agent
@@ -392,7 +392,7 @@ class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
         if auth_key is None:
             auth_key, _ = await self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/entity/{uri}/add'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/entity/{uri}/add'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             USER_AGENT_HEADER_FLAG: self.user_agent
@@ -422,7 +422,7 @@ class AsyncGroupManagementServiceAPI(AsyncServiceAPIClient):
         if auth_key is None:
             auth_key, _ = await self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
-        url: str = f'{self.service_base_url}{GroupManagementServiceAPI.GROUP_ENDPOINT}/{group_id}/entity/{uri}/remove'
+        url: str = f'{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/entity/{uri}/remove'
         headers: Dict[str, str] = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
             USER_AGENT_HEADER_FLAG: self.user_agent
