@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2023 Wacom. All rights reserved.
+# Copyright © 2023-24 Wacom. All rights reserved.
 import argparse
 from pathlib import Path
 from typing import Union, Dict, List
@@ -8,13 +8,12 @@ import ndjson
 import requests
 from tqdm import tqdm
 
-from knowledge.base.entity import LanguageCode
 from knowledge.base.ontology import OntologyClassReference, DataProperty, SYSTEM_SOURCE_REFERENCE_ID, \
-    SYSTEM_SOURCE_SYSTEM
+    SYSTEM_SOURCE_SYSTEM, EN_US
 from knowledge.base.ontology import ThingObject
 from knowledge.services.graph import WacomKnowledgeService
-
-EN_US: LanguageCode = LanguageCode('en_US')
+from knowledge.services.session import PermanentSession
+from knowledge.utils.graph import count_things, things_iter
 
 
 def download_file(url: str, user_images_path: Path, uri: str) -> str:
@@ -93,7 +92,7 @@ if __name__ == '__main__':
     wacom_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Wacom Knowledge Listing",
         service_url=args.instance)
-    user_auth_key, refresh_token, _ = wacom_client.request_user_token(args.tenant, args.user)
+    session: PermanentSession = wacom_client.login(args.tenant, args.user)
     next_page_id: Union[str, None] = None
     page_number: int = 1
     entity_count: int = 0
@@ -106,37 +105,23 @@ if __name__ == '__main__':
     images_path: Path = dump_path / 'images'
     dump_path.mkdir(parents=True, exist_ok=True)
     images_path.mkdir(parents=True, exist_ok=True)
-    _, total_number, _ = wacom_client.listing(user_auth_key, filter_type=filter_type, page_id=None, limit=1,
-                                              estimate_count=True)
+    total_number: int = count_things(wacom_client, session.auth_token, filter_type)
     print(f'Found {total_number} entities.')
     delete_uri: List[str] = []
+    pbar: tqdm = tqdm(things_iter(wacom_client, session.auth_token, session.refresh_token, filter_type),
+                      f"Export entities. [tenant:={args.tenant}, user:={args.user}]")
     # Writing items to a ndjson file
     with open(dump_file, 'w', encoding='utf-8') as fp_dump:
         writer: ndjson.writer = ndjson.writer(fp_dump, ensure_ascii=False)
-        while True:
-            if wacom_client.expires_in(user_auth_key) < 60:
-                user_auth_key, refresh_token, _ = wacom_client.refresh_token(refresh_token)
-            # pull
-            entities, total_number, next_page_id = wacom_client.listing(user_auth_key,
-                                                                        filter_type=filter_type,
-                                                                        page_id=next_page_id, limit=1000,
-                                                                        estimate_count=True)
+        for e, _, _ in pbar:
+            if not args.all and not e.owner:
+                continue
             if args.relations:
-                pbar: tqdm = tqdm([e for e in entities if args.all or e.owner], desc="Extract relations.")
-                for e in pbar:
+                if e.owner or args.all:
                     pbar.set_description(f"Relation for {e.uri} - {e.label[0].content} - ({e.concept_type.iri})")
-                    relations = wacom_client.relations(auth_key=user_auth_key, uri=e.uri)
+                    relations = wacom_client.relations( uri=e.uri)
                     e.object_properties = relations
 
-            pulled_entities: int = len(entities)
-            entity_count += pulled_entities
-            if pulled_entities == 0:
-                print_summary(total_number, types_count, languages_count)
-                break
-            pbar = tqdm(entities)
-            for e in pbar:
-                if not args.all and not e.owner:
-                    continue
                 if args.images and e.image:
                     e.image = download_file(e.image, images_path, e.uri)
                 if e.concept_type.iri not in types_count:
@@ -152,8 +137,9 @@ if __name__ == '__main__':
                         languages_count[label.language_code] = 0
                     languages_count[label.language_code] += 1
                 if isinstance(e, ThingObject):
-                    pbar.set_description(f'Export entity: {e.label_lang(LanguageCode("en_US"))}')
+                    pbar.set_description(f'Export entity: {e.label_lang(EN_US)}')
                 # Write entity to cache file
                 writer.writerow(e.__import_format_dict__())
             page_number += 1
+    print_summary(total_number, types_count, languages_count)
 
