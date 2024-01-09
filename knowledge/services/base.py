@@ -71,6 +71,30 @@ class WacomServiceException(Exception):
         return self.__status_code
 
 
+def format_exception(exception: WacomServiceException) -> str:
+    """
+    Formats the exception.
+
+    Parameters
+    ----------
+    exception: WacomServiceException
+        Exception
+
+    Returns
+    -------
+    formatted_exception: str
+        Formatted exception
+    """
+    return (f'WacomServiceException: {exception.message}\n'
+            f'[URL:= {exception.url}\n,'
+            f'method:= {exception.method}\n,'
+            f'parameters:= {exception.params}\n,'
+            f'payload:= {exception.payload}\n,'
+            f'headers:= {exception.headers}\n,'
+            f'status code=: {exception.status_code}\n,'
+            f'service response:= {exception.service_response}')
+
+
 def handle_error(message: str, response: Response, parameters: Optional[Dict[str, Any]] = None,
                  payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) \
         -> WacomServiceException:

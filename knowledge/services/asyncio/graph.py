@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024 Wacom. All rights reserved.
+import logging
 import os
 import urllib
 from pathlib import Path
@@ -25,7 +26,7 @@ from knowledge.services import SUBJECT_URI, RELATION_URI, OBJECT_URI, LANGUAGE_P
 from knowledge.services import AUTHORIZATION_HEADER_FLAG
 from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, USER_AGENT_HEADER_FLAG, \
-    CONTENT_TYPE_HEADER_FLAG, DEFAULT_TIMEOUT
+    CONTENT_TYPE_HEADER_FLAG, DEFAULT_TIMEOUT, format_exception
 from knowledge.services.graph import Visibility, SearchPattern, MIME_TYPE
 
 
@@ -413,30 +414,34 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             payload[TENANT_RIGHTS_TAG] = entity.tenant_access_right.to_list()
         return payload
 
-    async def create_entity_bulk(self, auth_key: str, entities: List[ThingObject], batch_size: int = 10) \
-            -> List[ThingObject]:
+    async def create_entity_bulk(self, entities: List[ThingObject], batch_size: int = 10,
+                                 ignore_images: bool = False, auth_key: Optional[str] = None) -> List[ThingObject]:
         """
         Creates entity in graph.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         entities: List[ThingObject]
             Entities
         batch_size: int
             Batch size
+        ignore_images: bool
+            Do not automatically upload images
+        auth_key: Optional[str]
+            If auth key is not set, the client auth key will be used.
 
         Returns
         -------
-        uri: str
-            URI of entity
+        uris: List[ThingObject]
+            List of ThingObjects with URI
 
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code
         """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_BULK_ENDPOINT}'
         # Header info
         headers: Dict[str, str] = {
@@ -449,12 +454,19 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             for bulk_idx in range(0, len(entities), batch_size):
                 bulk = payload[bulk_idx:bulk_idx + batch_size]
 
-                with session.post(url, json=bulk, headers=headers, verify_ssl=self.verify_calls) as response:
+                async with session.post(url, json=bulk, headers=headers, verify_ssl=self.verify_calls) as response:
                     if response.ok:
-                        response_dict: Dict[str, Any] = response.json()
+                        response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
                         for idx, uri in enumerate(response_dict[URIS_TAG]):
-                            if entities[bulk_idx + idx].image is not None and entities[bulk_idx + idx].image != '':
-                                await self.set_entity_image_url(auth_key, uri, entities[bulk_idx + idx].image)
+                            entities[bulk_idx + idx].uri = uri
+                            if entities[bulk_idx + idx].image is not None and entities[bulk_idx + idx].image != '' \
+                                    and not ignore_images:
+                                try:
+                                    await self.set_entity_image_url(uri, entities[bulk_idx + idx].image,
+                                                                    auth_key=auth_key)
+                                except WacomServiceException as we:
+                                    logging.error(f'Failed to upload image for entity {uri}. '
+                                                  f'{format_exception(we)}')
                             entities[bulk_idx + idx].uri = response_dict[URIS_TAG][idx]
 
         return entities
