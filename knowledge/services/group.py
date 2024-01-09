@@ -213,7 +213,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
                                               timeout=DEFAULT_TIMEOUT)
             if response.ok:
                 return Group.parse(response.json())
-            handle_error('Creating of group failed.', response, payload=payload, headers=headers)
+            raise handle_error('Creating of group failed.', response, payload=payload, headers=headers)
 
     def update_group(self, group_id: str, name: str, rights: GroupAccessRight = GroupAccessRight,
                      auth_key: Optional[str] = None):
@@ -255,7 +255,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             response: Response = session.patch(url, headers=headers, json=payload, verify=self.verify_calls,
                                                timeout=DEFAULT_TIMEOUT)
             if not response.ok:
-                handle_error('Update of group failed.', response, payload=payload, headers=headers)
+                raise handle_error('Update of group failed.', response, payload=payload, headers=headers)
 
     def delete_group(self, group_id: str, force: bool = False, auth_key: Optional[str] = None):
         """
@@ -293,7 +293,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             response: Response = session.delete(url, headers=headers, params=params,
                                                 verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if not response.ok:
-                handle_error('Deletion of group failed.', response, parameters=params, headers=headers)
+                raise handle_error('Deletion of group failed.', response, parameters=params, headers=headers)
 
     def listing_groups(self, admin: bool = False, limit: int = 20, offset: int = 0, auth_key: Optional[str] = None)\
             -> List[Group]:
@@ -339,7 +339,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             if response.ok:
                 groups: List[Dict[str, Any]] = response.json()
                 return [Group.parse(g) for g in groups]
-            handle_error('Listing of groups failed.', response, parameters=params, headers=headers)
+            raise handle_error('Listing of groups failed.', response, parameters=params, headers=headers)
 
     def group(self, group_id: str, auth_key: Optional[str] = None) -> GroupInfo:
         """Get a group.
@@ -371,7 +371,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         if response.ok:
             group: Dict[str, Any] = response.json()
             return GroupInfo.parse(group)
-        handle_error('Getting of group information failed.', response, headers=headers)
+        raise handle_error('Getting of group information failed.', response, headers=headers)
 
     def join_group(self, group_id: str, join_key: str, auth_key: Optional[str] = None):
         """User joining a group with his auth token.
@@ -402,7 +402,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
                                            timeout=DEFAULT_TIMEOUT)
         if not response.ok:
-            handle_error('Joining of group failed.', response, parameters=params, headers=headers)
+            raise handle_error('Joining of group failed.', response, parameters=params, headers=headers)
 
     def leave_group(self, group_id: str, auth_key: Optional[str] = None):
         """User leaving a group with his auth token.
@@ -427,7 +427,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         }
         response: Response = requests.post(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
-            handle_error('Leaving of group failed.', response, headers=headers)
+            raise handle_error('Leaving of group failed.', response, headers=headers)
 
     def add_user_to_group(self, group_id: str, user_id: str, auth_key: Optional[str] = None):
         """Adding a user to group.
@@ -458,7 +458,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
                                            timeout=DEFAULT_TIMEOUT)
         if not response.ok:
-            handle_error('Adding of user to group failed.', response, parameters=params, headers=headers)
+            raise handle_error('Adding of user to group failed.', response, parameters=params, headers=headers)
 
     def remove_user_from_group(self, group_id: str, user_id: str, force: bool = False, auth_key: Optional[str] = None):
         """Remove a user from group.
@@ -492,7 +492,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.post(url, headers=headers, params=params, verify=self.verify_calls,
                                            timeout=DEFAULT_TIMEOUT)
         if not response.ok:
-            handle_error('Removing of user from group failed.', response, parameters=params, headers=headers)
+            raise handle_error('Removing of user from group failed.', response, parameters=params, headers=headers)
 
     def add_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None):
         """Adding an entity to group.
@@ -526,7 +526,7 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.post(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if not response.ok:
-                handle_error('Adding of entity to group failed.', response, headers=headers)
+                raise handle_error('Adding of entity to group failed.', response, headers=headers)
 
     def remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None):
         """Remove an entity from group.
@@ -560,4 +560,4 @@ class GroupManagementServiceAPI(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.post(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
             if not response.ok:
-                handle_error('Removing of entity from group failed.', response, headers=headers)
+                raise handle_error('Removing of entity from group failed.', response, headers=headers)

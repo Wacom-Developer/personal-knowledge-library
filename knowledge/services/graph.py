@@ -179,7 +179,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             else:
                 thing.tenant_access_right = TenantAccessRight()
             return thing
-        handle_error(f'Retrieving of entity content failed. URI:={uri}.', response)
+        raise handle_error(f'Retrieving of entity content failed. URI:={uri}.', response)
 
     def delete_entities(self, uris: List[str], force: bool = False, auth_key: Optional[str] = None,
                         max_retries: int = 3, backoff_factor: float = 0.1):
@@ -188,12 +188,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         uris: List[str]
             List of URI of entities. **Remark:** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         max_retries: int
             Maximum number of retries
         backoff_factor: float
@@ -226,7 +226,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.delete(url, headers=headers, params=params, verify=self.verify_calls)
             if not response.ok:
-                handle_error(f'Deletion of entities failed.', response)
+                raise handle_error('Deletion of entities failed.', response)
 
     def delete_entity(self, uri: str, force: bool = False, auth_key: Optional[str] = None, max_retries: int = 3,
                       backoff_factor: float = 0.1):
@@ -268,7 +268,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             response: Response = session.delete(url, headers=headers, params={FORCE_TAG: force},
                                                 verify=self.verify_calls)
             if not response.ok:
-                handle_error(f'Deletion of entity (URI:={uri}) failed.', response)
+                raise handle_error(f'Deletion of entity (URI:={uri}) failed.', response)
 
     def exists(self, uri: str, auth_key: Optional[str] = None) -> bool:
         """
@@ -395,7 +395,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                         self.set_entity_image_url(auth_key, uri, entities[bulk_idx + idx].image)
                     entities[bulk_idx + idx].uri = response_dict[URIS_TAG][idx]
             else:
-                handle_error(f'Pushing entity failed.', response)
+                raise handle_error('Pushing entity failed.', response)
         return entities
 
     def create_entity(self, entity: ThingObject, auth_key: Optional[str] = None, max_retries: int = 3,
@@ -461,7 +461,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             if response.ok:
                 uri: str = response.json()[URI_TAG]
                 return uri
-            handle_error(f'Pushing entity failed.', response)
+            raise handle_error('Pushing entity failed.', response)
 
     def update_entity(self, entity: ThingObject, auth_key: Optional[str] = None, max_retries: int = 3,
                       backoff_factor: float = 0.1):
@@ -505,7 +505,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             response: Response = session.patch(url, json=payload, headers=headers, timeout=DEFAULT_TIMEOUT,
                                                verify=self.verify_calls)
             if not response.ok:
-                handle_error(f'Updating entity failed.', response)
+                raise handle_error('Updating entity failed.', response)
 
     def relations(self, uri: str, auth_key: Optional[str] = None) -> Dict[OntologyPropertyReference, ObjectProperty]:
         """
@@ -545,7 +545,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             if response.ok:
                 rel: list = response.json().get(RELATIONS_TAG)
                 return ObjectProperty.create_from_list(rel)
-        handle_error(f'Retrieving relations failed.', response)
+        raise handle_error('Retrieving relations failed.', response)
 
     def labels(self, uri: str, locale: LocaleCode = EN_US, auth_key: Optional[str] = None) -> List[Label]:
         """
@@ -584,7 +584,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             if LABELS_TAG in response_dict:
                 return [Label.create_from_dict(label) for label in response_dict[LABELS_TAG]]
             return []
-        handle_error(f'Retrieving labels failed.', response)
+        raise handle_error('Retrieving labels failed.', response)
 
     def literals(self, uri: str, locale: LocaleCode = EN_US, auth_key: Optional[str] = None) -> List[DataProperty]:
         """
@@ -665,7 +665,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.post(url, params=params, headers=headers, verify=self.verify_calls)
             if not response.ok:
-                handle_error(f'Creation of relation failed.', response)
+                raise handle_error('Creation of relation failed.', response)
 
     def remove_relation(self, source: str, relation: OntologyPropertyReference, target: str,
                         auth_key: Optional[str] = None):
@@ -703,7 +703,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         response: Response = requests.delete(url, params=params, headers=headers, timeout=DEFAULT_TIMEOUT,
                                              verify=self.verify_calls)
         if not response.ok:
-            handle_error(f'Removal of relation failed.', response)
+            raise handle_error('Removal of relation failed.', response)
 
     def activations(self, uris: List[str], depth: int, auth_key: Optional[str] = None) \
             -> Tuple[Dict[str, ThingObject], List[Tuple[str, OntologyPropertyReference, str]]]:
@@ -755,7 +755,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 if r[SUBJECT] in things:
                     things[r[SUBJECT]].add_relation(ObjectProperty(relation, outgoing=[r[OBJECT]]))
             return things, relations
-        handle_error(f'Activation failed. uris:= {uris} activation:={depth}).', response)
+        raise handle_error(f'Activation failed. uris:= {uris} activation:={depth}).', response)
 
     def listing(self, filter_type: OntologyClassReference, page_id: Optional[str] = None,
                 limit: int = 30, locale: Optional[LocaleCode] = None, visibility: Optional[Visibility] = None,
@@ -841,7 +841,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                         thing.status_flag = EntityStatus.SYNCED
                         entities.append(thing)
                 return entities, estimated_total_number, next_page_id
-        handle_error(f'Failed to list the entities (since:= {page_id}, limit:={limit}).', response)
+        raise handle_error(f'Failed to list the entities (since:= {page_id}, limit:={limit}).', response)
 
     def ontology_update(self, fix: bool = False, auth_key: Optional[str] = None,
                         max_retries: int = 3, backoff_factor: float = 0.1):
@@ -883,7 +883,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.patch(url, headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
             if not response.ok:
-                handle_error(f'Ontology update fails.', response)
+                raise handle_error('Ontology update fails.', response)
 
     def search_all(self, search_term: str, language_code: LocaleCode, types: List[OntologyClassReference],
                    limit: int = 30, next_page_id: str = None, auth_key: Optional[str] = None) \
@@ -935,7 +935,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                           verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
-        handle_error(f'Search on labels {search_term} failed. ', response)
+        raise handle_error(f'Search on labels {search_term} failed. ', response)
 
     def search_labels(self, search_term: str, language_code: LocaleCode, limit: int = 30,
                       next_page_id: str = None, auth_key: Optional[str] = None) -> Tuple[List[ThingObject], str]:
@@ -983,7 +983,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                           verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
-        handle_error(f'Search on labels {search_term} failed. ', response)
+        raise handle_error(f'Search on labels {search_term} failed. ', response)
 
     def search_literal(self, search_term: str, literal: OntologyPropertyReference,
                        pattern: SearchPattern = SearchPattern.REGEX,
@@ -1040,7 +1040,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                           verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
-        handle_error(f'Search on literals {search_term} failed. ', response)
+        raise handle_error(f'Search on literals {search_term} failed. ', response)
 
     def search_relation(self, relation: OntologyPropertyReference, language_code: LocaleCode,
                         subject_uri: str = None, object_uri: str = None,
@@ -1096,8 +1096,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                 verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
-        handle_error(f'Search on: subject:={subject_uri}, relation {relation.iri}, '
-                     f'object:= {object_uri} failed. ', response)
+        raise handle_error(f'Search on: subject:={subject_uri}, relation {relation.iri}, '
+                           f'object:= {object_uri} failed. ', response)
 
     def search_description(self, search_term: str, language_code: LocaleCode, limit: int = 30,
                            next_page_id: str = None, auth_key: Optional[str] = None) -> Tuple[List[ThingObject], str]:
@@ -1144,7 +1144,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                 verify=self.verify_calls)
         if response.ok:
             return WacomKnowledgeService.__search_results__(response.json())
-        handle_error(f'Search on labels {search_term}@{language_code} failed. ', response)
+        raise handle_error(f'Search on labels {search_term}@{language_code} failed. ', response)
 
     @staticmethod
     def __search_results__(response: Dict[str, Any]) -> Tuple[List[ThingObject], str]:
@@ -1225,14 +1225,13 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 if mime_type is None:
                     _, file_extension = os.path.splitext(file_name.lower())
                     if file_extension not in MIME_TYPE:
-                        handle_error(f'Creation of entity image failed. Mime-type cannot be identified or is not '
-                                     f'supported.', response)
+                        raise handle_error('Creation of entity image failed. Mime-type cannot be identified or is not '
+                                     'supported.', response)
                     mime_type = MIME_TYPE[file_extension]
 
                 return self.set_entity_image(entity_uri, image_bytes, file_name, mime_type, auth_key=auth_key)
         if not response.ok:
-            raise WacomServiceException(f'Creation of entity image failed'
-                                        f'Response code:={response.status_code}, exception:= {response.content}')
+            raise handle_error('Creation of entity image failed.', response)
 
     def set_entity_image(self, entity_uri: str, image_byte: bytes, file_name: str = 'icon.jpg',
                          mime_type: str = 'image/jpeg', auth_key: Optional[str] = None) -> str:
@@ -1271,7 +1270,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             ('file', (file_name, image_byte, mime_type))
         ]
         url: str = f'{self.service_base_url}{self.ENTITY_IMAGE_ENDPOINT}{urllib.parse.quote(entity_uri)}'
-        response = requests.patch(url, headers=headers, files=files, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
+        response: Response = requests.patch(url, headers=headers, files=files, timeout=DEFAULT_TIMEOUT,
+                                            verify=self.verify_calls)
         if response.ok:
             return response.json()['imageId']
-        handle_error(f'Creation of entity image failed.', response)
+        raise handle_error('Creation of entity image failed.', response)

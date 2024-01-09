@@ -7,10 +7,11 @@ from typing import Any, Optional, Dict, Tuple, List
 import requests
 from requests import Response
 
-from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, OntologyProperty, OntologyClass, \
-    PropertyType, THING_CLASS, DataPropertyType, InflectionSetting, Comment, OntologyContext, OntologyLabel
+from knowledge.base.ontology import (OntologyClassReference, OntologyPropertyReference, OntologyProperty,
+                                     OntologyClass, PropertyType, THING_CLASS, DataPropertyType, InflectionSetting,
+                                     Comment, OntologyContext, OntologyLabel)
 from knowledge.services import USER_AGENT_HEADER_FLAG
-from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
+from knowledge.services.base import WacomServiceAPIClient, handle_error
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG
 
 # ------------------------------------------------- Constants ----------------------------------------------------------
@@ -58,20 +59,22 @@ class OntologyService(WacomServiceAPIClient):
         super().__init__(application_name="Ontology Service", service_url=service_url,
                          service_endpoint=service_endpoint)
 
-    def context(self, auth_key: str) -> Optional[OntologyContext]:
+    def context(self, auth_key: Optional[str] = None) -> Optional[OntologyContext]:
         """
         Getting the information on the context.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
+        auth_key: Optional[str] [default:= None]
+            Auth
 
         Returns
         -------
         context_description: Optional[OntologyContext]
             Context of the Ontology
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -82,22 +85,24 @@ class OntologyService(WacomServiceAPIClient):
             return OntologyContext.from_dict(response.json())
         return None
 
-    def context_metadata(self, auth_key: str, context: str) -> List[InflectionSetting]:
+    def context_metadata(self, context: str, auth_key: Optional[str] = None) -> List[InflectionSetting]:
         """
         Getting the meta-data on the context.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Name of the context.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
         list_inflection_settings: List[InflectionSetting]
             List of inflection settings.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -108,9 +113,10 @@ class OntologyService(WacomServiceAPIClient):
         if response.ok:
             return [InflectionSetting.from_dict(c) for c in response.json() if c.get('concept') is not None
                     and not c.get('concept').startswith('http')]
-        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error('Failed to retrieve context metadata', response, headers=headers)
 
-    def concepts(self, auth_key: str, context: str) -> List[Tuple[OntologyClassReference, OntologyClassReference]]:
+    def concepts(self, context: str, auth_key: Optional[str] = None) \
+            -> List[Tuple[OntologyClassReference, OntologyClassReference]]:
         """Retrieve all concept classes.
 
         **Remark:**
@@ -128,6 +134,8 @@ class OntologyService(WacomServiceAPIClient):
         concepts: List[Tuple[OntologyClassReference, OntologyClassReference]]
             List of ontology classes. Tuple<Classname, Superclass>
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -143,9 +151,9 @@ class OntologyService(WacomServiceAPIClient):
                                       None if struct[SUB_CLASS_OF_TAG] is None else
                                       OntologyClassReference.parse(struct[SUB_CLASS_OF_TAG])))
             return response_list
-        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error('Failed to retrieve concepts', response, headers=headers)
 
-    def properties(self, auth_key: str, context: str) \
+    def properties(self, context: str, auth_key: Optional[str] = None) \
             -> List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]:
         """List all properties.
 
@@ -154,16 +162,18 @@ class OntologyService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Name of the context
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
         contexts: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]
             List of ontology contexts
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -182,9 +192,9 @@ class OntologyService(WacomServiceAPIClient):
                                       None if c[SUB_PROPERTY_OF_TAG] is None or c.get(SUB_PROPERTY_OF_TAG) == '' else
                                       OntologyPropertyReference.parse(c[SUB_PROPERTY_OF_TAG])))
             return response_list
-        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error('Failed to retrieve properties', response, headers=headers)
 
-    def concept(self, auth_key: str, context: str, concept_name: str) -> OntologyClass:
+    def concept(self, context: str, concept_name: str, auth_key: Optional[str] = None) -> OntologyClass:
         """Retrieve a concept instance.
 
         **Remark:**
@@ -192,18 +202,20 @@ class OntologyService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Name of the context
         concept_name: str
             IRI of the concept
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
         instance: OntologyClass
             Instance of the concept
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -216,9 +228,9 @@ class OntologyService(WacomServiceAPIClient):
         if response.ok:
             result: Dict[str, Any] = response.json()
             return OntologyClass.from_dict(result)
-        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error('Failed to retrieve concept', response, headers=headers)
 
-    def property(self, auth_key: str, context: str, property_name: str) -> OntologyProperty:
+    def property(self, context: str, property_name: str, auth_key: Optional[str] = None) -> OntologyProperty:
         """Retrieve a property instance.
 
         **Remark:**
@@ -226,18 +238,20 @@ class OntologyService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Name of the context
         property_name: str
             IRI of the property
+        auth_key: Optional[str] [default:= None]
+            If auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
         instance: OntologyProperty
             Instance of the property
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -249,12 +263,12 @@ class OntologyService(WacomServiceAPIClient):
                                           timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return OntologyProperty.from_dict(response.json())
-        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error('Failed to retrieve property', response, headers=headers)
 
-    def create_concept(self, auth_key: str, context: str, reference: OntologyClassReference,
+    def create_concept(self, context: str, reference: OntologyClassReference,
                        subclass_of: OntologyClassReference = THING_CLASS,
                        icon: Optional[str] = None, labels: Optional[List[OntologyLabel]] = None,
-                       comments: Optional[List[Comment]] = None) -> Dict[str, str]:
+                       comments: Optional[List[Comment]] = None, auth_key: Optional[str] = None) -> Dict[str, str]:
         """Create concept class.
 
         **Remark:**
@@ -262,8 +276,6 @@ class OntologyService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         reference: OntologyClassReference
@@ -276,6 +288,8 @@ class OntologyService(WacomServiceAPIClient):
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         Returns
         -------
         result: Dict[str, str]
@@ -286,6 +300,8 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -308,12 +324,11 @@ class OntologyService(WacomServiceAPIClient):
         if response.ok:
             result_dict: Dict[str, str] = response.json()
             return result_dict
-        raise WacomServiceException(f'Creation of concept failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error('Failed to create concept', response, headers=headers, payload=payload)
 
-    def update_concept(self, auth_key: str, context: str, name: str, subclass_of: Optional[str],
+    def update_concept(self, context: str, name: str, subclass_of: Optional[str],
                        icon: Optional[str] = None, labels: Optional[List[OntologyLabel]] = None,
-                       comments: Optional[List[Comment]] = None) -> Dict[str, str]:
+                       comments: Optional[List[Comment]] = None, auth_key: Optional[str] = None) -> Dict[str, str]:
         """Update concept class.
 
         **Remark:**
@@ -321,8 +336,6 @@ class OntologyService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         name: str
@@ -335,6 +348,8 @@ class OntologyService(WacomServiceAPIClient):
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -346,6 +361,8 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -367,10 +384,9 @@ class OntologyService(WacomServiceAPIClient):
                                           timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return response.json()
-        raise WacomServiceException(f'Update of concept failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error('Failed to update concept', response, headers=headers, payload=payload)
 
-    def delete_concept(self, auth_key: str, context: str, reference: OntologyClassReference):
+    def delete_concept(self, context: str, reference: OntologyClassReference, auth_key: Optional[str] = None):
         """Delete concept class.
 
         **Remark:**
@@ -378,18 +394,20 @@ class OntologyService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         reference: OntologyClassReference
             Name of the concept
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Raises
         ------
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -399,17 +417,17 @@ class OntologyService(WacomServiceAPIClient):
         url: str = f'{self.service_base_url}context/{context_url}/concepts/{concept_url}'
         response: Response = requests.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
-            raise WacomServiceException(f'Deletion of concept failed. '
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+            raise handle_error('Failed to delete concept', response, headers=headers)
 
-    def create_object_property(self, auth_key: str, context: str,
+    def create_object_property(self, context: str,
                                reference: OntologyPropertyReference,
                                domains_cls: List[OntologyClassReference], ranges_cls: List[OntologyClassReference],
                                inverse_of: Optional[OntologyPropertyReference] = None,
                                subproperty_of: Optional[OntologyPropertyReference] = None,
                                icon: Optional[str] = None,
                                labels: Optional[List[OntologyLabel]] = None,
-                               comments: Optional[List[Comment]] = None) -> Dict[str, str]:
+                               comments: Optional[List[Comment]] = None,
+                               auth_key: Optional[str] = None) -> Dict[str, str]:
         """Create property.
 
         **Remark:**
@@ -417,8 +435,6 @@ class OntologyService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         reference: OntologyPropertyReference
@@ -437,6 +453,8 @@ class OntologyService(WacomServiceAPIClient):
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -448,6 +466,8 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -474,16 +494,16 @@ class OntologyService(WacomServiceAPIClient):
                                            timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return response.json()
-        raise WacomServiceException(f'Creation of object property failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error('Failed to create object property', response, headers=headers, payload=payload)
 
-    def create_data_property(self, auth_key: str, context: str,
+    def create_data_property(self, context: str,
                              reference: OntologyPropertyReference,
                              domains_cls: List[OntologyClassReference], ranges_cls: List[DataPropertyType],
                              subproperty_of: Optional[OntologyPropertyReference] = None,
                              icon: Optional[str] = None,
                              labels: Optional[List[OntologyLabel]] = None,
-                             comments: Optional[List[Comment]] = None) -> Dict[str, str]:
+                             comments: Optional[List[Comment]] = None,
+                             auth_key: Optional[str] = None) -> Dict[str, str]:
         """Create data property.
 
         **Remark:**
@@ -491,8 +511,6 @@ class OntologyService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         reference: OntologyPropertyReference
@@ -509,6 +527,8 @@ class OntologyService(WacomServiceAPIClient):
             Labels for the class
         comments: Optional[List[Comment]] (default:= None)
             Comments for the class
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
@@ -520,6 +540,8 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -545,10 +567,9 @@ class OntologyService(WacomServiceAPIClient):
                                            timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return response.json()
-        raise WacomServiceException(f'Creation of data property failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error('Failed to create data property', response, headers=headers, payload=payload)
 
-    def delete_property(self, auth_key: str, context: str, reference: OntologyPropertyReference):
+    def delete_property(self, context: str, reference: OntologyPropertyReference, auth_key: Optional[str] = None):
         """Delete property.
 
         **Remark:**
@@ -556,18 +577,20 @@ class OntologyService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of ontology
         reference: OntologyPropertyReference
             Name of the property
+        auth_key: Optional[str] [default:= None]
+            If auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Raises
         ------
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -577,13 +600,11 @@ class OntologyService(WacomServiceAPIClient):
         url: str = f'{self.service_base_url}context/{context_url}/properties/{property_url}'
         response: Response = requests.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
-            raise WacomServiceException(f'Deletion of property: {reference.iri} failed. '
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+            raise handle_error('Failed to delete property', response, headers=headers)
 
-    def create_context(self, auth_key: str, name: str, context: Optional[str] = None,
-                       base_uri: Optional[str] = None,
-                       icon: Optional[str] = None,
-                       labels: List[OntologyLabel] = None, comments: List[Comment] = None) -> Dict[str, str]:
+    def create_context(self, name: str, context: Optional[str] = None, base_uri: Optional[str] = None,
+                       icon: Optional[str] = None, labels: List[OntologyLabel] = None, comments: List[Comment] = None,
+                       auth_key: Optional[str] = None) -> Dict[str, str]:
         """Create context.
 
         **Remark:**
@@ -591,13 +612,11 @@ class OntologyService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         base_uri: str
             Base URI
         name: str
             Name of the context
-        context:  Optional[str] (default:= None)
+        context: Optional[str] [default:= None]
             Context of ontology
         icon: Optional[str] (default:= None)
             Icon representing the concept
@@ -605,7 +624,8 @@ class OntologyService(WacomServiceAPIClient):
             Labels for the context
         comments: Optional[List[Comment]] (default:= None)
             Comments for the context
-
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         Returns
         -------
         result: Dict[str, str]
@@ -616,6 +636,8 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -643,26 +665,26 @@ class OntologyService(WacomServiceAPIClient):
                                            timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return response.json()
-        raise WacomServiceException(f'Creation of concept failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error('Creation of context failed.', response, headers=headers)
 
-    def remove_context(self, auth_key: str, name: str, force: bool = False):
+    def remove_context(self, name: str, force: bool = False, auth_key: Optional[str] = None):
         """Remove context.
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         name: str
             Name of the context
         force: bool (default:= False)
             Force removal of context
-
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         Returns
         -------
         result: Dict[str, str]
             Result from the service
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -670,21 +692,21 @@ class OntologyService(WacomServiceAPIClient):
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{name}{"/force" if force else ""}'
         response: Response = requests.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
+            raise handle_error('Removing the context failed.', response, headers=headers)
 
-            raise WacomServiceException(f'Removing the context failed. '
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
-
-    def commit(self, auth_key: str, context: str):
+    def commit(self, context: str, auth_key: Optional[str] = None):
         """
         Commit the ontology.
 
         Parameters
         ----------
-        auth_key: str
-            User token (must have TenantAdmin) role
         context: str
             Name of the context.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -693,25 +715,26 @@ class OntologyService(WacomServiceAPIClient):
         url: str = f'{self.service_base_url}context/{context_url}/commit'
         response: Response = requests.put(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if not response.ok:
-            raise WacomServiceException(f'Commit of ontology failed. '
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+            raise handle_error('Commit of ontology failed.', response, headers=headers)
 
-    def rdf_export(self, auth_key: str, context: str) -> str:
+    def rdf_export(self, context: str, auth_key: Optional[str] = None) -> str:
         """
         Export RDF.
 
         Parameters
         ----------
-        auth_key: str
-            User token (must have TenantAdmin) role
         context: str
             Name of the context.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
         rdf: str
             Ontology as RDFS / OWL  ontology
         """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
@@ -721,5 +744,4 @@ class OntologyService(WacomServiceAPIClient):
         response: Response = requests.get(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return response.text
-        raise WacomServiceException(f'RDF export failed. '
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error('RDF export failed', response, headers=headers)

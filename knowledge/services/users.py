@@ -8,7 +8,7 @@ import requests
 from dateutil.parser import parse, ParserError
 from requests import Response
 
-from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
+from knowledge.services.base import WacomServiceAPIClient, handle_error
 
 # -------------------------------------- Constant flags ----------------------------------------------------------------
 TENANT_ID: str = 'tenantId'
@@ -207,8 +207,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
 
             return User.parse(results['user']), results['token']['accessToken'], results['token']['refreshToken'], \
                 date_object
-
-        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error("Failed to create user.", response)
 
     def update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: Dict[str, str] = None,
                     roles: List[UserRole] = None):
@@ -249,8 +248,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.patch(url, headers=headers, json=payload, params=params, timeout=DEFAULT_TIMEOUT,
                                             verify=self.verify_calls)
         if not response.ok:
-            raise WacomServiceException(f'Updating user failed. '
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+            raise handle_error("Updating of user failed.", response)
 
     def delete_user(self, tenant_key: str, external_id: str, internal_id: str, force: bool = False):
         """Deletes user from tenant.
@@ -284,7 +282,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.delete(url, headers=headers, params=params, timeout=DEFAULT_TIMEOUT,
                                              verify=self.verify_calls)
         if not response.ok:
-            raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+            raise handle_error("Deletion of user failed.", response)
 
     def user_internal_id(self, tenant_key: str, external_id: str) -> str:
         """User internal id.
@@ -319,7 +317,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         if response.ok:
             response_dict: Dict[str, Any] = response.json()
             return response_dict[INTERNAL_USER_ID_TAG]
-        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error("Retrieval of user internal id failed.", response)
 
     def listing_users(self, tenant_key: str, offset: int = 0, limit: int = 20) -> List[User]:
         """
@@ -356,5 +354,4 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             for u in users:
                 results.append(User.parse(u))
             return results
-        raise WacomServiceException(f'Listing of users failed.'
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+        raise handle_error("Listing of users failed.", response)

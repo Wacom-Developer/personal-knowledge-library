@@ -64,13 +64,12 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         Returns
         -------
         tenant_dict: Dict[str, str]
-
-        Newly created tenant structure.
-        >>>     {
-        >>>       "id": "<Tenant-ID>",
-        >>>       "apiKey": "<Tenant-API-Key>",
-        >>>       "name": "<Tenant-Name>"
-        >>>    }
+            Newly created tenant structure.
+            >>>     {
+            >>>       "id": "<Tenant-ID>",
+            >>>       "apiKey": "<Tenant-API-Key>",
+            >>>       "name": "<Tenant-Name>"
+            >>>    }
 
         Raises
         ------
@@ -90,7 +89,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
                                            verify=self.verify_calls)
         if response.ok:
             return response.json()
-        handle_error("Creation of tenant failed.", response)
+        raise handle_error("Creation of tenant failed.", response)
 
     def listing_tenant(self) -> List[Dict[str, str]]:
         """
@@ -124,4 +123,4 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
                                           verify=self.verify_calls)
         if response.ok:
             return response.json()
-        handle_error("Listing of tenant failed.", response)
+        raise handle_error("Listing of tenant failed.", response)

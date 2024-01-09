@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-24 Wacom. All rights reserved.
 from abc import ABC
-from datetime import timezone, datetime
+from datetime import datetime
 from typing import Any, Tuple, Dict, Optional, Union
 
-import jwt
 import requests
 from dateutil.parser import parse, ParserError
 from requests import Response
 
+from knowledge import __version__
+from knowledge.services import DEFAULT_TIMEOUT
 from knowledge.services import USER_AGENT_HEADER_FLAG, TENANT_API_KEY, CONTENT_TYPE_HEADER_FLAG, \
     REFRESH_TOKEN_TAG, EXPIRATION_DATE_TAG, ACCESS_TOKEN_TAG, APPLICATION_JSON_HEADER, EXTERNAL_USER_ID
-from knowledge.services import DEFAULT_TIMEOUT
 from knowledge.services.session import TokenManager, Session, RefreshableSession, TimedSession, PermanentSession
-from knowledge import __version__
 
 
 class WacomServiceException(Exception):
@@ -73,7 +72,8 @@ class WacomServiceException(Exception):
 
 
 def handle_error(message: str, response: Response, parameters: Optional[Dict[str, Any]] = None,
-                 payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None):
+                 payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) \
+        -> WacomServiceException:
     """
     Handles an error response.
 
@@ -90,19 +90,19 @@ def handle_error(message: str, response: Response, parameters: Optional[Dict[str
     headers: Optional[Dict[str, str]] (Default:= None)
         Headers
 
-    Raises
-    ------
+    Returns
+    -------
     WacomServiceException
-        Exception if service returns HTTP error code.
+        Returns the generated exception.
     """
-    raise WacomServiceException(message,
-                                url=response.url,
-                                method=response.request.method,
-                                params=parameters,
-                                payload=payload,
-                                headers=headers,
-                                status_code=response.status_code,
-                                service_response=response.text)
+    return WacomServiceException(message,
+                                 url=response.url,
+                                 method=response.request.method,
+                                 params=parameters,
+                                 payload=payload,
+                                 headers=headers,
+                                 status_code=response.status_code,
+                                 service_response=response.text)
 
 
 class RESTAPIClient(ABC):
@@ -245,8 +245,8 @@ class WacomServiceAPIClient(RESTAPIClient):
                     date_object: datetime = datetime.now()
                 return response_token['accessToken'], response_token['refreshToken'], date_object
             except Exception as e:
-                handle_error(f'Parsing of response failed. {e}', response)
-        handle_error(f'User login failed.', response)
+                raise handle_error(f'Parsing of response failed. {e}', response) from e
+        raise handle_error('User login failed.', response)
 
     def login(self, tenant_api_key: str, external_user_id: str) -> PermanentSession:
         """ Login as user by using the tenant id and its external user id.
@@ -262,7 +262,7 @@ class WacomServiceAPIClient(RESTAPIClient):
             Session. The session is stored in the token manager and the client is using the session id for further
             calls.
         """
-        auth_key, refresh_token, exp = self.request_user_token(tenant_api_key, external_user_id)
+        auth_key, refresh_token, _ = self.request_user_token(tenant_api_key, external_user_id)
         session: PermanentSession = self.__token_manager.add_session(auth_token=auth_key, refresh_token=refresh_token,
                                                                      tenant_api_key=tenant_api_key,
                                                                      external_user_id=external_user_id)
@@ -291,9 +291,21 @@ class WacomServiceAPIClient(RESTAPIClient):
         """
         session = self.__token_manager.add_session(auth_token=auth_key, refresh_token=refresh_token)
         self.__current_session_id = session.id
-        if isinstance(session, RefreshableSession) or isinstance(session, TimedSession):
+        if isinstance(session, (RefreshableSession, TimedSession)):
             return session
         raise WacomServiceException(f'Wrong session type:= {type(session)}.')
+
+    def use_session(self, session_id: str):
+        """ Use session.
+        Parameters
+        ----------
+        session_id: str
+            Session id
+        """
+        if self.__token_manager.has_session(session_id):
+            self.__current_session_id = session_id
+        else:
+            raise WacomServiceException(f'Unknown session id:= {session_id}.')
 
     def refresh_token(self, refresh_token: str) -> Tuple[str, str, datetime]:
         """
@@ -335,7 +347,7 @@ class WacomServiceAPIClient(RESTAPIClient):
             except (ParserError, OverflowError) as _:
                 date_object: datetime = datetime.now()
             return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
-        handle_error(f'Refreshing token failed.', response)
+        raise handle_error('Refreshing token failed.', response)
 
     def handle_token(self, force_refresh: bool = False, force_refresh_timeout: float = 120) -> Tuple[str, str]:
         """

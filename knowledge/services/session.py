@@ -192,6 +192,10 @@ class TimedSession(Session):
         """JWT token for the session encoding the user id."""
         return self.__auth_token
 
+    @auth_token.setter
+    def auth_token(self, value: str):
+        self.__auth_token = value
+
     @property
     def id(self) -> str:
         """Session id."""
@@ -237,6 +241,10 @@ class RefreshableSession(TimedSession):
         """Refresh token for the session."""
         return self.__refresh_token
 
+    @refresh_token.setter
+    def refresh_token(self, value: str):
+        self.__refresh_token = value
+
     def refresh_session(self, auth_token: str, refresh_token: str):
         """
         Refresh the session.
@@ -255,8 +263,8 @@ class RefreshableSession(TimedSession):
                 self.service_url != structures['iss']:
             raise ValueError('The token is from a different user, tenant, or instance.')
         self._auth_token_details_(auth_token)
-        self.__auth_token = auth_token
-        self.__refresh_token = refresh_token
+        self.auth_token = auth_token
+        self.refresh_token = refresh_token
 
     @property
     def refreshable(self) -> bool:
@@ -295,7 +303,7 @@ class PermanentSession(RefreshableSession):
                f'auth_token={self.auth_token}, refresh_token={self.refresh_token})'
 
 
-class TokenManager(object):
+class TokenManager:
     """
     TokenManager
     ------------
@@ -314,7 +322,6 @@ class TokenManager(object):
 
     def __initialize__(self):
         self.sessions: Dict[str, Union[TimedSession, RefreshableSession, PermanentSession]] = {}
-        """Dictionary of sessions."""
 
     def add_session(self, auth_token: str, refresh_token: Optional[str] = None,
                     tenant_api_key: Optional[str] = None, external_user_id: Optional[str] = None) \
@@ -352,7 +359,7 @@ class TokenManager(object):
                 # If there is no refresh token, then the session is timed
             if session.id in self.sessions:
                 logger.warning(f'Session {session.id} already exists. Overwriting.')
-                if type(self.sessions[session.id]) != type(session):
+                if not isinstance(self.sessions[session.id], type(session)):
                     logger.warning(f'The session {session.id} is of a different type. '
                                    f'Cached version is a {type(self.sessions[session.id])} '
                                    f'and the new session is a {type(session)}.')
@@ -388,3 +395,20 @@ class TokenManager(object):
         with self.__lock:
             if session_id in self.sessions:
                 del self.sessions[session_id]
+
+    def has_session(self, session_id: str) -> bool:
+        """
+        Check if a session exists.
+
+        Parameters
+        ----------
+        session_id: str
+            Session id.
+
+        Returns
+        -------
+        available: bool
+            True if the session exists, otherwise False.
+        """
+        with self.__lock:
+            return session_id in self.sessions
