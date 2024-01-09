@@ -1,3 +1,7 @@
+2024/01/09 - RELEASE 2.0.1
+==========================
+- Adding missing dependency
+
 2024/01/09 - RELEASE 2.0.0
 ==========================
 - Major refactoring of the library
