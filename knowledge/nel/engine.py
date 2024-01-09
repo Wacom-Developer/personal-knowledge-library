@@ -11,7 +11,7 @@ from knowledge.base.language import LocaleCode, DE_DE, EN_US, JA_JP
 from knowledge.base.ontology import OntologyClassReference
 from knowledge.nel.base import PersonalEntityLinkingProcessor, EntitySource, KnowledgeSource, \
     KnowledgeGraphEntity, EntityType
-from knowledge.services.base import WacomServiceException, handle_error
+from knowledge.services.base import handle_error
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG
 
 
@@ -109,5 +109,5 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
                     ne.relevant_type = OntologyClassReference.parse(e['type'])
                     named_entities.append(ne)
                 return named_entities
-        handle_error(f'Named entity linking for text:={text}@{language_code}. ', response)
+        raise handle_error(f'Named entity linking for text:={text}@{language_code}. ', response)
 
