@@ -19,7 +19,7 @@ from knowledge.services.asyncio.group import AsyncGroupManagementServiceAPI
 from knowledge.services.asyncio.users import AsyncUserManagementService
 from knowledge.services.base import WacomServiceException
 from knowledge.services.graph import Visibility, SearchPattern
-from knowledge.services.group import Group
+from knowledge.services.group import Group, GroupInfo
 from knowledge.services.users import User, UserRole
 from knowledge.utils.graph import async_things_iter, async_count_things
 
@@ -392,6 +392,13 @@ async def test_16_group_flows():
     await group_management.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     # User 1 creates a group
     new_group: Group = await group_management.create_group("qa-test-group")
+    assert new_group.id is not None
+    assert new_group.join_key is not None
+    pull_group: GroupInfo = await group_management.group(new_group.id)
+    assert pull_group.id == new_group.id
+    assert pull_group.name == new_group.name
+    assert pull_group.join_key == new_group.join_key
+
     # User 2 joins the group
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     thing: ThingObject = create_thing(OntologyClassReference.parse('wacom:core#Person'))
@@ -465,9 +472,20 @@ async def test_16_group_flows():
     await group_management.join_group(new_group.id, new_group.join_key)
     groups: List[Group] = await group_management.listing_groups()
     assert new_group.id == groups[0].id
+    group_info: GroupInfo = await group_management.group(new_group.id)
+    assert group_info.id == new_group.id
+    assert group_info.name == new_group.name
+    assert group_info.join_key is None
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id_2)
     # Now user 2 has access again
     await async_client.entity(thing_uri)
+    await group_management.leave_group(new_group.id)
+    try:
+        await async_client.entity(thing_uri)
+        raise AssertionError("User 2 should not have access to the entity.")
+    except WacomServiceException as we:
+        assert isinstance(we, WacomServiceException)
+        assert we.status_code == 403
 
 
 async def test_17_public_entity():

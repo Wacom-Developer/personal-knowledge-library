@@ -11,8 +11,8 @@ from knowledge.base.language import SUPPORTED_LOCALES, SUPPORTED_LANGUAGES, EN
 from knowledge.base.ontology import OntologyPropertyReference, OntologyContext
 from knowledge.ontomapping import register_ontology, load_configuration
 from knowledge.ontomapping.manager import wikidata_to_thing
-from knowledge.public.relations import wikidata_relations_extractor
-from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient, WikidataSearchResult
+from knowledge.public.relations import wikidata_relations_extractor, wikidata_relations_extractor_qids
+from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient, WikidataSearchResult, WikidataClass
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, UserRole
@@ -90,16 +90,15 @@ class WikidataFlow(TestCase):
             if UserRole.ADMIN in user.user_roles:
                 self.external_id = user.external_user_id
 
-        admin_token, refresh, expire = self.knowledge_client.request_user_token(self.tenant_api_key, self.external_id)
-
-        context: Optional[OntologyContext] = self.ontology_client.context(admin_token)
+        self.ontology_client.login(tenant_api_key=self.tenant_api_key, external_user_id=self.external_id)
+        context: Optional[OntologyContext] = self.ontology_client.context()
         if not context:
             import sys
             sys.exit(0)
         else:
             context_name: str = context.context
             # Export ontology
-            rdf_export: str = self.ontology_client.rdf_export(admin_token, context_name)
+            rdf_export: str = self.ontology_client.rdf_export(context_name)
             # Register ontology
             register_ontology(rdf_export)
             # Load configuration
@@ -153,11 +152,31 @@ class WikidataFlow(TestCase):
                             image_url = get_wikipedia_summary_image(title=title, lang=lang)
                             self.assertIsNotNone(image_url)
 
-    def test_5_labels(self):
+    def test_5_wikidata_to_thing_conversion(self):
         entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(self.cache.WIKIDATA_QIDS)
-        wikidata_things: Dict[str, WikidataThing] = dict([(e.qid, e) for e in entities])
-        relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(wikidata_things)
+        for e in entities:
+            for l_locale in e.label_languages:
+                self.assertIsNotNone(e.label_lang(l_locale))
+            for a_locale in e.alias_languages:
+                self.assertIsNotNone(e.alias_lang(a_locale))
+            for d_locale in e.description_languages:
+                self.assertIsNotNone(e.description_lang(d_locale))
+            for w_cls in e.instance_of:
+                self.assertIsInstance(w_cls, WikidataClass)
+            dict_wikidata: Dict[str, Any] = e.__dict__()
+            self.assertIsInstance(dict_wikidata, dict)
 
+
+        wikidata_things: Dict[str, WikidataThing] = {e.qid: e for e in entities}
+        relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(wikidata_things)
+        relations_2: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor_qids(wikidata_things,
+                                                                                         set(wikidata_things.keys()))
+        for qid, rel in relations.items():
+            if qid not in relations_2:
+                self.fail(f"QID {qid} is not in the second relations.")
+            if len(rel) != len(relations_2[qid]):
+                self.fail(f"QID {qid} has different number of relations.")
+        load_configuration(Path(__file__).parent.parent / 'pkl-cache' / 'ontology_mapping.json')
         van_gogh, import_warnings = wikidata_to_thing(wikidata_things["Q5582"], all_relations=relations,
                                                       supported_locales=SUPPORTED_LOCALES,
                                                       pull_wikipedia=True,
