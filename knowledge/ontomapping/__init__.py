@@ -505,7 +505,7 @@ def load_configuration(configuration: Path = CONFIGURATION_FILE):
     if configuration.exists():
         with configuration.open('r', encoding='utf-8') as fp_configuration:
             configuration = json.loads(fp_configuration.read())
-            mapping_configuration = build_configuration(configuration)
+        mapping_configuration = build_configuration(configuration)
     else:
         raise ValueError(f'Configuration file {configuration} not found.')
 
