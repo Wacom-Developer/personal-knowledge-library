@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional
 from knowledge.base.ontology import OntologyContext
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
+from knowledge.services.session import PermanentSession
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
 
 ROLE_MAPPING: Dict[str, UserRole] = dict([(role.value.lower(), role) for role in UserRole])
@@ -52,17 +53,18 @@ if __name__ == '__main__':
         knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
             application_name="Ontology Creation",
             service_url=service_url)
-        admin_token, refresh, expire = ontology_client.request_user_token(tenant_api_key, admin_external_user)
-        context: Optional[OntologyContext] = ontology_client.context(admin_token)
+        session: PermanentSession = ontology_client.login(tenant_api_key, admin_external_user)
+        knowledge_client.use_session(session.id)
+        context: Optional[OntologyContext] = ontology_client.context()
         # Check if the context already exists
         if not context:
             # First, create a context for the ontology
-            ontology_client.create_context(admin_token, name=context_name,
+            ontology_client.create_context(name=context_name,
                                            base_uri=f'{schema}:{context_name}#')
-            context: Optional[OntologyContext] = ontology_client.context(admin_token)
+            context: Optional[OntologyContext] = ontology_client.context()
         # If there is no version defined context, we need to commit the ontology
         if context.version is None:
             # Commit the changes of the ontology. This is very important to confirm changes.
-            ontology_client.commit(admin_token, context_name)
+            ontology_client.commit(context_name)
             # Trigger graph service. After the update the ontology is available and the new entities can be created
-            knowledge_client.ontology_update(auth_key=admin_token)
+            knowledge_client.ontology_update()
