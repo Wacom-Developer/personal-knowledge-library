@@ -86,7 +86,8 @@ def format_exception(exception: WacomServiceException) -> str:
         Formatted exception
     """
     return (f'WacomServiceException: {exception.message}\n'
-            f'[URL:= {exception.url}\n,'
+            '--------------------------------------------------\n'
+            f'URL:= {exception.url}\n,'
             f'method:= {exception.method}\n,'
             f'parameters:= {exception.params}\n,'
             f'payload:= {exception.payload}\n,'
