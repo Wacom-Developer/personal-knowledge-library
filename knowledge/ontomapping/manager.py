@@ -92,26 +92,26 @@ def convert_dict(structure: Dict[str, Any], locale: str) -> Optional[str]:
         value: Any = structure['value']
         if structure_type == 'time' and isinstance(value, dict) and 'iso' in value and value['iso']:
             return value['iso']
-        elif structure_type == 'time' and isinstance(value, dict):
+        if structure_type == 'time' and isinstance(value, dict):
             return value['time']
-        elif structure_type == 'quantity' and isinstance(value, dict):
+        if structure_type == 'quantity' and isinstance(value, dict):
             return value['amount']
-        elif structure_type == 'wikibase-item' and isinstance(value, dict):
+        if structure_type == 'wikibase-item' and isinstance(value, dict):
             wikidata_data: WikidataThing = pull_wikidata_object(value['id'])
             if locale in wikidata_data.label:
                 return wikidata_data.label[locale].content
             return None
-        elif structure_type == 'external-id':
+        if structure_type == 'external-id':
             return value
-        elif structure_type == 'string':
+        if structure_type == 'string':
             return value
-        elif structure_type == 'monolingualtext' and isinstance(value, dict):
+        if structure_type == 'monolingualtext' and isinstance(value, dict):
             if LOCALE_LANGUAGE_MAPPING.get(LocaleCode(locale)) == LanguageCode(value['language']):
                 return value['text']
             return None
-        elif structure_type == 'globe-coordinate' and isinstance(value, dict):
+        if structure_type == 'globe-coordinate' and isinstance(value, dict):
             return f'{value["latitude"]},{value["longitude"]}'
-        elif structure_type == 'url' and isinstance(value, str):
+        if structure_type == 'url' and isinstance(value, str):
             return value
     raise NotImplementedError()
 
@@ -188,7 +188,7 @@ def wikidata_to_thing(wikidata_thing: WikidataThing, all_relations: Dict[str, An
                     except Exception as e:
                         logging.error(f'Failed to get Wikipedia summary for {title} ({lang}): {e}')
     if len(descriptions) == 0:
-        descriptions = [de for de in wikidata_thing.description.values()]
+        descriptions = list(wikidata_thing.description.values())
     t3: float = time.perf_counter()
     # Create the thing
     thing: ThingObject = ThingObject(label=labels_entity,

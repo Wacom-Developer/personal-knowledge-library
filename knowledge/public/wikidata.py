@@ -580,13 +580,13 @@ class WikidataThing:
         """
         return self.description.get(language_code)
 
-    def alias_lang(self, language_code: LanguageCode) -> List[Label]:
+    def alias_lang(self, language_code: str) -> List[Label]:
         """
         Get alias for language_code code.
 
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: str
             Requested language_code code
         Returns
         -------
@@ -662,12 +662,12 @@ class WikidataThing:
             QID_TAG: self.qid,
             REVISION_TAG: self.revision,
             MODIFIED_TAG: self.modified.isoformat(),
-            LABELS_TAG: dict([(lang, la.__dict__()) for lang, la in self.label.items()]),
-            DESCRIPTIONS_TAG: dict([(lang, la.__dict__()) for lang, la in self.description.items()]),
+            LABELS_TAG: {lang: la.__dict__() for lang, la in self.label.items() },
+            DESCRIPTIONS_TAG: {lang: la.__dict__() for lang, la in self.description.items()},
             ALIASES_TAG: dict([(lang, [a.__dict__() for a in al]) for lang, al in self.aliases.items()]),
-            CLAIMS_TAG: dict([(pid, cl.__dict__()) for pid, cl in self.claims.items()]),
+            CLAIMS_TAG: {pid: cl.__dict__() for pid, cl in self.claims.items()},
             ONTOLOGY_TYPES_TAG: self.ontology_types,
-            SITELINKS_TAG: dict([(source, site.__dict__()) for source, site in self.sitelinks.items()])
+            SITELINKS_TAG: {source: site.__dict__() for source, site in self.sitelinks.items()}
         }
 
     @classmethod
@@ -1107,7 +1107,7 @@ class WikiDataAPIClient(ABC):
             return WikidataThing.from_wikidata(__waiting_request__(qid))
         except Exception as e:
             logger.exception(e)
-            raise WikiDataAPIException(e)
+            raise WikiDataAPIException(e) from e
 
     @staticmethod
     def __wikidata_multiple_task__(qids: List[str]) -> List[WikidataThing]:
@@ -1127,7 +1127,7 @@ class WikiDataAPIClient(ABC):
             return [WikidataThing.from_wikidata(e) for e in __waiting_multi_request__(qids)]
         except Exception as e:
             logger.exception(e)
-            raise WikiDataAPIException(e)
+            raise WikiDataAPIException(e) from e
 
     @staticmethod
     def retrieve_entity(qid: str) -> WikidataThing:

@@ -40,7 +40,7 @@ class PropertyType(enum.Enum):
     DATA_PROPERTY = "Literal"
 
 
-INVERSE_PROPERTY_TYPE: Dict[str, PropertyType] = dict([(pt.value, pt) for pt in PropertyType])
+INVERSE_PROPERTY_TYPE: Dict[str, PropertyType] = { pt.value: pt for pt in PropertyType}
 
 
 class DataPropertyType(enum.Enum):
@@ -2252,7 +2252,7 @@ class ThingEncoder(JSONEncoder):
     Encoder for ThingObject, Label and Description objects.
     """
     def default(self, o: Any):
-        if isinstance(o, Label) or isinstance(o, Description) or isinstance(o, ThingObject):
+        if isinstance(o, (Label, Description, ThingObject)):
             return o.__dict__()
         return str(o)
 
@@ -2277,42 +2277,42 @@ def ontology_import(rdf_content: str, tenant_id: str = '', context: str = '') ->
     rdf_graph: Graph = Graph().parse(data=rdf_content, format='xml')
     ontology: Ontology = Ontology()
     # Parse classes
-    for cls_iri in [s for s, p, o in rdf_graph.triples((None, RDF.type, OWL.Class))]:
+    for cls_iri in [s for s, p, o in list(rdf_graph.triples((None, RDF.type, OWL.Class)))]:
         subclass_of: Optional[OntologyClassReference] = None
         comments: List[Comment] = []
         labels: List[OntologyLabel] = []
-        for _, _, o in rdf_graph.triples((cls_iri, RDFS.comment, None)):
+        for _, _, o in list(rdf_graph.triples((cls_iri, RDFS.comment, None))):
             if isinstance(o, Literal):
                 comments.append(Comment(str(o), LanguageCode(o.language)))
-        for _, _, o in rdf_graph.triples((cls_iri, PREFERRED_LABEL, None)):
+        for _, _, o in list(rdf_graph.triples((cls_iri, PREFERRED_LABEL, None))):
             if isinstance(o, Literal):
                 labels.append(OntologyLabel(str(o), LanguageCode(o.language)))
-        for _, _, o in rdf_graph.triples((cls_iri, RDFS.subClassOf, None)):
+        for _, _, o in list(rdf_graph.triples((cls_iri, RDFS.subClassOf, None))):
             subclass_of = OntologyClassReference.parse(str(o))
         ontology.add_class(OntologyClass(tenant_id=tenant_id, context=context,
                                          reference=OntologyClassReference.parse(str(cls_iri)),
                                          subclass_of=subclass_of, labels=labels, comments=comments))
 
     # Parse data properties
-    for data_property_iri in [s for s, p, o in rdf_graph.triples((None, RDF.type, OWL.DatatypeProperty))]:
+    for data_property_iri in [s for s, p, o in list(rdf_graph.triples((None, RDF.type, OWL.DatatypeProperty)))]:
         subproperty_of: Optional[OntologyPropertyReference] = None
         range_prop: List[DataPropertyType] = []
         domain_prop: List[OntologyClassReference] = []
         comments: List[Comment] = []
         labels: List[OntologyLabel] = []
         inverse_prop: Optional[OntologyPropertyReference] = None
-        for _, _, obj in rdf_graph.triples((data_property_iri, RDFS.range, None)):
+        for _, _, obj in list(rdf_graph.triples((data_property_iri, RDFS.range, None))):
             range_prop.append(INVERSE_DATA_PROPERTY_TYPE_MAPPING[str(obj)])
-        for _, _, obj in rdf_graph.triples((data_property_iri, RDFS.domain, None)):
+        for _, _, obj in list(rdf_graph.triples((data_property_iri, RDFS.domain, None))):
             domain_prop.append(OntologyClassReference.parse(str(obj)))
-        for _, _, obj in rdf_graph.triples((data_property_iri, OWL.inverseOf, None)):
+        for _, _, obj in list(rdf_graph.triples((data_property_iri, OWL.inverseOf, None))):
             inverse_prop = OntologyPropertyReference.parse(str(obj))
-        for _, _, obj in rdf_graph.triples((data_property_iri, RDFS.subPropertyOf, None)):
+        for _, _, obj in list(rdf_graph.triples((data_property_iri, RDFS.subPropertyOf, None))):
             subproperty_of = OntologyPropertyReference.parse(str(obj))
-        for _, _, o in rdf_graph.triples((data_property_iri, RDFS.comment, None)):
+        for _, _, o in list(rdf_graph.triples((data_property_iri, RDFS.comment, None))):
             if isinstance(o, Literal):
                 comments.append(Comment(str(o), LanguageCode(o.language)))
-        for _, _, o in rdf_graph.triples((data_property_iri, PREFERRED_LABEL, None)):
+        for _, _, o in list(rdf_graph.triples((data_property_iri, PREFERRED_LABEL, None))):
             if isinstance(o, Literal):
                 labels.append(OntologyLabel(str(o), LanguageCode(o.language)))
         ontology.add_properties(OntologyProperty(kind=PropertyType.DATA_PROPERTY, tenant_id=tenant_id, context=context,
@@ -2321,25 +2321,25 @@ def ontology_import(rdf_content: str, tenant_id: str = '', context: str = '') ->
                                                  sub_property_of=subproperty_of, inverse_property_of=inverse_prop,
                                                  labels=labels, comments=comments))
     # Parse object properties
-    for object_property_iri in [s for s, p, o in rdf_graph.triples((None, RDF.type, OWL.ObjectProperty))]:
+    for object_property_iri in [s for s, p, o in list(rdf_graph.triples((None, RDF.type, OWL.ObjectProperty)))]:
         subproperty_of: Optional[OntologyPropertyReference] = None
         obj_range_prop: List[OntologyClassReference] = []
         domain_prop: List[OntologyClassReference] = []
         inverse_prop: Optional[OntologyPropertyReference] = None
         comments: List[Comment] = []
         labels: List[OntologyLabel] = []
-        for _, _, o_range in rdf_graph.triples((object_property_iri, RDFS.range, None)):
+        for _, _, o_range in list(rdf_graph.triples((object_property_iri, RDFS.range, None))):
             obj_range_prop.append(OntologyClassReference.parse(str(o_range)))
-        for _, _, o_domain in rdf_graph.triples((object_property_iri, RDFS.domain, None)):
+        for _, _, o_domain in list(rdf_graph.triples((object_property_iri, RDFS.domain, None))):
             domain_prop.append(OntologyClassReference.parse(str(o_domain)))
-        for _, _, o_inverse in rdf_graph.triples((object_property_iri, OWL.inverseOf, None)):
+        for _, _, o_inverse in list(rdf_graph.triples((object_property_iri, OWL.inverseOf, None))):
             inverse_prop = OntologyPropertyReference.parse(str(o_inverse))
-        for _, _, o_sub in rdf_graph.triples((object_property_iri, RDFS.subPropertyOf, None)):
+        for _, _, o_sub in list(rdf_graph.triples((object_property_iri, RDFS.subPropertyOf, None))):
             subproperty_of = OntologyPropertyReference.parse(str(o_sub))
-        for _, _, o in rdf_graph.triples((object_property_iri, RDFS.comment, None)):
+        for _, _, o in list(rdf_graph.triples((object_property_iri, RDFS.comment, None))):
             if isinstance(o, Literal):
                 comments.append(Comment(str(o), LanguageCode(o.language)))
-        for _, _, o in rdf_graph.triples((object_property_iri, PREFERRED_LABEL, None)):
+        for _, _, o in list(rdf_graph.triples((object_property_iri, PREFERRED_LABEL, None))):
             if isinstance(o, Literal):
                 labels.append(OntologyLabel(str(o), LanguageCode(o.language)))
         ontology.add_properties(OntologyProperty(kind=PropertyType.OBJECT_PROPERTY, tenant_id=tenant_id,

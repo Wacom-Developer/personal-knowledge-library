@@ -98,7 +98,7 @@ async def async_count_things(async_client: AsyncWacomKnowledgeService, user_toke
                              concept_type: OntologyClassReference, locale: Optional[LocaleCode] = None,
                              visibility: Optional[Visibility] = None) -> int:
     """
-    Counts the number of things.
+    Async counting of things given a concept type.
 
     Parameters
     ----------
@@ -157,10 +157,11 @@ async def async_things_iter(async_client: AsyncWacomKnowledgeService, user_token
         The tenant API key
     external_user_id: Optional[str] [default:= None]
         The external user ID
+
     Returns
     -------
     AsyncIterator[ThingObject]
-        Iterator of things
+        Asynchronous Iterator of things
     """
     next_page_id: Optional[str] = None
     if tenant_api_key is not None and external_user_id is not None:

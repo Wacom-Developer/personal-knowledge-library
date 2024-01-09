@@ -42,7 +42,7 @@ def subclasses_of(iri: str) -> List[str]:
     subclasses: List[str]
         Subclasses of the ontology class.
     """
-    sub_classes: List[str] = [str(s) for s, p, o in ontology_graph.triples((None, RDFS.subClassOf, URIRef(iri)))]
+    sub_classes: List[str] = [str(s) for s, p, o in list(ontology_graph.triples((None, RDFS.subClassOf, URIRef(iri))))]
     for sub_class in sub_classes:
         sub_classes.extend(subclasses_of(sub_class))
     return sub_classes
@@ -371,13 +371,13 @@ class MappingConfiguration:
             for r in prop_config.ranges:
                 if r == DataPropertyType.STRING.value:
                     return content is not None and isinstance(content, str)
-                elif r == DataPropertyType.INTEGER.value:
+                if r == DataPropertyType.INTEGER.value:
                     return content is not None and isinstance(content, int)
-                elif r == DataPropertyType.FLOAT.value:
+                if r == DataPropertyType.FLOAT.value:
                     return content is not None and isinstance(content, float)
-                elif r == DataPropertyType.BOOLEAN.value:
+                if r == DataPropertyType.BOOLEAN.value:
                     return content is not None and isinstance(content, bool)
-                elif r in {DataPropertyType.DATE.value, DataPropertyType.DATE_TIME.value}:
+                if r in {DataPropertyType.DATE.value, DataPropertyType.DATE_TIME.value}:
                     return content is not None and isinstance(content, str) and is_iso_date(content)
                 return True
         return False
@@ -519,7 +519,6 @@ def get_mapping_configuration() -> MappingConfiguration:
     mapping_configuration: MappingConfiguration
         The mapping configuration
     """
-    global mapping_configuration
     if mapping_configuration is None:
         raise ValueError('Please load configuration')
     return mapping_configuration

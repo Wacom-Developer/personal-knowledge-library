@@ -63,7 +63,7 @@ def wikidata_extractor_entities(qids: Set[str]) -> Dict[str, WikidataThing]:
     wikidata_extractor: Dict[str, WikidataThing]
         Wikidata map
     """
-    return dict([(e.qid, e) for e in WikiDataAPIClient.retrieve_entities(qids)])
+    return {e.qid: e for e in WikiDataAPIClient.retrieve_entities(qids)}
 
 
 def wikidata_relations_extractor(wikidata: Dict[str, WikidataThing]) -> Dict[str, List[Dict[str, Any]]]:
