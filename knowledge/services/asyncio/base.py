@@ -71,7 +71,8 @@ cached_resolver: CachedResolver = CachedResolver()
 
 
 async def handle_error(message: str, response: aiohttp.ClientResponse, parameters: Optional[Dict[str, Any]] = None,
-                       payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None):
+                       payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) \
+        -> WacomServiceException:
     """
     Handles an error response.
 
@@ -88,24 +89,24 @@ async def handle_error(message: str, response: aiohttp.ClientResponse, parameter
     headers: Optional[Dict[str, str]] (Default:= None)
         Headers
 
-    Raises
-    ------
+    Returns
+    -------
     WacomServiceException
-        Exception if service returns HTTP error code.
+        Create exception.
     """
     try:
         response_text: str = await response.text()
     except Exception as e:
         logging.error(f'Error while reading response text: {e}')
         response_text: str = ""
-    raise WacomServiceException(message,
-                                method=response.method,
-                                url=response.url.human_repr(),
-                                params=parameters,
-                                payload=payload,
-                                headers=headers,
-                                status_code=response.status,
-                                service_response=response_text)
+    return WacomServiceException(message,
+                                 method=response.method,
+                                 url=response.url.human_repr(),
+                                 params=parameters,
+                                 payload=payload,
+                                 headers=headers,
+                                 status_code=response.status,
+                                 service_response=response_text)
 
 
 class AsyncServiceAPIClient(RESTAPIClient):
@@ -181,6 +182,18 @@ class AsyncServiceAPIClient(RESTAPIClient):
             raise WacomServiceException(f'Unknown session id:= {self.__current_session_id}. Please login first.')
         return session
 
+    async def use_session(self, session_id: str):
+        """ Use session.
+        Parameters
+        ----------
+        session_id: str
+            Session id
+        """
+        if self.__token_manager.has_session(session_id):
+            self.__current_session_id = session_id
+        else:
+            raise WacomServiceException(f'Unknown session id:= {session_id}.')
+
     async def handle_token(self, force_refresh: bool = False, force_refresh_timeout: float = 120) -> Tuple[str, str]:
         """
         Handles the token and refreshes it if needed.
@@ -228,7 +241,6 @@ class AsyncServiceAPIClient(RESTAPIClient):
         session: aiohttp.ClientSession
             Asynchronous session
         """
-        global cached_resolver
         timeout: ClientTimeout = ClientTimeout(total=60)
         ssl_context: ssl.SSLContext = ssl.create_default_context()
         connector: aiohttp.TCPConnector = aiohttp.TCPConnector(ssl=ssl_context, limit_per_host=10,
@@ -343,7 +355,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
             Session. The session is stored in the token manager and the client is using the session id for further
             calls.
         """
-        auth_key, refresh_token, exp = await self.request_user_token(tenant_api_key, external_user_id)
+        auth_key, refresh_token, _ = await self.request_user_token(tenant_api_key, external_user_id)
         session: PermanentSession = self.__token_manager.add_session(auth_token=auth_key, refresh_token=refresh_token,
                                                                      tenant_api_key=tenant_api_key,
                                                                      external_user_id=external_user_id)
@@ -372,7 +384,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         """
         session = self.__token_manager.add_session(auth_token=auth_key, refresh_token=refresh_token)
         self.__current_session_id = session.id
-        if isinstance(session, RefreshableSession) or isinstance(session, TimedSession):
+        if isinstance(session, (RefreshableSession, TimedSession)):
             return session
         raise WacomServiceException(f'Wrong session type:= {type(session)}.')
 

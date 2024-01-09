@@ -4,12 +4,11 @@ from datetime import datetime
 from typing import Any, Union, Dict, List, Tuple
 
 import orjson
-import requests
 from dateutil.parser import parse, ParserError
-from requests import Response
 
-from knowledge.services.asyncio.base import AsyncServiceAPIClient
-from knowledge.services.base import WacomServiceAPIClient, WacomServiceException
+from knowledge.services import APPLICATION_JSON_HEADER
+from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error
+from knowledge.services.base import WacomServiceAPIClient
 from knowledge.services.users import UserRole, USER_AGENT_TAG, TENANT_API_KEY_FLAG, OFFSET_TAG, LIMIT_TAG, User, \
     USER_ID_TAG, EXTERNAL_USER_ID_TAG, FORCE_TAG, ROLES_TAG, META_DATA_TAG, CONTENT_TYPE_FLAG, DEFAULT_TIMEOUT, \
     INTERNAL_USER_ID_TAG
@@ -17,9 +16,8 @@ from knowledge.services.users import UserRole, USER_AGENT_TAG, TENANT_API_KEY_FL
 
 class AsyncUserManagementService(AsyncServiceAPIClient):
     """
-    User-Management Service API
-    -----------------------------
-
+    Async User-Management Service API
+    ---------------------------------
     Functionality:
         - List all users
         - Create / update / delete users
@@ -96,8 +94,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
                         date_object: datetime = datetime.now()
                     return User.parse(results['user']), results['token']['accessToken'], \
                         results['token']['refreshToken'], date_object
-
-            raise WacomServiceException(f'Response code:={response.status}, exception:= {response.text}')
+            raise await handle_error('Failed to create the user.', response, headers=headers, payload=payload)
 
     async def update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: Dict[str, str] = None,
                           roles: List[UserRole] = None):
@@ -125,7 +122,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         headers: Dict[str, str] = {
             USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key,
-            CONTENT_TYPE_FLAG: 'application/json'
+            CONTENT_TYPE_FLAG: APPLICATION_JSON_HEADER
         }
         payload: Dict[str, str] = {
             META_DATA_TAG: meta_data if meta_data is not None else {},
@@ -135,11 +132,12 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             USER_ID_TAG: internal_id,
             EXTERNAL_USER_ID_TAG: external_id
         }
-        response: Response = requests.patch(url, headers=headers, json=payload, params=params, timeout=DEFAULT_TIMEOUT,
-                                            verify=self.verify_calls)
-        if not response.ok:
-            raise WacomServiceException(f'Updating user failed. '
-                                        f'Response code:={response.status_code}, exception:= {response.text}')
+        async with self.__async_session__() as session:
+            async with session.patch(url, headers=headers, json=payload, params=params, timeout=DEFAULT_TIMEOUT,
+                                     verify_ssl=self.verify_calls) as response:
+                if not response.ok:
+                    raise await handle_error('Failed to update the user.', response, headers=headers,
+                                             payload=payload)
 
     async def delete_user(self, tenant_key: str, external_id: str, internal_id: str, force: bool = False):
         """Deletes user from tenant.
@@ -168,12 +166,13 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         params: Dict[str, str] = {
             USER_ID_TAG: internal_id,
             EXTERNAL_USER_ID_TAG: external_id,
-            FORCE_TAG: force
+            FORCE_TAG: str(force)
         }
-        response: Response = requests.delete(url, headers=headers, params=params, timeout=DEFAULT_TIMEOUT,
-                                             verify=self.verify_calls)
-        if not response.ok:
-            raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+        async with self.__async_session__() as session:
+            async with session.delete(url, headers=headers, params=params, timeout=DEFAULT_TIMEOUT,
+                                      verify_ssl=self.verify_calls) as response:
+                if not response.ok:
+                    raise await handle_error('Failed to delete the user.', response, headers=headers)
 
     async def user_internal_id(self, tenant_key: str, external_id: str) -> str:
         """User internal id.
@@ -203,12 +202,13 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         parameters: Dict[str, str] = {
             EXTERNAL_USER_ID_TAG:  external_id
         }
-        response: Response = requests.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
-                                          verify=self.verify_calls)
-        if response.ok:
-            response_dict: Dict[str, Any] = response.json()
-            return response_dict[INTERNAL_USER_ID_TAG]
-        raise WacomServiceException(f'Response code:={response.status_code}, exception:= {response.text}')
+        async with self.__async_session__() as session:
+            async with session.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
+                                   verify_ssl=self.verify_calls) as response:
+                if response.ok:
+                    response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
+                    return response_dict[INTERNAL_USER_ID_TAG]
+            raise await handle_error('Failed to get the user.', response, headers=headers)
 
     async def listing_users(self, tenant_key: str, offset: int = 0, limit: int = 20) -> List[User]:
         """
@@ -237,13 +237,13 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             OFFSET_TAG: offset,
             LIMIT_TAG: limit
         }
-        response: Response = requests.get(url, headers=headers, params=params,  timeout=DEFAULT_TIMEOUT,
-                                          verify=self.verify_calls)
-        if response.ok:
-            users: List[Dict[str, Any]] = response.json()
-            results: List[User] = []
-            for u in users:
-                results.append(User.parse(u))
-            return results
-        raise WacomServiceException(f'Listing of users failed.'
-                                    f'Response code:={response.status_code}, exception:= {response.text}')
+        async with self.__async_session__() as session:
+            async with session.get(url, headers=headers, params=params,  timeout=DEFAULT_TIMEOUT,
+                                   verify_ssl=self.verify_calls) as response:
+                if response.ok:
+                    users: List[Dict[str, Any]] = await response.json(loads=orjson.loads)
+                    results: List[User] = []
+                    for u in users:
+                        results.append(User.parse(u))
+                    return results
+        await handle_error('Listing of users failed.', response, headers=headers, parameters=params)
