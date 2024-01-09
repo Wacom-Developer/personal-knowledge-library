@@ -26,7 +26,7 @@ an older version of knowledge-service-lib :
 
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
-__version__ = "1.0.8"
+__version__ = "2.0.0"
 
 # The text of the README file
 README = (HERE / "README.md").read_text()
@@ -52,12 +52,15 @@ setup(
         "tqdm>=4.62.0",
         "ndjson>=0.3.1",
         "rdflib>=6.3.2",
-        "python-dateutil"
+        "python-dateutil",
+        "aiohttp[speedups]>3.8.6",
+        "orjson>=3.8.0"
     ],
     extras_require={
     },
     tests_require=(
         'pytest',
+        'pytest-asyncio',
         'pytest-cov',
         'faker',
         'ontospy',
