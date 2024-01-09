@@ -13,6 +13,7 @@
 #  See the License for the specific language_code governing permissions and
 #  limitations under the License.
 import argparse
+import sys
 from typing import Optional, List
 
 from knowledge.base.entity import Label, Description
@@ -21,6 +22,7 @@ from knowledge.base.ontology import DataPropertyType, OntologyClassReference, On
     DataProperty, OntologyContext
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
+from knowledge.services.session import PermanentSession
 
 # ------------------------------- Constants ----------------------------------------------------------------------------
 LEONARDO_DA_VINCI: str = 'Leonardo da Vinci'
@@ -75,36 +77,40 @@ if __name__ == '__main__':
     EXTERNAL_USER_ID: str = args.user
     # Wacom Ontology REST API Client
     ontology_client: OntologyService = OntologyService(service_url=args.instance)
-    admin_token, refresh_token, expiration_time = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Ontology Creation Demo",
         service_url=args.instance)
-    context: Optional[OntologyContext] = ontology_client.context(admin_token)
+    # Login as admin user
+    session: PermanentSession = ontology_client.login(TENANT_KEY, EXTERNAL_USER_ID)
+    if session.roles != "TenantAdmin":
+        print(f'User {EXTERNAL_USER_ID} is not an admin user.')
+        sys.exit(1)
+    knowledge_client.use_session(session.id)
+    knowledge_client.ontology_update()
+    context: Optional[OntologyContext] = ontology_client.context()
     if context is None:
         # First, create a context for the ontology
-        ontology_client.create_context(admin_token, name=CONTEXT_NAME, base_uri=f'demo:{CONTEXT_NAME}')
+        ontology_client.create_context(name=CONTEXT_NAME, base_uri=f'demo:{CONTEXT_NAME}')
         context_name: str = CONTEXT_NAME
     else:
         context_name: str = context.context
     # Creating a class which is a subclass of a person
-    ontology_client.create_concept(admin_token, context_name, reference=ARTIST_TYPE, subclass_of=PERSON_TYPE)
+    ontology_client.create_concept(context_name, reference=ARTIST_TYPE, subclass_of=PERSON_TYPE)
 
     # Object properties
-    ontology_client.create_object_property(auth_key=admin_token, context=context_name,
-                                           reference=IS_INSPIRED_BY, domains_cls=[ARTIST_TYPE],
+    ontology_client.create_object_property(context=context_name, reference=IS_INSPIRED_BY, domains_cls=[ARTIST_TYPE],
                                            ranges_cls=[PERSON_TYPE], inverse_of=None, subproperty_of=None)
     # Data properties
-    ontology_client.create_data_property(auth_key=admin_token, context=context_name,
-                                         reference=STAGE_NAME,
+    ontology_client.create_data_property(context=context_name, reference=STAGE_NAME,
                                          domains_cls=[ARTIST_TYPE],
                                          ranges_cls=[DataPropertyType.STRING],
                                          subproperty_of=None)
     # Commit the changes of the ontology. This is very important to confirm changes.
-    ontology_client.commit(admin_token, context_name)
+    ontology_client.commit(context=context_name)
     # Trigger graph service. After the update the ontology is available and the new entities can be created
-    knowledge_client.ontology_update(admin_token)
+    knowledge_client.ontology_update()
 
-    res_entities, next_search_page = knowledge_client.search_labels(auth_key=admin_token, search_term=LEONARDO_DA_VINCI,
+    res_entities, next_search_page = knowledge_client.search_labels(search_term=LEONARDO_DA_VINCI,
                                                                     language_code=EN_US, limit=1000)
     leo: Optional[ThingObject] = None
     for entity in res_entities:
@@ -114,5 +120,5 @@ if __name__ == '__main__':
             break
 
     artist_student: ThingObject = create_artist()
-    artist_student_uri: str = knowledge_client.create_entity(artist_student, auth_key=admin_token)
-    knowledge_client.create_relation(artist_student_uri, IS_INSPIRED_BY, leo.uri, auth_key=admin_token)
+    artist_student_uri: str = knowledge_client.create_entity(artist_student)
+    knowledge_client.create_relation(artist_student_uri, IS_INSPIRED_BY, leo.uri)

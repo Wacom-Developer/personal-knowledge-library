@@ -78,8 +78,8 @@ def print_entity(display_entity: ThingObject, list_idx: int, client: WacomKnowle
         relations_obj: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(uri=display_entity.uri)
         if len(relations_obj) > 0:
             print('    | [Relations]')
-            for idx, re in enumerate(relations_obj.values()):
-                last: bool = idx == len(relations_obj) - 1
+            for r_idx, re in enumerate(relations_obj.values()):
+                last: bool = r_idx == len(relations_obj) - 1
                 print(f'    |--- {re.relation.iri}: ')
                 print(f'    {"|" if not last else " "}       |- [Incoming]: {re.incoming_relations} ')
                 print(f'    {"|" if not last else " "}       |- [Outgoing]: {re.outgoing_relations}')
