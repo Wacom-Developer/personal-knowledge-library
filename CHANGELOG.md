@@ -1,7 +1,17 @@
+2024/01/09 - RELEASE 2.0.0
+==========================
+- Major refactoring of the library
+- Adding a script to set up a new tenant
+- Support for async Client
+- Introduction of token management and session handling (breaking change)
+- Minor fixes and improvements
+- Adding sample for async client
+- Adding more unit tests
+
 2023/7/13 - RELEASE 1.0.8
 ==========================
 - Minor fix: No entities returned from Wikidata
-- 
+
 2023/7/13 - RELEASE 1.0.7
 ==========================
 - Minor fix: Unclosed file handle

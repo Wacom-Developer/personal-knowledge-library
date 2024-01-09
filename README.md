@@ -197,9 +197,10 @@ This samples shows how to work with graph service.
 
 ```python
 import argparse
-from typing import Optional
+from typing import Optional, Dict, List
 
-from knowledge.base.entity import LanguageCode, Description, Label
+from knowledge.base.entity import Description, Label
+from knowledge.base.language import LocaleCode, EN_US, DE_DE
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, ThingObject, ObjectProperty
 from knowledge.services.graph import WacomKnowledgeService
 
@@ -222,7 +223,7 @@ CREATED: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:core
 HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:creative#hasArtstyle')
 
 
-def print_entity(display_entity: ThingObject, list_idx: int, auth_key: str, client: WacomKnowledgeService,
+def print_entity(display_entity: ThingObject, list_idx: int, client: WacomKnowledgeService,
                  short: bool = False):
     """
     Printing entity details.
@@ -233,8 +234,6 @@ def print_entity(display_entity: ThingObject, list_idx: int, auth_key: str, clie
         Entity with properties
     list_idx: int
         Index with a list
-    auth_key: str
-        Authorization key
     client: WacomKnowledgeService
         Knowledge graph client
     short: bool
@@ -254,28 +253,28 @@ def print_entity(display_entity: ThingObject, list_idx: int, auth_key: str, clie
             print('    |')
         if len(display_entity.data_properties) > 0:
             print('    | [Attributes]')
-            for data_property, labels in entity.data_properties.items():
+            for data_property, labels in display_entity.data_properties.items():
                 print(f'    |    |- {data_property.iri}:')
                 for li in labels:
                     print(f'    |    |-- "{li.value}"@{li.language_code}')
             print('    |')
 
-        relations_obj: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key,
-                                                                                          uri=entity.uri)
+        relations_obj: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(uri=display_entity.uri)
         if len(relations_obj) > 0:
             print('    | [Relations]')
-            for re in relations_obj.values():
+            for r_idx, re in enumerate(relations_obj.values()):
+                last: bool = r_idx == len(relations_obj) - 1
                 print(f'    |--- {re.relation.iri}: ')
-                print(f'           |- [Incoming]: {re.incoming_relations} ')
-                print(f'           |- [Outgoing]: {re.outgoing_relations}')
+                print(f'    {"|" if not last else " "}       |- [Incoming]: {re.incoming_relations} ')
+                print(f'    {"|" if not last else " "}       |- [Outgoing]: {re.outgoing_relations}')
         print()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Private Knowledge.",
+    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
-    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Private Knowledge.",
+    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
     parser.add_argument("-i", "--instance", default='https://private-knowledge.wacom.com',
                         help="URL of instance")
@@ -285,16 +284,15 @@ if __name__ == '__main__':
     # Wacom personal knowledge REST API Client
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
                                                                     service_url=args.instance)
-    # Use special tenant for testing:  Unit-test tenant
-    user_token, refresh_token, expiration_time = knowledge_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
+    knowledge_client.login(args.tenant, args.user)
     page_id: Optional[str] = None
     page_number: int = 1
     entity_count: int = 0
     print('-----------------------------------------------------------------------------------------------------------')
     print(' First step: Find Leonardo da Vinci in the knowledge graph.')
     print('-----------------------------------------------------------------------------------------------------------')
-    res_entities, next_search_page = knowledge_client.search_labels(auth_key=user_token, search_term=LEONARDO_DA_VINCI,
-                                                                    language_code=LanguageCode('en_US'), limit=1000)
+    res_entities, next_search_page = knowledge_client.search_labels(search_term=LEONARDO_DA_VINCI,
+                                                                    language_code=LocaleCode('en_US'), limit=1000)
     leo: Optional[ThingObject] = None
     s_idx: int = 1
     for res_entity in res_entities:
@@ -306,13 +304,12 @@ if __name__ == '__main__':
     print('-----------------------------------------------------------------------------------------------------------')
     print(' What artwork exists in the knowledge graph.')
     print('-----------------------------------------------------------------------------------------------------------')
-    relations_dict: Dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(auth_key=user_token,
-                                                                                                 uri=leo.uri)
+    relations_dict: Dict[OntologyPropertyReference, ObjectProperty] = knowledge_client.relations(uri=leo.uri)
     print(f' Artwork of {leo.label}')
     print('-----------------------------------------------------------------------------------------------------------')
     idx: int = 1
     if CREATED in relations_dict:
-        for e in relations_Dict[CREATED].outgoing_relations:
+        for e in relations_dict[CREATED].outgoing_relations:
             print(f' [{idx}] {e.uri}: {e.label}')
             idx += 1
     print('-----------------------------------------------------------------------------------------------------------')
@@ -321,18 +318,18 @@ if __name__ == '__main__':
 
     # Main labels for entity
     artwork_labels: List[Label] = [
-        Label('Ginevra Gherardini', LanguageCode('en_US')),
-        Label('Ginevra Gherardini', LanguageCode('de_DE'))
+        Label('Ginevra Gherardini', EN_US),
+        Label('Ginevra Gherardini', DE_DE)
     ]
     # Alias labels for entity
     artwork_alias: List[Label] = [
-        Label("Ginevra", LanguageCode('en_US')),
-        Label("Ginevra", LanguageCode('de_DE'))
+        Label("Ginevra", EN_US),
+        Label("Ginevra", DE_DE)
     ]
     # Topic description
     artwork_description: List[Description] = [
-        Description('Oil painting of Mona Lisa\' sister', LanguageCode('en_US')),
-        Description('Ölgemälde von Mona Lisa\' Schwester', LanguageCode('de_DE'))
+        Description('Oil painting of Mona Lisa\' sister', EN_US),
+        Description('Ölgemälde von Mona Lisa\' Schwester', DE_DE)
     ]
     # Topic
     artwork_object: ThingObject = ThingObject(label=artwork_labels, concept_type=ARTWORK_CLASS,
@@ -341,62 +338,57 @@ if __name__ == '__main__':
     artwork_object.alias = artwork_alias
     print(f' Create: {artwork_object}')
     # Create artwork
-    artwork_entity_uri: str = knowledge_client.create_entity(user_token, artwork_object)
+    artwork_entity_uri: str = knowledge_client.create_entity(artwork_object)
     print(f' Entity URI: {artwork_entity_uri}')
     # Create relation between Leonardo da Vinci and artwork
-    knowledge_client.create_relation(auth_key=user_token, source=leo.uri, relation=IS_CREATOR,
-                                     target=artwork_entity_uri)
+    knowledge_client.create_relation(source=leo.uri, relation=IS_CREATOR, target=artwork_entity_uri)
 
-    relations_dict = knowledge_client.relations(auth_key=user_token, uri=artwork_entity_uri)
+    relations_dict = knowledge_client.relations(uri=artwork_entity_uri)
     for ontology_property, object_property in relations_dict.items():
         print(f'  {object_property}')
     # You will see that wacom:core#isCreatedBy is automatically inferred as relation as it is the inverse property of
     # wacom:core#created.
 
     # Now, more search options
-    res_entities, next_search_page = knowledge_client.search_description(user_token, 'Michelangelo\'s Sistine Chapel',
-                                                                         LanguageCode('en_US'), limit=1000)
+    res_entities, next_search_page = knowledge_client.search_description('Michelangelo\'s Sistine Chapel',
+                                                                         EN_US, limit=1000)
     print('-----------------------------------------------------------------------------------------------------------')
     print(' Search results.  Description: "Michelangelo\'s Sistine Chapel"')
     print('-----------------------------------------------------------------------------------------------------------')
     s_idx: int = 1
     for e in res_entities:
-        print_entity(e, s_idx, user_token, knowledge_client)
+        print_entity(e, s_idx, knowledge_client)
 
     # Now, let's search all artwork that has the art style self-portrait
-    res_entities, next_search_page = knowledge_client.search_labels(auth_key=user_token,
-                                                                    search_term=SELF_PORTRAIT_STYLE,
-                                                                    language_code=LanguageCode('en_US'), limit=1000)
+    res_entities, next_search_page = knowledge_client.search_labels(search_term=SELF_PORTRAIT_STYLE,
+                                                                    language_code=EN_US, limit=1000)
     art_style: Optional[ThingObject] = None
     s_idx: int = 1
     for entity in res_entities:
         #  Entity must be a person and the label match with full string
-        if entity.concept_type == ART_STYLE_CLASS and SELF_PORTRAIT_STYLE in [l.content for l in entity.label]:
+        if entity.concept_type == ART_STYLE_CLASS and SELF_PORTRAIT_STYLE in [la.content for la in entity.label]:
             art_style = entity
             break
-    res_entities, next_search_page = knowledge_client.search_relation(auth_key=user_token,
-                                                                      subject_uri=None,
+    res_entities, next_search_page = knowledge_client.search_relation(subject_uri=None,
                                                                       relation=HAS_ART_STYLE,
                                                                       object_uri=art_style.uri,
-                                                                      language_code=LanguageCode('en_US'))
+                                                                      language_code=EN_US)
     print('-----------------------------------------------------------------------------------------------------------')
     print(' Search results.  Relation: relation:=has_topic  object_uri:= unknown')
     print('-----------------------------------------------------------------------------------------------------------')
     s_idx: int = 1
     for e in res_entities:
-        print_entity(e, s_idx, user_token, knowledge_client, short=True)
+        print_entity(e, s_idx, knowledge_client, short=True)
         s_idx += 1
 
     # Finally, the activation function retrieving the related identities to a pre-defined depth.
-    entities, relations = knowledge_client.activations(auth_key=user_token,
-                                                       uris=[leo.uri],
-                                                       depth=1)
+    entities, relations = knowledge_client.activations(uris=[leo.uri], depth=1)
     print('-----------------------------------------------------------------------------------------------------------')
     print(f'Activation.  URI: {leo.uri}')
     print('-----------------------------------------------------------------------------------------------------------')
     s_idx: int = 1
     for e in res_entities:
-        print_entity(e, s_idx, user_token, knowledge_client)
+        print_entity(e, s_idx, knowledge_client)
         s_idx += 1
     # All relations
     print('-----------------------------------------------------------------------------------------------------------')
@@ -409,8 +401,7 @@ if __name__ == '__main__':
     idx: int = 1
     while True:
         # pull
-        entities, total_number, next_page_id = knowledge_client.listing(user_token, ART_STYLE_CLASS, page_id=page_id,
-                                                                        limit=100)
+        entities, total_number, next_page_id = knowledge_client.listing(ART_STYLE_CLASS, page_id=page_id, limit=100)
         pulled_entities: int = len(entities)
         entity_count += pulled_entities
         print('-------------------------------------------------------------------------------------------------------')
@@ -418,7 +409,7 @@ if __name__ == '__main__':
               f'Next page id: {next_page_id}')
         print('-------------------------------------------------------------------------------------------------------')
         for e in entities:
-            print_entity(e, idx, user_token, knowledge_client)
+            print_entity(e, idx, knowledge_client)
             idx += 1
         if pulled_entities == 0:
             break
@@ -428,14 +419,14 @@ if __name__ == '__main__':
     # Delete all personal entities for this user
     while True:
         # pull
-        entities, total_number, next_page_id = knowledge_client.listing(user_token, THING_OBJECT, page_id=page_id,
+        entities, total_number, next_page_id = knowledge_client.listing(THING_OBJECT, page_id=page_id,
                                                                         limit=100)
         pulled_entities: int = len(entities)
         if pulled_entities == 0:
             break
         delete_uris: List[str] = [e.uri for e in entities]
         print(f'Cleanup. Delete entities: {delete_uris}')
-        knowledge_client.delete_entities(auth_key=user_token, uris=delete_uris, force=True)
+        knowledge_client.delete_entities(uris=delete_uris, force=True)
         page_number += 1
         page_id = next_page_id
     print('-----------------------------------------------------------------------------------------------------------')
@@ -447,10 +438,11 @@ Performing Named Entity Linking (NEL) on text and Universal Ink Model.
 
 ```python
 import argparse
+from typing import List, Dict
 
 import urllib3
 
-from knowledge.base.entity import LanguageCode
+from knowledge.base.language import EN_US
 from knowledge.base.ontology import OntologyPropertyReference, ThingObject, ObjectProperty
 from knowledge.nel.base import KnowledgeGraphEntity
 from knowledge.nel.engine import WacomEntityLinkingEngine
@@ -459,7 +451,6 @@ from knowledge.services.graph import WacomKnowledgeService
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-LANGUAGE_CODE: LanguageCode = LanguageCode("en_US")
 TEXT: str = "Leonardo da Vinci painted the Mona Lisa."
 
 
@@ -479,7 +470,8 @@ def print_entity(entity: KnowledgeGraphEntity, list_idx: int, auth_key: str, cli
         Knowledge graph client
     """
     thing: ThingObject = knowledge_client.entity(auth_key=user_token, uri=entity.entity_source.uri)
-    print(f'[{list_idx}] - {e.ref_text} [{e.start_idx}-{e.end_idx}] : {thing.uri} <{thing.concept_type.iri}>')
+    print(f'[{list_idx}] - {entity.ref_text} [{entity.start_idx}-{entity.end_idx}] : {thing.uri}'
+          f' <{thing.concept_type.iri}>')
     if len(thing.label) > 0:
         print('    | [Labels]')
         for la in thing.label:
@@ -509,9 +501,9 @@ def print_entity(entity: KnowledgeGraphEntity, list_idx: int, auth_key: str, cli
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Private Knowledge.",
+    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
-    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Private Knowledge.",
+    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
     parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
@@ -529,11 +521,10 @@ if __name__ == '__main__':
     # Use special tenant for testing:  Unit-test tenant
     user_token, refresh_token, expiration_time = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     entities: List[KnowledgeGraphEntity] = nel_client.\
-        link_personal_entities(auth_key=user_token, text=TEXT,
-                               language_code=LANGUAGE_CODE)
+        link_personal_entities(text=TEXT, language_code=EN_US, auth_key=user_token)
     idx: int = 1
     print('-----------------------------------------------------------------------------------------------------------')
-    print(f'Text: "{TEXT}"@{LANGUAGE_CODE}')
+    print(f'Text: "{TEXT}"@{EN_US}')
     print('-----------------------------------------------------------------------------------------------------------')
     for e in entities:
         print_entity(e, idx, user_token, knowledge_client)
@@ -547,12 +538,14 @@ The sample shows, how access to entities can be shared with a group of users or 
 
 ```python
 import argparse
+from typing import List
 
-from knowledge.base.entity import LanguageCode, Label, Description
+from knowledge.base.entity import Label, Description
+from knowledge.base.language import EN_US, DE_DE, JA_JP
 from knowledge.base.ontology import OntologyClassReference, ThingObject
 from knowledge.services.base import WacomServiceException
 from knowledge.services.graph import WacomKnowledgeService
-from knowledge.services.group import GroupManagementServiceAPI, Group
+from knowledge.services.group import GroupManagementService, Group
 from knowledge.services.users import UserManagementServiceAPI
 
 # ------------------------------- User credential ----------------------------------------------------------------------
@@ -569,15 +562,15 @@ def create_entity() -> ThingObject:
     """
     # Main labels for entity
     topic_labels: List[Label] = [
-        Label('Hidden', LanguageCode('en_US')),
-        Label('Versteckt', LanguageCode('de_DE')),
-        Label('隠れた', LanguageCode('ja_JP'))
+        Label('Hidden', EN_US),
+        Label('Versteckt', DE_DE),
+        Label('隠れた', JA_JP),
     ]
 
     # Topic description
     topic_description: List[Description] = [
-        Description('Hidden entity to explain access management.', LanguageCode('en_US')),
-        Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
+        Description('Hidden entity to explain access management.', EN_US),
+        Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', DE_DE)
     ]
     # Topic
     topic_object: ThingObject = ThingObject(label=topic_labels, concept_type=TOPIC_CLASS, description=topic_description)
@@ -586,9 +579,9 @@ def create_entity() -> ThingObject:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Private Knowledge.",
+    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
-    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Private Knowledge.",
+    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
     parser.add_argument("-i", "--instance", default='https://private-knowledge.wacom.com',
                         help="URL of instance")
@@ -601,7 +594,7 @@ if __name__ == '__main__':
     # User Management
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=args.instance)
     # Group Management
-    group_management: GroupManagementServiceAPI = GroupManagementServiceAPI(service_url=args.instance)
+    group_management: GroupManagementService = GroupManagementService(service_url=args.instance)
     admin_token, refresh_token, expiration_time = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     # Now, we create a users
     u1, u1_token, _, _ = user_management.create_user(TENANT_KEY, "u1")
@@ -610,56 +603,66 @@ if __name__ == '__main__':
 
     # Now, let's create an entity
     thing: ThingObject = create_entity()
-    entity_uri: str = knowledge_client.create_entity(u1_token, thing)
+    entity_uri: str = knowledge_client.create_entity(thing, auth_key=u1_token)
     # Only user 1 can access the entity from cloud storage
-    my_thing: ThingObject = knowledge_client.entity(u1_token, entity_uri)
+    my_thing: ThingObject = knowledge_client.entity(entity_uri, auth_key=u1_token)
     print(f'User is the owner of {my_thing.owner}')
     # Now only user 1 has access to the personal entity
-    knowledge_client.entity(u1_token, entity_uri)
+    knowledge_client.entity(entity_uri, auth_key=u1_token)
     # Try to access the entity
     try:
-        knowledge_client.entity(u2_token, entity_uri)
+        knowledge_client.entity(entity_uri, auth_key=u2_token)
     except WacomServiceException as we:
         print(f"Expected exception as user 2 has no access to the personal entity of user 1. Exception: {we}")
+        print(f"Status code: {we.status_code}")
+        print(f"Response text: {we.service_response}")
     # Try to access the entity
     try:
-        knowledge_client.entity(u3_token, entity_uri)
+        knowledge_client.entity(entity_uri, auth_key=u3_token)
     except WacomServiceException as we:
         print(f"Expected exception as user 3 has no access to the personal entity of user 1. Exception: {we}")
     # Now, user 1 creates a group
-    g: Group = group_management.create_group(u1_token, "test-group")
+    g: Group = group_management.create_group("test-group", auth_key=u1_token)
     # Shares the join key with user 2 and user 2 joins
-    group_management.join_group(u2_token, g.id, g.join_key)
+    group_management.join_group(g.id, g.join_key, auth_key=u2_token)
     # Share entity with group
-    group_management.add_entity_to_group(u1_token, g.id, entity_uri)
+    group_management.add_entity_to_group(g.id, entity_uri, auth_key=u1_token)
     # Now, user 2 should have access
-    other_thing: ThingObject = knowledge_client.entity(u2_token, entity_uri)
+    other_thing: ThingObject = knowledge_client.entity(entity_uri, auth_key=u2_token)
     print(f'User 2 is the owner of the thing: {other_thing.owner}')
     # Try to access the entity
     try:
-        knowledge_client.entity(u3_token, entity_uri)
+        knowledge_client.entity(entity_uri, auth_key=u3_token)
     except WacomServiceException as we:
         print(f"Expected exception as user 3 still has no access to the personal entity of user 1. Exception: {we}")
+        print(f"URL: {we.url}, method: {we.method}")
+        print(f"Status code: {we.status_code}")
+        print(f"Response text: {we.service_response}")
+        print(f"Message: {we.message}")
     # Un-share the entity
-    group_management.remove_entity_to_group(u1_token, g.id, entity_uri)
+    group_management.remove_entity_to_group(g.id, entity_uri, auth_key=u1_token)
     # Now, again no access
     try:
-        knowledge_client.entity(u2_token, entity_uri)
+        knowledge_client.entity(entity_uri, auth_key=u2_token)
     except WacomServiceException as we:
         print(f"Expected exception as user 2 has no access to the personal entity of user 1. Exception: {we}")
-    group_management.leave_group(u2_token, group_id=g.id)
+        print(f"URL: {we.url}, method: {we.method}")
+        print(f"Status code: {we.status_code}")
+        print(f"Response text: {we.service_response}")
+        print(f"Message: {we.message}")
+    group_management.leave_group(group_id=g.id, auth_key=u2_token)
     # Now, share the entity with the whole tenant
     my_thing.tenant_access_right.read = True
-    knowledge_client.update_entity(u1_token, my_thing)
+    knowledge_client.update_entity(my_thing, auth_key=u1_token)
     # Now, all users can access the entity
-    knowledge_client.entity(u2_token, entity_uri)
-    knowledge_client.entity(u3_token, entity_uri)
+    knowledge_client.entity(entity_uri, auth_key=u2_token)
+    knowledge_client.entity(entity_uri, auth_key=u3_token)
     # Finally, clean up
-    knowledge_client.delete_entity(u1_token, entity_uri, force=True)
+    knowledge_client.delete_entity(entity_uri, force=True, auth_key=u1_token)
     # Remove users
-    user_management.delete_user(TENANT_KEY, u1.external_user_id, u1.id)
-    user_management.delete_user(TENANT_KEY, u2.external_user_id, u2.id)
-    user_management.delete_user(TENANT_KEY, u3.external_user_id, u3.id)
+    user_management.delete_user(TENANT_KEY, u1.external_user_id, u1.id, force=True)
+    user_management.delete_user(TENANT_KEY, u2.external_user_id, u2.id, force=True)
+    user_management.delete_user(TENANT_KEY, u3.external_user_id, u3.id, force=True)
 
 ```
 
@@ -668,28 +671,17 @@ if __name__ == '__main__':
 The samples show how the ontology can be extended and new entities can be added using the added classes.
 
 ```python
-# -*- coding: utf-8 -*-
-# Copyright © 2021-2022 Wacom Authors. All Rights Reserved.
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language_code governing permissions and
-#  limitations under the License.
 import argparse
-from typing import Optional
+import sys
+from typing import Optional, List
 
-from knowledge.base.entity import Label, LanguageCode, Description
+from knowledge.base.entity import Label, Description
+from knowledge.base.language import EN_US, DE_DE
 from knowledge.base.ontology import DataPropertyType, OntologyClassReference, OntologyPropertyReference, ThingObject, \
     DataProperty, OntologyContext
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
+from knowledge.services.session import PermanentSession
 
 # ------------------------------- Constants ----------------------------------------------------------------------------
 LEONARDO_DA_VINCI: str = 'Leonardo da Vinci'
@@ -714,18 +706,18 @@ def create_artist() -> ThingObject:
     """
     # Main labels for entity
     topic_labels: List[Label] = [
-        Label('Gian Giacomo Caprotti', LanguageCode('en_US'))
+        Label('Gian Giacomo Caprotti', EN_US),
     ]
 
     # Topic description
     topic_description: List[Description] = [
-        Description('Hidden entity to explain access management.', LanguageCode('en_US')),
-        Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', LanguageCode('de_DE'))
+        Description('Hidden entity to explain access management.', EN_US),
+        Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', DE_DE)
     ]
 
     data_property: DataProperty = DataProperty(content='Salaj',
                                                property_ref=STAGE_NAME,
-                                               language_code=LanguageCode('en_US'))
+                                               language_code=EN_US)
     # Topic
     artist: ThingObject = ThingObject(label=topic_labels, concept_type=ARTIST_TYPE, description=topic_description)
     artist.add_data_property(data_property)
@@ -734,9 +726,9 @@ def create_artist() -> ThingObject:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Private Knowledge.",
+    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
-    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Private Knowledge.",
+    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
                         required=True)
     parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
@@ -744,37 +736,41 @@ if __name__ == '__main__':
     EXTERNAL_USER_ID: str = args.user
     # Wacom Ontology REST API Client
     ontology_client: OntologyService = OntologyService(service_url=args.instance)
-    admin_token, refresh_token, expiration_time = ontology_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
         application_name="Ontology Creation Demo",
         service_url=args.instance)
-    context: Optional[OntologyContext] = ontology_client.context(admin_token)
+    # Login as admin user
+    session: PermanentSession = ontology_client.login(TENANT_KEY, EXTERNAL_USER_ID)
+    if session.roles != "TenantAdmin":
+        print(f'User {EXTERNAL_USER_ID} is not an admin user.')
+        sys.exit(1)
+    knowledge_client.use_session(session.id)
+    knowledge_client.ontology_update()
+    context: Optional[OntologyContext] = ontology_client.context()
     if context is None:
         # First, create a context for the ontology
-        ontology_client.create_context(admin_token, name=CONTEXT_NAME, base_uri=f'demo:{CONTEXT_NAME}')
+        ontology_client.create_context(name=CONTEXT_NAME, base_uri=f'demo:{CONTEXT_NAME}')
         context_name: str = CONTEXT_NAME
     else:
         context_name: str = context.context
     # Creating a class which is a subclass of a person
-    ontology_client.create_concept(admin_token, context_name, reference=ARTIST_TYPE, subclass_of=PERSON_TYPE)
+    ontology_client.create_concept(context_name, reference=ARTIST_TYPE, subclass_of=PERSON_TYPE)
 
     # Object properties
-    ontology_client.create_object_property(auth_key=admin_token, context=context_name,
-                                           reference=IS_INSPIRED_BY, domains_cls=[ARTIST_TYPE],
+    ontology_client.create_object_property(context=context_name, reference=IS_INSPIRED_BY, domains_cls=[ARTIST_TYPE],
                                            ranges_cls=[PERSON_TYPE], inverse_of=None, subproperty_of=None)
     # Data properties
-    ontology_client.create_data_property(auth_key=admin_token, context=context_name,
-                                         reference=STAGE_NAME,
+    ontology_client.create_data_property(context=context_name, reference=STAGE_NAME,
                                          domains_cls=[ARTIST_TYPE],
                                          ranges_cls=[DataPropertyType.STRING],
                                          subproperty_of=None)
     # Commit the changes of the ontology. This is very important to confirm changes.
-    ontology_client.commit(admin_token, context_name)
+    ontology_client.commit(context=context_name)
     # Trigger graph service. After the update the ontology is available and the new entities can be created
-    knowledge_client.ontology_update(admin_token)
+    knowledge_client.ontology_update()
 
-    res_entities, next_search_page = knowledge_client.search_labels(auth_key=admin_token, search_term=LEONARDO_DA_VINCI,
-                                                                    language_code=LanguageCode('en_US'), limit=1000)
+    res_entities, next_search_page = knowledge_client.search_labels(search_term=LEONARDO_DA_VINCI,
+                                                                    language_code=EN_US, limit=1000)
     leo: Optional[ThingObject] = None
     for entity in res_entities:
         #  Entity must be a person and the label match with full string
@@ -783,14 +779,289 @@ if __name__ == '__main__':
             break
 
     artist_student: ThingObject = create_artist()
-    artist_student_uri: str = knowledge_client.create_entity(admin_token, artist_student)
-    knowledge_client.create_relation(admin_token, artist_student_uri, IS_INSPIRED_BY, leo.uri)
+    artist_student_uri: str = knowledge_client.create_entity(artist_student)
+    knowledge_client.create_relation(artist_student_uri, IS_INSPIRED_BY, leo.uri)
 
 ```
+
+### Asynchronous Client 
+
+The sample shows how to use the asynchronous client. 
+Most of the methods are available in the asynchronous client(s).
+Only for the ontology management the asynchronous client is not available.
+
+```python
+import argparse
+import asyncio
+import uuid
+from pathlib import Path
+from typing import Tuple, List, Dict, Any, Optional
+
+from knowledge.base.entity import Label
+from knowledge.base.language import LanguageCode, EN, SUPPORTED_LOCALES, EN_US
+from knowledge.base.ontology import ThingObject
+from knowledge.ontomapping import load_configuration
+from knowledge.ontomapping.manager import wikidata_to_thing
+from knowledge.public.relations import wikidata_relations_extractor
+from knowledge.public.wikidata import WikidataSearchResult, WikiDataAPIClient, WikidataThing
+from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
+from knowledge.services.asyncio.group import AsyncGroupManagementService
+from knowledge.services.asyncio.users import AsyncUserManagementService
+from knowledge.services.base import WacomServiceException, format_exception
+from knowledge.services.group import Group
+from knowledge.services.session import PermanentSession, RefreshableSession
+from knowledge.services.users import UserRole, User
+
+
+def import_entity_from_wikidata(search_term: str, locale: LanguageCode) -> Dict[str, ThingObject]:
+    """
+    Import entity from Wikidata.
+    Parameters
+    ----------
+    search_term: str
+        Search term
+    locale: LanguageCode
+        Language code
+
+    Returns
+    -------
+    things: Dict[str, ThingObject]
+        Mapping qid to thing object
+    """
+    search_results: List[WikidataSearchResult] = WikiDataAPIClient.search_term(search_term, locale)
+    # Load mapping configuration
+    load_configuration(Path(__file__).parent.parent / 'pkl-cache' / 'ontology_mapping.json')
+    # Search wikidata for entities
+    qid_entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities([sr.qid for sr in search_results])
+    qid_things: Dict[str, WikidataThing] = {qt.qid: qt for qt in qid_entities}
+    relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(qid_things)
+    # Now, let's create the things
+    things: Dict[str, ThingObject] = {}
+    for res in qid_entities:
+        wikidata_thing, import_warnings = wikidata_to_thing(res, all_relations=relations,
+                                                            supported_locales=SUPPORTED_LOCALES,
+                                                            pull_wikipedia=True,
+                                                            all_wikidata_objects=qid_things)
+        things[res.qid] = wikidata_thing
+    return things
+
+
+async def user_management_sample(tenant_api_key: str, instance: str) -> Tuple[User, str, str]:
+    """
+    User management sample.
+    Parameters
+    ----------
+    tenant_api_key: str
+        Session
+    instance: str
+        Instance URL
+
+    Returns
+    -------
+    user: User
+        User object
+    user_token: str
+        User token
+    refresh_token: str
+        Refresh token
+    """
+    user_management: AsyncUserManagementService = AsyncUserManagementService(
+                                                    application_name="Async user management sample",
+                                                    service_url=instance)
+    meta_data: dict = {'user-type': 'demo'}
+    user, user_token, refresh_token, _ = await user_management.create_user(tenant_key=tenant_api_key,
+                                                                           external_id=uuid.uuid4().hex,
+                                                                           meta_data=meta_data,
+                                                                           roles=[UserRole.USER])
+    return user, user_token, refresh_token
+
+
+async def clean_up(instance: str, tenant_api_key: str):
+    """
+    Clean up sample.
+    Parameters
+    ----------
+    instance: str
+        Instance URL
+    tenant_api_key: str
+        Tenant API key
+    """
+    user_management: AsyncUserManagementService = AsyncUserManagementService(
+                                                    application_name="Async user management sample",
+                                                    service_url=instance)
+    users: List[User] = await user_management.listing_users(tenant_api_key)
+    for user in users:
+        if 'user-type' in user.meta_data and user.meta_data['user-type'] == 'demo':
+            await user_management.delete_user(tenant_key=tenant_api_key, external_id=user.external_user_id,
+                                              internal_id=user.id, force=True)
+
+
+async def main(external_user_id: str, tenant_api_key: str, instance: str):
+    """
+    Main function for the async sample.
+
+    Parameters
+    ----------
+    external_user_id: str
+        External Id of the shadow user within the Wacom Personal Knowledge.
+    tenant_api_key: str
+        Tenant api key of the shadow user within the Wacom Personal Knowledge.
+    instance: str
+        URL of instance
+    """
+    async_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(application_name="Async sample",
+                                                                          service_url=instance)
+    permanent_session: PermanentSession = await async_client.login(tenant_api_key=tenant_api_key,
+                                                                   external_user_id=external_user_id)
+    """
+    The permanent session contains the external user id, the tenant id, thus it is capable to refresh the token and 
+    re-login if needed. The functions check if the token is expired and refresh it if needed. Internally, the token 
+    manager handles the session. There are three different session types:
+    - Permanent session: The session is refreshed automatically if needed.
+    - Refreshable session: The session is not refreshed automatically using the refresh token, 
+                           but if the session is not used for a day the refresh token is invalidated.
+    - Timed session: The session is only has the authentication token and no refresh token. Thus, it times out after
+                     one hour.
+    """
+    print(f'Service instance: {async_client.service_url}')
+    print('-' * 100)
+    print(f'Logged in as {permanent_session.external_user_id} (tenant id: {permanent_session.tenant_id}) ')
+    is_ten_admin: bool = permanent_session.roles == "TenantAdmin"
+    print(f'Is tenant admin: {is_ten_admin}')
+    print('-' * 100)
+    print(f'Token information')
+    print('-' * 100)
+    print(f'Refreshable: {permanent_session.refreshable}')
+    print(f'Token must be refreshed before: {permanent_session.expiration} UTC')
+    print(f'Token expires in {permanent_session.expires_in} seconds)')
+    print('-' * 100)
+    print(f'Creating two users')
+    print('-' * 100)
+    # User management sample
+    user_1, user_token_1, refresh_token_1 = await user_management_sample(tenant_api_key, instance)
+    print(f'User: {user_1}')
+    user_2, user_token_2, refresh_token_2 = await user_management_sample(tenant_api_key, instance)
+    print(f'User: {user_2}')
+    print('-' * 100)
+    async_client_user_1: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(application_name="Async user 1",
+                                                                                 service_url=instance)
+    refresh_session_1: RefreshableSession = await async_client_user_1.register_token(auth_key=user_token_1,
+                                                                                     refresh_token=refresh_token_1)
+    async_client_user_2: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(application_name="Async sample",
+                                                                                 service_url=instance)
+    await async_client_user_2.register_token(auth_key=user_token_2, refresh_token=refresh_token_2)
+    """
+    Now, let's create some entities.
+    """
+    print('Creation of entities')
+    print('-' * 100)
+    things_objects: Dict[str, ThingObject] = import_entity_from_wikidata('Leonardo da Vinci', EN)
+    created: List[ThingObject] = await async_client_user_1.create_entity_bulk(list(things_objects.values()))
+    for thing in created:
+        try:
+            await async_client_user_2.entity(thing.uri)
+        except WacomServiceException as we:
+            print(f'User 2 cannot see entity {thing.uri}.\n{format_exception(we)}')
+
+    # Now using the group management service
+    group_management: AsyncGroupManagementService = AsyncGroupManagementService(application_name="Group management",
+                                                                                service_url=instance)
+    await group_management.use_session(refresh_session_1.id)
+    # User 1 creates a group
+    new_group: Group = await group_management.create_group("sample-group")
+    for thing in created:
+        try:
+            await group_management.add_entity_to_group(new_group.id, thing.uri)
+        except WacomServiceException as we:
+            print(f'User 1 cannot delete entity {thing.uri}.\n{format_exception(we)}')
+    await group_management.add_user_to_group(new_group.id, user_2.id)
+    print(f'User 2 can see the entities now. Let us check with async client 2. '
+          f'Id of the user: {async_client_user_2.current_session.external_user_id}')
+    for thing in created:
+        iter_thing: ThingObject = await async_client_user_2.entity(thing.uri)
+        label: Optional[Label] = iter_thing.label_lang(EN_US)
+        print(f'User 2 can see entity {label.content if label else "UNKNOWN"} {iter_thing.uri}.'
+              f'Ownership: owner flag:={iter_thing.owner}, owner is {iter_thing.owner_id}.')
+    print('-' * 100)
+    await clean_up(instance=instance, tenant_api_key=tenant_api_key)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
+                        required=True)
+    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
+                        required=True)
+    parser.add_argument("-i", "--instance", default='https://private-knowledge.wacom.com',
+                        help="URL of instance")
+    args = parser.parse_args()
+    asyncio.run(main(args.user, args.tenant, args.instance))
+```
+
+
 
 ## Tools
 
 The following samples show how to utilize the library to work with Wacom's Personal Knowledge.
+
+### Tenant creation
+
+The script `setup_tenant.py` creates a tenant with a user and an ontology. 
+It takes a JSON configuration file as input. Here's an example of a configuration file:
+
+```json
+{
+  "service": {
+    "url": "<URL-OF-DEPLOYMENT>"
+  },
+  "tenant": {
+    "api_key": "<TENANT-API-KEY>"
+  },
+  "users": [
+    {
+      "external_id": "<ADMIN-EXTERNAL-ID>",
+      "role": "tenantadmin",
+      "meta_data": {
+        "user_type": "system"
+      }
+    },
+    {
+      "external_id": "<USER-EXTERNAL-ID>",
+      "role": "user",
+      "meta_data": {
+        "user_type": "system",
+        "description": "This is a user created by the system"
+      }
+    }
+  ],
+  "ontology": {
+    "context": "<CORE-NAME>",
+    "schema": "<SCHEMA>"
+  }
+}
+```
+
+This JSON configuration is designed to set up a tenant for a private knowledge system. 
+It specifies the service URL, tenant API key, users, and initial ontology for the knowledge graph. 
+Here's a breakdown of its structure:
+
+1. **service**: This section contains information about the service deployment.
+   - `url`: The URL of the deployment.
+
+2. **tenant**: This section includes details specific to the tenant.
+   - `api_key`: The API key for the tenant.
+
+3. **users**: This array holds information about users who will have access to the tenant. Each user has the following fields:
+   - `external_id`: A unique identifier for the user.
+   - `role`: Defines the user's role within the tenant. Possible roles include "tenantadmin" for administrative access and "user" for general user access.
+   - `meta_data`: Additional information about the user. 
+     - `user_type`: Specifies the type of user, e.g., "system".
+     - `description` (optional): Provides a description of the user, particularly useful for system-created users.
+
+4. **ontology**: This section defines the initial setup of the knowledge graph.
+   - `context`: The context of the ontology, e.g., "core".
+   - `schema`: Specifies the schema to be used, e.g., "company".
+
 
 ### Listing script
 
@@ -850,7 +1121,6 @@ Pushing entities to knowledge graph.
 usage: wikidata_scrapper.py [-h] -u USER -t TENANT [-i INSTANCE] [-c CACHE]
                             [-m MAPPING] [-d DEPTH]
                             [-l LANGUAGES [LANGUAGES ...]]
-wikidata_scrapper.py: error: the following arguments are required: -u/--user, -t/--tenant
 ```
 
 **Parameters:**
@@ -862,6 +1132,17 @@ wikidata_scrapper.py: error: the following arguments are required: -u/--user, -t
 - _-m MAPPING, --mapping MAPPING_ - Mapping file to configure the wikidata mapping.
 - _-d DEPTH, --depth DEPTH_ - Depth of the graph to be scrapped.
 - _-l LANGUAGES [LANGUAGES ...], --languages LANGUAGES [LANGUAGES ...]_ - Languages to be scrapped.
+
+### Wikidata search 
+
+```bash
+usage: wikidata_search.py [-h] [-t TERM] [-l LANGUAGE]
+```
+
+**Parameters:**
+
+- _-t TERM, --term TERM_ - Search term.
+- _-l LANGUAGE, --language LANGUAGE_ - Language code
   
 # Documentation
 
