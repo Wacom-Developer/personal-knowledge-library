@@ -12,15 +12,14 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from knowledge.base.access import TenantAccessRight
-from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, IMAGE_TAG, \
-    DESCRIPTION_TAG, TYPE_TAG, URI_TAG, LABELS_TAG, IS_MAIN_TAG, DESCRIPTIONS_TAG, RELATIONS_TAG, SEND_TO_NEL_TAG, \
-    LOCALE_TAG, EntityStatus, Label, Description, URIS_TAG, FORCE_TAG
+from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, DESCRIPTION_TAG, TYPE_TAG, URI_TAG, \
+    LABELS_TAG, IS_MAIN_TAG, DESCRIPTIONS_TAG, RELATIONS_TAG, SEND_TO_NEL_TAG, \
+    LOCALE_TAG, EntityStatus, Label, URIS_TAG, FORCE_TAG
 from knowledge.base.language import LocaleCode, SUPPORTED_LOCALES
 from knowledge.base.ontology import DataProperty, OntologyPropertyReference, ThingObject, OntologyClassReference, \
     ObjectProperty, EN_US
-from knowledge.services import AUTHORIZATION_HEADER_FLAG, GROUP_IDS_TAG, OWNER_ID_TAG, \
-    TENANT_RIGHTS_TAG, APPLICATION_JSON_HEADER, RELATION_TAG, TARGET, ACTIVATION_TAG, PREDICATE, OBJECT, SUBJECT, \
+from knowledge.services import AUTHORIZATION_HEADER_FLAG, TENANT_RIGHTS_TAG, APPLICATION_JSON_HEADER, RELATION_TAG, \
+    TARGET, ACTIVATION_TAG, PREDICATE, OBJECT, SUBJECT, \
     LIMIT_PARAMETER, ESTIMATE_COUNT, VISIBILITY_TAG, NEXT_PAGE_ID_TAG, LISTING, TOTAL_COUNT, SEARCH_TERM, \
     LANGUAGE_PARAMETER, TYPES_PARAMETER, LIMIT, VALUE, LITERAL_PARAMETER, SEARCH_PATTERN_PARAMETER, SUBJECT_URI, \
     RELATION_URI, OBJECT_URI, DEFAULT_TIMEOUT
@@ -155,29 +154,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                     pref_label.append(Label.create_from_dict(label))
                 else:  # Alias
                     aliases.append(Label.create_from_dict(label))
-            # Create ThingObject
-            thing: ThingObject = ThingObject(label=pref_label, icon=e[IMAGE_TAG],
-                                             description=[Description.create_from_dict(d) for d in e[DESCRIPTIONS_TAG]],
-                                             concept_type=OntologyClassReference.parse(e[TYPE_TAG]),
-                                             uri=e[URI_TAG])
-            thing.group_ids = e.get(GROUP_IDS_TAG, [])
-            thing.owner_id = e.get(OWNER_ID_TAG)
-            thing.use_for_nel = e.get(SEND_TO_NEL_TAG, False)
-            # Set the alias
-            thing.alias = aliases
-            # Configure data properties
-            if DATA_PROPERTIES_TAG in e:
-                for data_property in e[DATA_PROPERTIES_TAG]:
-                    data_property_type: OntologyPropertyReference = \
-                        OntologyPropertyReference.parse(data_property[DATA_PROPERTY_TAG])
-                    language_code: LocaleCode = LocaleCode(data_property[LOCALE_TAG])
-                    value: str = data_property[VALUE_TAG]
-                    thing.add_data_property(DataProperty(value, data_property_type, language_code))
-            # Tenant rights
-            if TENANT_RIGHTS_TAG in e:
-                thing.tenant_access_right = TenantAccessRight.parse(e[TENANT_RIGHTS_TAG])
-            else:
-                thing.tenant_access_right = TenantAccessRight()
+            thing: ThingObject = ThingObject.from_dict(e)
             return thing
         raise handle_error(f'Retrieving of entity content failed. URI:={uri}.', response)
 
@@ -351,7 +328,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             payload[TENANT_RIGHTS_TAG] = entity.tenant_access_right.to_list()
         return payload
 
-    def create_entity_bulk(self, entities: List[ThingObject], batch_size: int = 10, auth_key: Optional[str] = None) \
+    def create_entity_bulk(self, entities: List[ThingObject], batch_size: int = 10, ignore_images: bool = False,
+                           auth_key: Optional[str] = None) \
             -> List[ThingObject]:
         """
         Creates entity in graph.
@@ -362,13 +340,15 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Entities
         batch_size: int
             Batch size
+        ignore_images: bool
+            Ignore images
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
         Returns
         -------
-        uri: str
-            URI of entity
+        things: List[ThingObject]
+            List of entities with URI
 
         Raises
         ------
@@ -390,9 +370,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                                verify=self.verify_calls)
             if response.ok:
                 response_dict: Dict[str, Any] = response.json()
+
                 for idx, uri in enumerate(response_dict[URIS_TAG]):
-                    if entities[bulk_idx + idx].image is not None and entities[bulk_idx + idx].image != '':
-                        self.set_entity_image_url(auth_key, uri, entities[bulk_idx + idx].image)
+                    if entities[bulk_idx + idx].image is not None and entities[bulk_idx + idx].image != '' \
+                            and not ignore_images:
+                        self.set_entity_image_url(uri, entities[bulk_idx + idx].image, auth_key=auth_key)
                     entities[bulk_idx + idx].uri = response_dict[URIS_TAG][idx]
             else:
                 raise handle_error('Pushing entity failed.', response)
@@ -1226,7 +1208,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                     _, file_extension = os.path.splitext(file_name.lower())
                     if file_extension not in MIME_TYPE:
                         raise handle_error('Creation of entity image failed. Mime-type cannot be identified or is not '
-                                     'supported.', response)
+                                           'supported.', response)
                     mime_type = MIME_TYPE[file_extension]
 
                 return self.set_entity_image(entity_uri, image_bytes, file_name, mime_type, auth_key=auth_key)

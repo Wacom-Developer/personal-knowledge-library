@@ -10,20 +10,19 @@ from urllib.parse import urlparse
 import aiohttp
 import orjson
 
-from knowledge.base.access import TenantAccessRight
-from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, IMAGE_TAG, \
-    DESCRIPTION_TAG, TYPE_TAG, URI_TAG, LABELS_TAG, IS_MAIN_TAG, DESCRIPTIONS_TAG, RELATIONS_TAG, SEND_TO_NEL_TAG, \
-    LOCALE_TAG, EntityStatus, Label, Description, URIS_TAG, FORCE_TAG, TENANT_RIGHTS_TAG, VISIBILITY_TAG, \
-    RELATION_TAG, OWNER_ID_TAG, TEXT_TAG
+from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, DESCRIPTION_TAG, TYPE_TAG, URI_TAG, \
+    LABELS_TAG, IS_MAIN_TAG, DESCRIPTIONS_TAG, RELATIONS_TAG, SEND_TO_NEL_TAG, \
+    LOCALE_TAG, EntityStatus, Label, URIS_TAG, FORCE_TAG, TENANT_RIGHTS_TAG, VISIBILITY_TAG, \
+    RELATION_TAG, TEXT_TAG
 from knowledge.base.language import LocaleCode, EN_US, SUPPORTED_LOCALES
 from knowledge.base.ontology import DataProperty, OntologyPropertyReference, ThingObject, OntologyClassReference, \
     ObjectProperty
 from knowledge.nel.base import KnowledgeGraphEntity, EntityType, KnowledgeSource, EntitySource
+from knowledge.services import AUTHORIZATION_HEADER_FLAG
 from knowledge.services import SUBJECT_URI, RELATION_URI, OBJECT_URI, LANGUAGE_PARAMETER, LIMIT, \
     LISTING, TOTAL_COUNT, SEARCH_TERM, TYPES_PARAMETER, APPLICATION_JSON_HEADER, SUBJECT, OBJECT, PREDICATE, \
     LIMIT_PARAMETER, ESTIMATE_COUNT, TARGET, ACTIVATION_TAG, SEARCH_PATTERN_PARAMETER, LITERAL_PARAMETER, VALUE, \
-    GROUP_IDS_TAG, NEXT_PAGE_ID_TAG, ENTITIES_TAG, RESULT_TAG, EXACT_MATCH
-from knowledge.services import AUTHORIZATION_HEADER_FLAG
+    NEXT_PAGE_ID_TAG, ENTITIES_TAG, RESULT_TAG, EXACT_MATCH
 from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, USER_AGENT_HEADER_FLAG, \
     CONTENT_TYPE_HEADER_FLAG, DEFAULT_TIMEOUT, format_exception
@@ -115,32 +114,10 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                         else:  # Alias
                             aliases.append(Label.create_from_dict(label))
                     # Create ThingObject
-                    thing: ThingObject = ThingObject(label=pref_label, icon=e[IMAGE_TAG],
-                                                     description=[Description.create_from_dict(d) for d in
-                                                                  e[DESCRIPTIONS_TAG]],
-                                                     concept_type=OntologyClassReference.parse(e[TYPE_TAG]),
-                                                     uri=e[URI_TAG])
-                    thing.group_ids = e.get(GROUP_IDS_TAG, [])
-                    thing.owner_id = e.get(OWNER_ID_TAG)
-                    thing.use_for_nel = e.get(SEND_TO_NEL_TAG, False)
-                    # Set the alias
-                    thing.alias = aliases
-                    # Configure data properties
-                    if DATA_PROPERTIES_TAG in e:
-                        for data_property in e[DATA_PROPERTIES_TAG]:
-                            data_property_type: OntologyPropertyReference = \
-                                OntologyPropertyReference.parse(data_property[DATA_PROPERTY_TAG])
-                            language_code: LocaleCode = data_property[LOCALE_TAG]
-                            value: str = data_property[VALUE_TAG]
-                            thing.add_data_property(DataProperty(value, data_property_type, language_code))
-                    # Tenant rights
-                    if TENANT_RIGHTS_TAG in e:
-                        thing.tenant_access_right = TenantAccessRight.parse(e[TENANT_RIGHTS_TAG])
-                    else:
-                        thing.tenant_access_right = TenantAccessRight()
+                    thing: ThingObject = ThingObject.from_dict(e)
                     return thing
             raise await handle_error(f'Retrieving of entity content failed. URI:={uri}.',
-                               response, headers=headers)
+                                     response, headers=headers)
 
     async def set_entity_image_local(self, entity_uri: str, path: Path, auth_key: Optional[str] = None) -> str:
         """Setting the image of the entity.
