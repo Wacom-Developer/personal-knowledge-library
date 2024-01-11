@@ -181,9 +181,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ------
         WacomServiceException
             If the graph service returns an error code
+        ValueError
+            If more than 100 entities are given
         """
         if len(uris) > 100:
-            raise WacomServiceException("Please delete less than 100 entities.")
+            raise ValueError("Please delete less than 100 entities.")
         if auth_key is None:
             auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}'
@@ -380,8 +382,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 raise handle_error('Pushing entity failed.', response)
         return entities
 
-    def create_entity(self, entity: ThingObject, auth_key: Optional[str] = None, max_retries: int = 3,
-                      backoff_factor: float = 0.1, ignore_image: bool = False) \
+    def create_entity(self, entity: ThingObject, ignore_image: bool = False, auth_key: Optional[str] = None,
+                      max_retries: int = 3, backoff_factor: float = 0.1, timeout: int = DEFAULT_TIMEOUT) \
             -> str:
         """
         Creates entity in graph.
@@ -390,16 +392,17 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ----------
         entity: ThingObject
             Entity object that needs to be created
+        ignore_image: bool [default:= False]
+            Ignore image.
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        max_retries: int
+        max_retries: int [default:= 3]
             Maximum number of retries
-        backoff_factor: float
+        backoff_factor: float [default:= 0.1]
             A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
             second try without a delay)
-        ignore_image: bool
-            Ignore image.
-
+        timeout: int [default:= 5]
+            Timeout for the request
         Returns
         -------
         uri: str
@@ -427,7 +430,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                    backoff_factor=backoff_factor,
                                    status_forcelist=[502, 503, 504])
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(url, json=payload, headers=headers, verify=self.verify_calls, timeout=5)
+            response: Response = session.post(url, json=payload, headers=headers, verify=self.verify_calls,
+                                              timeout=timeout)
 
             if response.ok and not ignore_image:
                 uri: str = response.json()[URI_TAG]
