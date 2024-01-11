@@ -96,9 +96,8 @@ async def handle_error(message: str, response: aiohttp.ClientResponse, parameter
     """
     try:
         response_text: str = await response.text()
-    except Exception as e:
-        logging.error(f'Error while reading response text: {e}')
-        response_text: str = ""
+    except Exception as _:
+        response_text: str = ''
     return WacomServiceException(message,
                                  method=response.method,
                                  url=response.url.human_repr(),
@@ -226,7 +225,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         # Refresh token if needed
         if (self.current_session.refreshable and
                 (self.current_session.expires_in < force_refresh_timeout or force_refresh)):
-            auth_key, refresh_token, _ = self.refresh_token(self.current_session.refresh_token)
+            auth_key, refresh_token, _ = await self.refresh_token(self.current_session.refresh_token)
             self.current_session.refresh_session(auth_key, refresh_token)
             return auth_key, refresh_token
         return self.current_session.auth_token, self.current_session.refresh_token
@@ -330,7 +329,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         }
         async with self.__async_session__() as session:
             async with session.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT,
-                                    verify=self.verify_calls) as response:
+                                    verify_ssl=self.verify_calls) as response:
                 if response.ok:
                     response_token: Dict[str, str] = await response.json()
                     try:
