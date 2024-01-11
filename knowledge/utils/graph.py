@@ -229,3 +229,48 @@ async def async_things_iter(async_client: AsyncWacomKnowledgeService, user_token
             user_token, refresh_token = await async_client.handle_token(force_refresh_timeout=force_refresh_timeout)
             if obj.owner or not only_own:
                 yield obj, user_token, refresh_token
+
+
+async def async_things_session_iter(async_client: AsyncWacomKnowledgeService,
+                                    concept_type: OntologyClassReference,
+                                    visibility: Optional[Visibility] = None, locale: Optional[LocaleCode] = None,
+                                    only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360) \
+        -> AsyncIterator[Tuple[ThingObject, str, str]]:
+    """
+    Asynchronous iterator over all things of a given type using session.
+
+    Parameters
+    ----------
+    async_client: AsyncWacomKnowledgeService
+        The Wacom Knowledge Service
+    concept_type: OntologyClassReference
+        The class type
+    visibility: Optional[Visibility] [default:= None]
+        The visibility
+    locale: Optional[LocaleCode] [default:= None]
+        Only entities with this labels having a given locale
+    only_own: bool [default:= False]
+        Only own things
+    fetch_size: int [default:= 100]
+        Fetch size.
+    force_refresh_timeout: int [default:= 360]
+        Force refresh timeout
+
+    Returns
+    -------
+    AsyncIterator[ThingObject]
+        Asynchronous Iterator of things
+    """
+    next_page_id: Optional[str] = None
+    if async_client.current_session is None:
+        raise ValueError("No session configured for client")
+
+    while True:
+        things, _, next_page_id = await async_client.listing(concept_type, visibility=visibility, locale=locale,
+                                                             limit=fetch_size, page_id=next_page_id)
+        if len(things) == 0:
+            return
+        for obj in things:
+            await async_client.handle_token(force_refresh_timeout=force_refresh_timeout)
+            if obj.owner or not only_own:
+                yield obj
