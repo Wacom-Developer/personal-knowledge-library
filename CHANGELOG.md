@@ -1,3 +1,8 @@
+2024/01/11 - RELEASE 2.0.2
+==========================
+- Adding new helper functions
+- Fix issue with refresh in async client
+
 2024/01/09 - RELEASE 2.0.1
 ==========================
 - Adding missing dependency
