@@ -152,23 +152,24 @@ Classes
         WacomServiceException
             If the graph service returns an error code, and activation failed.
 
-    `create_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: Optional[str] = None, max_retries: int = 3, backoff_factor: float = 0.1, ignore_image: bool = False) ‑> str`
+    `create_entity(self, entity: knowledge.base.ontology.ThingObject, ignore_image: bool = False, auth_key: Optional[str] = None, max_retries: int = 3, backoff_factor: float = 0.1, timeout: int = 60) ‑> str`
     :   Creates entity in graph.
         
         Parameters
         ----------
         entity: ThingObject
             Entity object that needs to be created
+        ignore_image: bool [default:= False]
+            Ignore image.
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        max_retries: int
+        max_retries: int [default:= 3]
             Maximum number of retries
-        backoff_factor: float
+        backoff_factor: float [default:= 0.1]
             A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
             second try without a delay)
-        ignore_image: bool
-            Ignore image.
-        
+        timeout: int [default:= 5]
+            Timeout for the request
         Returns
         -------
         uri: str
@@ -244,6 +245,8 @@ Classes
         ------
         WacomServiceException
             If the graph service returns an error code
+        ValueError
+            If more than 100 entities are given
 
     `delete_entity(self, uri: str, force: bool = False, auth_key: Optional[str] = None, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Deletes an entity.

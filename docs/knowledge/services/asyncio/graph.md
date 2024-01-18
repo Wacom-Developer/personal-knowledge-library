@@ -168,22 +168,24 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `delete_entities(self, auth_key: str, uris: List[str], force: bool = False)`
+    `delete_entities(self, uris: List[str], force: bool = False, auth_key: Optional[str] = None)`
     :   Delete a list of entities.
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         uris: List[str]
             List of URI of entities. **Remark:** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
+        auth_key: Optional[str]
+            Use a different auth key than the one from the client
         
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code
+        ValueError
+            If more than 100 entities are given
 
     `delete_entity(self, uri: str, force: bool = False, auth_key: Optional[str] = None)`
     :   Deletes an entity.
@@ -546,14 +548,12 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `set_entity_image(self, auth_key: str, entity_uri: str, image_byte: bytes, file_name: str = 'icon.jpg', mime_type: str = 'image/jpeg') ‑> str`
+    `set_entity_image(self, entity_uri: str, image_byte: bytes, file_name: str = 'icon.jpg', mime_type: str = 'image/jpeg', auth_key: Optional[str] = None) ‑> str`
     :   Setting the image of the entity.
         The image for the URL is downloaded and then pushed to the backend.
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user
         entity_uri: str
             URI of the entity.
         image_byte: bytes
@@ -562,7 +562,8 @@ Classes
             Name of  the file. If None the name is extracted from URL.
         mime_type: str [default:=None]
             Mime type.
-        
+        auth_key: Optional[str] [default:=None]
+            Auth key from user if not set, the client auth key will be used
         Returns
         -------
         image_id: str

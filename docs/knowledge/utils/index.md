@@ -5,4 +5,5 @@ Module knowledge.utils
 Sub-modules
 -----------
 * knowledge.utils.graph
+* knowledge.utils.wikidata
 * knowledge.utils.wikipedia

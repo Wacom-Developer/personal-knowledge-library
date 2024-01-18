@@ -62,6 +62,32 @@ Functions
         Asynchronous Iterator of things
 
     
+`async_things_session_iter(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: Optional[knowledge.services.graph.Visibility] = None, locale: Optional[knowledge.base.language.LocaleCode] = None, only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360) ‑> AsyncIterator[Tuple[knowledge.base.ontology.ThingObject, str, str]]`
+:   Asynchronous iterator over all things of a given type using session.
+    
+    Parameters
+    ----------
+    async_client: AsyncWacomKnowledgeService
+        The Wacom Knowledge Service
+    concept_type: OntologyClassReference
+        The class type
+    visibility: Optional[Visibility] [default:= None]
+        The visibility
+    locale: Optional[LocaleCode] [default:= None]
+        Only entities with this labels having a given locale
+    only_own: bool [default:= False]
+        Only own things
+    fetch_size: int [default:= 100]
+        Fetch size.
+    force_refresh_timeout: int [default:= 360]
+        Force refresh timeout
+    
+    Returns
+    -------
+    AsyncIterator[ThingObject]
+        Asynchronous Iterator of things
+
+    
 `count_things(wacom_client: knowledge.services.graph.WacomKnowledgeService, user_token: str, concept_type: knowledge.base.ontology.OntologyClassReference, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None) ‑> int`
 :   Counts the number of things.
     
@@ -118,7 +144,7 @@ Functions
         Iterator of things
 
     
-`things_session_iter(wacom_client: knowledge.services.graph.WacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: Optional[knowledge.services.graph.Visibility] = None, locale: Optional[knowledge.base.language.LocaleCode] = None, only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360) ‑> Iterator[Tuple[knowledge.base.ontology.ThingObject, str, str]]`
+`things_session_iter(wacom_client: knowledge.services.graph.WacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: Optional[knowledge.services.graph.Visibility] = None, locale: Optional[knowledge.base.language.LocaleCode] = None, only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360) ‑> Iterator[knowledge.base.ontology.ThingObject]`
 :   Iterates over all things using the current session configured for client.
     
     Parameters
