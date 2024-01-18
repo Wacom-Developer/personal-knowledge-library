@@ -201,15 +201,13 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                     return await self.set_entity_image(auth_key, entity_uri, image_bytes, file_name, mime_type)
         raise await handle_error(f'Creation of entity image failed. URI:={entity_uri}.', response, headers=headers)
 
-    async def set_entity_image(self, auth_key: str, entity_uri: str, image_byte: bytes, file_name: str = 'icon.jpg',
-                               mime_type: str = 'image/jpeg') -> str:
+    async def set_entity_image(self, entity_uri: str, image_byte: bytes, file_name: str = 'icon.jpg',
+                               mime_type: str = 'image/jpeg', auth_key: Optional[str] = None) -> str:
         """Setting the image of the entity.
        The image for the URL is downloaded and then pushed to the backend.
 
        Parameters
        ----------
-       auth_key: str
-           Auth key from user
        entity_uri: str
            URI of the entity.
        image_byte: bytes
@@ -218,7 +216,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
            Name of  the file. If None the name is extracted from URL.
        mime_type: str [default:=None]
            Mime type.
-
+       auth_key: Optional[str] [default:=None]
+           Auth key from user if not set, the client auth key will be used
        Returns
        -------
        image_id: str
@@ -229,6 +228,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
        WacomServiceException
            If the graph service returns an error code.
        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
         headers: dict = {
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
@@ -671,7 +672,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key:
+        if auth_key is None:
             auth_key, _ = await self.handle_token()
         url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation'
         headers: dict = {
