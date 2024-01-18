@@ -1,3 +1,7 @@
+2024/01/18 - RELEASE 2.0.3
+==========================
+- Fix issue with auth token handling in async client
+
 2024/01/11 - RELEASE 2.0.2
 ==========================
 - Adding new helper functions
