@@ -40,7 +40,7 @@ def things_session_iter(wacom_client: WacomKnowledgeService,concept_type: Ontolo
                         visibility: Optional[Visibility] = None,
                         locale: Optional[LocaleCode] = None, only_own: bool = False, fetch_size: int = 100,
                         force_refresh_timeout: int = 360) \
-        -> Iterator[Tuple[ThingObject, str, str]]:
+        -> Iterator[ThingObject]:
     """
     Iterates over all things using the current session configured for client.
 
