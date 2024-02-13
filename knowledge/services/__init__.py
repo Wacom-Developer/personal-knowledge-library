@@ -54,7 +54,7 @@ DEFAULT_TOKEN_REFRESH_TIME: int = 360
 Refresh token time in seconds. 360 seconds = 6 minutes
 """
 
-__all__ = ['base', 'graph', 'ontology', 'tenant', 'users', 'USER_AGENT_HEADER_FLAG',
+__all__ = ['base', 'graph', 'ontology', 'tenant', 'users', 'search', 'USER_AGENT_HEADER_FLAG',
            'AUTHORIZATION_HEADER_FLAG', 'CONTENT_TYPE_HEADER_FLAG', 'TENANT_API_KEY', 'REFRESH_TOKEN_TAG',
            'EXPIRATION_DATE_TAG', 'ACCESS_TOKEN_TAG', 'ACTIVATION_TAG', 'SEARCH_TERM', 'LANGUAGE_PARAMETER',
            'TYPES_PARAMETER', 'LIMIT_PARAMETER', 'LITERAL_PARAMETER', 'VALUE', 'SEARCH_PATTERN_PARAMETER', 'LISTING',
