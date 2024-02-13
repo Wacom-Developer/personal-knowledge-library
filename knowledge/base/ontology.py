@@ -18,6 +18,7 @@ from knowledge.base.entity import EntityStatus, Label, Description, URI_TAG, IMA
     INCOMING_TAG, OUTGOING_TAG, COMMENT_TAG, LocalizedContent, COMMENTS_TAG
 from knowledge.base.language import EN_US, SUPPORTED_LOCALES, EN, LanguageCode, LocaleCode
 
+
 # ---------------------------------------------- Vocabulary base URI ---------------------------------------------------
 PREFIX: str = "xsd"
 BASE_URI: str = "http://www.w3.org/2001/XMLSchema#"
@@ -25,6 +26,7 @@ BASE_URI: str = "http://www.w3.org/2001/XMLSchema#"
 SUB_CLASS_OF_TAG: str = 'subClassOf'
 TENANT_ID: str = 'tenantId'
 NAME_TAG: str = "name"
+SEND_TO_NEL: str = 'sendToNEL'
 # ---------------------------------------------------- RDFLib ----------------------------------------------------------
 PREFERRED_LABEL: URIRef = URIRef('wacom:core#prefLabel')
 
@@ -1479,7 +1481,7 @@ class ThingObject(abc.ABC):
         ----------
         label: str
             Label
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         """
         self.__label.append(Label(label, language_code, True))
@@ -1501,13 +1503,13 @@ class ThingObject(abc.ABC):
         # Label with language does not exist, so create a new label
         self.add_label(value, language_code)
 
-    def remove_label(self, language_code: LanguageCode):
+    def remove_label(self, language_code: LocaleCode):
         """
         Remove label for entity if it exists for language.
 
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         """
         for idx, label in enumerate(self.label):
@@ -1600,7 +1602,7 @@ class ThingObject(abc.ABC):
         if SYSTEM_SOURCE_REFERENCE_ID in self.__data_properties:
             # The en_US is the default language for the source reference id
             for sr in self.data_properties[SYSTEM_SOURCE_REFERENCE_ID]:
-                if sr.language_code == LanguageCode('en_US'):
+                if sr.language_code == EN_US:
                     return sr.value
             if len(self.data_properties[SYSTEM_SOURCE_REFERENCE_ID]) > 0:
                 return self.data_properties[SYSTEM_SOURCE_REFERENCE_ID][0].value
@@ -1626,7 +1628,7 @@ class ThingObject(abc.ABC):
         if SYSTEM_SOURCE_REFERENCE_ID in self.__data_properties:
             # The en_US is the default language for the source reference system
             for sr in self.data_properties[SYSTEM_SOURCE_SYSTEM]:
-                if sr.language_code == LanguageCode('en_US'):
+                if sr.language_code == EN_US:
                     return sr.value
             if len(self.data_properties[SYSTEM_SOURCE_SYSTEM]) > 0:
                 return self.data_properties[SYSTEM_SOURCE_SYSTEM][0].value
@@ -1646,13 +1648,13 @@ class ThingObject(abc.ABC):
             self.__data_properties[SYSTEM_SOURCE_SYSTEM] = []
         self.__data_properties[SYSTEM_SOURCE_SYSTEM].append(DataProperty(value, SYSTEM_SOURCE_SYSTEM))
 
-    def default_source_reference_id(self, language_code: LanguageCode = LanguageCode('en_US')) -> Optional[str]:
+    def default_source_reference_id(self, language_code: LocaleCode = EN_US) -> Optional[str]:
         """
         Getting the source reference id for a certain language code.
 
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
         Returns
@@ -1666,13 +1668,13 @@ class ThingObject(abc.ABC):
                     return sr.value
         return None
 
-    def default_source_system(self, language_code: LanguageCode = LanguageCode('en_US')) -> Optional[str]:
+    def default_source_system(self, language_code: LocaleCode = EN_US) -> Optional[str]:
         """
         Getting the source system for a certain language code.
 
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
         Returns
@@ -1733,13 +1735,13 @@ class ThingObject(abc.ABC):
         # Description with language does not exist, so create a new description
         self.add_description(value, language_code)
 
-    def description_lang(self, language_code: str) -> Optional[Description]:
+    def description_lang(self, language_code: LocaleCode) -> Optional[Description]:
         """
         Get description for entity.
 
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         Returns
         -------
@@ -1751,13 +1753,13 @@ class ThingObject(abc.ABC):
                 return desc
         return None
 
-    def remove_description(self, language_code: LanguageCode):
+    def remove_description(self, language_code: LocaleCode):
         """
         Remove description for entity if it exists for language.
 
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         """
         for idx in range(len(self.description)):
@@ -1802,7 +1804,7 @@ class ThingObject(abc.ABC):
     def object_properties(self, relations: Dict[OntologyPropertyReference, ObjectProperty]):
         self.__object_properties = relations
 
-    def data_property_lang(self, data_property: OntologyPropertyReference, language_code: LanguageCode) \
+    def data_property_lang(self, data_property: OntologyPropertyReference, language_code: LocaleCode) \
             -> List[DataProperty]:
         """
         Get data property for language_code code.
@@ -1811,7 +1813,7 @@ class ThingObject(abc.ABC):
         ----------
         data_property: OntologyPropertyReference
             Data property.
-        language_code: LanguageCode
+        language_code: LocaleCode
             Requested language_code code
         Returns
         -------
@@ -1839,13 +1841,13 @@ class ThingObject(abc.ABC):
     def alias(self, alias: List[Label]):
         self.__alias = alias
 
-    def alias_lang(self, language_code: LanguageCode) -> List[Label]:
+    def alias_lang(self, language_code: LocaleCode) -> List[Label]:
         """
         Get alias for language_code code.
 
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             Requested language_code code
         Returns
         -------
@@ -1865,7 +1867,7 @@ class ThingObject(abc.ABC):
         ----------
         value: str
             Value to be set
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         """
         for a in self.alias:
@@ -2073,7 +2075,11 @@ class ThingObject(abc.ABC):
         for desc in entity[DESCRIPTIONS_TAG]:
             descriptions.append(Description.create_from_dict(desc))
 
-        use_nel: bool = entity.get(USE_NEL_TAG, True)
+        use_nel: bool = False
+        if USE_NEL_TAG in entity:
+            use_nel = entity[USE_NEL_TAG]
+        elif SEND_TO_NEL in entity:
+            use_nel = entity[SEND_TO_NEL]
         visibility: Optional[str] = entity.get(VISIBILITY_TAG)
         thing: ThingObject = ThingObject(label=labels, icon=entity[IMAGE_TAG], description=descriptions,
                                          uri=entity[URI_TAG],
