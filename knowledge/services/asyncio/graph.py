@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2024 Wacom. All rights reserved.
+# Copyright © 2024-present Wacom. All rights reserved.
 import logging
 import os
 import urllib
@@ -149,7 +149,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             file_name: str = str(path.absolute())
             _, file_extension = os.path.splitext(file_name.lower())
             mime_type = MIME_TYPE[file_extension]
-            return await self.set_entity_image(auth_key, entity_uri, image_bytes, file_name, mime_type)
+            return await self.set_entity_image(entity_uri, image_bytes, file_name, mime_type, auth_key=auth_key)
 
     async def set_entity_image_url(self, entity_uri: str, image_url: str, file_name: Optional[str] = None,
                                    mime_type: Optional[str] = None, auth_key: Optional[str] = None) -> str:
@@ -198,7 +198,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                                                         'identified or is not supported.')
                         mime_type = MIME_TYPE[file_extension]
 
-                    return await self.set_entity_image(auth_key, entity_uri, image_bytes, file_name, mime_type)
+                    return await self.set_entity_image(entity_uri, image_bytes, file_name, mime_type, auth_key=auth_key)
         raise await handle_error(f'Creation of entity image failed. URI:={entity_uri}.', response, headers=headers)
 
     async def set_entity_image(self, entity_uri: str, image_byte: bytes, file_name: str = 'icon.jpg',
@@ -621,7 +621,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         ----------
         uri: str
             Entity URI of the source
-        locale: str
+        locale: LocaleCode [default:=EN_US]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str] [default:=None]
             Use a different auth key than the one from the client
