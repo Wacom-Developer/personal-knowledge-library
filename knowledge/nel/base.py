@@ -416,8 +416,10 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
         Verifies all HTTPS calls and the associated certificate.
     """
 
-    def __init__(self, service_url: str = str, supported_languages: List[str] = None, verify_calls: bool = False):
+    def __init__(self, service_url: str, provider: str = "external", supported_languages: List[str] = None,
+                 verify_calls: bool = False):
         super().__init__(service_url=service_url, verify_calls=verify_calls)
+        self.__provider: str = provider
         self.__supported_languages: List[str] = supported_languages if supported_languages else []
 
     @abc.abstractmethod
@@ -459,6 +461,11 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
             Flag if this language_code code is supported
         """
         return language_code in self.supported_language
+
+    @property
+    def provider(self) -> str:
+        """Provider of the service."""
+        return self.__provider
 
     def __repr__(self):
         return f'Public Entity Linking:= {self.service_url}'
