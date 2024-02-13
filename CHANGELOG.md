@@ -1,3 +1,8 @@
+2024/02/13 - RELEASE 2.1.0
+==========================
+- Fix some minor issues for auth token handling with image 
+- Adding implementation for vector search 
+
 2024/01/18 - RELEASE 2.0.3
 ==========================
 - Fix issue with auth token handling in async client
