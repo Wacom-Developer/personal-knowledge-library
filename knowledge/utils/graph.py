@@ -235,7 +235,7 @@ async def async_things_session_iter(async_client: AsyncWacomKnowledgeService,
                                     concept_type: OntologyClassReference,
                                     visibility: Optional[Visibility] = None, locale: Optional[LocaleCode] = None,
                                     only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360) \
-        -> AsyncIterator[Tuple[ThingObject, str, str]]:
+        -> AsyncIterator[ThingObject]:
     """
     Asynchronous iterator over all things of a given type using session.
 
