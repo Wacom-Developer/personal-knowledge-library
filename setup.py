@@ -2,7 +2,6 @@
 import pathlib
 import sys
 from setuptools import setup, find_packages
-from knowledge import __version__
 
 CURRENT_PYTHON = sys.version_info[:2]
 REQUIRED_PYTHON = (3, 7)
@@ -34,7 +33,7 @@ README = (HERE / "README.md").read_text()
 # the setup
 setup(
     name='personal_knowledge_library',
-    version=__version__,
+    version="2.1.1",
     description="Library to access Wacom's Personal Knowledge graph.",
     long_description=README,
     long_description_content_type="text/markdown",
