@@ -355,7 +355,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         WacomServiceException
             Exception if service returns HTTP error code.
         """
-        url: str = f'{self.service_base_url}/{WacomServiceAPIClient.USER_REFRESH_ENDPOINT}/'
+        url: str = f'{self.service_base_url}{WacomServiceAPIClient.USER_REFRESH_ENDPOINT}/'
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
@@ -407,7 +407,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         if (self.current_session.refreshable and
                 (self.current_session.expires_in < force_refresh_timeout or force_refresh)):
             auth_key, refresh_token, _ = self.refresh_token(self.current_session.refresh_token)
-            self.current_session.refresh_session(auth_key, refresh_token)
+            self.current_session.update_session(auth_key, refresh_token)
             return auth_key, refresh_token
         return self.current_session.auth_token, self.current_session.refresh_token
     

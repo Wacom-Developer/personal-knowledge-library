@@ -12,9 +12,9 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, DESCRIPTION_TAG, TYPE_TAG, URI_TAG, \
+from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, DESCRIPTION_TAG, TYPE_TAG, \
     LABELS_TAG, IS_MAIN_TAG, DESCRIPTIONS_TAG, RELATIONS_TAG, SEND_TO_NEL_TAG, \
-    LOCALE_TAG, EntityStatus, Label, URIS_TAG, FORCE_TAG
+    LOCALE_TAG, EntityStatus, Label, URIS_TAG, FORCE_TAG, URI_TAG
 from knowledge.base.language import LocaleCode, SUPPORTED_LOCALES
 from knowledge.base.ontology import DataProperty, OntologyPropertyReference, ThingObject, OntologyClassReference, \
     ObjectProperty, EN_US
