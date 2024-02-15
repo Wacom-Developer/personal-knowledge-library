@@ -74,9 +74,10 @@ class Session(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def refresh_session(self, auth_token: str, refresh_token: str):
+    def update_session(self, auth_token: str, refresh_token: str):
         """
-        Refresh the session.
+        Update the session.
+
         Parameters
         ----------
         auth_token: str
@@ -217,7 +218,7 @@ class TimedSession(Session):
         """Is the session refreshable."""
         return False
 
-    def refresh_session(self, auth_token: str, refresh_token: str):
+    def update_session(self, auth_token: str, refresh_token: str):
         raise NotImplementedError
 
     def __str__(self):
@@ -245,7 +246,7 @@ class RefreshableSession(TimedSession):
     def refresh_token(self, value: str):
         self.__refresh_token = value
 
-    def refresh_session(self, auth_token: str, refresh_token: str):
+    def update_session(self, auth_token: str, refresh_token: str):
         """
         Refresh the session.
         Parameters
@@ -358,7 +359,10 @@ class TokenManager:
                 session = TimedSession(auth_token=auth_token)
                 # If there is no refresh token, then the session is timed
             if session.id in self.sessions:
-                logger.warning(f'Session {session.id} already exists. Overwriting.')
+                if type(session) is not type(self.sessions[session.id]):
+                    logger.warning(f'Session {session.id} already exists. '
+                                   f'Overwriting with new type of session {type(session)}, '
+                                   f'before {type(self.sessions[session.id])}.')
                 if not isinstance(self.sessions[session.id], type(session)):
                     logger.warning(f'The session {session.id} is of a different type. '
                                    f'Cached version is a {type(self.sessions[session.id])} '
