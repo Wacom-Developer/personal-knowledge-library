@@ -199,7 +199,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                         mime_type = MIME_TYPE[file_extension]
 
                     return await self.set_entity_image(entity_uri, image_bytes, file_name, mime_type, auth_key=auth_key)
-        raise await handle_error(f'Creation of entity image failed. URI:={entity_uri}.', response, headers=headers)
+        raise await handle_error(f'Creation of entity image failed. URI:={entity_uri}.', response,
+                                 headers=headers)
 
     async def set_entity_image(self, entity_uri: str, image_byte: bytes, file_name: str = 'icon.jpg',
                                mime_type: str = 'image/jpeg', auth_key: Optional[str] = None) -> str:

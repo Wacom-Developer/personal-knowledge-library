@@ -144,12 +144,6 @@ class AsyncServiceAPIClient(RESTAPIClient):
         super().__init__(service_url, verify_calls)
 
     @property
-    def auth_endpoint(self) -> str:
-        """Authentication endpoint."""
-        # This is in graph service REST API
-        return f'{self.service_url}/{self.__auth_service_endpoint}/{self.USER_LOGIN_ENDPOINT}'
-
-    @property
     def application_name(self) -> str:
         """Application name."""
         return self.__application_name
@@ -226,7 +220,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         if (self.current_session.refreshable and
                 (self.current_session.expires_in < force_refresh_timeout or force_refresh)):
             auth_key, refresh_token, _ = await self.refresh_token(self.current_session.refresh_token)
-            self.current_session.refresh_session(auth_key, refresh_token)
+            self.current_session.update_session(auth_key, refresh_token)
             return auth_key, refresh_token
         return self.current_session.auth_token, self.current_session.refresh_token
 
@@ -292,9 +286,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
                     except (ParserError, OverflowError) as _:
                         date_object: datetime = datetime.now()
                     return response_token['accessToken'], response_token['refreshToken'], date_object
-                raise WacomServiceException(f'Login failed'
-                                            f'Response code:={response.status}, '
-                                            f'response text:= {await response.text()}')
+                raise await handle_error(f'Login failed.', response, payload=payload,
+                                         headers=headers)
 
     async def refresh_token(self, refresh_token: str) -> Tuple[str, str, datetime]:
         """
@@ -319,7 +312,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         WacomServiceException
             Exception if service returns HTTP error code.
         """
-        url: str = f'{self.service_base_url}/{AsyncServiceAPIClient.USER_REFRESH_ENDPOINT}/'
+        url: str = f'{self.service_base_url}{AsyncServiceAPIClient.USER_REFRESH_ENDPOINT}/'
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: 'application/json'
@@ -337,8 +330,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
                     except (ParserError, OverflowError) as _:
                         date_object: datetime = datetime.now()
                     return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
-        raise WacomServiceException(f'Refresh failed. '
-                                    f'Response code:={response.status}, exception:= {response.text}')
+        raise await handle_error(f'Refresh of token failed.', response, payload=payload,
+                                 headers=headers)
 
     async def login(self, tenant_api_key: str, external_user_id: str) -> PermanentSession:
         """ Login as user by using the tenant id and its external user id.
@@ -396,3 +389,9 @@ class AsyncServiceAPIClient(RESTAPIClient):
     def service_base_url(self):
         """Service endpoint."""
         return f'{self.service_url}/{self.service_endpoint}'
+
+    @property
+    def auth_endpoint(self) -> str:
+        """Authentication endpoint."""
+        # This is in graph service REST API
+        return f'{self.service_url}/{self.__auth_service_endpoint}/{self.USER_LOGIN_ENDPOINT}'
