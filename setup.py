@@ -2,6 +2,7 @@
 import pathlib
 import sys
 from setuptools import setup, find_packages
+from knowledge import __version__
 
 CURRENT_PYTHON = sys.version_info[:2]
 REQUIRED_PYTHON = (3, 7)
@@ -26,7 +27,6 @@ an older version of knowledge-service-lib :
 
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
-__version__ = "2.1.0"
 
 # The text of the README file
 README = (HERE / "README.md").read_text()
