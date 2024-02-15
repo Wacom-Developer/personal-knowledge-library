@@ -1,3 +1,9 @@
+2024/02/15 - RELEASE 2.1.1
+==========================
+- Fix some minor issues for refresh token handling
+- Cosmetics updates to improve pylint score
+- Remove requirement for dateutil
+
 2024/02/13 - RELEASE 2.1.0
 ==========================
 - Fix some minor issues for auth token handling with image 
