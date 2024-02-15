@@ -52,8 +52,7 @@ setup(
         "tqdm>=4.62.0",
         "ndjson>=0.3.1",
         "rdflib>=6.3.2",
-        "python-dateutil",
-        "aiohttp[speedups]>3.8.6",
+        "aiohttp[speedups]>3.9.1",
         "orjson>=3.8.0",
         "cachetools==5.3.2"
     ],
