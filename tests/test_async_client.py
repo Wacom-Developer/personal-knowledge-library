@@ -130,6 +130,7 @@ async def test_02_push_entity():
     global tenant_api_key, external_id, dummy_image
     thing: ThingObject = create_thing(OntologyClassReference.parse('wacom:core#Person'))
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    await async_client.handle_token(force_refresh=True)
     thing_uri: str = await async_client.create_entity(thing)
     assert thing_uri is not None
     new_thing: ThingObject = await async_client.entity(thing_uri)
