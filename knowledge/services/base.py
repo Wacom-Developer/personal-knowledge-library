@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-24 Wacom. All rights reserved.
+# Copyright © 2021-present Wacom. All rights reserved.
 from abc import ABC
 from datetime import datetime
 from typing import Any, Tuple, Dict, Optional, Union
 
 import requests
-from dateutil.parser import parse, ParserError
 from requests import Response
 
-from knowledge import __version__
+from knowledge import __version__, logger
 from knowledge.services import DEFAULT_TIMEOUT
 from knowledge.services import USER_AGENT_HEADER_FLAG, TENANT_API_KEY, CONTENT_TYPE_HEADER_FLAG, \
     REFRESH_TOKEN_TAG, EXPIRATION_DATE_TAG, ACCESS_TOKEN_TAG, APPLICATION_JSON_HEADER, EXTERNAL_USER_ID
@@ -265,9 +264,10 @@ class WacomServiceAPIClient(RESTAPIClient):
             try:
                 response_token: Dict[str, str] = response.json()
                 try:
-                    date_object: datetime = parse(response_token['expirationDate'])
-                except (ParserError, OverflowError) as _:
+                    date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
+                except (TypeError, ValueError) as _:
                     date_object: datetime = datetime.now()
+                    logger.warning(f'Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}')
                 return response_token['accessToken'], response_token['refreshToken'], date_object
             except Exception as e:
                 raise handle_error(f'Parsing of response failed. {e}', response) from e
@@ -368,9 +368,10 @@ class WacomServiceAPIClient(RESTAPIClient):
         if response.ok:
             response_token: Dict[str, str] = response.json()
             try:
-                date_object: datetime = parse(response_token[EXPIRATION_DATE_TAG])
-            except (ParserError, OverflowError) as _:
+                date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
+            except (TypeError, ValueError) as _:
                 date_object: datetime = datetime.now()
+                logger.warning(f'Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}')
             return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
         raise handle_error('Refreshing token failed.', response)
 

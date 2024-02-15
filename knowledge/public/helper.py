@@ -8,7 +8,6 @@ from enum import Enum
 from typing import Any, Optional, Dict, List
 
 import requests
-from dateutil import parser
 from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
@@ -139,9 +138,9 @@ def parse_date(date_string: str) -> Optional[datetime]:
         Parsed date
     """
     try:
-        parsed_date = parser.parse(timestr=date_string)
+        parsed_date = datetime.fromisoformat(date_string)
         return parsed_date
-    except parser.ParserError:
+    except (TypeError, ValueError):
         date_part, _ = date_string.split('T')
         year, month, day = date_part.split('-')
         if month == '00':
@@ -150,9 +149,9 @@ def parse_date(date_string: str) -> Optional[datetime]:
             day = '01'
         iso_date = f'{year}-{month.zfill(2)}-{day.zfill(2)}'
         try:
-            parsed_date = parser.parse(timestr=iso_date)
+            parsed_date = datetime.fromisoformat(iso_date)
             return parsed_date
-        except parser.ParserError:
+        except (TypeError, ValueError):
             return None
 
 
@@ -241,10 +240,8 @@ def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
                 elif Precision.DAY.value == precision:
                     pretty = dt_obj.strftime("%-d %B %Y")
                 iso_encoded = dt_obj.isoformat()
-                try:
-                    parse_date(iso_encoded)
-                except parser.ParserError:
-                    iso_encoded = None
+            else:
+                iso_encoded = None
     except Exception as pe:
         logger.error(param)
         logger.exception(pe)

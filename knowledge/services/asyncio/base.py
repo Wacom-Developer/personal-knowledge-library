@@ -2,7 +2,6 @@
 # Copyright © 2021-23 Wacom. All rights reserved.
 import asyncio
 import json
-import logging
 import socket
 import ssl
 from datetime import datetime
@@ -12,9 +11,8 @@ import aiohttp
 import orjson
 from aiohttp import ClientTimeout
 from cachetools import TTLCache
-from dateutil.parser import parse, ParserError
 
-from knowledge import __version__
+from knowledge import __version__, logger
 from knowledge.services import USER_AGENT_HEADER_FLAG, TENANT_API_KEY, \
     CONTENT_TYPE_HEADER_FLAG, REFRESH_TOKEN_TAG, DEFAULT_TIMEOUT, EXPIRATION_DATE_TAG, ACCESS_TOKEN_TAG, \
     APPLICATION_JSON_HEADER, EXTERNAL_USER_ID
@@ -282,11 +280,12 @@ class AsyncServiceAPIClient(RESTAPIClient):
                 if response.ok:
                     response_token: Dict[str, str] = await response.json(loads=orjson.loads)
                     try:
-                        date_object: datetime = parse(response_token['expirationDate'])
-                    except (ParserError, OverflowError) as _:
+                        date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
+                    except (TypeError, ValueError) as _:
                         date_object: datetime = datetime.now()
+                        logger.warning(f'Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}')
                     return response_token['accessToken'], response_token['refreshToken'], date_object
-                raise await handle_error(f'Login failed.', response, payload=payload,
+                raise await handle_error('Login failed.', response, payload=payload,
                                          headers=headers)
 
     async def refresh_token(self, refresh_token: str) -> Tuple[str, str, datetime]:
@@ -326,11 +325,12 @@ class AsyncServiceAPIClient(RESTAPIClient):
                 if response.ok:
                     response_token: Dict[str, str] = await response.json()
                     try:
-                        date_object: datetime = parse(response_token[EXPIRATION_DATE_TAG])
-                    except (ParserError, OverflowError) as _:
+                        date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
+                    except (TypeError, ValueError) as _:
                         date_object: datetime = datetime.now()
+                        logger.warning(f'Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}')
                     return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
-        raise await handle_error(f'Refresh of token failed.', response, payload=payload,
+        raise await handle_error('Refresh of token failed.', response, payload=payload,
                                  headers=headers)
 
     async def login(self, tenant_api_key: str, external_user_id: str) -> PermanentSession:

@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-24 Wacom. All rights reserved.
+# Copyright © 2021-present Wacom. All rights reserved.
 import enum
 from datetime import datetime
 from typing import Any, Union, Dict, List, Tuple
 
 import requests
-from dateutil.parser import parse, ParserError
 from requests import Response
 
+from knowledge import logger
+from knowledge.services import EXPIRATION_DATE_TAG
 from knowledge.services.base import WacomServiceAPIClient, handle_error
 
 # -------------------------------------- Constant flags ----------------------------------------------------------------
@@ -38,7 +39,7 @@ class UserRole(enum.Enum):
     """TenantAdmin has access to all entities independent of the access rights."""
 
 
-USER_ROLE_MAPPING: Dict[str, UserRole] = dict([(str(r.value), r) for r in UserRole])
+USER_ROLE_MAPPING: Dict[str, UserRole] = {str(r.value): r for r in UserRole}
 
 
 class User:
@@ -199,12 +200,11 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
                                            verify=self.verify_calls)
         if response.ok:
             results: Dict[str, Union[str, Dict[str, str], List[str]]] = response.json()
-
             try:
-                date_object: datetime = parse(results['token']['expirationDate'])
-            except (ParserError, OverflowError) as _:
+                date_object: datetime = datetime.fromisoformat(results['token'][EXPIRATION_DATE_TAG])
+            except (TypeError, ValueError) as _:
                 date_object: datetime = datetime.now()
-
+                logger.warning(f'Parsing of expiration date failed. {results["token"][EXPIRATION_DATE_TAG]}')
             return User.parse(results['user']), results['token']['accessToken'], results['token']['refreshToken'], \
                 date_object
         raise handle_error("Failed to create user.", response)

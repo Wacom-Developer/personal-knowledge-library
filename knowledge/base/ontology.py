@@ -6,7 +6,6 @@ from datetime import datetime
 from json import JSONEncoder
 from typing import Union, Optional, Any, List, Dict, Tuple, Set
 
-import dateutil
 from rdflib import Literal, RDFS, OWL, URIRef, RDF, Graph
 
 from knowledge.base.access import TenantAccessRight
@@ -714,8 +713,8 @@ class OntologyContext(OntologyObject):
             [Label(content=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in context_data['labels']]
         comments: List[Comment] = [] if context_data['comments'] is None else \
             [Comment(text=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in context_data['comments']]
-        added: datetime = dateutil.parser.isoparse(context_data['dateAdded'])
-        modified: datetime = dateutil.parser.isoparse(context_data['dateModified'])
+        added: datetime = datetime.fromisoformat(context_data['dateAdded'])
+        modified: datetime = datetime.fromisoformat(context_data['dateModified'])
         return OntologyContext(context_data['id'], context_data['tenantId'], context_data['name'],
                                context_data['icon'], labels, comments, added, modified,
                                context_data['context'], context_data['baseURI'],

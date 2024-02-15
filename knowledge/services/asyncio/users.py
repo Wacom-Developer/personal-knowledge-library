@@ -4,9 +4,9 @@ from datetime import datetime
 from typing import Any, Union, Dict, List, Tuple
 
 import orjson
-from dateutil.parser import parse, ParserError
 
-from knowledge.services import APPLICATION_JSON_HEADER
+from knowledge import logger
+from knowledge.services import APPLICATION_JSON_HEADER, EXPIRATION_DATE_TAG
 from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error
 from knowledge.services.base import WacomServiceAPIClient
 from knowledge.services.users import UserRole, USER_AGENT_TAG, TENANT_API_KEY_FLAG, OFFSET_TAG, LIMIT_TAG, User, \
@@ -87,11 +87,11 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
                                     verify_ssl=self.verify_calls) as response:
                 if response.ok:
                     results: Dict[str, Union[str, Dict[str, str], List[str]]] = await response.json(loads=orjson.loads)
-
                     try:
-                        date_object: datetime = parse(results['token']['expirationDate'])
-                    except (ParserError, OverflowError) as _:
+                        date_object: datetime = datetime.fromisoformat(results['token'][EXPIRATION_DATE_TAG])
+                    except (TypeError, ValueError) as _:
                         date_object: datetime = datetime.now()
+                        logger.warning(f'Parsing of expiration date failed. {results["token"][EXPIRATION_DATE_TAG]}')
                     return User.parse(results['user']), results['token']['accessToken'], \
                         results['token']['refreshToken'], date_object
             raise await handle_error('Failed to create the user.', response, headers=headers, payload=payload)
