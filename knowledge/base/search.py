@@ -390,7 +390,19 @@ class DocumentSearchResponse:
         return self.__stats
 
     @staticmethod
-    def from_dict(data: Dict[str, Any]):
+    def from_dict(data: Dict[str, Any]) -> 'DocumentSearchResponse':
+        """
+        Create a DocumentSearchResponse from a dictionary.
+        Parameters
+        ----------
+        data: Dict[str, Any]
+            Dictionary with the response data.
+
+        Returns
+        -------
+        DocumentSearchResponse
+            Document search response.
+        """
         return DocumentSearchResponse(
             results=[DocumentSearchResult(**result) for result in data['results']],
             max_results=data['max_results'],
@@ -437,6 +449,18 @@ class LabelMatchingResponse:
 
     @staticmethod
     def from_dict(data: Dict[str, Any]):
+        """
+        Create a LabelMatchingResponse from a dictionary.
+        Parameters
+        ----------
+        data: Dict[str, Any]
+            Dictionary with the response data.
+
+        Returns
+        -------
+        LabelMatchingResponse
+            Label matching response.
+        """
         return LabelMatchingResponse(
             results=[LabelSearchResult(**result) for result in data['results']],
             max_results=data['max_results'],

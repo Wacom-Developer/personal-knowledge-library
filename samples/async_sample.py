@@ -59,10 +59,9 @@ def import_entity_from_wikidata(search_term: str, locale: LanguageCode) -> Dict[
     # Now, let's create the things
     things: Dict[str, ThingObject] = {}
     for res in qid_entities:
-        wikidata_thing, import_warnings = wikidata_to_thing(res, all_relations=relations,
-                                                            supported_locales=SUPPORTED_LOCALES,
-                                                            pull_wikipedia=True,
-                                                            all_wikidata_objects=qid_things)
+        wikidata_thing, _ = wikidata_to_thing(res, all_relations=relations,
+                                              supported_locales=SUPPORTED_LOCALES, pull_wikipedia=True,
+                                              all_wikidata_objects=qid_things)
         things[res.qid] = wikidata_thing
     return things
 
@@ -150,13 +149,13 @@ async def main(external_user_id: str, tenant_api_key: str, instance: str):
     is_ten_admin: bool = permanent_session.roles == "TenantAdmin"
     print(f'Is tenant admin: {is_ten_admin}')
     print('-' * 100)
-    print(f'Token information')
+    print('Token information')
     print('-' * 100)
     print(f'Refreshable: {permanent_session.refreshable}')
     print(f'Token must be refreshed before: {permanent_session.expiration} UTC')
     print(f'Token expires in {permanent_session.expires_in} seconds)')
     print('-' * 100)
-    print(f'Creating two users')
+    print('Creating two users')
     print('-' * 100)
     # User management sample
     user_1, user_token_1, refresh_token_1 = await user_management_sample(tenant_api_key, instance)

@@ -12,7 +12,7 @@ from knowledge.services.ontology import OntologyService
 from knowledge.services.session import PermanentSession
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
 
-ROLE_MAPPING: Dict[str, UserRole] = dict([(role.value.lower(), role) for role in UserRole])
+ROLE_MAPPING: Dict[str, UserRole] = {role.value.lower(): role for role in UserRole}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

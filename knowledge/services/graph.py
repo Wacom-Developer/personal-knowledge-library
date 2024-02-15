@@ -732,8 +732,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                                           verify=self.verify_calls)
         if response.ok:
             entities: Dict[str, Any] = response.json()
-            things: Dict[str, ThingObject] = dict([(e[URI_TAG], ThingObject.from_dict(e))
-                                                   for e in entities['entities']])
+            things: Dict[str, ThingObject] = {e[URI_TAG]: ThingObject.from_dict(e) for e in entities['entities']}
             relations: List[Tuple[str, OntologyPropertyReference, str]] = []
             for r in entities[RELATIONS_TAG]:
                 relation: OntologyPropertyReference = OntologyPropertyReference.parse(r[PREDICATE])
