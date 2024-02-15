@@ -175,6 +175,34 @@ async def async_count_things(async_client: AsyncWacomKnowledgeService, user_toke
     return total
 
 
+async def async_count_things_session(async_client: AsyncWacomKnowledgeService,
+                                     concept_type: OntologyClassReference, locale: Optional[LocaleCode] = None,
+                                     visibility: Optional[Visibility] = None) -> int:
+    """
+    Async counting of things given a concept type using session.
+
+    Parameters
+    ----------
+    async_client: AsyncWacomKnowledgeService
+        The Wacom Knowledge Service
+    concept_type: OntologyClassReference
+        The concept type
+    locale: Optional[LocaleCode]
+        The locale
+    visibility: Optional[Visibility]
+        The visibility
+
+
+    Returns
+    -------
+    int
+        The number of things
+    """
+    _, total, _ = await async_client.listing(concept_type, visibility=visibility, locale=locale, limit=1,
+                                             estimate_count=True)
+    return total
+
+
 async def async_things_iter(async_client: AsyncWacomKnowledgeService, user_token: str, refresh_token: str,
                             concept_type: OntologyClassReference,
                             visibility: Optional[Visibility] = None, locale: Optional[LocaleCode] = None,
