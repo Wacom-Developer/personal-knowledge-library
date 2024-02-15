@@ -7,4 +7,5 @@ Sub-modules
 * knowledge.services.asyncio.base
 * knowledge.services.asyncio.graph
 * knowledge.services.asyncio.group
+* knowledge.services.asyncio.search
 * knowledge.services.asyncio.users

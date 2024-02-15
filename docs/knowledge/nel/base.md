@@ -337,7 +337,7 @@ Classes
         entities: List[KnowledgeGraphEntity]
             List of knowledge graph entities.
 
-`PublicEntityLinkingProcessor(service_url: str = builtins.str, supported_languages: List[str] = None, verify_calls: bool = False)`
+`PublicEntityLinkingProcessor(service_url: str, provider: str = 'external', supported_languages: List[str] = None, verify_calls: bool = False)`
 :   Public Entity Linking
     ---------------------
     Service that links entities to a public entities in a knowledge graph.
@@ -357,6 +357,9 @@ Classes
     * abc.ABC
 
     ### Instance variables
+
+    `provider: str`
+    :   Provider of the service.
 
     `supported_language: List[str]`
     :   List of supported languages.

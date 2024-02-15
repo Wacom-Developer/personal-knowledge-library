@@ -52,6 +52,17 @@ Classes
     `refresh_token: str`
     :   Refresh token for the session.
 
+    ### Methods
+
+    `update_session(self, auth_token: str, refresh_token: str)`
+    :   Refresh the session.
+        Parameters
+        ----------
+        auth_token: str
+            The refreshed authentication token.
+        refresh_token: str
+            The refreshed refresh token.
+
 `Session()`
 :   Session
     -------
@@ -91,8 +102,9 @@ Classes
 
     ### Methods
 
-    `refresh_session(self, auth_token: str, refresh_token: str)`
-    :   Refresh the session.
+    `update_session(self, auth_token: str, refresh_token: str)`
+    :   Update the session.
+        
         Parameters
         ----------
         auth_token: str

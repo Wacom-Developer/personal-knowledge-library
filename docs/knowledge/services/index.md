@@ -9,6 +9,7 @@ Sub-modules
 * knowledge.services.graph
 * knowledge.services.group
 * knowledge.services.ontology
+* knowledge.services.search
 * knowledge.services.session
 * knowledge.services.tenant
 * knowledge.services.users

@@ -103,6 +103,7 @@ Classes
     * knowledge.services.graph.WacomKnowledgeService
     * knowledge.services.group.GroupManagementService
     * knowledge.services.ontology.OntologyService
+    * knowledge.services.search.SemanticSearchClient
     * knowledge.services.tenant.TenantManagementServiceAPI
     * knowledge.services.users.UserManagementServiceAPI
 

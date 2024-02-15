@@ -28,6 +28,27 @@ Functions
         The number of things
 
     
+`async_count_things_session(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None) ‑> int`
+:   Async counting of things given a concept type using session.
+    
+    Parameters
+    ----------
+    async_client: AsyncWacomKnowledgeService
+        The Wacom Knowledge Service
+    concept_type: OntologyClassReference
+        The concept type
+    locale: Optional[LocaleCode]
+        The locale
+    visibility: Optional[Visibility]
+        The visibility
+    
+    
+    Returns
+    -------
+    int
+        The number of things
+
+    
 `async_things_iter(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, user_token: str, refresh_token: str, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: Optional[knowledge.services.graph.Visibility] = None, locale: Optional[knowledge.base.language.LocaleCode] = None, only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360, tenant_api_key: Optional[str] = None, external_user_id: Optional[str] = None) ‑> AsyncIterator[Tuple[knowledge.base.ontology.ThingObject, str, str]]`
 :   Asynchronous iterator over all things of a given type.
     
@@ -62,7 +83,7 @@ Functions
         Asynchronous Iterator of things
 
     
-`async_things_session_iter(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: Optional[knowledge.services.graph.Visibility] = None, locale: Optional[knowledge.base.language.LocaleCode] = None, only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360) ‑> AsyncIterator[Tuple[knowledge.base.ontology.ThingObject, str, str]]`
+`async_things_session_iter(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: Optional[knowledge.services.graph.Visibility] = None, locale: Optional[knowledge.base.language.LocaleCode] = None, only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360) ‑> AsyncIterator[knowledge.base.ontology.ThingObject]`
 :   Asynchronous iterator over all things of a given type using session.
     
     Parameters

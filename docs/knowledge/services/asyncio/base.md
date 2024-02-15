@@ -79,6 +79,7 @@ Classes
 
     * knowledge.services.asyncio.graph.AsyncWacomKnowledgeService
     * knowledge.services.asyncio.group.AsyncGroupManagementService
+    * knowledge.services.asyncio.search.AsyncSemanticSearchClient
     * knowledge.services.asyncio.users.AsyncUserManagementService
 
     ### Class variables

@@ -1236,7 +1236,7 @@ Classes
         ----------
         label: str
             Label
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
     `add_relation(self, prop: knowledge.base.ontology.ObjectProperty)`
@@ -1265,38 +1265,38 @@ Classes
             Adds the source system as a Data Property. **Remark:** The data property must have the property type
             'wacom:core#sourceSystem'.
 
-    `alias_lang(self, language_code: knowledge.base.language.LanguageCode) ‑> List[knowledge.base.entity.Label]`
+    `alias_lang(self, language_code: knowledge.base.language.LocaleCode) ‑> List[knowledge.base.entity.Label]`
     :   Get alias for language_code code.
         
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             Requested language_code code
         Returns
         -------
         aliases: List[Label]
             Returns a list of aliases for a specific language code
 
-    `data_property_lang(self, data_property: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.language.LanguageCode) ‑> List[knowledge.base.ontology.DataProperty]`
+    `data_property_lang(self, data_property: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.language.LocaleCode) ‑> List[knowledge.base.ontology.DataProperty]`
     :   Get data property for language_code code.
         
         Parameters
         ----------
         data_property: OntologyPropertyReference
             Data property.
-        language_code: LanguageCode
+        language_code: LocaleCode
             Requested language_code code
         Returns
         -------
         data_properties: List[DataProperty]
             Returns a list of data properties for a specific language code
 
-    `default_source_reference_id(self, language_code: knowledge.base.language.LanguageCode = 'en_US') ‑> Optional[str]`
+    `default_source_reference_id(self, language_code: knowledge.base.language.LocaleCode = 'en_US') ‑> Optional[str]`
     :   Getting the source reference id for a certain language code.
         
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         
         Returns
@@ -1304,12 +1304,12 @@ Classes
         id: str
             Source reference id.
 
-    `default_source_system(self, language_code: knowledge.base.language.LanguageCode = 'en_US') ‑> Optional[str]`
+    `default_source_system(self, language_code: knowledge.base.language.LocaleCode = 'en_US') ‑> Optional[str]`
     :   Getting the source system for a certain language code.
         
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         
         Returns
@@ -1317,12 +1317,12 @@ Classes
         id: str
             Source system.
 
-    `description_lang(self, language_code: str) ‑> Optional[knowledge.base.entity.Description]`
+    `description_lang(self, language_code: knowledge.base.language.LocaleCode) ‑> Optional[knowledge.base.entity.Description]`
     :   Get description for entity.
         
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         Returns
         -------
@@ -1357,20 +1357,20 @@ Classes
         data_property: OntologyPropertyReference
             Data property to be removed.
 
-    `remove_description(self, language_code: knowledge.base.language.LanguageCode)`
+    `remove_description(self, language_code: knowledge.base.language.LocaleCode)`
     :   Remove description for entity if it exists for language.
         
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `remove_label(self, language_code: knowledge.base.language.LanguageCode)`
+    `remove_label(self, language_code: knowledge.base.language.LocaleCode)`
     :   Remove label for entity if it exists for language.
         
         Parameters
         ----------
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
     `update_alias(self, value: str, language_code: knowledge.base.language.LocaleCode)`
@@ -1380,7 +1380,7 @@ Classes
         ----------
         value: str
             Value to be set
-        language_code: LanguageCode
+        language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
     `update_description(self, value: str, language_code: knowledge.base.language.LocaleCode)`

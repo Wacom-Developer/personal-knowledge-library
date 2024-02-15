@@ -325,7 +325,7 @@ Classes
         ----------
         uri: str
             Entity URI of the source
-        locale: str
+        locale: LocaleCode [default:=EN_US]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str] [default:=None]
             Use a different auth key than the one from the client
