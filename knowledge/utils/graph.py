@@ -9,7 +9,8 @@ from knowledge.services.graph import WacomKnowledgeService, Visibility
 
 
 def count_things(wacom_client: WacomKnowledgeService, user_token: str, concept_type: OntologyClassReference,
-                 locale: Optional[LocaleCode] = None, visibility: Optional[Visibility] = None) -> int:
+                 locale: Optional[LocaleCode] = None, visibility: Optional[Visibility] = None,
+                 only_own: Optional[bool] = None) -> int:
     """
     Counts the number of things.
 
@@ -25,18 +26,47 @@ def count_things(wacom_client: WacomKnowledgeService, user_token: str, concept_t
         The locale
     visibility: Optional[Visibility]
         The visibility
-
+    only_own: Optional[bool]
+        Only own things
     Returns
     -------
     int
         The number of things
     """
-    _, total, _ = wacom_client.listing(concept_type, visibility=visibility, locale=locale, limit=1,
+    _, total, _ = wacom_client.listing(concept_type, visibility=visibility, locale=locale, is_owner=only_own, limit=1,
                                        estimate_count=True, auth_key=user_token)
     return total
 
 
-def things_session_iter(wacom_client: WacomKnowledgeService,concept_type: OntologyClassReference,
+def count_things_session(wacom_client: WacomKnowledgeService, concept_type: OntologyClassReference,
+                         locale: Optional[LocaleCode] = None, visibility: Optional[Visibility] = None,
+                         only_own: Optional[bool] = None) -> int:
+    """
+    Counts the number of things.
+
+    Parameters
+    ----------
+    wacom_client: WacomKnowledgeService
+        The Wacom Knowledge Service
+    concept_type: OntologyClassReference
+        The concept type
+    locale: Optional[LocaleCode]
+        The locale
+    visibility: Optional[Visibility]
+        The visibility
+    only_own: Optional[bool]
+        Only own things
+    Returns
+    -------
+    int
+        The number of things
+    """
+    _, total, _ = wacom_client.listing(concept_type, visibility=visibility, locale=locale, is_owner=only_own, limit=1,
+                                       estimate_count=True)
+    return total
+
+
+def things_session_iter(wacom_client: WacomKnowledgeService, concept_type: OntologyClassReference,
                         visibility: Optional[Visibility] = None,
                         locale: Optional[LocaleCode] = None, only_own: bool = False, fetch_size: int = 100,
                         force_refresh_timeout: int = 360) \
@@ -135,19 +165,18 @@ def things_iter(wacom_client: WacomKnowledgeService, user_token: str, refresh_to
     while True:
         # Refresh token if needed
         things, _, next_page_id = wacom_client.listing(concept_type, visibility=visibility, locale=locale,
-                                                       limit=fetch_size, page_id=next_page_id)
+                                                       is_owner=only_own, limit=fetch_size, page_id=next_page_id)
         if len(things) == 0:
             return
         for obj in things:
             # Refresh token if needed
-            if obj.owner or not only_own:
-                wacom_client.handle_token(force_refresh_timeout=force_refresh_timeout)
-                yield obj, user_token, refresh_token
+            wacom_client.handle_token(force_refresh_timeout=force_refresh_timeout)
+            yield obj, user_token, refresh_token
 
 
 async def async_count_things(async_client: AsyncWacomKnowledgeService, user_token: str,
                              concept_type: OntologyClassReference, locale: Optional[LocaleCode] = None,
-                             visibility: Optional[Visibility] = None) -> int:
+                             visibility: Optional[Visibility] = None, only_own: Optional[bool] = None) -> int:
     """
     Async counting of things given a concept type.
 
@@ -163,7 +192,8 @@ async def async_count_things(async_client: AsyncWacomKnowledgeService, user_toke
         The locale
     visibility: Optional[Visibility]
         The visibility
-
+    only_own: Optional[bool]
+        Only own things
 
     Returns
     -------
@@ -171,13 +201,13 @@ async def async_count_things(async_client: AsyncWacomKnowledgeService, user_toke
         The number of things
     """
     _, total, _ = await async_client.listing(concept_type, visibility=visibility, locale=locale, limit=1,
-                                             estimate_count=True, auth_key=user_token)
+                                             estimate_count=True, is_owner=only_own, auth_key=user_token)
     return total
 
 
 async def async_count_things_session(async_client: AsyncWacomKnowledgeService,
                                      concept_type: OntologyClassReference, locale: Optional[LocaleCode] = None,
-                                     visibility: Optional[Visibility] = None) -> int:
+                                     visibility: Optional[Visibility] = None, only_own: Optional[bool] = None) -> int:
     """
     Async counting of things given a concept type using session.
 
@@ -191,22 +221,23 @@ async def async_count_things_session(async_client: AsyncWacomKnowledgeService,
         The locale
     visibility: Optional[Visibility]
         The visibility
-
+    only_own: Optional[bool]
+        Only own things
 
     Returns
     -------
     int
         The number of things
     """
-    _, total, _ = await async_client.listing(concept_type, visibility=visibility, locale=locale, limit=1,
-                                             estimate_count=True)
+    _, total, _ = await async_client.listing(concept_type, visibility=visibility, is_owner=only_own,
+                                             locale=locale, limit=1, estimate_count=True)
     return total
 
 
 async def async_things_iter(async_client: AsyncWacomKnowledgeService, user_token: str, refresh_token: str,
                             concept_type: OntologyClassReference,
                             visibility: Optional[Visibility] = None, locale: Optional[LocaleCode] = None,
-                            only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360,
+                            only_own: Optional[bool] = None, fetch_size: int = 100, force_refresh_timeout: int = 360,
                             tenant_api_key: Optional[str] = None, external_user_id: Optional[str] = None) \
         -> AsyncIterator[Tuple[ThingObject, str, str]]:
     """
@@ -226,7 +257,7 @@ async def async_things_iter(async_client: AsyncWacomKnowledgeService, user_token
         The visibility
     locale: Optional[LocaleCode] [default:= None]
         Only entities with this labels having a given locale
-    only_own: bool [default:= False]
+    only_own: Optional[bool] = [default:= None]
         Only own things
     fetch_size: int [default:= 100]
         Fetch size.
@@ -250,19 +281,19 @@ async def async_things_iter(async_client: AsyncWacomKnowledgeService, user_token
         await async_client.register_token(user_token, refresh_token)
     while True:
         things, _, next_page_id = await async_client.listing(concept_type, visibility=visibility, locale=locale,
-                                                             limit=fetch_size, page_id=next_page_id)
+                                                             is_owner=only_own, limit=fetch_size, page_id=next_page_id)
         if len(things) == 0:
             return
         for obj in things:
             user_token, refresh_token = await async_client.handle_token(force_refresh_timeout=force_refresh_timeout)
-            if obj.owner or not only_own:
-                yield obj, user_token, refresh_token
+            yield obj, user_token, refresh_token
 
 
 async def async_things_session_iter(async_client: AsyncWacomKnowledgeService,
                                     concept_type: OntologyClassReference,
                                     visibility: Optional[Visibility] = None, locale: Optional[LocaleCode] = None,
-                                    only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360) \
+                                    only_own: Optional[bool] = None, fetch_size: int = 100,
+                                    force_refresh_timeout: int = 360) \
         -> AsyncIterator[ThingObject]:
     """
     Asynchronous iterator over all things of a given type using session.
@@ -277,7 +308,7 @@ async def async_things_session_iter(async_client: AsyncWacomKnowledgeService,
         The visibility
     locale: Optional[LocaleCode] [default:= None]
         Only entities with this labels having a given locale
-    only_own: bool [default:= False]
+    only_own: Optional[bool] = [default:= None]
         Only own things
     fetch_size: int [default:= 100]
         Fetch size.
@@ -294,8 +325,8 @@ async def async_things_session_iter(async_client: AsyncWacomKnowledgeService,
         raise ValueError("No session configured for client")
 
     while True:
-        things, _, next_page_id = await async_client.listing(concept_type, visibility=visibility, locale=locale,
-                                                             limit=fetch_size, page_id=next_page_id)
+        things, _, next_page_id = await async_client.listing(concept_type, visibility=visibility, is_owner=only_own,
+                                                             locale=locale, limit=fetch_size, page_id=next_page_id)
         if len(things) == 0:
             return
         for obj in things:
