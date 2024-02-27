@@ -130,8 +130,8 @@ class DataPropertyType(enum.Enum):
     """XML NCNames"""
 
 
-INVERSE_DATA_PROPERTY_TYPE_MAPPING: Dict[str, DataPropertyType] = dict([(str(lit_type.value), lit_type)
-                                                                        for lit_type in DataPropertyType])
+INVERSE_DATA_PROPERTY_TYPE_MAPPING: Dict[str, DataPropertyType] = {str(lit_type.value): lit_type
+                                                                   for lit_type in DataPropertyType}
 """Maps the string representation of the XSD data types to the data types enum constants."""
 
 

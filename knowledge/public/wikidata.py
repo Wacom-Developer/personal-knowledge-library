@@ -664,7 +664,7 @@ class WikidataThing:
             MODIFIED_TAG: self.modified.isoformat(),
             LABELS_TAG: {lang: la.__dict__() for lang, la in self.label.items() },
             DESCRIPTIONS_TAG: {lang: la.__dict__() for lang, la in self.description.items()},
-            ALIASES_TAG: dict([(lang, [a.__dict__() for a in al]) for lang, al in self.aliases.items()]),
+            ALIASES_TAG: {lang: [a.__dict__() for a in al] for lang, al in self.aliases.items()},
             CLAIMS_TAG: {pid: cl.__dict__() for pid, cl in self.claims.items()},
             ONTOLOGY_TYPES_TAG: self.ontology_types,
             SITELINKS_TAG: {source: site.__dict__() for source, site in self.sitelinks.items()}
