@@ -41,6 +41,7 @@ JOIN_KEY_PARAM: str = "joinKey"
 USER_TO_ADD_PARAM: str = "userToAddId"
 USER_TO_REMOVE_PARAM: str = "userToRemoveId"
 FORCE_PARAM: str = "force"
+IS_OWNER_PARAM: str = 'isOwner'
 RELATION_TAG: str = 'relation'
 ENTITIES_TAG: str = 'entities'
 RESULT_TAG: str = 'result'
@@ -62,7 +63,7 @@ __all__ = ['base', 'graph', 'ontology', 'tenant', 'users', 'search', 'USER_AGENT
            'SUBJECT_URI', 'NEXT_PAGE_ID_TAG', 'TENANT_RIGHTS_TAG', 'GROUP_IDS_TAG', 'OWNER_ID_TAG', 'VISIBILITY_TAG',
            'ESTIMATE_COUNT', 'GROUP_USER_RIGHTS_TAG', 'JOIN_KEY_PARAM', 'USER_TO_ADD_PARAM', 'USER_TO_REMOVE_PARAM',
            'FORCE_PARAM', 'RELATION_TAG', 'APPLICATION_JSON_HEADER', 'DEFAULT_TIMEOUT', 'ENTITIES_TAG', 'RESULT_TAG',
-           'EXACT_MATCH', 'DEFAULT_TOKEN_REFRESH_TIME', 'EXTERNAL_USER_ID']
+           'EXACT_MATCH', 'DEFAULT_TOKEN_REFRESH_TIME', 'EXTERNAL_USER_ID', 'IS_OWNER_PARAM']
 
 from knowledge.services import base
 from knowledge.services import graph

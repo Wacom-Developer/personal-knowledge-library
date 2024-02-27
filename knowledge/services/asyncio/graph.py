@@ -18,7 +18,7 @@ from knowledge.base.language import LocaleCode, EN_US, SUPPORTED_LOCALES
 from knowledge.base.ontology import DataProperty, OntologyPropertyReference, ThingObject, OntologyClassReference, \
     ObjectProperty
 from knowledge.nel.base import KnowledgeGraphEntity, EntityType, KnowledgeSource, EntitySource
-from knowledge.services import AUTHORIZATION_HEADER_FLAG
+from knowledge.services import AUTHORIZATION_HEADER_FLAG, IS_OWNER_PARAM
 from knowledge.services import SUBJECT_URI, RELATION_URI, OBJECT_URI, LANGUAGE_PARAMETER, LIMIT, \
     LISTING, TOTAL_COUNT, SEARCH_TERM, TYPES_PARAMETER, APPLICATION_JSON_HEADER, SUBJECT, OBJECT, PREDICATE, \
     LIMIT_PARAMETER, ESTIMATE_COUNT, TARGET, ACTIVATION_TAG, SEARCH_PATTERN_PARAMETER, LITERAL_PARAMETER, VALUE, \
@@ -784,7 +784,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
 
     async def listing(self, filter_type: OntologyClassReference, page_id: Optional[str] = None,
                       limit: int = 30, locale: Optional[LocaleCode] = None, visibility: Optional[Visibility] = None,
-                      estimate_count: bool = False, auth_key: Optional[str] = None) \
+                      is_owner: Optional[bool] = None, estimate_count: bool = False, auth_key: Optional[str] = None) \
             -> Tuple[List[ThingObject], int, str]:
         """
         List all entities visible to users.
@@ -801,6 +801,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         visibility: Optional[Visibility] [default:=None]
             Filter the entities based on its visibilities
+        is_owner: Optional[bool] [default:=None]
+            Filter the entities based on its owner
         estimate_count: bool [default:=False]
             Request an estimate of the entities in a tenant.
         auth_key: Optional[str]
@@ -834,6 +836,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             LIMIT_PARAMETER: str(limit),
             ESTIMATE_COUNT: str(estimate_count)
         }
+        if is_owner is not None:
+            parameters[IS_OWNER_PARAM] = str(is_owner)
         if locale:
             parameters[LOCALE_TAG] = locale
         if visibility:

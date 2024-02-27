@@ -22,7 +22,7 @@ from knowledge.services import AUTHORIZATION_HEADER_FLAG, TENANT_RIGHTS_TAG, APP
     TARGET, ACTIVATION_TAG, PREDICATE, OBJECT, SUBJECT, \
     LIMIT_PARAMETER, ESTIMATE_COUNT, VISIBILITY_TAG, NEXT_PAGE_ID_TAG, LISTING, TOTAL_COUNT, SEARCH_TERM, \
     LANGUAGE_PARAMETER, TYPES_PARAMETER, LIMIT, VALUE, LITERAL_PARAMETER, SEARCH_PATTERN_PARAMETER, SUBJECT_URI, \
-    RELATION_URI, OBJECT_URI, DEFAULT_TIMEOUT
+    RELATION_URI, OBJECT_URI, DEFAULT_TIMEOUT, IS_OWNER_PARAM
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, \
     USER_AGENT_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG, handle_error
 
@@ -744,7 +744,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
     def listing(self, filter_type: OntologyClassReference, page_id: Optional[str] = None,
                 limit: int = 30, locale: Optional[LocaleCode] = None, visibility: Optional[Visibility] = None,
-                estimate_count: bool = False, auth_key: Optional[str] = None,
+                is_owner: Optional[bool] = None, estimate_count: bool = False, auth_key: Optional[str] = None,
                 max_retries: int = 3, backoff_factor: float = 0.1) -> Tuple[List[ThingObject], int, str]:
         """
         List all entities visible to users.
@@ -761,6 +761,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         visibility: Optional[Visibility] [default:=None]
             Filter the entities based on its visibilities
+        is_owner: Optional[bool] [default:=None]
+            Filter the entities based on its owner
         estimate_count: bool [default:=False]
             Request an estimate of the entities in a tenant.
         auth_key: Optional[str] = None
@@ -803,6 +805,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             parameters[LOCALE_TAG] = locale
         if visibility:
             parameters[VISIBILITY_TAG] = str(visibility.value)
+        if is_owner is not None:
+            parameters[IS_OWNER_PARAM] = str(is_owner)
         # If filtering is configured
         if page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = page_id
