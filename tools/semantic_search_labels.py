@@ -17,7 +17,6 @@ import time
 from typing import List
 
 from knowledge.base.language import LocaleCode, EN_US
-from knowledge.base.ontology import ThingObject
 from knowledge.base.search import LabelMatchingResponse, VectorDBDocument
 from knowledge.services.search import SemanticSearchClient
 
@@ -41,11 +40,6 @@ def search_words(query: str, locale: LocaleCode, tenant_api_key: str, external_u
         URL of the instance.
     max_results: int
         Maximum number of results.
-
-    Returns
-    -------
-    entities: List[ThingObject]
-        List of entities found in the knowledge graph.
     """
     client: SemanticSearchClient = SemanticSearchClient(service_url=instance_url)
     client.login(tenant_api_key, external_user_id)
