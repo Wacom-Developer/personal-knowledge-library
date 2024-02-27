@@ -5,7 +5,7 @@ Functions
 ---------
 
     
-`async_count_things(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, user_token: str, concept_type: knowledge.base.ontology.OntologyClassReference, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None) ‑> int`
+`async_count_things(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, user_token: str, concept_type: knowledge.base.ontology.OntologyClassReference, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None, only_own: Optional[bool] = None) ‑> int`
 :   Async counting of things given a concept type.
     
     Parameters
@@ -20,7 +20,8 @@ Functions
         The locale
     visibility: Optional[Visibility]
         The visibility
-    
+    only_own: Optional[bool]
+        Only own things
     
     Returns
     -------
@@ -28,7 +29,7 @@ Functions
         The number of things
 
     
-`async_count_things_session(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None) ‑> int`
+`async_count_things_session(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None, only_own: Optional[bool] = None) ‑> int`
 :   Async counting of things given a concept type using session.
     
     Parameters
@@ -41,7 +42,8 @@ Functions
         The locale
     visibility: Optional[Visibility]
         The visibility
-    
+    only_own: Optional[bool]
+        Only own things
     
     Returns
     -------
@@ -49,7 +51,7 @@ Functions
         The number of things
 
     
-`async_things_iter(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, user_token: str, refresh_token: str, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: Optional[knowledge.services.graph.Visibility] = None, locale: Optional[knowledge.base.language.LocaleCode] = None, only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360, tenant_api_key: Optional[str] = None, external_user_id: Optional[str] = None) ‑> AsyncIterator[Tuple[knowledge.base.ontology.ThingObject, str, str]]`
+`async_things_iter(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, user_token: str, refresh_token: str, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: Optional[knowledge.services.graph.Visibility] = None, locale: Optional[knowledge.base.language.LocaleCode] = None, only_own: Optional[bool] = None, fetch_size: int = 100, force_refresh_timeout: int = 360, tenant_api_key: Optional[str] = None, external_user_id: Optional[str] = None) ‑> AsyncIterator[Tuple[knowledge.base.ontology.ThingObject, str, str]]`
 :   Asynchronous iterator over all things of a given type.
     
     Parameters
@@ -66,7 +68,7 @@ Functions
         The visibility
     locale: Optional[LocaleCode] [default:= None]
         Only entities with this labels having a given locale
-    only_own: bool [default:= False]
+    only_own: Optional[bool] = [default:= None]
         Only own things
     fetch_size: int [default:= 100]
         Fetch size.
@@ -83,7 +85,7 @@ Functions
         Asynchronous Iterator of things
 
     
-`async_things_session_iter(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: Optional[knowledge.services.graph.Visibility] = None, locale: Optional[knowledge.base.language.LocaleCode] = None, only_own: bool = False, fetch_size: int = 100, force_refresh_timeout: int = 360) ‑> AsyncIterator[knowledge.base.ontology.ThingObject]`
+`async_things_session_iter(async_client: knowledge.services.asyncio.graph.AsyncWacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: Optional[knowledge.services.graph.Visibility] = None, locale: Optional[knowledge.base.language.LocaleCode] = None, only_own: Optional[bool] = None, fetch_size: int = 100, force_refresh_timeout: int = 360) ‑> AsyncIterator[knowledge.base.ontology.ThingObject]`
 :   Asynchronous iterator over all things of a given type using session.
     
     Parameters
@@ -96,7 +98,7 @@ Functions
         The visibility
     locale: Optional[LocaleCode] [default:= None]
         Only entities with this labels having a given locale
-    only_own: bool [default:= False]
+    only_own: Optional[bool] = [default:= None]
         Only own things
     fetch_size: int [default:= 100]
         Fetch size.
@@ -109,7 +111,7 @@ Functions
         Asynchronous Iterator of things
 
     
-`count_things(wacom_client: knowledge.services.graph.WacomKnowledgeService, user_token: str, concept_type: knowledge.base.ontology.OntologyClassReference, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None) ‑> int`
+`count_things(wacom_client: knowledge.services.graph.WacomKnowledgeService, user_token: str, concept_type: knowledge.base.ontology.OntologyClassReference, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None, only_own: Optional[bool] = None) ‑> int`
 :   Counts the number of things.
     
     Parameters
@@ -124,7 +126,29 @@ Functions
         The locale
     visibility: Optional[Visibility]
         The visibility
+    only_own: Optional[bool]
+        Only own things
+    Returns
+    -------
+    int
+        The number of things
+
     
+`count_things_session(wacom_client: knowledge.services.graph.WacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None, only_own: Optional[bool] = None) ‑> int`
+:   Counts the number of things.
+    
+    Parameters
+    ----------
+    wacom_client: WacomKnowledgeService
+        The Wacom Knowledge Service
+    concept_type: OntologyClassReference
+        The concept type
+    locale: Optional[LocaleCode]
+        The locale
+    visibility: Optional[Visibility]
+        The visibility
+    only_own: Optional[bool]
+        Only own things
     Returns
     -------
     int

@@ -328,7 +328,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `listing(self, filter_type: knowledge.base.ontology.OntologyClassReference, page_id: Optional[str] = None, limit: int = 30, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None, estimate_count: bool = False, auth_key: Optional[str] = None, max_retries: int = 3, backoff_factor: float = 0.1) ‑> Tuple[List[knowledge.base.ontology.ThingObject], int, str]`
+    `listing(self, filter_type: knowledge.base.ontology.OntologyClassReference, page_id: Optional[str] = None, limit: int = 30, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None, is_owner: Optional[bool] = None, estimate_count: bool = False, auth_key: Optional[str] = None, max_retries: int = 3, backoff_factor: float = 0.1) ‑> Tuple[List[knowledge.base.ontology.ThingObject], int, str]`
     :   List all entities visible to users.
         
         Parameters
@@ -343,6 +343,8 @@ Classes
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         visibility: Optional[Visibility] [default:=None]
             Filter the entities based on its visibilities
+        is_owner: Optional[bool] [default:=None]
+            Filter the entities based on its owner
         estimate_count: bool [default:=False]
             Request an estimate of the entities in a tenant.
         auth_key: Optional[str] = None
