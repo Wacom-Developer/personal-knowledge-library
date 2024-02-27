@@ -1946,7 +1946,7 @@ class ThingObject(abc.ABC):
             dict_object[OBJECT_PROPERTIES_TAG][relation_type.iri] = item.__dict__()
         return dict_object
 
-    def __import_format_dict__(self, group_ids: List[Dict[str, str]] = None):
+    def __import_format_dict__(self, group_ids: List[str] = None):
         labels: List[Dict[str, Any]] = []
         labels.extend([la.__dict__() for la in self.label])
         labels.extend([la.__dict__() for la in self.alias])
