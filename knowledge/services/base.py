@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-present Wacom. All rights reserved.
+import sys
 from abc import ABC
 from datetime import datetime
 from typing import Any, Tuple, Dict, Optional, Union
@@ -263,11 +264,17 @@ class WacomServiceAPIClient(RESTAPIClient):
         if response.ok:
             try:
                 response_token: Dict[str, str] = response.json()
+                timestamp_str_truncated: str = ''
                 try:
-                    date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
+                    if sys.version_info <= (3, 10):
+                        timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG][:19] + '+00:00'
+                    else:
+                        timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
+                    date_object: datetime = datetime.fromisoformat(timestamp_str_truncated)
                 except (TypeError, ValueError) as _:
                     date_object: datetime = datetime.now()
-                    logger.warning(f'Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}')
+                    logger.warning(f'Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]} '
+                                   f'-> {timestamp_str_truncated}')
                 return response_token['accessToken'], response_token['refreshToken'], date_object
             except Exception as e:
                 raise handle_error(f'Parsing of response failed. {e}', response) from e

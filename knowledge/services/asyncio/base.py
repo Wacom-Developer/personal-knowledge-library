@@ -4,6 +4,7 @@ import asyncio
 import json
 import socket
 import ssl
+import sys
 from datetime import datetime
 from typing import Any, Tuple, Dict, Optional, Union
 
@@ -324,11 +325,16 @@ class AsyncServiceAPIClient(RESTAPIClient):
                                     verify_ssl=self.verify_calls) as response:
                 if response.ok:
                     response_token: Dict[str, str] = await response.json()
+                    timestamp_str_truncated: str = ''
                     try:
-                        date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
+                        if sys.version_info <= (3, 10):
+                            timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG][:19] + '+00:00'
+                        else:
+                            timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
+                        date_object: datetime = datetime.fromisoformat(timestamp_str_truncated)
                     except (TypeError, ValueError) as _:
                         date_object: datetime = datetime.now()
-                        logger.warning(f'Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}')
+                        logger.warning(f'Parsing of expiration date failed. {timestamp_str_truncated}')
                     return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
         raise await handle_error('Refresh of token failed.', response, payload=payload,
                                  headers=headers)
