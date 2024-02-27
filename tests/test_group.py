@@ -13,10 +13,11 @@ from faker import Faker
 from knowledge.base.language import JA_JP, EN_US, DE_DE
 from knowledge.base.ontology import ThingObject, OntologyClassReference
 from knowledge.services.base import WacomServiceException
-from knowledge.services.graph import WacomKnowledgeService
+from knowledge.services.graph import WacomKnowledgeService, Visibility
 from knowledge.services.group import GroupManagementService, Group
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
+from knowledge.utils.graph import count_things_session, count_things
 
 THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
 
@@ -159,7 +160,10 @@ class GroupFlow(TestCase):
     def test_2_push_entity(self):
         """ Push entity."""
         thing: ThingObject = create_thing()
+        before: int = count_things(self.knowledge_client, self.cache.token, THING_OBJECT, only_own=True)
         uri_thing: str = self.knowledge_client.create_entity(thing, auth_key=self.cache.token)
+        after: int = count_things(self.knowledge_client, self.cache.token, THING_OBJECT, only_own=True)
+        self.assertEqual(before + 1, after, "Entity was not created.")
         self.cache.thing_uri = uri_thing
         self.knowledge_client.set_entity_image_local(uri_thing,
                                                      Path(__file__).parent / '..' / 'assets' / 'dummy.png',
@@ -197,7 +201,20 @@ class GroupFlow(TestCase):
         """ Add entity to group."""
         # Adding entity to group
         groups: List[Group] = self.group_management.listing_groups(auth_key=self.cache.token_2)
+        before_shared_count: int = count_things(self.knowledge_client, self.cache.token, THING_OBJECT,
+                                                visibility=Visibility.SHARED, only_own=True)
+        self.assertEqual(before_shared_count, 0, "User 1 should not have access to the entity.")
+        before_shared_count_u2: int = count_things(self.knowledge_client, self.cache.token_2, THING_OBJECT,
+                                                   visibility=Visibility.SHARED, only_own=False)
+        self.assertEqual(before_shared_count_u2, 0, "User 2 should not have access to the entity.")
         self.group_management.add_entity_to_group(groups[0].id, self.cache.thing_uri, auth_key=self.cache.token)
+        after_shared_count: int = count_things(self.knowledge_client, self.cache.token, THING_OBJECT,
+                                               visibility=Visibility.SHARED, only_own=True)
+        after_shared_count_u2: int = count_things(self.knowledge_client, self.cache.token_2, THING_OBJECT,
+                                                  visibility=Visibility.SHARED, only_own=False)
+        self.assertEqual(after_shared_count, 1, "User 1 should have one shared entity.")
+        self.assertEqual(after_shared_count_u2, 1, "User 2 should have one shared entity.")
+
         entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token)
         self.assertEqual(groups[0].id, entity.group_ids[0])
         self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
@@ -208,6 +225,9 @@ class GroupFlow(TestCase):
             self.fail("User 2 should not have access to the entity.")
         except WacomServiceException as we:
             pass
+        after_removal_shared_count_u2: int = count_things(self.knowledge_client, self.cache.token_2, THING_OBJECT,
+                                                          visibility=Visibility.SHARED, only_own=False)
+        self.assertEqual(after_removal_shared_count_u2, 0, "User 2 should not have access to the entity.")
         groups: List[Group] = self.group_management.listing_groups(auth_key=self.cache.token_2)
         self.assertEqual(len(groups), 0)
         self.group_management.join_group(self.cache.group_id, self.cache.join_key, auth_key=self.cache.token_2)
