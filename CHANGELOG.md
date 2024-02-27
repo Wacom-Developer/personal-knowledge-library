@@ -1,3 +1,10 @@
+2024/02/27 - RELEASE 2.1.2
+==========================
+- Fix some minor issues for timestamp parsing with older python versions (<3.10)
+- Adding support for filter owner entities
+- Adding vector search sample and tools
+- Update helper functions for listing and counting entities
+
 2024/02/15 - RELEASE 2.1.1
 ==========================
 - Fix some minor issues for refresh token handling
