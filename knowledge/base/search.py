@@ -225,6 +225,7 @@ class PerformanceStats:
         self.__loading_time: float = stats.get('loading', 0.0) * 1000
         self.__embedding_time: float = stats.get('embedding', 0.0) * 1000
         self.__vector_db_response_time: float = stats.get('request', 0.0) * 1000
+        self.__overall_time: float = stats.get('overall', 0.0) * 1000
 
     @property
     def locale_code(self) -> LocaleCode:
@@ -255,6 +256,11 @@ class PerformanceStats:
     def vector_db_response_time(self) -> float:
         """Response time in milliseconds for the vector database."""
         return self.__vector_db_response_time
+
+    @property
+    def overall_time(self) -> float:
+        """Overall time in milliseconds for the search query."""
+        return self.__overall_time
 
     def __repr__(self):
         return f"PerformanceStats(locale_code={self.locale_code}, model_name={self.model_name}, top_k={self.top_k}, " \
