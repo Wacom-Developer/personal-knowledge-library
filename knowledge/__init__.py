@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-23 Wacom. All rights reserved.
+# Copyright © 2021-present Wacom. All rights reserved.
 """
 Personal knowledge Library
 --------------------------
@@ -17,7 +17,7 @@ __license__ = "Wacom"
 __maintainer__ = ["Markus Weber"]
 __email__ = "markus.weber@wacom.com"
 __status__ = "beta"
-__version__ = "2.1.1"
+__version__ = "2.1.3"
 
 # Create the Logger
 logger: Union[logging.Logger, None] = None

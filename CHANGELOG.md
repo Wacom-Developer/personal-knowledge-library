@@ -1,3 +1,7 @@
+2024/04/08 - RELEASE 2.1.3
+==========================
+- Fix issues with import format, sendToNEL flag was not parsed correctly
+
 2024/02/27 - RELEASE 2.1.2
 ==========================
 - Fix some minor issues for timestamp parsing with older python versions (<3.10)
