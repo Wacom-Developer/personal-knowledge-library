@@ -8,20 +8,20 @@ REQUIRED_PYTHON = (3, 7)
 
 if CURRENT_PYTHON < REQUIRED_PYTHON:
     sys.stderr.write(f"""
-==========================
-Unsupported Python version
-==========================
-This version of personal knowledge lib requires Python {REQUIRED_PYTHON}.
-
-This may be because you are using a version of pip that doesn't
-understand the python_requires classifier. Make sure you
-have pip >= 9.0 and setuptools >= 24.2, then try again:
-    $ python -m pip install --upgrade pip setuptools
-This will install the latest version of personal-knowledge-library which works on your
-version of Python. If you can't upgrade your pip (or Python), request
-an older version of knowledge-service-lib :
-    $ python -m pip install personal-knowledge-library
-""")
+    ==========================
+    Unsupported Python version
+    ==========================
+    This version of personal knowledge lib requires Python {REQUIRED_PYTHON}.
+    
+    This may be because you are using a version of pip that doesn't
+    understand the python_requires classifier. Make sure you
+    have pip >= 9.0 and setuptools >= 24.2, then try again:
+        $ python -m pip install --upgrade pip setuptools
+    This will install the latest version of personal-knowledge-library which works on your
+    version of Python. If you can't upgrade your pip (or Python), request
+    an older version of knowledge-service-lib :
+        $ python -m pip install personal-knowledge-library
+    """)
     sys.exit(1)
 
 # The directory containing this file
@@ -33,7 +33,7 @@ README = (HERE / "README.md").read_text()
 # the setup
 setup(
     name='personal_knowledge_library',
-    version="2.1.2",
+    version="2.1.3",
     description="Library to access Wacom's Personal Knowledge graph.",
     long_description=README,
     long_description_content_type="text/markdown",
