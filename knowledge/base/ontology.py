@@ -11,12 +11,11 @@ from rdflib import Literal, RDFS, OWL, URIRef, RDF, Graph
 from knowledge.base.access import TenantAccessRight
 from knowledge.base.entity import EntityStatus, Label, Description, URI_TAG, IMAGE_TAG, DESCRIPTIONS_TAG, \
     LABELS_TAG, TYPE_TAG, STATUS_FLAG_TAG, DATA_PROPERTIES_TAG, OBJECT_PROPERTIES_TAG, GROUP_IDS, OWNER_TAG, \
-    OWNER_ID_TAG, SOURCE_REFERENCE_ID_TAG, SOURCE_SYSTEM_TAG, TENANT_RIGHTS_TAG, SEND_TO_NEL_TAG, LOCALE_TAG, \
+    OWNER_ID_TAG, SOURCE_REFERENCE_ID_TAG, SOURCE_SYSTEM_TAG, TENANT_RIGHTS_TAG, LOCALE_TAG, \
     IS_MAIN_TAG, USE_NEL_TAG, VALUE_TAG, DATA_PROPERTY_TAG, VISIBILITY_TAG, INFLECTION_CASE_SENSITIVE, \
     INFLECTION_SETTING, INFLECTION_CONCEPT_CLASS, LANGUAGE_TAG, CONTENT_TAG, DATA_TYPE_TAG, RELATION_TAG, \
     INCOMING_TAG, OUTGOING_TAG, COMMENT_TAG, LocalizedContent, COMMENTS_TAG
 from knowledge.base.language import EN_US, SUPPORTED_LOCALES, EN, LanguageCode, LocaleCode
-
 
 # ---------------------------------------------- Vocabulary base URI ---------------------------------------------------
 PREFIX: str = "xsd"
@@ -1961,7 +1960,7 @@ class ThingObject(abc.ABC):
             OBJECT_PROPERTIES_TAG: [],
             TENANT_RIGHTS_TAG: self.tenant_access_right.to_list(),
             GROUP_IDS: group_ids if group_ids else [],
-            SEND_TO_NEL_TAG: self.use_for_nel
+            USE_NEL_TAG: self.use_for_nel
         }
         for _, items in self.data_properties.items():
             dict_object[DATA_PROPERTIES_TAG].extend([i.__dict__() for i in items])
