@@ -1,3 +1,7 @@
+2024/05/31 - RELEASE 2.1.4
+==========================
+- Minor fix use is owner flag in utility function
+
 2024/04/08 - RELEASE 2.1.3
 ==========================
 - Fix issues with import format, sendToNEL flag was not parsed correctly
