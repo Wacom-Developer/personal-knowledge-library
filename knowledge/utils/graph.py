@@ -107,14 +107,13 @@ def things_session_iter(wacom_client: WacomKnowledgeService, concept_type: Ontol
     while True:
         # Refresh token if needed
         things, _, next_page_id = wacom_client.listing(concept_type, visibility=visibility, locale=locale,
-                                                       limit=fetch_size, page_id=next_page_id)
+                                                       is_owner=only_own, limit=fetch_size, page_id=next_page_id)
         if len(things) == 0:
             return
         for obj in things:
             # Refresh token if needed
-            if obj.owner or not only_own:
-                wacom_client.handle_token(force_refresh_timeout=force_refresh_timeout)
-                yield obj
+            wacom_client.handle_token(force_refresh_timeout=force_refresh_timeout)
+            yield obj
 
 
 def things_iter(wacom_client: WacomKnowledgeService, user_token: str, refresh_token: str,
