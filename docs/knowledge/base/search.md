@@ -301,6 +301,9 @@ Classes
     `model_name: str`
     :   Name of the model used for the search.
 
+    `overall_time: float`
+    :   Overall time in milliseconds for the search query.
+
     `top_k: int`
     :   Top-k results requested.
 
