@@ -36,7 +36,9 @@ if __name__ == '__main__':
         filter_type = OntologyClassReference.parse(args.type)
     while True:
         # pull
-        entities, total_number, next_page_id = wacom_client.listing(filter_type, next_page_id, limit=100)
+        entities, total_number, next_page_id = wacom_client.listing(filter_type, next_page_id, limit=100,
+                                                                    is_owner=True,
+                                                                    estimate_count=True)
         page_uris: List[str] = [e.uri for e in entities]
         pulled_entities: int = len(entities)
         if pulled_entities == 0:
