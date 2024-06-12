@@ -246,14 +246,15 @@ if __name__ == '__main__':
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(service_url=args.instance,
                                                                     application_name="Ontology")
     ontology_client: OntologyService = OntologyService(service_url=args.instance)
-    admin_token, refresh, expire = knowledge_client.request_user_token(args.tenant, args.user)
-    context: Optional[OntologyContext] = ontology_client.context(admin_token)
+    knowledge_client.login(tenant_api_key=args.tenant, external_user_id=args.user)
+    ontology_client.use_session(knowledge_client.current_session.id)
+    context: Optional[OntologyContext] = ontology_client.context()
     if not context:
         sys.exit(0)
     else:
         context_name: str = context.context
         # Export ontology
-        rdf_export: str = ontology_client.rdf_export(admin_token, context_name)
+        rdf_export: str = ontology_client.rdf_export(context_name)
         # Register ontology
         register_ontology(rdf_export)
         # Load configuration
