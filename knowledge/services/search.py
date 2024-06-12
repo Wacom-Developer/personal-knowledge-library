@@ -181,6 +181,61 @@ class SemanticSearchClient(WacomServiceAPIClient):
         raise handle_error("Counting documents failed.", response, headers=headers,
                            parameters={"locale": locale})
 
+    def count_documents_filter(self, locale: LocaleCode, filters: Dict[str, Any],
+                               auth_key: Optional[str] = None,
+                               max_retries: int = 3, backoff_factor: float = 0.1) -> int:
+        """
+        Count all documents for a tenant with filters.
+
+        Parameters
+        ----------
+        locale: LocaleCode
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
+        filters: Dict[str, Any]
+            Filters for the search
+        auth_key: Optional[str] (Default:= None)
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try.
+
+        Returns
+        -------
+        number_of_docs: int
+            Number of documents.
+
+        Raises
+        ------
+        WacomServiceException
+            If the request fails.
+        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        url: str = f"{self.service_base_url}documents/count/filter"
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=[502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response = session.post(url, json={
+                               "locale": locale,
+                               "filter": filters
+                           }, headers=headers)
+            if response.ok:
+                return response.json().get("count", 0)
+        raise handle_error("Counting documents failed.", response, headers=headers,
+                           parameters={
+                               "locale": locale,
+                               "filter": filters
+                           })
+
     def count_labels(self, locale: LocaleCode, concept_type: Optional[str] = None,
                      auth_key: Optional[str] = None, max_retries: int = 3, backoff_factor: float = 0.1) -> int:
         """
@@ -230,6 +285,61 @@ class SemanticSearchClient(WacomServiceAPIClient):
                 return response.json().get("count", 0)
         raise handle_error("Counting labels failed.", response, headers=headers,
                            parameters={"locale": locale})
+
+    def count_labels_filter(self, locale: LocaleCode, filters: Dict[str, Any],
+                             auth_key: Optional[str] = None,
+                             max_retries: int = 3, backoff_factor: float = 0.1) -> int:
+        """
+        Count all labels for a tenant with filters.
+
+        Parameters
+        ----------
+        locale: LocaleCode
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
+        filters: Dict[str, Any]
+            Filters for the search
+        auth_key: Optional[str] (Default:= None)
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try.
+
+        Returns
+        -------
+        number_of_docs: int
+            Number of labels.
+
+        Raises
+        ------
+        WacomServiceException
+            If the request fails.
+        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        url: str = f"{self.service_base_url}labels/count/filter"
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=[502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response = session.post(url, json={
+                               "locale": locale,
+                               "filter": filters
+                           }, headers=headers)
+            if response.ok:
+                return response.json().get("count", 0)
+        raise handle_error("Counting labels failed.", response, headers=headers,
+                           parameters={
+                               "locale": locale,
+                               "filter": filters
+                           })
 
     def document_search(self, query: str, locale: LocaleCode, filters: Optional[Dict[str, Any]] = None,
                         max_results: int = 10, max_retries: int = 3, backoff_factor: float = 0.1,
