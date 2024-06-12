@@ -1,3 +1,8 @@
+2024/06/12 - RELEASE 2.1.5
+==========================
+- Adding a function to count vector documents and labels using a filter
+- Fixing issue tool for wikidata import
+
 2024/05/31 - RELEASE 2.1.4
 ==========================
 - Minor fix use is owner flag in utility function
