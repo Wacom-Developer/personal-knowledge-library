@@ -153,6 +153,45 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         raise await handle_error("Counting documents failed.", response, headers=headers,
                                  parameters={"locale": locale})
 
+    async def count_documents_filter(self, locale: LocaleCode, filters: Dict[str, Any],
+                                     auth_key: Optional[str] = None) -> int:
+        """
+        Count all documents for a tenant using a filter.
+
+        Parameters
+        ----------
+        locale: str
+            Locale
+        filters: Dict[str, Any]
+            Filters for the search
+        auth_key: Optional[str] (Default:= None)
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+
+        Returns
+        -------
+        number_of_docs: int
+            Number of documents.
+
+        Raises
+        ------
+        WacomServiceException
+            If the request fails.
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        url: str = f"{self.service_base_url}documents/count/filter"
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        async with self.__async_session__() as session:
+            async with session.post(url, json={"locale": locale, "filter": filters}, headers=headers) as response:
+                if response.ok:
+                    return (await response.json(loads=orjson.loads)).get("count", 0)
+        raise await handle_error("Counting documents failed.", response, headers=headers,
+                                 parameters={"locale": locale, "filter": filters})
+
     async def count_labels(self, locale: str, concept_type: Optional[str] = None,
                            auth_key: Optional[str] = None) -> int:
         """
@@ -194,6 +233,45 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
                     return (await response.json(loads=orjson.loads)).get("count", 0)
         raise await handle_error("Counting labels failed.", response, headers=headers,
                                  parameters={"locale": locale})
+
+    async def count_labels_filter(self, locale: LocaleCode, filters: Dict[str, Any],
+                                  auth_key: Optional[str] = None) -> int:
+        """
+        Count all labels for a tenant using a filter.
+
+        Parameters
+        ----------
+        locale: str
+            Locale
+        filters: Dict[str, Any]
+            Filters for the search
+        auth_key: Optional[str] (Default:= None)
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+
+        Returns
+        -------
+        number_of_docs: int
+            Number of documents.
+
+        Raises
+        ------
+        WacomServiceException
+            If the request fails.
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        url: str = f"{self.service_base_url}labels/count/filter"
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        async with self.__async_session__() as session:
+            async with session.post(url, json={"locale": locale, "filter": filters}, headers=headers) as response:
+                if response.ok:
+                    return (await response.json(loads=orjson.loads)).get("count", 0)
+        raise await handle_error("Counting documents failed.", response, headers=headers,
+                                 parameters={"locale": locale, "filter": filters})
 
     async def document_search(self, query: str, locale: str, filters: Optional[Dict[str, Any]] = None,
                               max_results: int = 10, auth_key: Optional[str] = None) -> DocumentSearchResponse:
