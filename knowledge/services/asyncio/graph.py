@@ -13,7 +13,7 @@ import orjson
 from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, DESCRIPTION_TAG, TYPE_TAG, \
     URI_TAG, LABELS_TAG, IS_MAIN_TAG, DESCRIPTIONS_TAG, RELATIONS_TAG, SEND_TO_NEL_TAG, \
     LOCALE_TAG, EntityStatus, Label, URIS_TAG, FORCE_TAG, TENANT_RIGHTS_TAG, VISIBILITY_TAG, \
-    RELATION_TAG, TEXT_TAG
+    RELATION_TAG, TEXT_TAG, SEND_VECTOR_INDEX_TAG
 from knowledge.base.language import LocaleCode, EN_US, SUPPORTED_LOCALES
 from knowledge.base.ontology import DataProperty, OntologyPropertyReference, ThingObject, OntologyClassReference, \
     ObjectProperty
@@ -393,6 +393,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             DATA_PROPERTIES_TAG: literals,
             SEND_TO_NEL_TAG: entity.use_for_nel
         }
+        if entity.use_vector_index:
+            entity[SEND_VECTOR_INDEX_TAG] = entity.use_vector_index
         if entity.tenant_access_right:
             payload[TENANT_RIGHTS_TAG] = entity.tenant_access_right.to_list()
         return payload

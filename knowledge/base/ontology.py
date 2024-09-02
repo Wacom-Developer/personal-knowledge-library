@@ -14,7 +14,7 @@ from knowledge.base.entity import EntityStatus, Label, Description, URI_TAG, IMA
     OWNER_ID_TAG, SOURCE_REFERENCE_ID_TAG, SOURCE_SYSTEM_TAG, TENANT_RIGHTS_TAG, LOCALE_TAG, \
     IS_MAIN_TAG, USE_NEL_TAG, VALUE_TAG, DATA_PROPERTY_TAG, VISIBILITY_TAG, INFLECTION_CASE_SENSITIVE, \
     INFLECTION_SETTING, INFLECTION_CONCEPT_CLASS, LANGUAGE_TAG, CONTENT_TAG, DATA_TYPE_TAG, RELATION_TAG, \
-    INCOMING_TAG, OUTGOING_TAG, COMMENT_TAG, LocalizedContent, COMMENTS_TAG
+    INCOMING_TAG, OUTGOING_TAG, COMMENT_TAG, LocalizedContent, COMMENTS_TAG, USE_VECTOR_INDEX_TAG, SEND_VECTOR_INDEX_TAG
 from knowledge.base.language import EN_US, SUPPORTED_LOCALES, EN, LanguageCode, LocaleCode
 
 # ---------------------------------------------- Vocabulary base URI ---------------------------------------------------
@@ -1382,11 +1382,16 @@ class ThingObject(abc.ABC):
         Rights for tenants
     owner: bool
         Is the logged-in user the owner of the entity
+    use_for_nel: bool
+        Use the entity for named entity linking
+    use_vector_index: bool
+        Use vector index for entity
     """
 
     def __init__(self, label: List[Label] = None, concept_type: OntologyClassReference = THING_CLASS,
                  description: Optional[List[Description]] = None, uri: Optional[str] = None, icon: Optional[str] = None,
-                 tenant_rights: TenantAccessRight = TenantAccessRight(), owner: bool = True, use_for_nel: bool = True):
+                 tenant_rights: TenantAccessRight = TenantAccessRight(), owner: bool = True, use_for_nel: bool = True,
+                 use_vector_index: bool = False):
         self.__uri: str = uri
         self.__icon: Optional[str] = icon
         self.__label: List[Label] = label if label else []
@@ -1402,6 +1407,7 @@ class ThingObject(abc.ABC):
         self.__owner_id: Optional[str] = None
         self.__group_ids: List[str] = []
         self.__use_for_nel: bool = use_for_nel
+        self.__use_vector_index: bool = use_vector_index
         self.__visibility: Optional[str] = None
 
     @property
@@ -1430,6 +1436,15 @@ class ThingObject(abc.ABC):
     @use_for_nel.setter
     def use_for_nel(self, use_for_nel: bool):
         self.__use_for_nel = use_for_nel
+
+    @property
+    def use_vector_index(self) -> bool:
+        """Use vector index for entity."""
+        return self.__use_vector_index
+
+    @use_vector_index.setter
+    def use_vector_index(self, use_vector_index: bool):
+        self.__use_vector_index = use_vector_index
 
     @property
     def owner(self) -> bool:
@@ -1960,7 +1975,8 @@ class ThingObject(abc.ABC):
             OBJECT_PROPERTIES_TAG: [],
             TENANT_RIGHTS_TAG: self.tenant_access_right.to_list(),
             GROUP_IDS: group_ids if group_ids else [],
-            USE_NEL_TAG: self.use_for_nel
+            USE_NEL_TAG: self.use_for_nel,
+            USE_VECTOR_INDEX_TAG: self.use_vector_index,
         }
         for _, items in self.data_properties.items():
             dict_object[DATA_PROPERTIES_TAG].extend([i.__dict__() for i in items])
@@ -2014,10 +2030,11 @@ class ThingObject(abc.ABC):
                 descriptions.append(Description.create_from_dict(desc))
 
         use_nel: bool = entity.get(USE_NEL_TAG, True)
-
+        use_vector_index: bool = entity.get(USE_VECTOR_INDEX_TAG, False)
         thing: ThingObject = ThingObject(label=labels, icon=entity[IMAGE_TAG], description=descriptions,
                                          concept_type=OntologyClassReference.parse(entity[TYPE_TAG]),
-                                         use_for_nel=use_nel)
+                                         use_for_nel=use_nel, use_vector_index=use_vector_index)
+        thing.use_vector_index = use_vector_index
         if DATA_PROPERTIES_TAG in entity:
             if isinstance(entity[DATA_PROPERTIES_TAG], dict):
                 for data_property_type_str, data_properties in entity[DATA_PROPERTIES_TAG].items():
@@ -2074,15 +2091,21 @@ class ThingObject(abc.ABC):
             descriptions.append(Description.create_from_dict(desc))
 
         use_nel: bool = False
+        use_vector_index: bool = False
         if USE_NEL_TAG in entity:
             use_nel = entity[USE_NEL_TAG]
         elif SEND_TO_NEL in entity:
             use_nel = entity[SEND_TO_NEL]
+        if USE_VECTOR_INDEX_TAG in entity:
+            use_vector_index = entity[USE_VECTOR_INDEX_TAG]
+        elif SEND_VECTOR_INDEX_TAG in entity:
+            use_vector_index = entity[SEND_VECTOR_INDEX_TAG]
         visibility: Optional[str] = entity.get(VISIBILITY_TAG)
         thing: ThingObject = ThingObject(label=labels, icon=entity[IMAGE_TAG], description=descriptions,
                                          uri=entity[URI_TAG],
                                          concept_type=OntologyClassReference.parse(entity[TYPE_TAG]),
-                                         owner=entity.get(OWNER_TAG, True), use_for_nel=use_nel)
+                                         owner=entity.get(OWNER_TAG, True), use_for_nel=use_nel,
+                                         use_vector_index=use_vector_index)
         thing.visibility = visibility
         thing.owner_id = entity.get(OWNER_ID_TAG)
         thing.group_ids = entity.get(GROUP_IDS)
