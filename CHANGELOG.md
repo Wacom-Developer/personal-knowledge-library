@@ -1,3 +1,7 @@
+2024/09/02 - RELEASE 2.1.6
+==========================
+- Adding support for indexing entities for vector search
+
 2024/06/12 - RELEASE 2.1.5
 ==========================
 - Adding a function to count vector documents and labels using a filter
