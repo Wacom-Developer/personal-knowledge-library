@@ -2131,7 +2131,7 @@ class ThingObject(abc.ABC):
                 thing.add_relation(obj)
         thing.alias = alias
         # Finally, retrieve rights
-        if TENANT_RIGHTS_TAG in entity:
+        if TENANT_RIGHTS_TAG in entity and entity[TENANT_RIGHTS_TAG]:
             thing.tenant_access_right = TenantAccessRight.parse(entity[TENANT_RIGHTS_TAG])
         return thing
 
