@@ -52,7 +52,8 @@ REPOSITORY_TAG: str = 'repository'
 DISPLAY_TAG: str = 'display'
 USE_NEL_TAG: str = 'use_for_nel'
 USE_VECTOR_INDEX_TAG: str = 'use_for_vector_index'
-
+USE_FULLTEXT_TAG: str = 'user_full_text'
+TARGETS_TAG: str = 'targets'
 VISIBILITY_TAG: str = 'visibility'
 RELATIONS_TAG: str = 'relations'
 LABELS_TAG: str = 'labels'
@@ -65,6 +66,10 @@ TENANT_RIGHTS_TAG: str = 'tenantRights'
 INFLECTION_CONCEPT_CLASS: str = 'concept'
 INFLECTION_SETTING: str = 'inflection'
 INFLECTION_CASE_SENSITIVE: str = 'caseSensitive'
+# ------------------------------------------ Indexing targets ----------------------------------------------------------
+INDEXING_NEL_TARGET: str = "NEL"
+INDEXING_VECTOR_SEARCH_TARGET: str = "VectorSearch"
+INDEXING_FULLTEXT_TARGET: str = "ElasticSearch"
 
 
 class EntityStatus(enum.Enum):
