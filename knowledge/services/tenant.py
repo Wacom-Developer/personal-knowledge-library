@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-24 Wacom. All rights reserved.
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import requests
 from requests import Response
 
+from knowledge.base.tenant import TenantConfiguration
 from knowledge.services import DEFAULT_TIMEOUT
 from knowledge.services.base import WacomServiceAPIClient, USER_AGENT_HEADER_FLAG, \
     CONTENT_TYPE_HEADER_FLAG, handle_error
@@ -52,7 +53,11 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
 
     # ------------------------------------------ Tenants handling ------------------------------------------------------
 
-    def create_tenant(self, name: str) -> Dict[str, str]:
+    def create_tenant(self, name: str, create_and_apply_onto: bool = True,
+                      rights: Optional[List[str]] = None,
+                      vector_search_data_properties: Optional[List[str]] = None,
+                      vector_search_object_properties: Optional[List[str]] = None,
+                      content_data_property_name: str = "") -> Dict[str, str]:
         """
         Creates a tenant.
 
@@ -60,6 +65,16 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         ----------
         name: str -
             Name of the tenant
+        create_and_apply_onto: bool
+            Creates and applies the ontology.
+        rights: List[str]
+            List of rights for the tenant. They are encoded in the user token, e.g., "ink-to-text"
+        vector_search_data_properties: List[str]
+            List of data properties that are automatically added to meta-data of the vector search index documents.
+        vector_search_object_properties: List[str]
+            List of object properties that are automatically added to meta-data of the vector search index documents.
+        content_data_property_name: str
+            The data property that is used to indexing its content to the document index.
 
         Returns
         -------
@@ -83,32 +98,31 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             CONTENT_TYPE_HEADER_FLAG: 'application/json'
         }
         payload: dict = {
-            'name': name
+            "name": name,
+            "rights": rights if rights else [],
+            "vectorSearchDataProperties": vector_search_data_properties if vector_search_object_properties else [],
+            "vectorSearchObjectProperties": vector_search_object_properties if vector_search_object_properties else [],
+            "contentDataPropertyName": content_data_property_name
         }
-        response: Response = requests.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT,
+        params: dict = {
+            "createAndApplyOnto": create_and_apply_onto
+        }
+        response: Response = requests.post(url, headers=headers, json=payload, params=params,
+                                           timeout=DEFAULT_TIMEOUT,
                                            verify=self.verify_calls)
         if response.ok:
             return response.json()
         raise handle_error("Creation of tenant failed.", response)
 
-    def listing_tenant(self) -> List[Dict[str, str]]:
+    def listing_tenant(self) -> List[TenantConfiguration]:
         """
         Listing all tenants configured for this instance.
 
         Returns
         -------
-        tenants:  List[Dict[str, str]]
-            List of tenants:
-            >>> [
-            >>>     {
-            >>>        "id": "<Tenant-ID>",
-            >>>        "ontologyName": "<Name-Of-Ontology>",
-            >>>        "ontologyVersion": "<Version-Of-Ontology>",
-            >>>        "isLocked": "<Lock-Flag>",
-            >>>        "name": "<Tenant-Name>"
-            >>>     },
-            >>>     ...
-            >>> ]
+        tenants:  List[TenantConfiguration]
+            List of tenants
+
         Raises
         ------
         WacomServiceException
@@ -122,5 +136,40 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         response: Response = requests.get(url, headers=headers, data={}, timeout=DEFAULT_TIMEOUT,
                                           verify=self.verify_calls)
         if response.ok:
-            return response.json()
+            return [TenantConfiguration.from_dict(tenant) for tenant in response.json()]
         raise handle_error("Listing of tenant failed.", response)
+
+    def update_tenant_configuration(self, identifier: str, rights: List[str], vector_search_data_properties: List[str],
+                                    vector_search_object_properties: List[str], content_data_property_name: str):
+        """
+        Update the configuration of a tenant.
+
+        Parameters
+        ----------
+        identifier: str
+            Tenant identifier.
+        rights: List[str]
+            List of rights for the tenant. They are encoded in the user token, e.g., "ink-to-text"
+        vector_search_data_properties: List[str]
+            List of data properties that are automatically added to meta-data of the vector search index documents.
+        vector_search_object_properties: List[str]
+            List of object properties that are automatically added to meta-data of the vector search index documents.
+        content_data_property_name: str
+            The data property that is used to indexing its content to the document index.
+        """
+        url: str = f'{self.service_base_url}{TenantManagementServiceAPI.TENANT_ENDPOINT}/{identifier}/rights'
+        headers: dict = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {self.__tenant_management_token}',
+            CONTENT_TYPE_HEADER_FLAG: 'application/json'
+        }
+        payload: dict = {
+            "rights": rights,
+            "vectorSearchDataProperties": vector_search_data_properties,
+            "vectorSearchObjectProperties": vector_search_object_properties,
+            "contentDataPropertyName": content_data_property_name
+        }
+        response: Response = requests.patch(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT,
+                                            verify=self.verify_calls)
+        if not response.ok:
+            raise handle_error("Creation of tenant failed.", response)
