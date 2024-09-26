@@ -1,3 +1,8 @@
+2024/09/26 - RELEASE 2.2.0
+==========================
+- Introduction of new API for indexing entities for vector search, now Full-text search index can be controlled as target
+- Tentant management API is also extended to configure the vector search properties
+
 2024/09/02 - RELEASE 2.1.6
 ==========================
 - Adding support for indexing entities for vector search
