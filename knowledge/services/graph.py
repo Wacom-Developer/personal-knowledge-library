@@ -330,9 +330,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         targets: List[str] = []
         if entity.use_vector_index:
             payload[SEND_VECTOR_INDEX_TAG] = entity.use_vector_index
-            targets.append(INDEXING_FULLTEXT_TARGET)
-        if entity.use_full_text_index:
             targets.append(INDEXING_VECTOR_SEARCH_TARGET)
+        if entity.use_full_text_index:
+            targets.append(INDEXING_FULLTEXT_TARGET)
         if entity.use_for_nel:
             targets.append(INDEXING_NEL_TARGET)
         payload[TARGETS_TAG] = targets
