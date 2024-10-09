@@ -29,6 +29,7 @@ DATA_PROPERTIES_TAG: str = 'literals'
 SEND_TO_NEL_TAG: str = 'sendToNEL'
 SEND_VECTOR_INDEX_TAG: str = 'sendToVectorIndex'
 SOURCE_REFERENCE_ID_TAG: str = 'source_reference_id'
+EXTERNAL_USER_ID_TAG: str = 'external_user_id'
 SOURCE_SYSTEM_TAG: str = 'source_system'
 OBJECT_PROPERTIES_TAG: str = 'relations'
 OWNER_TAG: str = 'owner'
@@ -52,6 +53,7 @@ REPOSITORY_TAG: str = 'repository'
 DISPLAY_TAG: str = 'display'
 USE_NEL_TAG: str = 'use_for_nel'
 USE_VECTOR_INDEX_TAG: str = 'use_for_vector_index'
+USE_VECTOR_DOCUMENT_INDEX_TAG: str = 'use_for_vector_document_index'
 USE_FULLTEXT_TAG: str = 'user_full_text'
 TARGETS_TAG: str = 'targets'
 VISIBILITY_TAG: str = 'visibility'
@@ -68,7 +70,8 @@ INFLECTION_SETTING: str = 'inflection'
 INFLECTION_CASE_SENSITIVE: str = 'caseSensitive'
 # ------------------------------------------ Indexing targets ----------------------------------------------------------
 INDEXING_NEL_TARGET: str = "NEL"
-INDEXING_VECTOR_SEARCH_TARGET: str = "VectorSearch"
+INDEXING_VECTOR_SEARCH_TARGET: str = "VectorSearchWord"
+INDEXING_VECTOR_SEARCH_DOCUMENT_TARGET: str = "VectorSearchDocument"
 INDEXING_FULLTEXT_TARGET: str = "ElasticSearch"
 
 
