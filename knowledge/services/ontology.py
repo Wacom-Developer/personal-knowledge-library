@@ -717,7 +717,7 @@ class OntologyService(WacomServiceAPIClient):
         if not response.ok:
             raise handle_error('Commit of ontology failed.', response, headers=headers)
 
-    def rdf_export(self, context: str, auth_key: Optional[str] = None) -> str:
+    def rdf_export(self, context: str, version: int = 0, auth_key: Optional[str] = None) -> str:
         """
         Export RDF.
 
@@ -725,6 +725,8 @@ class OntologyService(WacomServiceAPIClient):
         ----------
         context: str
             Name of the context.
+        version: int (default:= 0)
+            Version of the context if 0 is set the latest version will be exported.
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
@@ -739,9 +741,14 @@ class OntologyService(WacomServiceAPIClient):
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
+        if version > 0:
+            params: Dict[str, int] = {'version': version}
+        else:
+            params: Dict[str, int] = {}
         context_url: str = urllib.parse.quote_plus(context)
         url: str = f'{self.service_base_url}context/{context_url}/versions/rdf'
-        response: Response = requests.get(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
+        response: Response = requests.get(url, headers=headers, verify=self.verify_calls, params=params,
+                                          timeout=DEFAULT_TIMEOUT)
         if response.ok:
             return response.text
         raise handle_error('RDF export failed', response, headers=headers)
