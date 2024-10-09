@@ -16,7 +16,8 @@ from knowledge.base.entity import EntityStatus, Label, Description, URI_TAG, IMA
     INFLECTION_SETTING, INFLECTION_CONCEPT_CLASS, LANGUAGE_TAG, CONTENT_TAG, DATA_TYPE_TAG, RELATION_TAG, \
     INCOMING_TAG, OUTGOING_TAG, COMMENT_TAG, LocalizedContent, COMMENTS_TAG, USE_VECTOR_INDEX_TAG, \
     SEND_VECTOR_INDEX_TAG, USE_FULLTEXT_TAG, TARGETS_TAG, INDEXING_NEL_TARGET, INDEXING_VECTOR_SEARCH_TARGET, \
-    INDEXING_FULLTEXT_TARGET
+    INDEXING_FULLTEXT_TARGET, USE_VECTOR_DOCUMENT_INDEX_TAG, INDEXING_VECTOR_SEARCH_DOCUMENT_TARGET, \
+    EXTERNAL_USER_ID_TAG
 from knowledge.base.language import EN_US, SUPPORTED_LOCALES, EN, LanguageCode, LocaleCode
 
 # ---------------------------------------------- Vocabulary base URI ---------------------------------------------------
@@ -1387,7 +1388,9 @@ class ThingObject(abc.ABC):
     use_for_nel: bool
         Use the entity for named entity linking
     use_vector_index: bool
-        Use vector index for entity
+        Use vector index for labels
+    use_vector_index_document: bool
+        Use vector index for document
     use_full_text_index: bool
         Use full text index for entity
     """
@@ -1395,7 +1398,8 @@ class ThingObject(abc.ABC):
     def __init__(self, label: List[Label] = None, concept_type: OntologyClassReference = THING_CLASS,
                  description: Optional[List[Description]] = None, uri: Optional[str] = None, icon: Optional[str] = None,
                  tenant_rights: TenantAccessRight = TenantAccessRight(), owner: bool = True, use_for_nel: bool = True,
-                 use_vector_index: bool = False, use_full_text_index: bool = True):
+                 use_vector_index: bool = False, use_vector_index_document: bool = False,
+                 use_full_text_index: bool = True):
         self.__uri: str = uri
         self.__icon: Optional[str] = icon
         self.__label: List[Label] = label if label else []
@@ -1409,9 +1413,11 @@ class ThingObject(abc.ABC):
         self.__ontology_types: Optional[Set[str]] = None
         self.__owner: bool = owner
         self.__owner_id: Optional[str] = None
+        self.__owner_external_user_id: Optional[str] = None
         self.__group_ids: List[str] = []
         self.__use_for_nel: bool = use_for_nel
         self.__use_vector_index: bool = use_vector_index
+        self.__use_vector_index_document: bool = use_vector_index_document
         self.__use_full_text_index: bool = use_full_text_index
         self.__visibility: Optional[str] = None
 
@@ -1461,6 +1467,15 @@ class ThingObject(abc.ABC):
         self.__use_vector_index = use_vector_index
 
     @property
+    def use_vector_index_document(self) -> bool:
+        """Use vector index for document."""
+        return self.__use_vector_index_document
+
+    @use_vector_index_document.setter
+    def use_vector_index_document(self, use_vector_index_document: bool):
+        self.__use_vector_index_document = use_vector_index_document
+
+    @property
     def owner(self) -> bool:
         """Is current user the owner of the entity."""
         return self.__owner
@@ -1473,6 +1488,15 @@ class ThingObject(abc.ABC):
     @owner_id.setter
     def owner_id(self, value: str):
         self.__owner_id = value
+
+    @property
+    def owner_external_user_id(self) -> Optional[str]:
+        """External user id of the owner."""
+        return self.__owner_external_user_id
+
+    @owner_external_user_id.setter
+    def owner_external_user_id(self, value: str):
+        self.__owner_external_user_id = value
 
     @property
     def group_ids(self) -> List[str]:
@@ -1974,12 +1998,29 @@ class ThingObject(abc.ABC):
             dict_object[OBJECT_PROPERTIES_TAG][relation_type.iri] = item.__dict__()
         return dict_object
 
-    def __import_format_dict__(self, group_ids: List[str] = None):
+    def __import_format_dict__(self, group_ids: List[str] = None, external_user_id: Optional[str] = None,
+                               reference_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Export the entity to a dictionary.
+        Parameters
+        ----------
+        group_ids: List[str]
+            List of group ids
+        external_user_id: Optional[str]
+            External user id
+        reference_id: Optional[str]
+            Override the reference id
+
+        Returns
+        -------
+        dict_object: Dict[str, Any]
+            Dictionary of the entity in the import format
+        """
         labels: List[Dict[str, Any]] = []
         labels.extend([la.__dict__() for la in self.label])
         labels.extend([la.__dict__() for la in self.alias])
         dict_object: Dict[str, Any] = {
-            SOURCE_REFERENCE_ID_TAG: self.reference_id,
+            SOURCE_REFERENCE_ID_TAG: self.reference_id if reference_id is None else reference_id,
             SOURCE_SYSTEM_TAG: self.source_system,
             IMAGE_TAG: self.image,
             LABELS_TAG: labels,
@@ -1991,8 +2032,11 @@ class ThingObject(abc.ABC):
             GROUP_IDS: group_ids if group_ids else [],
             USE_NEL_TAG: self.use_for_nel,
             USE_VECTOR_INDEX_TAG: self.use_vector_index,
+            USE_VECTOR_DOCUMENT_INDEX_TAG: self.use_vector_index_document,
             USE_FULLTEXT_TAG: self.use_full_text_index
         }
+        if external_user_id:
+            dict_object[EXTERNAL_USER_ID_TAG] = external_user_id
         for _, items in self.data_properties.items():
             dict_object[DATA_PROPERTIES_TAG].extend([i.__dict__() for i in items])
         for _, item in self.object_properties.items():
@@ -2046,12 +2090,15 @@ class ThingObject(abc.ABC):
 
         use_nel: bool = entity.get(USE_NEL_TAG, True)
         use_vector_index: bool = entity.get(USE_VECTOR_INDEX_TAG, False)
+        use_vector_index_document: bool = entity.get(USE_VECTOR_DOCUMENT_INDEX_TAG, False)
         use_full_text_index: bool = entity.get(USE_FULLTEXT_TAG, True)
         thing: ThingObject = ThingObject(label=labels, icon=entity[IMAGE_TAG], description=descriptions,
                                          concept_type=OntologyClassReference.parse(entity[TYPE_TAG]),
                                          use_for_nel=use_nel, use_vector_index=use_vector_index,
+                                         use_vector_index_document=use_vector_index_document,
                                          use_full_text_index=use_full_text_index)
-        thing.use_vector_index = use_vector_index
+        if EXTERNAL_USER_ID_TAG in entity:
+            thing.owner_external_user_id = entity[EXTERNAL_USER_ID_TAG]
         if DATA_PROPERTIES_TAG in entity:
             if isinstance(entity[DATA_PROPERTIES_TAG], dict):
                 for data_property_type_str, data_properties in entity[DATA_PROPERTIES_TAG].items():
@@ -2109,9 +2156,11 @@ class ThingObject(abc.ABC):
 
         use_nel: bool = False
         use_vector_index: bool = False
+        use_vector_index_document: bool = False
         if TARGETS_TAG in entity:
             use_nel = INDEXING_NEL_TARGET in entity[TARGETS_TAG]
             use_vector_index = INDEXING_VECTOR_SEARCH_TARGET in entity[TARGETS_TAG]
+            use_vector_index_document = INDEXING_VECTOR_SEARCH_DOCUMENT_TARGET in entity[TARGETS_TAG]
             use_fulltext_index = INDEXING_FULLTEXT_TARGET in entity[TARGETS_TAG]
         else:
             if USE_NEL_TAG in entity:
@@ -2128,7 +2177,9 @@ class ThingObject(abc.ABC):
                                          uri=entity[URI_TAG],
                                          concept_type=OntologyClassReference.parse(entity[TYPE_TAG]),
                                          owner=entity.get(OWNER_TAG, True), use_for_nel=use_nel,
-                                         use_vector_index=use_vector_index, use_full_text_index=use_fulltext_index)
+                                         use_vector_index=use_vector_index,
+                                         use_vector_index_document=use_vector_index_document,
+                                         use_full_text_index=use_fulltext_index)
         thing.visibility = visibility
         thing.owner_id = entity.get(OWNER_ID_TAG)
         thing.group_ids = entity.get(GROUP_IDS)
@@ -2190,6 +2241,9 @@ class ThingObject(abc.ABC):
         self.__concept_type = OntologyClassReference.parse(state[TYPE_TAG])
         self.__owner = state.get(OWNER_TAG, True)
         self.__use_for_nel = use_nel
+        self.__use_vector_index = state.get(USE_VECTOR_INDEX_TAG, False)
+        self.__use_vector_index_document = state.get(USE_VECTOR_DOCUMENT_INDEX_TAG, False)
+        self.__use_full_text_index = state.get(USE_FULLTEXT_TAG, True)
         self.__visibility = visibility
         self.__owner_id = state.get(OWNER_ID_TAG)
         self.__group_ids = state.get(GROUP_IDS)
@@ -2222,10 +2276,73 @@ class ThingObject(abc.ABC):
     def __hash__(self):
         return 0
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any):
         # another object is equal to self, iff
         # it is an instance of MyClass
-        return isinstance(other, ThingObject) and other.uri == self.uri
+        if not isinstance(other, ThingObject):
+            return False
+        if self.uri != other.uri:
+            return False
+        other_thing: ThingObject = other
+        # Check if the descriptions are different
+        if len(self.description) != len(other_thing.description):
+            return False
+        for desc_file in self.description:
+            kg_desc: Optional[Description] = other_thing.description_lang(desc_file.language_code)
+            if kg_desc is None or desc_file.content != kg_desc.content:
+                return False
+        # Difference in vector index
+        if self.use_vector_index != other_thing.use_vector_index:
+            return False
+        # Difference in NEL index
+        if self.use_for_nel != other_thing.use_for_nel:
+            return False
+        if self.use_vector_index_document != other_thing.use_vector_index_document:
+            return False
+
+        # Different number of labels
+        if len(self.label) != len(other_thing.label):
+            return False
+        # Check if the labels are different
+        for label_file in self.label:
+            label_kg_lang: Optional[Label] = other_thing.label_lang(label_file.language_code)
+            if label_kg_lang is None or \
+                    label_file.content != label_kg_lang.content:
+                return False
+
+        # Different number of aliases
+        if len(self.alias) != len(other_thing.alias):
+            return False
+
+        # Check if the aliases are different
+        for alias_file in self.alias:
+            alias_kg_lang = other_thing.alias_lang(alias_file.language_code)
+            if alias_file.content not in [alias.content for alias in alias_kg_lang]:
+                return False
+
+        # If the image is different
+        if self.image != other_thing.image:
+            return False
+
+        difference_data_properties: List[Dict[str, Any]] = []
+        # If the data properties are different
+        if len(self.data_properties) != len(other_thing.data_properties):
+            return False
+
+        for prop, data_properties in self.data_properties.items():
+            if prop not in other_thing.data_properties:
+                return False
+            if len(data_properties) != len(other_thing.data_properties.get(prop, [])):
+                return False
+
+            for dp in data_properties:
+                if prop not in other_thing.data_properties:
+                    return False
+
+                else:
+                    if dp.value not in [d.value for d in other_thing.data_properties.get(prop)]:
+                        return False
+        return True
 
     def __repr__(self):
         return f'<{self.concept_type.iri if self.__concept_type else "UNSET"}: uri:={self.uri}, labels:={self.label}, '\
