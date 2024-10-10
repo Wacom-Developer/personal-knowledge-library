@@ -28,6 +28,7 @@ from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, USER_AGENT_HEADER_FLAG, \
     CONTENT_TYPE_HEADER_FLAG, DEFAULT_TIMEOUT, format_exception
 from knowledge.services.graph import Visibility, SearchPattern, MIME_TYPE
+from knowledge.services.helper import split_updates, entity_payload
 
 
 # -------------------------------------------- Service API Client ------------------------------------------------------
@@ -341,71 +342,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
 
     @staticmethod
     async def __entity__(entity: ThingObject):
-        # Different localized content
-        labels: List[dict] = []
-        descriptions: List[dict] = []
-        literals: List[dict] = []
-        # Add description in different languages
-        for desc in entity.description:
-            if len(desc.content) > 0 and not desc.content == ' ':
-                descriptions.append({
-                    DESCRIPTION_TAG: desc.content,
-                    LOCALE_TAG: desc.language_code
-                })
-        if len(descriptions) == 0:
-            #  Adding an empty description
-            for label in entity.label:
-                if len(label.content) > 0 and not label.content == ' ':
-                    descriptions.append({
-                        DESCRIPTION_TAG: f'Description of {label.content}',
-                        LOCALE_TAG: label.language_code
-                    })
-
-        # Labels are tagged as main label
-        for label in entity.label:
-            if label is not None and label.content is not None and len(label.content) > 0 and label.content != " ":
-                labels.append({
-                    VALUE_TAG: label.content,
-                    LOCALE_TAG: label.language_code,
-                    IS_MAIN_TAG: True
-                })
-        # Alias are no main labels
-        for label in entity.alias:
-            if label is not None and len(label.content) > 0 and label.content != " ":
-                labels.append({
-                    VALUE_TAG: label.content,
-                    LOCALE_TAG: label.language_code,
-                    IS_MAIN_TAG: False
-                })
-        # Labels are tagged as main label
-        for _, list_literals in entity.data_properties.items():
-            for li in list_literals:
-                if li.data_property_type:
-                    literals.append({
-                        VALUE_TAG: li.value,
-                        LOCALE_TAG: li.language_code
-                        if li.language_code and li.language_code in SUPPORTED_LOCALES else EN_US,
-                        DATA_PROPERTY_TAG: li.data_property_type.iri
-                    })
-        payload: Dict[str, Any] = {
-            TYPE_TAG: entity.concept_type.iri,
-            DESCRIPTIONS_TAG: descriptions,
-            LABELS_TAG: labels,
-            DATA_PROPERTIES_TAG: literals,
-            SEND_TO_NEL_TAG: entity.use_for_nel
-        }
-        targets: List[str] = []
-        if entity.use_vector_index:
-            payload[SEND_VECTOR_INDEX_TAG] = entity.use_vector_index
-            targets.append(INDEXING_VECTOR_SEARCH_TARGET)
-        if entity.use_full_text_index:
-            targets.append(INDEXING_FULLTEXT_TARGET)
-        if entity.use_for_nel:
-            targets.append(INDEXING_NEL_TARGET)
-        payload[TARGETS_TAG] = targets
-        if entity.tenant_access_right:
-            payload[TENANT_RIGHTS_TAG] = entity.tenant_access_right.to_list()
-        return payload
+        return entity_payload(entity)
 
     async def create_entity_bulk(self, entities: List[ThingObject], batch_size: int = 10,
                                  ignore_images: bool = False, auth_key: Optional[str] = None) -> List[ThingObject]:
@@ -699,6 +636,42 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                 if not response.ok:
                     raise await handle_error(f'Creation of relation failed. URI:={source}.', response, 
                                              headers=headers, parameters=params)
+
+    async def create_relations_bulk(self, source: str, relations: Dict[OntologyPropertyReference, List[str]],
+                                    auth_key: Optional[str] = None):
+        """
+        Creates all the relations for an entity to a source entity.
+
+        Parameters
+        ----------
+        source: str
+            Entity URI of the source
+
+        relations: Dict[OntologyPropertyReference, List[str]]
+            ObjectProperty property and targets mapping.
+
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        url: str = f'{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relations'
+        headers: dict = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        async with AsyncServiceAPIClient.__async_session__() as session:
+            for update_bulk in split_updates(relations):
+                async with session.post(url, json=update_bulk, headers=headers, verify_ssl=self.verify_calls
+                                        ) as response:
+                    if not response.ok:
+                        raise await handle_error(f'Creation of relation failed. URI:={source}.', response,
+                                                 headers=headers, parameters=update_bulk)
 
     async def remove_relation(self, source: str, relation: OntologyPropertyReference, target: str,
                               auth_key: Optional[str] = None):

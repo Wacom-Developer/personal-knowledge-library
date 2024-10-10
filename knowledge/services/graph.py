@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-24 Wacom. All rights reserved.
+# Copyright © 2021-present Wacom. All rights reserved.
 import enum
 import os
 import urllib
@@ -12,20 +12,19 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, DESCRIPTION_TAG, TYPE_TAG, \
-    LABELS_TAG, IS_MAIN_TAG, DESCRIPTIONS_TAG, RELATIONS_TAG, SEND_TO_NEL_TAG, \
-    LOCALE_TAG, EntityStatus, Label, URIS_TAG, FORCE_TAG, URI_TAG, SEND_VECTOR_INDEX_TAG, INDEXING_NEL_TARGET, \
-    INDEXING_VECTOR_SEARCH_TARGET, INDEXING_FULLTEXT_TARGET, TARGETS_TAG
-from knowledge.base.language import LocaleCode, SUPPORTED_LOCALES
+from knowledge.base.entity import DATA_PROPERTIES_TAG, TYPE_TAG, \
+    LABELS_TAG, IS_MAIN_TAG, RELATIONS_TAG, LOCALE_TAG, EntityStatus, Label, URIS_TAG, FORCE_TAG, URI_TAG
+from knowledge.base.language import LocaleCode
 from knowledge.base.ontology import DataProperty, OntologyPropertyReference, ThingObject, OntologyClassReference, \
     ObjectProperty, EN_US
-from knowledge.services import AUTHORIZATION_HEADER_FLAG, TENANT_RIGHTS_TAG, APPLICATION_JSON_HEADER, RELATION_TAG, \
+from knowledge.services import AUTHORIZATION_HEADER_FLAG, APPLICATION_JSON_HEADER, RELATION_TAG, \
     TARGET, ACTIVATION_TAG, PREDICATE, OBJECT, SUBJECT, \
     LIMIT_PARAMETER, ESTIMATE_COUNT, VISIBILITY_TAG, NEXT_PAGE_ID_TAG, LISTING, TOTAL_COUNT, SEARCH_TERM, \
     LANGUAGE_PARAMETER, TYPES_PARAMETER, LIMIT, VALUE, LITERAL_PARAMETER, SEARCH_PATTERN_PARAMETER, SUBJECT_URI, \
     RELATION_URI, OBJECT_URI, DEFAULT_TIMEOUT, IS_OWNER_PARAM
 from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, \
     USER_AGENT_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG, handle_error
+from knowledge.services.helper import split_updates, entity_payload
 
 MIME_TYPE: Dict[str, str] = {
     '.jpg': 'image/jpeg',
@@ -274,71 +273,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
     @staticmethod
     def __entity__(entity: ThingObject):
-        # Different localized content
-        labels: List[dict] = []
-        descriptions: List[dict] = []
-        literals: List[dict] = []
-        # Add description in different languages
-        for desc in entity.description:
-            if len(desc.content) > 0 and not desc.content == ' ':
-                descriptions.append({
-                    DESCRIPTION_TAG: desc.content,
-                    LOCALE_TAG: desc.language_code
-                })
-        if len(descriptions) == 0:
-            #  Adding an empty description
-            for label in entity.label:
-                if len(label.content) > 0 and not label.content == ' ':
-                    descriptions.append({
-                        DESCRIPTION_TAG: f'Description of {label.content}',
-                        LOCALE_TAG: label.language_code
-                    })
-
-        # Labels are tagged as main label
-        for label in entity.label:
-            if label is not None and label.content is not None and len(label.content) > 0 and label.content != " ":
-                labels.append({
-                    VALUE_TAG: label.content,
-                    LOCALE_TAG: label.language_code,
-                    IS_MAIN_TAG: True
-                })
-        # Alias are no main labels
-        for label in entity.alias:
-            if label is not None and len(label.content) > 0 and label.content != " ":
-                labels.append({
-                    VALUE_TAG: label.content,
-                    LOCALE_TAG: label.language_code,
-                    IS_MAIN_TAG: False
-                })
-        # Labels are tagged as main label
-        for _, list_literals in entity.data_properties.items():
-            for li in list_literals:
-                if li.data_property_type:
-                    literals.append({
-                        VALUE_TAG: li.value,
-                        LOCALE_TAG: li.language_code
-                        if li.language_code and li.language_code in SUPPORTED_LOCALES else EN_US,
-                        DATA_PROPERTY_TAG: li.data_property_type.iri
-                    })
-        payload: Dict[str, Any] = {
-            TYPE_TAG: entity.concept_type.iri,
-            DESCRIPTIONS_TAG: descriptions,
-            LABELS_TAG: labels,
-            DATA_PROPERTIES_TAG: literals,
-            SEND_TO_NEL_TAG: entity.use_for_nel
-        }
-        targets: List[str] = []
-        if entity.use_vector_index:
-            payload[SEND_VECTOR_INDEX_TAG] = entity.use_vector_index
-            targets.append(INDEXING_VECTOR_SEARCH_TARGET)
-        if entity.use_full_text_index:
-            targets.append(INDEXING_FULLTEXT_TARGET)
-        if entity.use_for_nel:
-            targets.append(INDEXING_NEL_TARGET)
-        payload[TARGETS_TAG] = targets
-        if entity.tenant_access_right:
-            payload[TENANT_RIGHTS_TAG] = entity.tenant_access_right.to_list()
-        return payload
+        return entity_payload(entity)
 
     def create_entity_bulk(self, entities: List[ThingObject], batch_size: int = 10, ignore_images: bool = False,
                            auth_key: Optional[str] = None) \
@@ -662,6 +597,46 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             response: Response = session.post(url, params=params, headers=headers, verify=self.verify_calls)
             if not response.ok:
                 raise handle_error('Creation of relation failed.', response)
+
+    def create_relations_bulk(self, source: str, relations: Dict[OntologyPropertyReference, List[str]],
+                              auth_key: Optional[str] = None):
+        """
+        Creates all the relations for an entity to a source entity.
+
+        Parameters
+        ----------
+        source: str
+            Entity URI of the source
+
+        relations: Dict[OntologyPropertyReference, List[str]]
+            ObjectProperty property and targets mapping.
+
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code
+        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        url: str = f'{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relations'
+        headers: dict = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+
+        mount_point: str = \
+            'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(backoff_factor=0.1,
+                                   status_forcelist=[500, 502, 503, 504])
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            for updates in split_updates(relations):
+                response: Response = session.post(url, json=updates, headers=headers, verify=self.verify_calls)
+                if not response.ok:
+                    raise handle_error('Creation of relation failed.', response, payload=updates)
 
     def remove_relation(self, source: str, relation: OntologyPropertyReference, target: str,
                         auth_key: Optional[str] = None):
@@ -1274,3 +1249,4 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         if response.ok:
             return response.json()['imageId']
         raise handle_error('Creation of entity image failed.', response)
+
