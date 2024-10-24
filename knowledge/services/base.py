@@ -205,7 +205,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         return f'{self.service_url}/{self.__auth_service_endpoint}/{self.USER_LOGIN_ENDPOINT}'
 
     @property
-    def current_session(self) -> Session:
+    def current_session(self) -> Union[RefreshableSession, TimedSession, PermanentSession, None]:
         """Current session.
 
         Returns
@@ -220,7 +220,8 @@ class WacomServiceAPIClient(RESTAPIClient):
         """
         if self.__current_session_id is None:
             raise WacomServiceException('No session set. Please login first.')
-        session: Session = self.__token_manager.get_session(self.__current_session_id)
+        session: Union[RefreshableSession, TimedSession, PermanentSession, None] = (
+            self.__token_manager.get_session(self.__current_session_id))
         if session is None:
             raise WacomServiceException(f'Unknown session id:= {self.__current_session_id}. Please login first.')
         return session
@@ -414,7 +415,16 @@ class WacomServiceAPIClient(RESTAPIClient):
         # Refresh token if needed
         if (self.current_session.refreshable and
                 (self.current_session.expires_in < force_refresh_timeout or force_refresh)):
-            auth_key, refresh_token, _ = self.refresh_token(self.current_session.refresh_token)
+            try:
+                auth_key, refresh_token, _ = self.refresh_token(self.current_session.refresh_token)
+            except WacomServiceException as e:
+                if isinstance(self.current_session, PermanentSession):
+                    permanent_session: PermanentSession = self.current_session
+                    auth_key, refresh_token, _ = self.request_user_token(permanent_session.tenant_api_key,
+                                                                         permanent_session.external_user_id)
+                else:
+                    logger.error(f"Error refreshing token: {e}")
+                    raise e
             self.current_session.update_session(auth_key, refresh_token)
             return auth_key, refresh_token
         return self.current_session.auth_token, self.current_session.refresh_token
