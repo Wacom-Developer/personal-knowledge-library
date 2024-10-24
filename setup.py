@@ -33,7 +33,7 @@ README = (HERE / "README.md").read_text()
 # the setup
 setup(
     name='personal_knowledge_library',
-    version="2.3.0",
+    version="2.4.0",
     description="Library to access Wacom's Personal Knowledge graph.",
     long_description=README,
     long_description_content_type="text/markdown",

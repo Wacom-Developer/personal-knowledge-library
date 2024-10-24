@@ -1,3 +1,7 @@
+2024/10/24 - RELEASE 2.4.0
+==========================
+- Introduce graceful shutdown for async client
+
 2024/10/10 - RELEASE 2.3.0
 ==========================
 - Splitting the VectorSearch targets in Word and Document index targets
