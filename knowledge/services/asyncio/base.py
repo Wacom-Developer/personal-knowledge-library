@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-23 Wacom. All rights reserved.
+# Copyright © 2021-present Wacom. All rights reserved.
 import asyncio
 import json
 import socket
@@ -123,6 +123,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         Authentication service endpoint
     verify_calls: bool (Default:= True)
         Flag if  API calls should be verified.
+
     """
     USER_ENDPOINT: str = 'user'
     USER_LOGIN_ENDPOINT: str = f'{USER_ENDPOINT}/login'
@@ -134,12 +135,14 @@ class AsyncServiceAPIClient(RESTAPIClient):
 
     def __init__(self, application_name: str = "Async Knowledge Client",
                  service_url: str = SERVICE_URL, service_endpoint: str = 'graph/v1',
-                 auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True):
+                 auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True,
+                 graceful_shutdown: bool = False):
         self.__service_endpoint: str = service_endpoint
         self.__auth_service_endpoint: str = auth_service_endpoint
         self.__application_name: str = application_name
         self.__token_manager: TokenManager = TokenManager()
         self.__current_session_id: Optional[str] = None
+        self.__graceful_shutdown: bool = graceful_shutdown
         super().__init__(service_url, verify_calls)
 
     @property
@@ -154,7 +157,12 @@ class AsyncServiceAPIClient(RESTAPIClient):
                 f"(+https://github.com/Wacom-Developer/personal-knowledge-library)")
 
     @property
-    def current_session(self) -> Session:
+    def use_graceful_shutdown(self) -> bool:
+        """ Use graceful shutdown."""
+        return self.__graceful_shutdown
+
+    @property
+    def current_session(self) -> Union[RefreshableSession, TimedSession, PermanentSession, None]:
         """Current session.
 
         Returns
@@ -169,7 +177,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
         """
         if self.__current_session_id is None:
             raise WacomServiceException('No session set. Please login first.')
-        session: Session = self.__token_manager.get_session(self.__current_session_id)
+        session: Union[RefreshableSession, TimedSession, PermanentSession, None] = (
+            self.__token_manager.get_session(self.__current_session_id))
         if session is None:
             raise WacomServiceException(f'Unknown session id:= {self.__current_session_id}. Please login first.')
         return session
@@ -218,7 +227,16 @@ class AsyncServiceAPIClient(RESTAPIClient):
         # Refresh token if needed
         if (self.current_session.refreshable and
                 (self.current_session.expires_in < force_refresh_timeout or force_refresh)):
-            auth_key, refresh_token, _ = await self.refresh_token(self.current_session.refresh_token)
+            try:
+                auth_key, refresh_token, _ = await self.refresh_token(self.current_session.refresh_token)
+            except WacomServiceException as e:
+                if isinstance(self.current_session, PermanentSession):
+                    permanent_session: PermanentSession = self.current_session
+                    auth_key, refresh_token, _ = await self.request_user_token(permanent_session.tenant_api_key,
+                                                                               permanent_session.external_user_id)
+                else:
+                    logger.error(f"Error refreshing token: {e}")
+                    raise e
             self.current_session.update_session(auth_key, refresh_token)
             return auth_key, refresh_token
         return self.current_session.auth_token, self.current_session.refresh_token
@@ -235,8 +253,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         """
         timeout: ClientTimeout = ClientTimeout(total=60)
         ssl_context: ssl.SSLContext = ssl.create_default_context()
-        connector: aiohttp.TCPConnector = aiohttp.TCPConnector(ssl=ssl_context, limit_per_host=10,
-                                                               resolver=cached_resolver)
+        connector: aiohttp.TCPConnector = aiohttp.TCPConnector(ssl=ssl_context, resolver=cached_resolver)
         return aiohttp.ClientSession(
             json_serialize=lambda x: orjson.dumps(x).decode(),
             timeout=timeout,
@@ -285,9 +302,11 @@ class AsyncServiceAPIClient(RESTAPIClient):
                     except (TypeError, ValueError) as _:
                         date_object: datetime = datetime.now()
                         logger.warning(f'Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}')
-                    return response_token['accessToken'], response_token['refreshToken'], date_object
-                raise await handle_error('Login failed.', response, payload=payload,
-                                         headers=headers)
+                else:
+                    raise await handle_error('Login failed.', response, payload=payload,
+                                             headers=headers)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return response_token['accessToken'], response_token['refreshToken'], date_object
 
     async def refresh_token(self, refresh_token: str) -> Tuple[str, str, datetime]:
         """
@@ -335,9 +354,11 @@ class AsyncServiceAPIClient(RESTAPIClient):
                     except (TypeError, ValueError) as _:
                         date_object: datetime = datetime.now()
                         logger.warning(f'Parsing of expiration date failed. {timestamp_str_truncated}')
-                    return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
-        raise await handle_error('Refresh of token failed.', response, payload=payload,
-                                 headers=headers)
+                else:
+                    raise await handle_error('Refresh of token failed.', response, payload=payload,
+                                             headers=headers)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
 
     async def login(self, tenant_api_key: str, external_user_id: str) -> PermanentSession:
         """ Login as user by using the tenant id and its external user id.
@@ -362,6 +383,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
 
     async def logout(self):
         """ Logout user."""
+        if self.__current_session_id:
+            self.__token_manager.remove_session(self.__current_session_id)
         self.__current_session_id = None
 
     async def register_token(self, auth_key: str, refresh_token: Optional[str] = None) \
