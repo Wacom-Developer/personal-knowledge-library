@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024-present Wacom. All rights reserved.
+import asyncio
 import logging
 import os
 import urllib
@@ -10,12 +11,11 @@ from urllib.parse import urlparse
 import aiohttp
 import orjson
 
-from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, DESCRIPTION_TAG, TYPE_TAG, \
-    URI_TAG, LABELS_TAG, IS_MAIN_TAG, DESCRIPTIONS_TAG, RELATIONS_TAG, SEND_TO_NEL_TAG, \
-    LOCALE_TAG, EntityStatus, Label, URIS_TAG, FORCE_TAG, TENANT_RIGHTS_TAG, VISIBILITY_TAG, \
-    RELATION_TAG, TEXT_TAG, SEND_VECTOR_INDEX_TAG, INDEXING_FULLTEXT_TARGET, INDEXING_VECTOR_SEARCH_TARGET, \
-    INDEXING_NEL_TARGET, TARGETS_TAG
-from knowledge.base.language import LocaleCode, EN_US, SUPPORTED_LOCALES
+from knowledge.base.entity import DATA_PROPERTIES_TAG, TYPE_TAG, \
+    URI_TAG, LABELS_TAG, IS_MAIN_TAG, RELATIONS_TAG, LOCALE_TAG, EntityStatus, Label, URIS_TAG, FORCE_TAG, \
+    VISIBILITY_TAG, \
+    RELATION_TAG, TEXT_TAG
+from knowledge.base.language import LocaleCode, EN_US
 from knowledge.base.ontology import DataProperty, OntologyPropertyReference, ThingObject, OntologyClassReference, \
     ObjectProperty
 from knowledge.nel.base import KnowledgeGraphEntity, EntityType, KnowledgeSource, EntitySource
@@ -70,8 +70,9 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
     ONTOLOGY_UPDATE_ENDPOINT: str = 'ontology-update'
 
     def __init__(self, application_name: str, service_url: str = WacomServiceAPIClient.SERVICE_URL,
-                 service_endpoint: str = 'graph/v1'):
-        super().__init__(application_name=application_name, service_url=service_url, service_endpoint=service_endpoint)
+                 service_endpoint: str = 'graph/v1', graceful_shutdown: bool = False):
+        super().__init__(application_name=application_name, service_url=service_url, service_endpoint=service_endpoint,
+                         graceful_shutdown=graceful_shutdown)
 
     async def entity(self, uri: str, auth_key: Optional[str] = None) -> ThingObject:
         """
@@ -115,11 +116,13 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                             pref_label.append(Label.create_from_dict(label))
                         else:  # Alias
                             aliases.append(Label.create_from_dict(label))
-                    # Create ThingObject
-                    thing: ThingObject = ThingObject.from_dict(e)
-                    return thing
-            raise await handle_error(f'Retrieving of entity content failed. URI:={uri}.',
-                                     response, headers=headers)
+                else:
+                    raise await handle_error(f'Retrieving of entity content failed. URI:={uri}.',
+                                             response, headers=headers)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        # Create ThingObject
+        thing: ThingObject = ThingObject.from_dict(e)
+        return thing
 
     async def set_entity_image_local(self, entity_uri: str, path: Path, auth_key: Optional[str] = None) -> str:
         """Setting the image of the entity.
@@ -245,9 +248,12 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             async with session.patch(url, headers=headers, data=data, timeout=DEFAULT_TIMEOUT,
                                      verify_ssl=self.verify_calls) as response:
                 if response.ok:
-                    return (await response.json(loads=orjson.loads))['imageId']
-        raise await handle_error(f'Creation of entity image failed. URI:={entity_uri}.', response,
-                                 headers=headers)
+                    image_id: str = (await response.json(loads=orjson.loads))['imageId']
+                else:
+                    raise await handle_error(f'Creation of entity image failed. URI:={entity_uri}.', response,
+                                             headers=headers)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return image_id
 
     async def delete_entities(self, uris: List[str], force: bool = False, auth_key: Optional[str] = None):
         """
@@ -288,6 +294,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                     raise WacomServiceException(f'Deletion of entities failed.'
                                                 f'Response code:={response.status_code}, '
                                                 f'exception:= {response.content}')
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
 
     async def delete_entity(self,  uri: str, force: bool = False, auth_key: Optional[str] = None):
         """
@@ -319,6 +326,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                                       verify_ssl=self.verify_calls) as response:
                 if not response.ok:
                     raise await handle_error(f'Deletion of entity failed. URI:={uri}.', response, headers=headers)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
 
     async def exists(self, uri: str) -> bool:
         """
@@ -398,7 +406,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                                     logging.error(f'Failed to upload image for entity {uri}. '
                                                   f'{format_exception(we)}')
                             entities[bulk_idx + idx].uri = response_dict[URIS_TAG][idx]
-
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
         return entities
 
     async def create_entity(self, entity: ThingObject, auth_key: Optional[str] = None, ignore_image: bool = False) \
@@ -445,9 +453,11 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                         await self.set_entity_image_local(uri, Path(p.path), auth_key=auth_key)
                     elif entity.image is not None and entity.image != '':
                         await self.set_entity_image_url(uri, entity.image, auth_key=auth_key)
-                    return uri
-                # Handle error
-                raise await handle_error("Creation of entity failed.", response, payload=payload, headers=headers)
+                if not response.ok:
+                    # Handle error
+                    raise await handle_error("Creation of entity failed.", response, payload=payload, headers=headers)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return uri
 
     async def update_entity(self, entity: ThingObject, auth_key: Optional[str] = None):
         """
@@ -482,6 +492,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                 if not response.ok:
                     raise await handle_error(f'Update of entity failed. URI:={uri}.', response, payload=payload,
                                              headers=headers)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
 
     async def relations(self, uri: str, auth_key: Optional[str] = None) \
             -> Dict[OntologyPropertyReference, ObjectProperty]:
@@ -518,8 +529,12 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             async with session.get(url, headers=headers, verify_ssl=self.verify_calls) as response:
                 if response.ok:
                     rel: list = (await response.json(loads=orjson.loads)).get(RELATIONS_TAG)
-                    return ObjectProperty.create_from_list(rel)
-        raise await handle_error(f'Retrieving of relations failed. URI:={uri}.', response, headers=headers)
+                else:
+                    raise await handle_error(f'Retrieving of relations failed. URI:={uri}.', response,
+                                             headers=headers)
+        # Graceful shutdown to close the session and file descriptor
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
+        return ObjectProperty.create_from_list(rel)
 
     async def labels(self, uri: str, locale: LocaleCode = EN_US, auth_key: Optional[str] = None) -> List[Label]:
         """
@@ -557,8 +572,10 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             }, verify_ssl=self.verify_calls) as response:
                 if response.ok:
                     labels: list = (await response.json(loads=orjson.loads)).get(LABELS_TAG)
-                    return [Label.create_from_dict(label) for label in labels]
-        raise await handle_error(f'Failed to pull labels. URI:={uri}.', response, headers=headers)
+                else:
+                    raise await handle_error(f'Failed to pull labels. URI:={uri}.', response, headers=headers)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
+        return [Label.create_from_dict(label) for label in labels]
 
     async def literals(self, uri: str, locale: LocaleCode = EN_US, auth_key: Optional[str] = None) \
             -> List[DataProperty]:
@@ -596,8 +613,10 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             }, verify_ssl=self.verify_calls) as response:
                 if response.ok:
                     literals: list = (await response.json(loads=orjson.loads)).get(DATA_PROPERTIES_TAG)
-                    return DataProperty.create_from_list(literals)
-        raise await handle_error(f'Failed to pull literals. URI:={uri}.', response, headers=headers)
+                else:
+                    raise await handle_error(f'Failed to pull literals. URI:={uri}.', response, headers=headers)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
+        return DataProperty.create_from_list(literals)
 
     async def create_relation(self, source: str, relation: OntologyPropertyReference, target: str,
                               auth_key: Optional[str] = None):
@@ -636,6 +655,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                 if not response.ok:
                     raise await handle_error(f'Creation of relation failed. URI:={source}.', response, 
                                              headers=headers, parameters=params)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
 
     async def create_relations_bulk(self, source: str, relations: Dict[OntologyPropertyReference, List[str]],
                                     auth_key: Optional[str] = None):
@@ -672,6 +692,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                     if not response.ok:
                         raise await handle_error(f'Creation of relation failed. URI:={source}.', response,
                                                  headers=headers, parameters=update_bulk)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
 
     async def remove_relation(self, source: str, relation: OntologyPropertyReference, target: str,
                               auth_key: Optional[str] = None):
@@ -711,6 +732,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                 if not response.ok:
                     raise await handle_error(f'Removal of relation failed. URI:={source}.', response,
                                              headers=headers, parameters=params)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
 
     async def activations(self, uris: List[str], depth: int, auth_key: Optional[str] = None) \
             -> Tuple[Dict[str, ThingObject], List[Tuple[str, OntologyPropertyReference, str]]]:
@@ -762,8 +784,10 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                         relations.append((r[SUBJECT], relation, r[OBJECT]))
                         if r[SUBJECT] in things:
                             things[r[SUBJECT]].add_relation(ObjectProperty(relation, outgoing=[r[OBJECT]]))
-                    return things, relations
-        raise await handle_error(f'Activation failed. URIS:={uris}.', response, headers=headers, parameters=params)
+                else:
+                    raise await handle_error(f'Activation failed. URIS:={uris}.', response, headers=headers, parameters=params)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
+        return things, relations
 
     async def listing(self, filter_type: OntologyClassReference, page_id: Optional[str] = None,
                       limit: int = 30, locale: Optional[LocaleCode] = None, visibility: Optional[Visibility] = None,
@@ -842,9 +866,11 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                             thing: ThingObject = ThingObject.from_dict(e)
                             thing.status_flag = EntityStatus.SYNCED
                             entities.append(thing)
-                    return entities, estimated_total_number, next_page_id
-
-        raise await handle_error(f'Failed to list the entities (since:= {page_id}, limit:={limit}). ', response)
+                else:
+                    raise await handle_error(f'Failed to list the entities (since:= {page_id}, limit:={limit}). ',
+                                             response)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
+        return entities, estimated_total_number, next_page_id
 
     async def ontology_update(self, fix: bool = False, auth_key: Optional[str] = None):
         """
@@ -879,6 +905,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                     as response:
                 if not response.ok:
                     raise await handle_error('Ontology update failed. ', response, headers=headers)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
 
     async def search_all(self, search_term: str, language_code: LocaleCode,
                          types: List[OntologyClassReference], limit: int = 30, next_page_id: str = None,
@@ -931,10 +958,11 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         async with AsyncServiceAPIClient.__async_session__() as session:
             async with session.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
                                    verify_ssl=self.verify_calls) as response:
-                if response.ok:
-                    return await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
-        raise await handle_error(f'Search on labels {search_term} failed. ', response, headers=headers,
-                                 parameters=parameters)
+                if not response.ok:
+                    raise await handle_error(f'Search on labels {search_term} failed. ', response, headers=headers,
+                                             parameters=parameters)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
+        return await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
 
     async def search_labels(self, search_term: str, language_code: LocaleCode, exact_match: bool = False,
                             limit: int = 30, next_page_id: str = None, auth_key: Optional[str] = None) \
@@ -989,9 +1017,10 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             async with session.get(url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT,
                                    verify_ssl=self.verify_calls) as response:
                 if response.ok:
-                    return await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
-        raise await handle_error(f'Search on labels {search_term} failed. ', response, headers=headers,
-                                 parameters=parameters)
+                    raise await handle_error(f'Search on labels {search_term} failed. ', response, headers=headers,
+                                             parameters=parameters)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
+        return await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
 
     async def search_literal(self, search_term: str, literal: OntologyPropertyReference,
                              pattern: SearchPattern = SearchPattern.REGEX,
@@ -1047,10 +1076,11 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         async with AsyncServiceAPIClient.__async_session__() as session:
             async with session.get(url, headers=headers, params=parameters,  timeout=DEFAULT_TIMEOUT,
                                    verify_ssl=self.verify_calls) as response:
-                if response.ok:
-                    return await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
-        raise await handle_error(f'Search on literals {search_term} failed. ', response, headers=headers,
-                                 parameters=parameters)
+                if not response.ok:
+                    raise await handle_error(f'Search on literals {search_term} failed. ', response, headers=headers,
+                                             parameters=parameters)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
+        return await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
 
     async def search_relation(self, relation: OntologyPropertyReference,
                               language_code: LocaleCode, subject_uri: str = None, object_uri: str = None,
@@ -1112,10 +1142,12 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         }
         async with AsyncServiceAPIClient.__async_session__() as session:
             async with session.get(url, headers=headers, params=parameters, verify_ssl=self.verify_calls) as response:
-                if response.ok:
-                    return await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
-        raise await handle_error(f'Search on: subject:={subject_uri}, relation {relation.iri}, '
-                                 f'object:= {object_uri} failed. ', response, headers=headers, parameters=parameters)
+                if not response.ok:
+                    raise await handle_error(f'Search on: subject:={subject_uri}, relation {relation.iri}, '
+                                             f'object:= {object_uri} failed. ', response, headers=headers,
+                                             parameters=parameters)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
+        return await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
 
     async def search_description(self, search_term: str, language_code: LocaleCode, limit: int = 30,
                                  auth_key: Optional[str] = None, next_page_id: str = None) \
@@ -1163,10 +1195,12 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         }
         async with AsyncServiceAPIClient.__async_session__() as session:
             async with session.get(url, headers=headers, params=parameters, verify_ssl=self.verify_calls) as response:
-                if response.ok:
-                    return await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
-        raise await handle_error(f'Search on descriptions {search_term} failed. ', response, headers=headers,
-                                 parameters=parameters)
+                if not response.ok:
+                    raise await handle_error(f'Search on descriptions {search_term} failed. ', response,
+                                             headers=headers,
+                                             parameters=parameters)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
+        return await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
 
     @staticmethod
     async def __search_results__(response: Dict[str, Any]) -> Tuple[List[ThingObject], str]:
@@ -1239,6 +1273,9 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                                                                         entity_type=EntityType.PERSONAL_ENTITY)
                         ne.relevant_type = OntologyClassReference.parse(e['type'])
                         named_entities.append(ne)
-                    return named_entities
-        raise await handle_error(f'Named entity linking for text:={text}@{language_code} failed. ', response,
-                                 headers=headers, parameters=payload)
+                else:
+                    raise await handle_error(f'Named entity linking for text:={text}@{language_code} failed. ',
+                                             response,
+                                             headers=headers, parameters=payload)
+        await asyncio.sleep(0.250 if self.use_graceful_shutdown else 0)
+        return named_entities

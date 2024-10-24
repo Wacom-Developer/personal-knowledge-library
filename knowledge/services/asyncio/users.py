@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024 Wacom. All rights reserved.
+import asyncio
 from datetime import datetime
 from typing import Any, Union, Dict, List, Tuple
 
@@ -92,9 +93,12 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
                     except (TypeError, ValueError) as _:
                         date_object: datetime = datetime.now()
                         logger.warning(f'Parsing of expiration date failed. {results["token"][EXPIRATION_DATE_TAG]}')
-                    return User.parse(results['user']), results['token']['accessToken'], \
-                        results['token']['refreshToken'], date_object
-            raise await handle_error('Failed to create the user.', response, headers=headers, payload=payload)
+
+                else:
+                    raise await handle_error('Failed to create the user.', response, headers=headers, payload=payload)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return (User.parse(results['user']), results['token']['accessToken'], results['token']['refreshToken'],
+                date_object)
 
     async def update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: Dict[str, str] = None,
                           roles: List[UserRole] = None):
@@ -138,6 +142,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
                 if not response.ok:
                     raise await handle_error('Failed to update the user.', response, headers=headers,
                                              payload=payload)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
 
     async def delete_user(self, tenant_key: str, external_id: str, internal_id: str, force: bool = False):
         """Deletes user from tenant.
@@ -173,6 +178,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
                                       verify_ssl=self.verify_calls) as response:
                 if not response.ok:
                     raise await handle_error('Failed to delete the user.', response, headers=headers)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
 
     async def user_internal_id(self, tenant_key: str, external_id: str) -> str:
         """User internal id.
@@ -207,8 +213,10 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
                                    verify_ssl=self.verify_calls) as response:
                 if response.ok:
                     response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
-                    return response_dict[INTERNAL_USER_ID_TAG]
-            raise await handle_error('Failed to get the user.', response, headers=headers)
+                else:
+                    raise await handle_error('Failed to get the user.', response, headers=headers)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return response_dict[INTERNAL_USER_ID_TAG]
 
     async def listing_users(self, tenant_key: str, offset: int = 0, limit: int = 20) -> List[User]:
         """
@@ -245,5 +253,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
                     results: List[User] = []
                     for u in users:
                         results.append(User.parse(u))
-                    return results
-        await handle_error('Listing of users failed.', response, headers=headers, parameters=params)
+                else:
+                    await handle_error('Listing of users failed.', response, headers=headers, parameters=params)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return results

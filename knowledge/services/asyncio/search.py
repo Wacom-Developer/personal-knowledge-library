@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024 Wacom. All rights reserved.
+import asyncio
 from typing import Dict, Any, Optional, List
 
 import orjson
@@ -66,9 +67,12 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             async with session.get(url, params={"locale": locale, "uri": uri},
                                    headers=headers, timeout=DEFAULT_TIMEOUT) as response:
                 if response.ok:
-                    return await response.json(loads=orjson.loads)
-        raise await handle_error("Failed to retrieve the document.", response, headers=headers,
-                                 parameters={"locale": locale, "uri": uri})
+                    docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in await response.json(loads=orjson.loads)]
+                else:
+                    raise await handle_error("Failed to retrieve the document.", response, headers=headers,
+                                             parameters={"locale": locale, "uri": uri})
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return docs
 
     async def retrieve_labels(self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None) \
             -> List[VectorDBDocument]:
@@ -107,9 +111,13 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             async with session.get(url, params={"locale": locale, "uri": uri},
                                    headers=headers, timeout=DEFAULT_TIMEOUT) as response:
                 if response.ok:
-                    return [VectorDBDocument(vec_doc) for vec_doc in await response.json(loads=orjson.loads)]
-        raise await handle_error("Failed to retrieve the document.", response, headers=headers,
-                                 parameters={"locale": locale, "uri": uri})
+                    docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in
+                                                    await response.json(loads=orjson.loads)]
+                else:
+                    raise await handle_error("Failed to retrieve the document.", response, headers=headers,
+                                             parameters={"locale": locale, "uri": uri})
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return docs
 
     async def count_documents(self, locale: LocaleCode, concept_type: Optional[str] = None,
                               auth_key: Optional[str] = None) -> int:
@@ -149,9 +157,12 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         async with self.__async_session__() as session:
             async with session.get(url, params=params, headers=headers) as response:
                 if response.ok:
-                    return (await response.json(loads=orjson.loads)).get("count", 0)
-        raise await handle_error("Counting documents failed.", response, headers=headers,
-                                 parameters={"locale": locale})
+                    count: int = (await response.json(loads=orjson.loads)).get("count", 0)
+                else:
+                    raise await handle_error("Counting documents failed.", response,
+                                             headers=headers, parameters={"locale": locale})
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return count
 
     async def count_documents_filter(self, locale: LocaleCode, filters: Dict[str, Any],
                                      auth_key: Optional[str] = None) -> int:
@@ -188,9 +199,12 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         async with self.__async_session__() as session:
             async with session.post(url, json={"locale": locale, "filter": filters}, headers=headers) as response:
                 if response.ok:
-                    return (await response.json(loads=orjson.loads)).get("count", 0)
-        raise await handle_error("Counting documents failed.", response, headers=headers,
-                                 parameters={"locale": locale, "filter": filters})
+                    count: int = (await response.json(loads=orjson.loads)).get("count", 0)
+                else:
+                    raise await handle_error("Counting documents failed.", response, headers=headers,
+                                             parameters={"locale": locale, "filter": filters})
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return count
 
     async def count_labels(self, locale: str, concept_type: Optional[str] = None,
                            auth_key: Optional[str] = None) -> int:
@@ -230,9 +244,12 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         async with self.__async_session__() as session:
             async with session.get(url, params=params,  headers=headers) as response:
                 if response.ok:
-                    return (await response.json(loads=orjson.loads)).get("count", 0)
-        raise await handle_error("Counting labels failed.", response, headers=headers,
-                                 parameters={"locale": locale})
+                    count: int = (await response.json(loads=orjson.loads)).get("count", 0)
+                else:
+                    raise await handle_error("Counting labels failed.", response, headers=headers,
+                                             parameters={"locale": locale})
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return count
 
     async def count_labels_filter(self, locale: LocaleCode, filters: Dict[str, Any],
                                   auth_key: Optional[str] = None) -> int:
@@ -269,9 +286,12 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         async with self.__async_session__() as session:
             async with session.post(url, json={"locale": locale, "filter": filters}, headers=headers) as response:
                 if response.ok:
-                    return (await response.json(loads=orjson.loads)).get("count", 0)
-        raise await handle_error("Counting documents failed.", response, headers=headers,
-                                 parameters={"locale": locale, "filter": filters})
+                    count: int = (await response.json(loads=orjson.loads)).get("count", 0)
+                else:
+                    raise await handle_error("Counting documents failed.", response, headers=headers,
+                                             parameters={"locale": locale, "filter": filters})
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return count
 
     async def document_search(self, query: str, locale: str, filters: Optional[Dict[str, Any]] = None,
                               max_results: int = 10, auth_key: Optional[str] = None) -> DocumentSearchResponse:
@@ -319,8 +339,10 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             async with session.post(url, headers=headers, json=params) as response:
                 if response.ok:
                     response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
-                    return DocumentSearchResponse.from_dict(response_dict)
-            raise await handle_error("Semantic Search failed.", response, headers=headers, parameters=params)
+                else:
+                    raise await handle_error("Semantic Search failed.", response, headers=headers, parameters=params)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return DocumentSearchResponse.from_dict(response_dict)
 
     async def labels_search(self, query: str, locale: str, filters: Optional[Dict[str, Any]] = None,
                             max_results: int = 10, auth_key: Optional[str] = None) -> LabelMatchingResponse:
@@ -363,6 +385,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             async with session.post(url, headers=headers, json=params) as response:
                 if response.ok:
                     response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
-                    return LabelMatchingResponse.from_dict(response_dict)
-            raise await handle_error("Label fuzzy matching failed.", response, headers=headers,
-                                     parameters=params)
+                else:
+                    raise await handle_error("Label fuzzy matching failed.", response, headers=headers,
+                                             parameters=params)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        return LabelMatchingResponse.from_dict(response_dict)
