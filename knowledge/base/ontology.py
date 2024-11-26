@@ -1642,9 +1642,13 @@ class ThingObject(abc.ABC):
                              f'Expected:={SYSTEM_SOURCE_REFERENCE_ID.iri}')
         if SYSTEM_SOURCE_REFERENCE_ID not in self.__data_properties:
             self.__data_properties[SYSTEM_SOURCE_REFERENCE_ID] = []
-        for idx in range(0, len(self.__data_properties[SYSTEM_SOURCE_REFERENCE_ID])):
+        len_props: int = len(self.__data_properties[SYSTEM_SOURCE_REFERENCE_ID])
+        idx: int = 0
+        while idx < len_props:
             if self.__data_properties[SYSTEM_SOURCE_REFERENCE_ID][idx].language_code == value.language_code:
                 del self.__data_properties[SYSTEM_SOURCE_REFERENCE_ID][idx]
+                len_props -= 1
+            idx += 1
         self.__data_properties[SYSTEM_SOURCE_REFERENCE_ID].append(value)
 
     @property
@@ -2087,11 +2091,23 @@ class ThingObject(abc.ABC):
         for desc in entity[DESCRIPTIONS_TAG]:
             if desc[LOCALE_TAG] in SUPPORTED_LOCALES:
                 descriptions.append(Description.create_from_dict(desc))
-
+        # Backwards-compatibility
         use_nel: bool = entity.get(USE_NEL_TAG, True)
         use_vector_index: bool = entity.get(USE_VECTOR_INDEX_TAG, False)
         use_vector_index_document: bool = entity.get(USE_VECTOR_DOCUMENT_INDEX_TAG, False)
         use_full_text_index: bool = entity.get(USE_FULLTEXT_TAG, True)
+        # Vector index target
+        if INDEXING_VECTOR_SEARCH_TARGET in entity.get(TARGETS_TAG, []):
+            use_vector_index = True
+        # Vector index document target
+        if INDEXING_VECTOR_SEARCH_DOCUMENT_TARGET in entity.get(TARGETS_TAG, []):
+            use_vector_index_document = True
+        # Full text index target
+        if INDEXING_FULLTEXT_TARGET in entity.get(TARGETS_TAG, []):
+            use_full_text_index = True
+        # Named entity linking target
+        if INDEXING_NEL_TARGET in entity.get(TARGETS_TAG, []):
+            use_nel = True
         thing: ThingObject = ThingObject(label=labels, icon=entity[IMAGE_TAG], description=descriptions,
                                          concept_type=OntologyClassReference.parse(entity[TYPE_TAG]),
                                          use_for_nel=use_nel, use_vector_index=use_vector_index,
