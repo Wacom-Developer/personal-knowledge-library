@@ -2034,11 +2034,16 @@ class ThingObject(abc.ABC):
             OBJECT_PROPERTIES_TAG: [],
             TENANT_RIGHTS_TAG: self.tenant_access_right.to_list(),
             GROUP_IDS: group_ids if group_ids else [],
-            USE_NEL_TAG: self.use_for_nel,
-            USE_VECTOR_INDEX_TAG: self.use_vector_index,
-            USE_VECTOR_DOCUMENT_INDEX_TAG: self.use_vector_index_document,
-            USE_FULLTEXT_TAG: self.use_full_text_index
+            TARGETS_TAG: []
         }
+        if self.use_for_nel:
+            dict_object[TARGETS_TAG].append(INDEXING_NEL_TARGET)
+        if self.use_vector_index:
+            dict_object[TARGETS_TAG].append(INDEXING_VECTOR_SEARCH_TARGET)
+        if self.use_vector_index_document:
+            dict_object[TARGETS_TAG].append(INDEXING_VECTOR_SEARCH_DOCUMENT_TARGET)
+        if not self.use_full_text_index:
+            dict_object[TARGETS_TAG].append(INDEXING_FULLTEXT_TARGET)
         if external_user_id:
             dict_object[EXTERNAL_USER_ID_TAG] = external_user_id
         for _, items in self.data_properties.items():
