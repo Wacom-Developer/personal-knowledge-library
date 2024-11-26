@@ -1,3 +1,8 @@
+2024/11/26 - RELEASE 2.4.1
+==========================
+- Minor bug fix for SYSTEM_REFERENCE_ID handling
+- Parsing of import format with backward compatibility
+
 2024/10/24 - RELEASE 2.4.0
 ==========================
 - Introduce graceful shutdown for async client
