@@ -1,4 +1,4 @@
-2024/11/26 - RELEASE 2.4.2
+2024/12/09 - RELEASE 2.4.2
 ==========================
 - FIX: Issue with create group. Response was parsed after the request was closed
 - User management service client uses session for requests
