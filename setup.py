@@ -58,12 +58,12 @@ setup(
     extras_require={
     },
     tests_require=(
-        'pytest',
-        'pytest-asyncio',
-        'pytest-cov',
-        'faker',
-        'ontospy',
-        'pytest-env'
+        'pytest==8.3.3',
+        'pytest-asyncio==0.23.7',
+        'pytest-cov==1.1.3',
+        'faker==21.0.0',
+        'ontospy==2.1.1',
+        'pytest-env==1.1.3'
     ),
     classifiers=[
         "Programming Language :: Python",
