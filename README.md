@@ -1,5 +1,18 @@
 # Wacom Private Knowledge Library
 
+[![Python package](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/python-package.yml/badge.svg)](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/python-package.yml)
+[![Pylint](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/pylint.yml/badge.svg)](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/pylint.yml)
+[![PyTest](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/pytest.yml/badge.svg)](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/pytest.yml)
+
+![License: Apache 2](https://img.shields.io/badge/License-Apache2-green.svg)
+[![PyPI](https://img.shields.io/pypi/v/personal-knowledge-library.svg)](https://pypi.python.org/pypi/personal-knowledge-library)
+[![PyPI](https://img.shields.io/pypi/pyversions/personal-knowledge-library.svg)](https://pypi.python.org/pypi/personal-knowledge-library)
+[![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://developer-docs.wacom.com/docs/private-knowledge-service) 
+
+![Contributors](https://img.shields.io/github/contributors/Wacom-Developer/personal-knowledge-library.svg)
+![GitHub forks](https://img.shields.io/github/forks/Wacom-Developer/personal-knowledge-library.svg)
+![GitHub stars](https://img.shields.io/github/stars/Wacom-Developer/personal-knowledge-library.svg)
+
 The required tenant API key is only available for selected partner companies.
 Please contact your Wacom representative for more information.
 
