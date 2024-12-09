@@ -18,7 +18,7 @@ from knowledge.services import USER_AGENT_HEADER_FLAG, TENANT_API_KEY, \
     CONTENT_TYPE_HEADER_FLAG, REFRESH_TOKEN_TAG, DEFAULT_TIMEOUT, EXPIRATION_DATE_TAG, ACCESS_TOKEN_TAG, \
     APPLICATION_JSON_HEADER, EXTERNAL_USER_ID
 from knowledge.services.base import WacomServiceException, RESTAPIClient
-from knowledge.services.session import TokenManager, Session, PermanentSession, RefreshableSession, TimedSession
+from knowledge.services.session import TokenManager, PermanentSession, RefreshableSession, TimedSession
 
 # A cache for storing DNS resolutions
 dns_cache: TTLCache = TTLCache(maxsize=100, ttl=300)  # Adjust size and ttl as needed
