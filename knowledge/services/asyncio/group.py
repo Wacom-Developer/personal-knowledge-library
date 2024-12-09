@@ -89,8 +89,9 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
                 if not response.ok:
                     raise await handle_error("Creation of group failed.", response, payload=payload,
                                              headers=headers)
+                group: Dict[str, Any] = await response.json(loads=orjson.loads)
         await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
-        return Group.parse(await response.json(loads=orjson.loads))
+        return Group.parse(group)
 
     async def update_group(self, group_id: str, name: str, rights: GroupAccessRight = GroupAccessRight,
                            auth_key: Optional[str] = None):
