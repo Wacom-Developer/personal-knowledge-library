@@ -127,19 +127,20 @@ if __name__ == '__main__':
                 if e.concept_type.iri not in types_count:
                     types_count[e.concept_type.iri] = 0
                 types_count[e.concept_type.iri] += 1
-                e.add_source_system(DataProperty(content='wacom-knowledge', property_ref=SYSTEM_SOURCE_SYSTEM,
-                                                 language_code=EN_US))
-                e.add_source_reference_id(
-                    DataProperty(content=e.uri, property_ref=SYSTEM_SOURCE_REFERENCE_ID,
-                                 language_code=EN_US))
-                for label in e.label:
-                    if label.language_code not in languages_count:
-                        languages_count[label.language_code] = 0
-                    languages_count[label.language_code] += 1
-                if isinstance(e, ThingObject):
-                    pbar.set_description(f'Export entity: {e.label_lang(EN_US)}')
-                # Write entity to cache file
-                writer.writerow(e.__import_format_dict__())
+                if SYSTEM_SOURCE_SYSTEM not in e.data_properties:
+                    e.add_source_system(DataProperty(content=session.tenant_id, property_ref=SYSTEM_SOURCE_SYSTEM,
+                                                     language_code=EN_US))
+                    e.add_source_system(DataProperty(content=e.uri, property_ref=SYSTEM_SOURCE_REFERENCE_ID,
+                                                     language_code=EN_US))
+
+            for label in e.label:
+                if label.language_code not in languages_count:
+                    languages_count[label.language_code] = 0
+                languages_count[label.language_code] += 1
+            if isinstance(e, ThingObject):
+                pbar.set_description(f'Export entity: {e.label_lang(EN_US)}')
+            # Write entity to cache file
+            writer.writerow(e.__import_format_dict__())
             page_number += 1
     print_summary(total_number, types_count, languages_count)
 
