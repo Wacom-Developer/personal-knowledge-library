@@ -1,3 +1,9 @@
+2024/11/26 - RELEASE 2.4.2
+==========================
+- FIX: Issue with create group. Response was parsed after the request was closed
+- User management service client uses session for requests
+- Update of requirements and pinning of test dependencies
+
 2024/11/26 - RELEASE 2.4.1
 ==========================
 - Minor bug fix for SYSTEM_REFERENCE_ID handling
