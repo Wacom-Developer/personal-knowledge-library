@@ -17,7 +17,7 @@ from knowledge.services.graph import WacomKnowledgeService, Visibility
 from knowledge.services.group import GroupManagementService, Group
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
-from knowledge.utils.graph import count_things_session, count_things
+from knowledge.utils.graph import count_things
 
 THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
 
