@@ -2,7 +2,6 @@
 
 [![Python package](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/python-package.yml/badge.svg)](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/python-package.yml)
 [![Pylint](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/pylint.yml/badge.svg)](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/pylint.yml)
-[![PyTest](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/pytest.yml/badge.svg)](https://github.com/Wacom-Developer/personal-knowledge-library/actions/workflows/pytest.yml)
 
 ![License: Apache 2](https://img.shields.io/badge/License-Apache2-green.svg)
 [![PyPI](https://img.shields.io/pypi/v/personal-knowledge-library.svg)](https://pypi.python.org/pypi/personal-knowledge-library)
