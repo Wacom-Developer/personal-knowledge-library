@@ -45,13 +45,13 @@ setup(
     packages=find_packages(exclude=('docs', 'tests', 'env')),
     include_package_data=True,
     install_requires=[
-        "requests>=2.25.1",
+        "requests>=2.32.0",
         "python-dateutil>=2.8.2",
         "PyJWT>=2.6.0",
-        "tqdm>=4.62.0",
+        "tqdm>=4.66.3",
         "ndjson>=0.3.1",
         "rdflib>=6.3.2",
-        "aiohttp[speedups]>3.9.1",
+        "aiohttp[speedups]>3.10.11",
         "orjson>=3.8.0",
         "cachetools==5.3.2"
     ],
