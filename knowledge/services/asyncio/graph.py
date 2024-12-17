@@ -289,11 +289,10 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             FORCE_TAG: str(force)
         }
         async with aiohttp.ClientSession() as session:
-            with session.delete(url, headers=headers, params=params, verify_ssl=self.verify_calls) as response:
+            async with session.delete(url, headers=headers, params=params, verify_ssl=self.verify_calls) as response:
                 if not response.ok:
-                    raise WacomServiceException(f'Deletion of entities failed.'
-                                                f'Response code:={response.status_code}, '
-                                                f'exception:= {response.content}')
+                    raise await handle_error(f'Deletion of entities failed.', response,
+                                             parameters=params, headers=headers)
         await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
 
     async def delete_entity(self,  uri: str, force: bool = False, auth_key: Optional[str] = None):
@@ -321,11 +320,12 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        async with (AsyncServiceAPIClient.__async_session__() as session):
+        async with AsyncServiceAPIClient.__async_session__() as session:
             async with session.delete(url, headers=headers, params={FORCE_TAG: str(force)},
                                       verify_ssl=self.verify_calls) as response:
                 if not response.ok:
-                    raise await handle_error(f'Deletion of entity failed. URI:={uri}.', response, headers=headers)
+                    raise await handle_error(f'Deletion of entity failed. URI:={uri}.', response,
+                                             headers=headers)
         await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
 
     async def exists(self, uri: str) -> bool:
