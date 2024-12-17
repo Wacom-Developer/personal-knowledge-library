@@ -199,6 +199,11 @@ class WacomServiceAPIClient(RESTAPIClient):
         super().__init__(service_url, verify_calls)
 
     @property
+    def token_manager(self) -> TokenManager:
+        """Token manager."""
+        return self.__token_manager
+
+    @property
     def auth_endpoint(self) -> str:
         """Authentication endpoint."""
         # This is in graph service REST API
