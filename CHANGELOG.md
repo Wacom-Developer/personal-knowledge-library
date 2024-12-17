@@ -1,3 +1,7 @@
+2024/12/17 - RELEASE 2.4.3
+==========================
+- FIX: Delete function in async client
+
 2024/12/09 - RELEASE 2.4.2
 ==========================
 - FIX: Issue with create group. Response was parsed after the request was closed
