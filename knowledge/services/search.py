@@ -9,8 +9,9 @@ from urllib3 import Retry
 from knowledge.base.language import LocaleCode
 from knowledge.base.search import DocumentSearchResponse, LabelMatchingResponse, VectorDBDocument
 from knowledge.services import DEFAULT_TIMEOUT, AUTHORIZATION_HEADER_FLAG, APPLICATION_JSON_HEADER, \
-    CONTENT_TYPE_HEADER_FLAG, USER_AGENT_HEADER_FLAG
+    CONTENT_TYPE_HEADER_FLAG, USER_AGENT_HEADER_FLAG, STATUS_FORCE_LIST
 from knowledge.services.base import WacomServiceAPIClient, handle_error
+
 
 
 class SemanticSearchClient(WacomServiceAPIClient):
@@ -72,7 +73,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response = session.get(url, params={"locale": locale, "uri": uri},
                                    headers=headers, timeout=DEFAULT_TIMEOUT)
@@ -122,7 +123,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         with requests.Session() as session:
             session.mount(mount_point, HTTPAdapter(max_retries=Retry(total=max_retries,
                                                                      backoff_factor=backoff_factor,
-                                                                     status_forcelist=[502, 503, 504])))
+                                                                     status_forcelist=STATUS_FORCE_LIST)))
             response = session.get(url, params={'uri': uri, "locale": locale}, headers=headers, timeout=DEFAULT_TIMEOUT)
             if response.ok:
                 return [VectorDBDocument(elem) for elem in response.json()]
@@ -173,7 +174,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response = session.get(url, params=params, headers=headers)
             if response.ok:
@@ -222,7 +223,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response = session.post(url, json={
                                "locale": locale,
@@ -278,7 +279,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response = session.get(url, params=params,  headers=headers)
             if response.ok:
@@ -327,7 +328,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response = session.post(url, json={
                                "locale": locale,
@@ -392,7 +393,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response = session.post(url, headers=headers, json=params)
             if response.ok:
@@ -447,7 +448,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response = session.post(url, headers=headers, json=params)
             if response.ok:
