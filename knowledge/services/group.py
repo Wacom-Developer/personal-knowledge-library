@@ -353,7 +353,7 @@ class GroupManagementService(WacomServiceAPIClient):
 
         Returns
         -------
-        group: Group
+        group: GroupInfo
             Instance of the group
 
         Raises
