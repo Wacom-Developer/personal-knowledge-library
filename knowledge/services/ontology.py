@@ -6,11 +6,13 @@ from typing import Any, Optional, Dict, Tuple, List
 
 import requests
 from requests import Response
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 
 from knowledge.base.ontology import (OntologyClassReference, OntologyPropertyReference, OntologyProperty,
                                      OntologyClass, PropertyType, THING_CLASS, DataPropertyType, InflectionSetting,
-                                     Comment, OntologyContext, OntologyLabel)
-from knowledge.services import USER_AGENT_HEADER_FLAG
+                                     Comment, OntologyContext, OntologyLabel, RESOURCE)
+from knowledge.services import USER_AGENT_HEADER_FLAG, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR, STATUS_FORCE_LIST
 from knowledge.services.base import WacomServiceAPIClient, handle_error
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG
 
@@ -29,6 +31,7 @@ CONTEXT_TAG: str = "context"
 RANGE_TAG: str = "ranges"
 SUB_CLASS_OF_TAG: str = "subClassOf"
 SUB_PROPERTY_OF_TAG: str = "subPropertyOf"
+LISTING_MODE_PARAM: str = "listingMode"
 TEXT_TAG: str = 'value'
 DEFAULT_TIMEOUT: int = 30
 
@@ -59,14 +62,23 @@ class OntologyService(WacomServiceAPIClient):
         super().__init__(application_name="Ontology Service", service_url=service_url,
                          service_endpoint=service_endpoint)
 
-    def context(self, auth_key: Optional[str] = None) -> Optional[OntologyContext]:
+    def context(self, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT,
+                max_retries: int = DEFAULT_MAX_RETRIES,
+                backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> Optional[OntologyContext]:
         """
         Getting the information on the context.
 
         Parameters
         ----------
-        auth_key: Optional[str] [default:= None]
-            Auth
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Returns
         -------
@@ -75,17 +87,25 @@ class OntologyService(WacomServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = self.handle_token()
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        headers: dict = {
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}',
+            USER_AGENT_HEADER_FLAG: self.user_agent
         }
-        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}',
-                                          headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
-        if response.ok:
-            return OntologyContext.from_dict(response.json())
-        return None
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}',
+                                             headers=headers, timeout=timeout, verify=self.verify_calls)
+            if response.ok:
+                return OntologyContext.from_dict(response.json())
+            return None
 
-    def context_metadata(self, context: str, auth_key: Optional[str] = None) -> List[InflectionSetting]:
+    def context_metadata(self, context: str, auth_key: Optional[str] = None,
+                         timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES,
+                         backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> List[InflectionSetting]:
         """
         Getting the meta-data on the context.
 
@@ -95,6 +115,13 @@ class OntologyService(WacomServiceAPIClient):
             Name of the context.
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Returns
         -------
@@ -107,15 +134,22 @@ class OntologyService(WacomServiceAPIClient):
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
-        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}'
-                                          f'/metadata',
-                                          headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
-        if response.ok:
-            return [InflectionSetting.from_dict(c) for c in response.json() if c.get('concept') is not None
-                    and not c.get('concept').startswith('http')]
-        raise handle_error('Failed to retrieve context metadata', response, headers=headers)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}'
+                                             '/metadata',  headers=headers, timeout=timeout, verify=self.verify_calls)
+            if response.ok:
+                return [InflectionSetting.from_dict(c) for c in response.json() if c.get('concept') is not None
+                        and not c.get('concept').startswith('http')]
+            raise handle_error('Failed to retrieve context metadata', response, headers=headers)
 
-    def concepts(self, context: str, auth_key: Optional[str] = None) \
+    def concepts(self, context: str, auth_key: Optional[str] = None,
+                 timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES,
+                 backoff_factor: float = DEFAULT_BACKOFF_FACTOR) \
             -> List[Tuple[OntologyClassReference, OntologyClassReference]]:
         """Retrieve all concept classes.
 
@@ -124,10 +158,17 @@ class OntologyService(WacomServiceAPIClient):
 
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of the ontology
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Returns
         -------
@@ -142,18 +183,80 @@ class OntologyService(WacomServiceAPIClient):
         }
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/' \
                    f'{OntologyService.CONCEPTS_ENDPOINT}'
-        response: Response = requests.get(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
-        if response.ok:
-            response_list: List[Tuple[OntologyClassReference, OntologyClassReference]] = []
-            result = response.json()
-            for struct in result:
-                response_list.append((OntologyClassReference.parse(struct[NAME_TAG]),
-                                      None if struct[SUB_CLASS_OF_TAG] is None else
-                                      OntologyClassReference.parse(struct[SUB_CLASS_OF_TAG])))
-            return response_list
-        raise handle_error('Failed to retrieve concepts', response, headers=headers)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(url, headers=headers, verify=self.verify_calls, timeout=timeout)
+            if response.ok:
+                response_list: List[Tuple[OntologyClassReference, OntologyClassReference]] = []
+                result = response.json()
+                for struct in result:
+                    response_list.append((OntologyClassReference.parse(struct[NAME_TAG]),
+                                          None if struct[SUB_CLASS_OF_TAG] is None else
+                                          OntologyClassReference.parse(struct[SUB_CLASS_OF_TAG])))
+                return response_list
+            raise handle_error('Failed to retrieve concepts', response, headers=headers)
 
-    def properties(self, context: str, auth_key: Optional[str] = None) \
+    def concepts_types(self, context: str, auth_key: Optional[str] = None,
+                       timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES,
+                       backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> List[OntologyClass]:
+        """Retrieve all concept class types.
+
+        **Remark:**
+        Works for users with role 'User' and 'TenantAdmin'.
+
+        Parameters
+        ----------
+        context: str
+            Context of the ontology
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+        Returns
+        -------
+        concepts: List[OntologyClass]
+            List of ontology classes.
+        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/' \
+                   f'{OntologyService.CONCEPTS_ENDPOINT}'
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(url, headers=headers, verify=self.verify_calls,
+                                             params={
+                                                 LISTING_MODE_PARAM: 'Full'
+                                             },
+                                             timeout=timeout)
+            if response.ok:
+                response_list: List[OntologyClass] = []
+                for struct in response.json():
+                    if struct[NAME_TAG] != RESOURCE:
+                        response_list.append(OntologyClass.from_dict(struct))
+                return response_list
+            raise handle_error('Failed to retrieve concepts', response, headers=headers)
+
+
+    def properties(self, context: str, auth_key: Optional[str] = None,
+                   timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES,
+                   backoff_factor: float = DEFAULT_BACKOFF_FACTOR) \
             -> List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]:
         """List all properties.
 
@@ -166,6 +269,13 @@ class OntologyService(WacomServiceAPIClient):
             Name of the context
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Returns
         -------
@@ -179,22 +289,86 @@ class OntologyService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         context_url: str = urllib.parse.quote_plus(context)
-        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/'
-                                          f'{context_url}/{OntologyService.PROPERTIES_ENDPOINT}',
-                                          headers=headers, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls)
-        # Return empty list if the NOT_FOUND is reported
-        if response.status_code == HTTPStatus.NOT_FOUND:
-            return []
-        if response.ok:
-            response_list: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]] = []
-            for c in response.json():
-                response_list.append((OntologyPropertyReference.parse(c[NAME_TAG]),
-                                      None if c[SUB_PROPERTY_OF_TAG] is None or c.get(SUB_PROPERTY_OF_TAG) == '' else
-                                      OntologyPropertyReference.parse(c[SUB_PROPERTY_OF_TAG])))
-            return response_list
-        raise handle_error('Failed to retrieve properties', response, headers=headers)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/'
+                                             f'{context_url}/{OntologyService.PROPERTIES_ENDPOINT}',
+                                             headers=headers, timeout=timeout, verify=self.verify_calls)
+            # Return empty list if the NOT_FOUND is reported
+            if response.status_code == HTTPStatus.NOT_FOUND:
+                return []
+            if response.ok:
+                response_list: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]] = []
+                for c in response.json():
+                    response_list.append((OntologyPropertyReference.parse(c[NAME_TAG]),
+                                          None if c[SUB_PROPERTY_OF_TAG] is None or
+                                                  c.get(SUB_PROPERTY_OF_TAG) == '' else
+                                          OntologyPropertyReference.parse(c[SUB_PROPERTY_OF_TAG])))
+                return response_list
+            raise handle_error('Failed to retrieve properties', response, headers=headers)
 
-    def concept(self, context: str, concept_name: str, auth_key: Optional[str] = None) -> OntologyClass:
+    def properties_types(self, context: str, auth_key: Optional[str] = None,
+                         timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES,
+                         backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> List[OntologyProperty]:
+        """List all properties types.
+
+        **Remark:**
+        Works for users with role 'User' and 'TenantAdmin'.
+
+        Parameters
+        ----------
+        context: str
+            Name of the context
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+        Returns
+        -------
+        contexts: List[OntologyProperty]
+            List of ontology contexts
+        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+        }
+        context_url: str = urllib.parse.quote_plus(context)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/'
+                                             f'{context_url}/{OntologyService.PROPERTIES_ENDPOINT}',
+                                             params={
+                                                 LISTING_MODE_PARAM: 'Full'
+                                             },
+                                             headers=headers, timeout=timeout, verify=self.verify_calls)
+            # Return empty list if the NOT_FOUND is reported
+            if response.status_code == HTTPStatus.NOT_FOUND:
+                return []
+            if response.ok:
+                response_list: List[OntologyProperty] = []
+                for c in response.json():
+                    response_list.append((OntologyProperty.from_dict(c)))
+                return response_list
+            raise handle_error('Failed to retrieve properties', response, headers=headers)
+
+    def concept(self, context: str, concept_name: str, auth_key: Optional[str] = None,
+                timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES,
+                backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> OntologyClass:
         """Retrieve a concept instance.
 
         **Remark:**
@@ -208,7 +382,13 @@ class OntologyService(WacomServiceAPIClient):
             IRI of the concept
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Returns
         -------
         instance: OntologyClass
@@ -222,15 +402,23 @@ class OntologyService(WacomServiceAPIClient):
         }
         context_url: str = urllib.parse.quote_plus(context)
         concept_url: str = urllib.parse.quote_plus(concept_name)
-        response: Response = requests.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}'
-                                          f'/{OntologyService.CONCEPTS_ENDPOINT}/{concept_url}',
-                                          headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
-        if response.ok:
-            result: Dict[str, Any] = response.json()
-            return OntologyClass.from_dict(result)
-        raise handle_error('Failed to retrieve concept', response, headers=headers)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}'
+                                             f'/{OntologyService.CONCEPTS_ENDPOINT}/{concept_url}',
+                                             headers=headers, verify=self.verify_calls, timeout=timeout)
+            if response.ok:
+                result: Dict[str, Any] = response.json()
+                return OntologyClass.from_dict(result)
+            raise handle_error('Failed to retrieve concept', response, headers=headers)
 
-    def property(self, context: str, property_name: str, auth_key: Optional[str] = None) -> OntologyProperty:
+    def property(self, context: str, property_name: str, auth_key: Optional[str] = None,
+                 timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES,
+                 backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> OntologyProperty:
         """Retrieve a property instance.
 
         **Remark:**
@@ -244,6 +432,13 @@ class OntologyService(WacomServiceAPIClient):
             IRI of the property
         auth_key: Optional[str] [default:= None]
             If auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Returns
         -------
@@ -259,16 +454,25 @@ class OntologyService(WacomServiceAPIClient):
         context_url: str = urllib.parse.quote_plus(context)
         concept_url: str = urllib.parse.quote_plus(property_name)
         param: str = f"context/{context_url}/properties/{concept_url}"
-        response: Response = requests.get(f'{self.service_base_url}{param}', headers=headers, verify=self.verify_calls,
-                                          timeout=DEFAULT_TIMEOUT)
-        if response.ok:
-            return OntologyProperty.from_dict(response.json())
-        raise handle_error('Failed to retrieve property', response, headers=headers)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(f'{self.service_base_url}{param}', headers=headers,
+                                             verify=self.verify_calls,
+                                             timeout=timeout)
+            if response.ok:
+                return OntologyProperty.from_dict(response.json())
+            raise handle_error('Failed to retrieve property', response, headers=headers)
 
     def create_concept(self, context: str, reference: OntologyClassReference,
                        subclass_of: OntologyClassReference = THING_CLASS,
                        icon: Optional[str] = None, labels: Optional[List[OntologyLabel]] = None,
-                       comments: Optional[List[Comment]] = None, auth_key: Optional[str] = None) -> Dict[str, str]:
+                       comments: Optional[List[Comment]] = None, auth_key: Optional[str] = None,
+                       timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES,
+                       backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> Dict[str, str]:
         """Create concept class.
 
         **Remark:**
@@ -290,6 +494,14 @@ class OntologyService(WacomServiceAPIClient):
             Comments for the class
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+
         Returns
         -------
         result: Dict[str, str]
@@ -319,16 +531,24 @@ class OntologyService(WacomServiceAPIClient):
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/' \
                    f'{OntologyService.CONCEPTS_ENDPOINT}'
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls,
-                                           timeout=DEFAULT_TIMEOUT)
-        if response.ok:
-            result_dict: Dict[str, str] = response.json()
-            return result_dict
-        raise handle_error('Failed to create concept', response, headers=headers, payload=payload)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.post(url, headers=headers, json=payload, verify=self.verify_calls,
+                                              timeout=timeout)
+            if response.ok:
+                result_dict: Dict[str, str] = response.json()
+                return result_dict
+            raise handle_error('Failed to create concept', response, headers=headers, payload=payload)
 
     def update_concept(self, context: str, name: str, subclass_of: Optional[str],
                        icon: Optional[str] = None, labels: Optional[List[OntologyLabel]] = None,
-                       comments: Optional[List[Comment]] = None, auth_key: Optional[str] = None) -> Dict[str, str]:
+                       comments: Optional[List[Comment]] = None, auth_key: Optional[str] = None,
+                       timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES,
+                       backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> Dict[str, str]:
         """Update concept class.
 
         **Remark:**
@@ -350,6 +570,13 @@ class OntologyService(WacomServiceAPIClient):
             Comments for the class
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Returns
         -------
@@ -380,13 +607,21 @@ class OntologyService(WacomServiceAPIClient):
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/' \
                    f'{OntologyService.CONCEPTS_ENDPOINT}'
-        response: Response = requests.put(url, headers=headers, json=payload, verify=self.verify_calls,
-                                          timeout=DEFAULT_TIMEOUT)
-        if response.ok:
-            return response.json()
-        raise handle_error('Failed to update concept', response, headers=headers, payload=payload)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.put(url, headers=headers, json=payload, verify=self.verify_calls,
+                                             timeout=timeout)
+            if response.ok:
+                return response.json()
+            raise handle_error('Failed to update concept', response, headers=headers, payload=payload)
 
-    def delete_concept(self, context: str, reference: OntologyClassReference, auth_key: Optional[str] = None):
+    def delete_concept(self, context: str, reference: OntologyClassReference, auth_key: Optional[str] = None,
+                       timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES,
+                       backoff_factor: float = DEFAULT_BACKOFF_FACTOR):
         """Delete concept class.
 
         **Remark:**
@@ -400,6 +635,13 @@ class OntologyService(WacomServiceAPIClient):
             Name of the concept
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Raises
         ------
@@ -415,9 +657,15 @@ class OntologyService(WacomServiceAPIClient):
         context_url: str = urllib.parse.quote_plus(context)
         concept_url: str = urllib.parse.quote_plus(reference.iri)
         url: str = f'{self.service_base_url}context/{context_url}/concepts/{concept_url}'
-        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
-        if not response.ok:
-            raise handle_error('Failed to delete concept', response, headers=headers)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.delete(url, headers=headers, verify=self.verify_calls, timeout=timeout)
+            if not response.ok:
+                raise handle_error('Failed to delete concept', response, headers=headers)
 
     def create_object_property(self, context: str,
                                reference: OntologyPropertyReference,
@@ -427,7 +675,9 @@ class OntologyService(WacomServiceAPIClient):
                                icon: Optional[str] = None,
                                labels: Optional[List[OntologyLabel]] = None,
                                comments: Optional[List[Comment]] = None,
-                               auth_key: Optional[str] = None) -> Dict[str, str]:
+                               auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT,
+                               max_retries: int = DEFAULT_MAX_RETRIES,
+                               backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> Dict[str, str]:
         """Create property.
 
         **Remark:**
@@ -455,6 +705,13 @@ class OntologyService(WacomServiceAPIClient):
             Comments for the class
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Returns
         -------
@@ -490,11 +747,17 @@ class OntologyService(WacomServiceAPIClient):
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/' \
                    f'{OntologyService.PROPERTIES_ENDPOINT}'
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls,
-                                           timeout=DEFAULT_TIMEOUT)
-        if response.ok:
-            return response.json()
-        raise handle_error('Failed to create object property', response, headers=headers, payload=payload)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.post(url, headers=headers, json=payload, verify=self.verify_calls,
+                                              timeout=timeout)
+            if response.ok:
+                return response.json()
+            raise handle_error('Failed to create object property', response, headers=headers, payload=payload)
 
     def create_data_property(self, context: str,
                              reference: OntologyPropertyReference,
@@ -503,7 +766,10 @@ class OntologyService(WacomServiceAPIClient):
                              icon: Optional[str] = None,
                              labels: Optional[List[OntologyLabel]] = None,
                              comments: Optional[List[Comment]] = None,
-                             auth_key: Optional[str] = None) -> Dict[str, str]:
+                             auth_key: Optional[str] = None,
+                             timeout: int = DEFAULT_TIMEOUT,
+                             max_retries: int = DEFAULT_MAX_RETRIES,
+                             backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> Dict[str, str]:
         """Create data property.
 
         **Remark:**
@@ -529,6 +795,13 @@ class OntologyService(WacomServiceAPIClient):
             Comments for the class
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Returns
         -------
@@ -563,13 +836,21 @@ class OntologyService(WacomServiceAPIClient):
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/' \
                    f'{OntologyService.PROPERTIES_ENDPOINT}'
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls,
-                                           timeout=DEFAULT_TIMEOUT)
-        if response.ok:
-            return response.json()
-        raise handle_error('Failed to create data property', response, headers=headers, payload=payload)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.post(url, headers=headers, json=payload, verify=self.verify_calls,
+                                              timeout=timeout)
+            if response.ok:
+                return response.json()
+            raise handle_error('Failed to create data property', response, headers=headers, payload=payload)
 
-    def delete_property(self, context: str, reference: OntologyPropertyReference, auth_key: Optional[str] = None):
+    def delete_property(self, context: str, reference: OntologyPropertyReference, auth_key: Optional[str] = None,
+                        timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_MAX_RETRIES,
+                        backoff_factor: float = DEFAULT_BACKOFF_FACTOR):
         """Delete property.
 
         **Remark:**
@@ -583,6 +864,13 @@ class OntologyService(WacomServiceAPIClient):
             Name of the property
         auth_key: Optional[str] [default:= None]
             If auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Raises
         ------
@@ -598,13 +886,22 @@ class OntologyService(WacomServiceAPIClient):
         context_url: str = urllib.parse.quote_plus(context)
         property_url: str = urllib.parse.quote_plus(reference.iri)
         url: str = f'{self.service_base_url}context/{context_url}/properties/{property_url}'
-        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
-        if not response.ok:
-            raise handle_error('Failed to delete property', response, headers=headers)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.delete(url, headers=headers, verify=self.verify_calls, timeout=timeout)
+            if not response.ok:
+                raise handle_error('Failed to delete property', response, headers=headers)
 
     def create_context(self, name: str, context: Optional[str] = None, base_uri: Optional[str] = None,
                        icon: Optional[str] = None, labels: List[OntologyLabel] = None, comments: List[Comment] = None,
-                       auth_key: Optional[str] = None) -> Dict[str, str]:
+                       auth_key: Optional[str] = None,
+                       timeout: int = DEFAULT_TIMEOUT,
+                       max_retries: int = DEFAULT_MAX_RETRIES,
+                       backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> Dict[str, str]:
         """Create context.
 
         **Remark:**
@@ -615,7 +912,7 @@ class OntologyService(WacomServiceAPIClient):
         base_uri: str
             Base URI
         name: str
-            Name of the context
+            Name of the context.
         context: Optional[str] [default:= None]
             Context of ontology
         icon: Optional[str] (default:= None)
@@ -626,6 +923,16 @@ class OntologyService(WacomServiceAPIClient):
             Comments for the context
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+                timeout: int
+            Timeout for the request (default: 60 seconds)
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+
         Returns
         -------
         result: Dict[str, str]
@@ -661,13 +968,22 @@ class OntologyService(WacomServiceAPIClient):
         for comment in comments if comments is not None else []:
             payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}'
-        response: Response = requests.post(url, headers=headers, json=payload, verify=self.verify_calls,
-                                           timeout=DEFAULT_TIMEOUT)
-        if response.ok:
-            return response.json()
-        raise handle_error('Creation of context failed.', response, headers=headers)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.post(url, headers=headers, json=payload, verify=self.verify_calls,
+                                              timeout=timeout)
+            if response.ok:
+                return response.json()
+            raise handle_error('Creation of context failed.', response, headers=headers)
 
-    def remove_context(self, name: str, force: bool = False, auth_key: Optional[str] = None):
+    def remove_context(self, name: str, force: bool = False, auth_key: Optional[str] = None,
+                       timeout: int = DEFAULT_TIMEOUT,
+                       max_retries: int = DEFAULT_MAX_RETRIES,
+                       backoff_factor: float = DEFAULT_BACKOFF_FACTOR):
         """Remove context.
 
         Parameters
@@ -678,6 +994,14 @@ class OntologyService(WacomServiceAPIClient):
             Force removal of context
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+
         Returns
         -------
         result: Dict[str, str]
@@ -690,11 +1014,20 @@ class OntologyService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
         }
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{name}{"/force" if force else ""}'
-        response: Response = requests.delete(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
-        if not response.ok:
-            raise handle_error('Removing the context failed.', response, headers=headers)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.delete(url, headers=headers, verify=self.verify_calls, timeout=timeout)
+            if not response.ok:
+                raise handle_error('Removing the context failed.', response, headers=headers)
 
-    def commit(self, context: str, auth_key: Optional[str] = None):
+    def commit(self, context: str, auth_key: Optional[str] = None,
+               timeout: int = DEFAULT_TIMEOUT,
+               max_retries: int = DEFAULT_MAX_RETRIES,
+               backoff_factor: float = DEFAULT_BACKOFF_FACTOR):
         """
         Commit the ontology.
 
@@ -704,6 +1037,13 @@ class OntologyService(WacomServiceAPIClient):
             Name of the context.
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         """
         if auth_key is None:
             auth_key, _ = self.handle_token()
@@ -713,11 +1053,20 @@ class OntologyService(WacomServiceAPIClient):
         }
         context_url: str = urllib.parse.quote_plus(context)
         url: str = f'{self.service_base_url}context/{context_url}/commit'
-        response: Response = requests.put(url, headers=headers, verify=self.verify_calls, timeout=DEFAULT_TIMEOUT)
-        if not response.ok:
-            raise handle_error('Commit of ontology failed.', response, headers=headers)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.put(url, headers=headers, verify=self.verify_calls, timeout=timeout)
+            if not response.ok:
+                raise handle_error('Commit of ontology failed.', response, headers=headers)
 
-    def rdf_export(self, context: str, version: int = 0, auth_key: Optional[str] = None) -> str:
+    def rdf_export(self, context: str, version: int = 0, auth_key: Optional[str] = None,
+                   timeout: int = DEFAULT_TIMEOUT,
+                   max_retries: int = DEFAULT_MAX_RETRIES,
+                   backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> str:
         """
         Export RDF.
 
@@ -729,7 +1078,13 @@ class OntologyService(WacomServiceAPIClient):
             Version of the context if 0 is set the latest version will be exported.
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Returns
         -------
         rdf: str
@@ -747,8 +1102,14 @@ class OntologyService(WacomServiceAPIClient):
             params: Dict[str, int] = {}
         context_url: str = urllib.parse.quote_plus(context)
         url: str = f'{self.service_base_url}context/{context_url}/versions/rdf'
-        response: Response = requests.get(url, headers=headers, verify=self.verify_calls, params=params,
-                                          timeout=DEFAULT_TIMEOUT)
-        if response.ok:
-            return response.text
-        raise handle_error('RDF export failed', response, headers=headers)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(url, headers=headers, verify=self.verify_calls, params=params,
+                                             timeout=timeout)
+            if response.ok:
+                return response.text
+            raise handle_error('RDF export failed', response, headers=headers)
