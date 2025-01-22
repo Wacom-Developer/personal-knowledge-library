@@ -23,6 +23,7 @@ from knowledge.base.language import EN_US, SUPPORTED_LOCALES, EN, LanguageCode, 
 # ---------------------------------------------- Vocabulary base URI ---------------------------------------------------
 PREFIX: str = "xsd"
 BASE_URI: str = "http://www.w3.org/2001/XMLSchema#"
+RESOURCE: str = "http://www.w3.org/2000/01/rdf-schema#Resource"
 # ---------------------------------------------------- Constants -------------------------------------------------------
 SUB_CLASS_OF_TAG: str = 'subClassOf'
 TENANT_ID: str = 'tenantId'
@@ -796,7 +797,8 @@ class OntologyClass(OntologyObject):
             [Comment(text=la[VALUE_TAG], language_code=la[LANGUAGE_TAG]) for la in concept_dict[COMMENTS_TAG]]
         return OntologyClass(tenant_id=concept_dict[TENANT_ID], context=concept_dict['context'],
                              reference=OntologyClassReference.parse(concept_dict[NAME_TAG]),
-                             subclass_of=OntologyClassReference.parse(concept_dict[SUB_CLASS_OF_TAG]),
+                             subclass_of=OntologyClassReference.parse(concept_dict[SUB_CLASS_OF_TAG])
+                                        if SUB_CLASS_OF_TAG in concept_dict else None,
                              icon=concept_dict['icon'], labels=labels, comments=comments)
 
     @classmethod
@@ -1817,9 +1819,9 @@ class ThingObject(abc.ABC):
         language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         """
-        for idx in range(len(self.description)):
-            if self.description[idx].language_code == language_code:
-                del self.__description[idx]
+        for index, description in enumerate(self.description):
+            if description.language_code == language_code:
+                del self.__description[index]
                 break
 
     @property
@@ -2097,7 +2099,7 @@ class ThingObject(abc.ABC):
             if desc[LOCALE_TAG] in SUPPORTED_LOCALES:
                 descriptions.append(Description.create_from_dict(desc))
         # Backwards-compatibility
-        use_nel: bool = entity.get(USE_NEL_TAG, True)
+        use_nel: bool = entity.get(USE_NEL_TAG, False)
         use_vector_index: bool = entity.get(USE_VECTOR_INDEX_TAG, False)
         use_vector_index_document: bool = entity.get(USE_VECTOR_DOCUMENT_INDEX_TAG, False)
         use_full_text_index: bool = entity.get(USE_FULLTEXT_TAG, True)
@@ -2345,7 +2347,6 @@ class ThingObject(abc.ABC):
         if self.image != other_thing.image:
             return False
 
-        difference_data_properties: List[Dict[str, Any]] = []
         # If the data properties are different
         if len(self.data_properties) != len(other_thing.data_properties):
             return False
@@ -2359,10 +2360,8 @@ class ThingObject(abc.ABC):
             for dp in data_properties:
                 if prop not in other_thing.data_properties:
                     return False
-
-                else:
-                    if dp.value not in [d.value for d in other_thing.data_properties.get(prop)]:
-                        return False
+                if dp.value not in [d.value for d in other_thing.data_properties.get(prop)]:
+                    return False
         return True
 
     def __repr__(self):
