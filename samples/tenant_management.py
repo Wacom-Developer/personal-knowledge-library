@@ -33,15 +33,15 @@ if __name__ == '__main__':
         if tidx > 0:
             print("-" * 120)
         print(f"{tidx}. Identifier: {tenant.identifier}, name: {tenant.name}")
-        print(f"   - Ontology Name: {tenant.ontology_name}, version: {tenant.ontology_version}")
-        print(f"   - Locked: {tenant.is_locked}")
-        print(f"   - Rights: ")
+        print("   - Ontology Name: {tenant.ontology_name}, version: {tenant.ontology_version}")
+        print("   - Locked: {tenant.is_locked}")
+        print("   - Rights: ")
         for r in tenant.rights:
             print(f"      ◦ {r} ")
-        print(f"   - Vector Search metadata (data properties):")
+        print("   - Vector Search metadata (data properties):")
         for dp in tenant.vector_search_data_properties:
             print(f"      ◦ {dp} ")
-        print(f"   - Vector Search metadata (object properties):")
+        print("   - Vector Search metadata (object properties):")
         for op in tenant.vector_search_object_properties:
             print(f"      ◦ {op} ")
         print(f"   - Content data-property: {tenant.content_data_property_name}")

@@ -133,16 +133,16 @@ async def main(external_user_id: str, tenant_api_key: str, instance: str):
                                                                           service_url=instance)
     permanent_session: PermanentSession = await async_client.login(tenant_api_key=tenant_api_key,
                                                                    external_user_id=external_user_id)
-    """
-    The permanent session contains the external user id, the tenant id, thus it is capable to refresh the token and 
-    re-login if needed. The functions check if the token is expired and refresh it if needed. Internally, the token 
-    manager handles the session. There are three different session types:
-    - Permanent session: The session is refreshed automatically if needed.
-    - Refreshable session: The session is not refreshed automatically using the refresh token, 
-                           but if the session is not used for a day the refresh token is invalidated.
-    - Timed session: The session is only has the authentication token and no refresh token. Thus, it times out after
-                     one hour.
-    """
+
+    # The permanent session contains the external user id, the tenant id, thus it is capable to refresh the token and
+    # re-login if needed. The functions check if the token is expired and refresh it if needed. Internally, the token
+    # manager handles the session. There are three different session types:
+    # - Permanent session: The session is refreshed automatically if needed.
+    # - Refreshable session: The session is not refreshed automatically using the refresh token,
+    #                       but if the session is not used for a day the refresh token will be invalid.
+    # - Timed session: The session is only has the authentication token and no refresh token. Thus, it times out after
+    #                 one hour.
+
     print(f'Service instance: {async_client.service_url}')
     print('-' * 100)
     print(f'Logged in as {permanent_session.external_user_id} (tenant id: {permanent_session.tenant_id}) ')

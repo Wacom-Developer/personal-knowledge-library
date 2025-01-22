@@ -291,7 +291,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         async with aiohttp.ClientSession() as session:
             async with session.delete(url, headers=headers, params=params, verify_ssl=self.verify_calls) as response:
                 if not response.ok:
-                    raise await handle_error(f'Deletion of entities failed.', response,
+                    raise await handle_error('Deletion of entities failed.', response,
                                              parameters=params, headers=headers)
         await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
 

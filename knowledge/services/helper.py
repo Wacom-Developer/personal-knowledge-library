@@ -17,8 +17,8 @@ In one request only 30 relations can be created, otherwise the database operatio
 """
 
 
-def split_updates(updates: Dict[OntologyPropertyReference, List[str]], max_operations: int = RELATIONS_BULK_LIMIT)\
-        -> Iterator[Dict[str, List[str]]]:
+def split_updates(updates: Dict[OntologyPropertyReference, List[str]],
+                  max_operations: int = RELATIONS_BULK_LIMIT) -> Iterator[Dict[str, List[str]]]:
     """
 
     Parameters
