@@ -10,7 +10,7 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 from knowledge import logger
-from knowledge.services import EXPIRATION_DATE_TAG
+from knowledge.services import EXPIRATION_DATE_TAG, STATUS_FORCE_LIST, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
 from knowledge.services.base import WacomServiceAPIClient, handle_error
 
 # -------------------------------------- Constant flags ----------------------------------------------------------------
@@ -157,7 +157,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
     # ------------------------------------------ Users handling --------------------------------------------------------
 
     def create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None,
-                    roles: List[UserRole] = None, max_retries: int = 3, backoff_factor: float = 0.1,
+                    roles: List[UserRole] = None, max_retries: int = DEFAULT_MAX_RETRIES,
+                    backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                     timeout: int = DEFAULT_TIMEOUT) \
             -> Tuple[User, str, str, datetime]:
         """
@@ -210,7 +211,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.post(url, headers=headers, json=payload, timeout=timeout,
                                               verify=self.verify_calls)
@@ -226,7 +227,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             raise handle_error("Failed to create user.", response)
 
     def update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: Dict[str, str] = None,
-                    roles: List[UserRole] = None, max_retries: int = 3, backoff_factor: float = 0.1,
+                    roles: List[UserRole] = None, max_retries: int = DEFAULT_MAX_RETRIES,
+                    backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                     timeout: int = DEFAULT_TIMEOUT):
         """Updates user for a tenant.
 
@@ -272,7 +274,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.patch(url, headers=headers, json=payload, params=params, timeout=timeout,
                                                verify=self.verify_calls)
@@ -280,7 +282,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
                 raise handle_error("Updating of user failed.", response)
 
     def delete_user(self, tenant_key: str, external_id: str, internal_id: str, force: bool = False,
-                    max_retries: int = 3, backoff_factor: float = 0.1, timeout: int = DEFAULT_TIMEOUT):
+                    max_retries: int = DEFAULT_MAX_RETRIES, backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+                    timeout: int = DEFAULT_TIMEOUT):
         """Deletes user from tenant.
 
         Parameters
@@ -319,14 +322,15 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.delete(url, headers=headers, params=params, timeout=timeout,
                                                 verify=self.verify_calls)
             if not response.ok:
                 raise handle_error("Deletion of user failed.", response)
 
-    def user_internal_id(self, tenant_key: str, external_id: str, max_retries: int = 3, backoff_factor: float = 0.1,
+    def user_internal_id(self, tenant_key: str, external_id: str, max_retries: int = DEFAULT_MAX_RETRIES,
+                         backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
                          timeout: int = DEFAULT_TIMEOUT) -> str:
         """User internal id.
 
@@ -365,7 +369,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.get(url, headers=headers, params=parameters, timeout=timeout,
                                              verify=self.verify_calls)
@@ -374,8 +378,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
                 return response_dict[INTERNAL_USER_ID_TAG]
             raise handle_error("Retrieval of user internal id failed.", response)
 
-    def listing_users(self, tenant_key: str, offset: int = 0, limit: int = 20, max_retries: int = 3,
-                      backoff_factor: float = 0.1, timeout: int = DEFAULT_TIMEOUT) -> List[User]:
+    def listing_users(self, tenant_key: str, offset: int = 0, limit: int = 20, max_retries: int = DEFAULT_MAX_RETRIES,
+                      backoff_factor: float = DEFAULT_BACKOFF_FACTOR, timeout: int = DEFAULT_TIMEOUT) -> List[User]:
         """
         Listing all users configured for this instance.
 
@@ -412,7 +416,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries,
                                    backoff_factor=backoff_factor,
-                                   status_forcelist=[502, 503, 504])
+                                   status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.get(url, headers=headers, params=params,  timeout=timeout,
                                              verify=self.verify_calls)
