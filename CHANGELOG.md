@@ -1,3 +1,9 @@
+2025/01/22 - RELEASE 2.5.0
+==========================
+- Refactoring of the clients, adding the timeout, max_retries, and backoff_factor parameters
+- Minor fixes and improvements
+- Changes in wikidata import
+
 2024/12/17 - RELEASE 2.4.3
 ==========================
 - FIX: Delete function in async client
