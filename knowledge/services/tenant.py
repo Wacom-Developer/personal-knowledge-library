@@ -4,9 +4,11 @@ from typing import List, Dict, Optional
 
 import requests
 from requests import Response
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 
 from knowledge.base.tenant import TenantConfiguration
-from knowledge.services import DEFAULT_TIMEOUT
+from knowledge.services import DEFAULT_TIMEOUT, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR, STATUS_FORCE_LIST
 from knowledge.services.base import WacomServiceAPIClient, USER_AGENT_HEADER_FLAG, \
     CONTENT_TYPE_HEADER_FLAG, handle_error
 from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG
@@ -57,7 +59,10 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
                       rights: Optional[List[str]] = None,
                       vector_search_data_properties: Optional[List[str]] = None,
                       vector_search_object_properties: Optional[List[str]] = None,
-                      content_data_property_name: str = "") -> Dict[str, str]:
+                      content_data_property_name: str = "",
+                      timeout: int = DEFAULT_TIMEOUT,
+                      max_retries: int = DEFAULT_MAX_RETRIES,
+                      backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> Dict[str, str]:
         """
         Creates a tenant.
 
@@ -75,6 +80,13 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             List of object properties that are automatically added to meta-data of the vector search index documents.
         content_data_property_name: str
             The data property that is used to indexing its content to the document index.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Returns
         -------
@@ -107,16 +119,34 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         params: dict = {
             "createAndApplyOnto": create_and_apply_onto
         }
-        response: Response = requests.post(url, headers=headers, json=payload, params=params,
-                                           timeout=DEFAULT_TIMEOUT,
-                                           verify=self.verify_calls)
-        if response.ok:
-            return response.json()
-        raise handle_error("Creation of tenant failed.", response)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.post(url, headers=headers, json=payload, params=params,
+                                               timeout=timeout,
+                                               verify=self.verify_calls)
+            if response.ok:
+                return response.json()
+            raise handle_error("Creation of tenant failed.", response)
 
-    def listing_tenant(self) -> List[TenantConfiguration]:
+    def listing_tenant(self, timeout: int = DEFAULT_TIMEOUT,
+                      max_retries: int = DEFAULT_MAX_RETRIES,
+                      backoff_factor: float = DEFAULT_BACKOFF_FACTOR) -> List[TenantConfiguration]:
         """
         Listing all tenants configured for this instance.
+
+        Parameters
+        ----------
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
         Returns
         -------
@@ -133,14 +163,23 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f'Bearer {self.__tenant_management_token}'
         }
-        response: Response = requests.get(url, headers=headers, data={}, timeout=DEFAULT_TIMEOUT,
-                                          verify=self.verify_calls)
-        if response.ok:
-            return [TenantConfiguration.from_dict(tenant) for tenant in response.json()]
-        raise handle_error("Listing of tenant failed.", response)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(url, headers=headers, data={}, timeout=timeout,
+                                             verify=self.verify_calls)
+            if response.ok:
+                return [TenantConfiguration.from_dict(tenant) for tenant in response.json()]
+            raise handle_error("Listing of tenant failed.", response)
 
     def update_tenant_configuration(self, identifier: str, rights: List[str], vector_search_data_properties: List[str],
-                                    vector_search_object_properties: List[str], content_data_property_name: str):
+                                    vector_search_object_properties: List[str], content_data_property_name: str,
+                                    timeout: int = DEFAULT_TIMEOUT,
+                                    max_retries: int = DEFAULT_MAX_RETRIES,
+                                    backoff_factor: float = DEFAULT_BACKOFF_FACTOR):
         """
         Update the configuration of a tenant.
 
@@ -156,6 +195,13 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             List of object properties that are automatically added to meta-data of the vector search index documents.
         content_data_property_name: str
             The data property that is used to indexing its content to the document index.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         """
         url: str = f'{self.service_base_url}{TenantManagementServiceAPI.TENANT_ENDPOINT}/{identifier}/rights'
         headers: dict = {
@@ -169,7 +215,13 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             "vectorSearchObjectProperties": vector_search_object_properties,
             "contentDataPropertyName": content_data_property_name
         }
-        response: Response = requests.patch(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT,
-                                            verify=self.verify_calls)
-        if not response.ok:
-            raise handle_error("Creation of tenant failed.", response)
+        mount_point: str = 'https://' if self.service_url.startswith('https') else 'http://'
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries,
+                                   backoff_factor=backoff_factor,
+                                   status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.patch(url, headers=headers, json=payload, timeout=timeout,
+                                               verify=self.verify_calls)
+            if not response.ok:
+                raise handle_error("Creation of tenant failed.", response)
