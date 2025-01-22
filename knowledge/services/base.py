@@ -12,7 +12,7 @@ from knowledge import __version__, logger
 from knowledge.services import DEFAULT_TIMEOUT
 from knowledge.services import USER_AGENT_HEADER_FLAG, TENANT_API_KEY, CONTENT_TYPE_HEADER_FLAG, \
     REFRESH_TOKEN_TAG, EXPIRATION_DATE_TAG, ACCESS_TOKEN_TAG, APPLICATION_JSON_HEADER, EXTERNAL_USER_ID
-from knowledge.services.session import TokenManager, Session, RefreshableSession, TimedSession, PermanentSession
+from knowledge.services.session import TokenManager, RefreshableSession, TimedSession, PermanentSession
 
 
 class WacomServiceException(Exception):
