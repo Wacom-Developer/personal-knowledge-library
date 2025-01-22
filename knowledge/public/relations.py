@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2023 Wacom. All rights reserved.
+# Copyright © 2023-present Wacom. All rights reserved.
 import functools
 import multiprocessing
-from typing import Any, Dict, Set, Tuple, List
+from typing import Any, Dict, Set, Tuple, List, Callable, Optional
 
 from tqdm import tqdm
 
@@ -66,13 +66,17 @@ def wikidata_extractor_entities(qids: Set[str]) -> Dict[str, WikidataThing]:
     return {e.qid: e for e in WikiDataAPIClient.retrieve_entities(qids)}
 
 
-def wikidata_relations_extractor(wikidata: Dict[str, WikidataThing]) -> Dict[str, List[Dict[str, Any]]]:
+def wikidata_relations_extractor(wikidata: Dict[str, WikidataThing],
+                                 progress_relations: Optional[Callable[[int, int], None]] = None,
+) -> Dict[str, List[Dict[str, Any]]]:
     """Extracts relations from Wikidata.
 
     Parameters
     ----------
     wikidata: Dict[str, WikidataThing]
         Wikidata map
+    progress_relations: Optional[Callable[[int, int], None]] = None
+        Progress callback function.
 
     Returns
     -------
@@ -82,13 +86,16 @@ def wikidata_relations_extractor(wikidata: Dict[str, WikidataThing]) -> Dict[str
     relations: Dict[str, List[Dict[str, Any]]] = {}
     qids: Set[str] = set(wikidata.keys())
     num_processes: int = min(len(wikidata), multiprocessing.cpu_count())
+    ctr: int = 0
+    tasks: int = len(qids)
     with multiprocessing.Pool(processes=num_processes) as pool:
         # Wikidata thing is not support in multiprocessing
-        with tqdm(total=round(len(wikidata) / num_processes), desc='Check Wikidata relations.') as pbar:
-            for qid, rels in pool.map(functools.partial(__relations__, wikidata=qids),
-                                      [e.__dict__() for e in wikidata.values()]):
-                relations[qid] = rels
-                pbar.update(1)
+        for qid, rels in pool.map(functools.partial(__relations__, wikidata=qids),
+                                  [e.__dict__() for e in wikidata.values()]):
+            relations[qid] = rels
+            ctr += 1
+            if progress_relations:
+                progress_relations(ctr, tasks)
     return relations
 
 

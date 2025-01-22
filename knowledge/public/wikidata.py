@@ -11,18 +11,17 @@ from typing import Optional, Union, Any, Dict, List, Tuple, Set
 import requests
 from requests import Response
 from requests.adapters import HTTPAdapter
-from tqdm import tqdm
 from urllib3 import Retry
 
 from knowledge import logger
 from knowledge.base.entity import Description, DESCRIPTIONS_TAG, Label, LanguageCode, LABELS_TAG, REPOSITORY_TAG, \
     DISPLAY_TAG, DESCRIPTION_TAG
+from knowledge.base.language import LANGUAGE_LOCALE_MAPPING, EN_US, LocaleCode
 from knowledge.public import PROPERTY_MAPPING, INSTANCE_OF_PROPERTY, IMAGE_PROPERTY
 from knowledge.public.helper import __waiting_request__, __waiting_multi_request__, QID_TAG, REVISION_TAG, \
     PID_TAG, LABEL_TAG, CLAIMS_TAG, LABEL_VALUE_TAG, WIKIDATA_LANGUAGE_TAG, ALIASES_TAG, MODIFIED_TAG, \
     ONTOLOGY_TYPES_TAG, SITELINKS_TAG, parse_date, ID_TAG, LAST_REVID_TAG, wikidate, WikiDataAPIException, \
     WIKIDATA_SPARQL_URL, SOURCE_TAG, URLS_TAG, TITLES_TAG, image_url, WIKIDATA_SEARCH_URL, SUPERCLASSES_TAG, API_LIMIT
-from knowledge.base.language import LANGUAGE_LOCALE_MAPPING, EN_US, LocaleCode
 
 # Constants
 QUALIFIERS_TAG: str = "QUALIFIERS"
@@ -54,7 +53,8 @@ class WikidataProperty:
     ----------
     pid: str
         Property ID.
-
+    label: Optional[str] (default: None)
+        Label of the property.
     """
     def __init__(self, pid: str, label: Optional[str] = None):
         super().__init__()
@@ -68,14 +68,31 @@ class WikidataProperty:
 
     @property
     def label(self) -> str:
-        """Label with lazy loading mechanism."""
+        """Label with lazy loading mechanism.
+
+        Returns
+        -------
+        label: str
+            Label of the property.
+        """
         if self.__label:
             return self.__label
         if self.pid in PROPERTY_MAPPING:  # only English mappings
             self.__label = PROPERTY_MAPPING[self.pid]
         else:
             prop_dict = __waiting_request__(self.pid)
-            self.__label = prop_dict['labels'].get('en', self.__pid) if prop_dict.get('labels') else self.__pid
+            if 'labels' in prop_dict:
+                labels: Dict[str, Any] = prop_dict.get('labels')
+                if 'en' in labels:
+                    en_label: Dict[str, Any] = labels.get('en')
+                    self.__label = en_label.get('value', self.__pid)
+                    PROPERTY_MAPPING[self.pid] = self.__label
+                else:
+                    self.__label = self.pid
+
+
+            else:
+                self.__label = self.__pid
         return self.__label
 
     @property
@@ -824,6 +841,10 @@ class WikidataThing:
                             val = {
                                 'tabular': data_value['value']
                             }
+                        elif data_type == "entity-schema":
+                            val = {
+                                'id': data_value['value']['id']
+                            }
                         else:
                             raise WikiDataAPIException(f"Data type: {data_type} not supported.")
                         literal.append({
@@ -1168,11 +1189,8 @@ class WikiDataAPIClient(ABC):
         if num_processes > 1:
             with Pool(processes=num_processes) as pool:
                 # Wikidata thing is not support in multiprocessing
-                with tqdm(total=len(jobs)) as pbar:
-                    for lst in pool.imap_unordered(__waiting_multi_request__, jobs):
-                        pulled.extend([WikidataThing.from_wikidata(e) for e in lst])
-                        pbar.set_description_str(f"{len(pulled)} / {len(qids)} entities retrieved.")
-                        pbar.update(1)
+                for lst in pool.imap_unordered(__waiting_multi_request__, jobs):
+                    pulled.extend([WikidataThing.from_wikidata(e) for e in lst])
         else:
             pulled = WikiDataAPIClient.__wikidata_multiple_task__(jobs[0])
         return pulled
