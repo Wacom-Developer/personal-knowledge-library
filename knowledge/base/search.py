@@ -7,59 +7,6 @@ from knowledge.base.language import LocaleCode
 from knowledge.base.ontology import OntologyClassReference
 
 
-class DocumentCount:
-    """
-    Document Count
-    ===============
-    Response model for the number of documents in the index.
-
-    Properties
-    ----------
-    count: int
-        Number of documents.
-    metadata: Dict[str, Any]
-        Metadata filters.
-    """
-    def __init__(self, count: int, metadata: Dict[str, Any]):
-        self.__count = count
-        self.__metadata = metadata
-
-    @property
-    def count(self) -> int:
-        """Number of documents."""
-        return self.__count
-
-    @property
-    def metadata(self) -> Dict[str, Any]:
-        """Metadata filters."""
-        return self.__metadata
-
-    def __repr__(self):
-        return f"DocumentCount(count={self.count}, metadata={self.metadata})"
-
-
-class LabelCount:
-    """
-    LabelCount
-    =========
-    Request model to rebuild the index for a specific tenant.
-    """
-
-    def __init__(self, count: int, metadata: Dict[str, Any]):
-        self.__count = count
-        self.__metadata = metadata
-
-    @property
-    def count(self) -> int:
-        """ Number of labels."""
-        return self.__count
-
-    @property
-    def metadata(self) -> Dict[str, Any]:
-        """Metadata filters."""
-        return self.__metadata
-
-
 class LabelSearchResult:
     """
     LabelSearchResult
