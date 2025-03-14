@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2024 Wacom. All rights reserved.
-""""Utilities"""
+# Copyright © 2024-present Wacom. All rights reserved.
+""" "Utilities"""
 
-__all__ = ['wikipedia', 'graph', 'wikidata']
+__all__ = ["wikipedia", "graph", "wikidata"]
 
 
 from knowledge.utils import wikipedia

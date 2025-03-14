@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-24 Wacom. All rights reserved.
+# Copyright © 2021-present Wacom. All rights reserved.
 """
 Base structures.
 ----------------
@@ -15,7 +15,7 @@ The access is used to access the knowledge graph, there are different types of a
     - Public access: the user can access all the entities.
     - Group access: the user can access the entities that are in the same group.
 """
-__all__ = ['access', 'entity', 'ontology']
+__all__ = ["access", "entity", "ontology"]
 
 from knowledge.base import access
 from knowledge.base import entity
