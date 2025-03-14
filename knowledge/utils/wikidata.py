@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2024 Wacom. All rights reserved.
+# Copyright © 2024-present Wacom. All rights reserved.
 from typing import Any, Dict, List
 
 from knowledge import logger
@@ -10,7 +10,7 @@ from knowledge.base.ontology import ThingObject, OntologyClassReference
 
 # ----------------------------------------------- Helper functions -----------------------------------------------------
 def update_language_code(lang: LanguageCode) -> LocaleCode:
-    """ Update the language_code code to a default language_code / country code
+    """Update the language_code code to a default language_code / country code
     Parameters
     ----------
     lang: LanguageCode
@@ -27,7 +27,7 @@ def update_language_code(lang: LanguageCode) -> LocaleCode:
         If the language_code code is not supported.
     """
     if lang not in LANGUAGE_LOCALE_MAPPING:
-        raise ValueError(f'Language code {lang} not supported.')
+        raise ValueError(f"Language code {lang} not supported.")
     return LANGUAGE_LOCALE_MAPPING[lang]
 
 
@@ -37,7 +37,7 @@ def localized_list_description(entity_dict: Dict[str, str]) -> List[Description]
     Parameters
     ----------
     entity_dict: Dict[str, str]
-        Entity dictionary.
+        Entities dictionary.
 
     Returns
     -------
@@ -54,15 +54,18 @@ def localized_list_label(entity_dict: Dict[str, str]) -> List[Label]:
     Parameters
     ----------
     entity_dict: Dict[str, str]
-        Entity dictionary.
+        Entities dictionary.
 
     Returns
     -------
     labels: List[Label]
         List of labels.
     """
-    return [Label(cont, update_language_code(LanguageCode(lang)), main=True)
-            for lang, cont in entity_dict.items() if cont != '']
+    return [
+        Label(cont, update_language_code(LanguageCode(lang)), main=True)
+        for lang, cont in entity_dict.items()
+        if cont != ""
+    ]
 
 
 def localized_flatten_alias_list(entity_dict: Dict[str, List[str]]) -> List[Label]:
@@ -71,7 +74,7 @@ def localized_flatten_alias_list(entity_dict: Dict[str, List[str]]) -> List[Labe
     Parameters
     ----------
     entity_dict: Dict[str, List[str]]
-        Entity dictionary.
+        Entities dictionary.
 
     Returns
     -------
@@ -81,7 +84,7 @@ def localized_flatten_alias_list(entity_dict: Dict[str, List[str]]) -> List[Labe
     flatten: List[Label] = []
     for language, items in entity_dict.items():
         for i in items:
-            if i != '':
+            if i != "":
                 flatten.append(Label(i, update_language_code(LanguageCode(language)), main=False))
     return flatten
 
@@ -92,7 +95,7 @@ def from_dict(entity: Dict[str, Any], concept_type: OntologyClassReference) -> T
     Parameters
     ----------
     entity: Dict[str, Any]
-        Entity dictionary.
+        Entities dictionary.
     concept_type: OntologyClassReference
         Concept type.
 
@@ -101,14 +104,14 @@ def from_dict(entity: Dict[str, Any], concept_type: OntologyClassReference) -> T
     thing: ThingObject
         Thing object.
     """
-    labels: List[Label] = localized_list_label(entity['label'])
-    description: List[Description] = localized_list_description(entity['description'])
-    alias: List[Label] = localized_flatten_alias_list(entity['alias'])
+    labels: List[Label] = localized_list_label(entity["label"])
+    description: List[Description] = localized_list_description(entity["description"])
+    alias: List[Label] = localized_flatten_alias_list(entity["alias"])
     if IMAGE_TAG in entity:
         icon: str = entity[IMAGE_TAG]
     else:
         logger.warning(f"Entity has no image: {entity}")
-        icon: str = ''
+        icon: str = ""
     # Create the entity
     thing: ThingObject = ThingObject(label=labels, concept_type=concept_type, description=description, icon=icon)
     thing.alias = alias
@@ -118,6 +121,7 @@ def from_dict(entity: Dict[str, Any], concept_type: OntologyClassReference) -> T
 
 
 # --------------------------------------------------- Utilities --------------------------------------------------------
+
 
 def strip(url: str) -> str:
     """Strip qid from url.
@@ -130,7 +134,7 @@ def strip(url: str) -> str:
     result: str
         Stripped URL
     """
-    parts = url.split('/')
+    parts = url.split("/")
     return parts[-1]
 
 
@@ -148,11 +152,11 @@ def build_query(params: Dict[str, Any]) -> List[str]:
     queries: List[str]
         SPARQL query string
     """
-    filters: List[Dict[str, Any]] = params.get('filters')
-    dynamics: Dict[str, Any] = params.get('dynamic-filters')
-    limit: int = params.get('limit', 1000)
-    lang_code: str = params.get('language_code', 'en')
-    filter_string: str = ''
+    filters: List[Dict[str, Any]] = params.get("filters")
+    dynamics: Dict[str, Any] = params.get("dynamic-filters")
+    limit: int = params.get("limit", 1000)
+    lang_code: str = params.get("language_code", "en")
+    filter_string: str = ""
     queries: List[str] = []
     for f in filters:
         filter_string += f"?item wdt:{f['property']}  wd:{f['target']}.\n"
@@ -189,5 +193,5 @@ def extract_qid(url: str) -> str:
     qid: str
         QID
     """
-    parts: List[str] = url.split('/')
+    parts: List[str] = url.split("/")
     return parts[-1]
