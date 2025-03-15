@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-24 Wacom Authors. All Rights Reserved.
+# Copyright © 2021-present Wacom Authors. All Rights Reserved.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ from knowledge.services.group import GroupManagementService, Group
 from knowledge.services.users import UserManagementServiceAPI
 
 # ------------------------------- User credential ----------------------------------------------------------------------
-TOPIC_CLASS: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Topic')
+TOPIC_CLASS: OntologyClassReference = OntologyClassReference("wacom", "core", "Topic")
 
 
 def create_entity() -> ThingObject:
@@ -33,39 +33,41 @@ def create_entity() -> ThingObject:
     Returns
     -------
     entity: ThingObject
-        Entity object
+        Entities object
     """
     # Main labels for entity
     topic_labels: List[Label] = [
-        Label('Hidden', EN_US),
-        Label('Versteckt', DE_DE),
-        Label('隠れた', JA_JP),
+        Label("Hidden", EN_US),
+        Label("Versteckt", DE_DE),
+        Label("隠れた", JA_JP),
     ]
 
     # Topic description
     topic_description: List[Description] = [
-        Description('Hidden entity to explain access management.', EN_US),
-        Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', DE_DE)
+        Description("Hidden entity to explain access management.", EN_US),
+        Description("Verstecke Entität, um die Zugriffsteuerung zu erlären.", DE_DE),
     ]
     # Topic
     topic_object: ThingObject = ThingObject(label=topic_labels, concept_type=TOPIC_CLASS, description=topic_description)
     return topic_object
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
-                        required=True)
-    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
-                        required=True)
-    parser.add_argument("-i", "--instance", default='https://private-knowledge.wacom.com',
-                        help="URL of instance")
+    parser.add_argument(
+        "-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.", required=True
+    )
+    parser.add_argument(
+        "-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.", required=True
+    )
+    parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom personal knowledge REST API Client
-    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
-                                                                    service_url=args.instance)
+    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
+        application_name="Wacom Knowledge Listing", service_url=args.instance
+    )
     # User Management
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=args.instance)
     # Group Management
@@ -81,7 +83,7 @@ if __name__ == '__main__':
     entity_uri: str = knowledge_client.create_entity(thing, auth_key=u1_token)
     # Only user 1 can access the entity from cloud storage
     my_thing: ThingObject = knowledge_client.entity(entity_uri, auth_key=u1_token)
-    print(f'User is the owner of {my_thing.owner}')
+    print(f"User is the owner of {my_thing.owner}")
     # Now only user 1 has access to the personal entity
     knowledge_client.entity(entity_uri, auth_key=u1_token)
     # Try to access the entity
@@ -104,7 +106,7 @@ if __name__ == '__main__':
     group_management.add_entity_to_group(g.id, entity_uri, auth_key=u1_token)
     # Now, user 2 should have access
     other_thing: ThingObject = knowledge_client.entity(entity_uri, auth_key=u2_token)
-    print(f'User 2 is the owner of the thing: {other_thing.owner}')
+    print(f"User 2 is the owner of the thing: {other_thing.owner}")
     # Try to access the entity
     try:
         knowledge_client.entity(entity_uri, auth_key=u3_token)

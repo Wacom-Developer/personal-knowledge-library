@@ -16,15 +16,14 @@ import argparse
 
 from knowledge.services.tenant import TenantManagementServiceAPI
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--token", help="Tenant API token.",
-                        required=True)
-    parser.add_argument("-i", "--instance", default='https://private-knowledge.wacom.com',
-                        help="URL of instance")
+    parser.add_argument("-u", "--token", help="Tenant API token.", required=True)
+    parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
-    tenant_manager: TenantManagementServiceAPI = TenantManagementServiceAPI(tenant_token=args.token,
-                                                                            service_url=args.instance)
+    tenant_manager: TenantManagementServiceAPI = TenantManagementServiceAPI(
+        tenant_token=args.token, service_url=args.instance
+    )
 
     print("Tenants")
     print("=" * 120)
@@ -46,4 +45,3 @@ if __name__ == '__main__':
             print(f"      ◦ {op} ")
         print(f"   - Content data-property: {tenant.content_data_property_name}")
     print("=" * 120)
-

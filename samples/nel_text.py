@@ -45,62 +45,66 @@ def print_entity(entity: KnowledgeGraphEntity, list_idx: int, auth_key: str, cli
         Knowledge graph client
     """
     thing: ThingObject = knowledge_client.entity(auth_key=user_token, uri=entity.entity_source.uri)
-    print(f'[{list_idx}] - {entity.ref_text} [{entity.start_idx}-{entity.end_idx}] : {thing.uri}'
-          f' <{thing.concept_type.iri}>')
+    print(
+        f"[{list_idx}] - {entity.ref_text} [{entity.start_idx}-{entity.end_idx}] : {thing.uri}"
+        f" <{thing.concept_type.iri}>"
+    )
     if len(thing.label) > 0:
-        print('    | [Labels]')
+        print("    | [Labels]")
         for la in thing.label:
             print(f'    |     |- "{la.content}"@{la.language_code}')
-        print('    |')
+        print("    |")
     if len(thing.label) > 0:
-        print('    | [Alias]')
+        print("    | [Alias]")
         for la in thing.alias:
             print(f'    |     |- "{la.content}"@{la.language_code}')
-        print('    |')
+        print("    |")
     relations: Dict[OntologyPropertyReference, ObjectProperty] = client.relations(auth_key=auth_key, uri=thing.uri)
     if len(thing.data_properties) > 0:
-        print('    | [Attributes]')
+        print("    | [Attributes]")
         for data_property, labels in thing.data_properties.items():
-            print(f'    |    |- {data_property.iri}:')
+            print(f"    |    |- {data_property.iri}:")
             for li in labels:
                 print(f'    |    |-- "{li.value}"@{li.language_code}')
-        print('    |')
+        print("    |")
     if len(relations) > 0:
-        print('    | [Relations]')
+        print("    | [Relations]")
         for re in relations.values():
-            print(f'    |--- {re.relation.iri}: ')
-            print(f'           |- [Incoming]: {re.incoming_relations} ')
-            print(f'           |- [Outgoing]: {re.outgoing_relations}')
+            print(f"    |--- {re.relation.iri}: ")
+            print(f"           |- [Incoming]: {re.incoming_relations} ")
+            print(f"           |- [Outgoing]: {re.outgoing_relations}")
     print()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
-                        required=True)
-    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
-                        required=True)
+    parser.add_argument(
+        "-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.", required=True
+    )
+    parser.add_argument(
+        "-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.", required=True
+    )
     parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom personal knowledge REST API Client
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
-        application_name="Named Entity Linking Knowledge access",
-        service_url=args.instance)
-    #  Wacom Named Entity Linking
+        application_name="Named Entities Linking Knowledge access", service_url=args.instance
+    )
+    #  Wacom Named Entities Linking
     nel_client: WacomEntityLinkingEngine = WacomEntityLinkingEngine(
-        service_url=args.instance,
-        service_endpoint=WacomEntityLinkingEngine.SERVICE_ENDPOINT
+        service_url=args.instance, service_endpoint=WacomEntityLinkingEngine.SERVICE_ENDPOINT
     )
     # Use special tenant for testing:  Unit-test tenant
     user_token, refresh_token, expiration_time = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
-    entities: List[KnowledgeGraphEntity] = nel_client.\
-        link_personal_entities(text=TEXT, language_code=EN_US, auth_key=user_token)
+    entities: List[KnowledgeGraphEntity] = nel_client.link_personal_entities(
+        text=TEXT, language_code=EN_US, auth_key=user_token
+    )
     idx: int = 1
-    print('-----------------------------------------------------------------------------------------------------------')
+    print("-----------------------------------------------------------------------------------------------------------")
     print(f'Text: "{TEXT}"@{EN_US}')
-    print('-----------------------------------------------------------------------------------------------------------')
+    print("-----------------------------------------------------------------------------------------------------------")
     for e in entities:
         print_entity(e, idx, user_token, knowledge_client)
         idx += 1

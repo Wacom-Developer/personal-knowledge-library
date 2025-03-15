@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2024 Wacom Authors. All Rights Reserved.
+# Copyright © 2024-present Wacom Authors. All Rights Reserved.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -39,20 +39,22 @@ def clean_text(text: str, max_length: int = -1) -> str:
         Cleaned text.
     """
     # First remove new lines
-    text = text.strip().replace('\n', ' ')
+    text = text.strip().replace("\n", " ")
     # Then remove multiple spaces
-    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r"\s+", " ", text)
     if 0 < max_length < len(text):
-        return text[:max_length] + '...'
+        return text[:max_length] + "..."
     return text
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.",
-                        required=True)
-    parser.add_argument("-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.",
-                        required=True)
+    parser.add_argument(
+        "-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.", required=True
+    )
+    parser.add_argument(
+        "-t", "--tenant", help="Tenant Id of the shadow user within the Wacom Personal Knowledge.", required=True
+    )
     parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="URL of instance")
     args = parser.parse_args()
     client: SemanticSearchClient = SemanticSearchClient(service_url=args.instance)
@@ -61,8 +63,9 @@ if __name__ == '__main__':
     labels_count: int = client.count_documents(locale=EN_US)
     print(f"Tenant ID: {client.current_session.tenant_id} | Labels count: {labels_count} for [locale:={EN_US}]")
     t0: float = time.time()
-    results: LabelMatchingResponse = client.labels_search(query="Leonardo Da Vinci", locale=EN_US,
-                                                          max_results=max_results)
+    results: LabelMatchingResponse = client.labels_search(
+        query="Leonardo Da Vinci", locale=EN_US, max_results=max_results
+    )
     t1: float = time.time()
     if len(results.results) > 0:
         print("=" * 120)
@@ -77,17 +80,20 @@ if __name__ == '__main__':
     print(f"Time: {(t1 - t0) * 1000:.2f} ms")
     print("=" * 120)
     document_count: int = client.count_documents(locale=EN_US)
-    print(f"Document count: {document_count} for [locale:={EN_US}]")
+    print(f"SegmentedContent count: {document_count} for [locale:={EN_US}]")
     t2: float = time.time()
-    document_results: DocumentSearchResponse = client.document_search(query="Leonardo Da Vinci artwork", locale=EN_US,
-                                                                      max_results=max_results)
+    document_results: DocumentSearchResponse = client.document_search(
+        query="Leonardo Da Vinci artwork", locale=EN_US, max_results=max_results
+    )
     t3: float = time.time()
     print("=" * 120)
     if len(document_results.results) > 0:
 
         for idx, res in enumerate(document_results.results):
-            print(f"{idx + 1}.  URI: {res.content_uri} | Relevance: {res.score:.2f} | Chunk:"
-                  f"\n\t{clean_text(res.content_chunk, max_length=100)}")
+            print(
+                f"{idx + 1}.  URI: {res.content_uri} | Relevance: {res.score:.2f} | Chunk:"
+                f"\n\t{clean_text(res.content_chunk, max_length=100)}"
+            )
         print(f"\n All document chunks for best match: {document_results.results[0].content_uri}")
         print("=" * 120)
         # If you need all document chunks, you can retrieve them using the content_uri.
