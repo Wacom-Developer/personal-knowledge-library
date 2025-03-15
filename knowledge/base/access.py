@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-24 Wacom. All rights reserved.
+# Copyright © 2021-present Wacom. All rights reserved.
 from typing import List
 
 
@@ -16,6 +16,7 @@ class AccessRight:
     delete: bool (default := False)
         Delete access for entity within tenant.
     """
+
     READ: str = "Read"
     WRITE: str = "Write"
     DELETE: str = "Delete"
@@ -53,8 +54,8 @@ class AccessRight:
         self.__delete = value
 
     def __repr__(self):
-        result: str = '['
-        prefix: str = ''
+        result: str = "["
+        prefix: str = ""
         if self.read:
             result += AccessRight.READ
             prefix = ", "
@@ -62,7 +63,7 @@ class AccessRight:
             result += prefix + AccessRight.WRITE
         if self.delete:
             result += AccessRight.DELETE
-        result += ']'
+        result += "]"
         return result
 
     def to_list(self) -> List[str]:
@@ -104,7 +105,7 @@ class TenantAccessRight(AccessRight):
         super().__init__(read, write, delete)
 
     @classmethod
-    def parse(cls, param: List[str]) -> 'TenantAccessRight':
+    def parse(cls, param: List[str]) -> "TenantAccessRight":
         """
         Converts the access to list of properties.
 
@@ -145,7 +146,7 @@ class GroupAccessRight(AccessRight):
         super().__init__(read, write, delete)
 
     @classmethod
-    def parse(cls, param: List[str]) -> 'GroupAccessRight':
+    def parse(cls, param: List[str]) -> "GroupAccessRight":
         """
         Converts the access to list of properties.
 

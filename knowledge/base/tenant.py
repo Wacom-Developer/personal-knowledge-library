@@ -39,11 +39,19 @@ class TenantConfiguration:
         Name of the content data property which is used for vector search to index documents
 
     """
-    def __init__(self, identifier: str, ontology_name: str, ontology_version: int,
-                 is_locked: bool, name: str, rights: List[str],
-                 vector_search_data_properties: List[str],
-                 vector_search_object_properties: List[str],
-                 content_data_property_name: str):
+
+    def __init__(
+        self,
+        identifier: str,
+        ontology_name: str,
+        ontology_version: int,
+        is_locked: bool,
+        name: str,
+        rights: List[str],
+        vector_search_data_properties: List[str],
+        vector_search_object_properties: List[str],
+        content_data_property_name: str,
+    ):
         # Constructor to initialize the properties
         self.__identifier: str = identifier
         self.__ontology_name: str = ontology_name
@@ -147,7 +155,7 @@ class TenantConfiguration:
         self.__content_data_property_name = value
 
     @classmethod
-    def from_dict(cls, data_dict: Dict[str, Any]) -> 'TenantConfiguration':
+    def from_dict(cls, data_dict: Dict[str, Any]) -> "TenantConfiguration":
         """
         Create a TenantConfiguration object from a dictionary.
 
@@ -162,21 +170,23 @@ class TenantConfiguration:
             The tenant configuration object.
         """
         return cls(
-            identifier=data_dict.get('id'),
-            ontology_name=data_dict.get('ontologyName'),
-            ontology_version=data_dict.get('ontologyVersion'),
-            is_locked=data_dict.get('isLocked'),
-            name=data_dict.get('name'),
-            rights=data_dict.get('rights'),
-            vector_search_data_properties=data_dict.get('vectorSearchDataProperties'),
-            vector_search_object_properties=data_dict.get('vectorSearchObjectProperties'),
-            content_data_property_name=data_dict.get('contentDataPropertyName')
+            identifier=data_dict.get("id"),
+            ontology_name=data_dict.get("ontologyName"),
+            ontology_version=data_dict.get("ontologyVersion"),
+            is_locked=data_dict.get("isLocked"),
+            name=data_dict.get("name"),
+            rights=data_dict.get("rights"),
+            vector_search_data_properties=data_dict.get("vectorSearchDataProperties"),
+            vector_search_object_properties=data_dict.get("vectorSearchObjectProperties"),
+            content_data_property_name=data_dict.get("contentDataPropertyName"),
         )
 
     def __repr__(self):
-        return (f"TenantConfiguration(identifier='{self.identifier}', ontology_name='{self.ontology_name}', "
-                f"ontology_version={self.ontology_version}, is_locked={self.is_locked}, "
-                f"name='{self.name}', rights={self.rights}, "
-                f"vector_search_data_properties={self.vector_search_data_properties}, "
-                f"vector_search_object_properties={self.vector_search_object_properties}, "
-                f"content_data_property_name='{self.content_data_property_name}')")
+        return (
+            f"TenantConfiguration(identifier='{self.identifier}', ontology_name='{self.ontology_name}', "
+            f"ontology_version={self.ontology_version}, is_locked={self.is_locked}, "
+            f"name='{self.name}', rights={self.rights}, "
+            f"vector_search_data_properties={self.vector_search_data_properties}, "
+            f"vector_search_object_properties={self.vector_search_object_properties}, "
+            f"content_data_property_name='{self.content_data_property_name}')"
+        )

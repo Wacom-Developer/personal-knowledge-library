@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-24 Wacom. All rights reserved.
+# Copyright © 2021-present Wacom. All rights reserved.
 import abc
 from enum import Enum
 from typing import Optional, List
@@ -15,6 +15,7 @@ class EntityType(Enum):
     ------------
     Different types of entities.
     """
+
     PUBLIC_ENTITY = 0
     """Public entity - Entity from a public knowledge graph"""
     PERSONAL_ENTITY = 1
@@ -29,11 +30,12 @@ class KnowledgeSource(Enum):
     ----------------
     List of knowledge sources which a used within Semantic Ink.
     """
-    WIKIDATA = 'wikidata'
+
+    WIKIDATA = "wikidata"
     """Wikidata"""
-    DBPEDIA = 'dbpedia'
+    DBPEDIA = "dbpedia"
     """dbpedia"""
-    WACOM_KNOWLEDGE = 'wacom'
+    WACOM_KNOWLEDGE = "wacom"
     """Wacom Personal Knowledge"""
 
 
@@ -43,13 +45,14 @@ class BasicType(Enum):
     ----------
     Basic type of entities use for instance in named entity recognition.
     """
-    UNKNOWN = 'Unknown'
-    MONEY = 'Money'
-    PERSON = 'Person'
-    DATE = 'Date'
-    PLACE = 'Place'
-    TIME = 'Time'
-    NUMBER = 'Number'
+
+    UNKNOWN = "Unknown"
+    MONEY = "Money"
+    PERSON = "Person"
+    DATE = "Date"
+    PLACE = "Place"
+    TIME = "Time"
+    NUMBER = "Number"
 
 
 class EntitySource:
@@ -81,7 +84,7 @@ class EntitySource:
         return self.__source
 
     def __repr__(self):
-        return f'{self.uri} ({self.source})'
+        return f"{self.uri} ({self.source})"
 
 
 class NamedEntity(abc.ABC):
@@ -130,7 +133,7 @@ class NamedEntity(abc.ABC):
         return self.__type
 
     def __repr__(self):
-        return f'{self.ref_text} [{self.start_idx}-{self.end_idx}'
+        return f"{self.ref_text} [{self.start_idx}-{self.end_idx}"
 
 
 class KnowledgeGraphEntity(NamedEntity):
@@ -161,9 +164,18 @@ class KnowledgeGraphEntity(NamedEntity):
         Type of the entity.
     """
 
-    def __init__(self, ref_text: str, start_idx: int, end_idx: int, label: str, confidence: float,
-                 source: EntitySource, content_link: str,
-                 ontology_types: List[str], entity_type: EntityType = EntityType.PUBLIC_ENTITY):
+    def __init__(
+        self,
+        ref_text: str,
+        start_idx: int,
+        end_idx: int,
+        label: str,
+        confidence: float,
+        source: EntitySource,
+        content_link: str,
+        ontology_types: List[str],
+        entity_type: EntityType = EntityType.PUBLIC_ENTITY,
+    ):
         super().__init__(ref_text, start_idx, end_idx, entity_type)
         self.__source: EntitySource = source
         self.__content_link: str = content_link
@@ -231,7 +243,7 @@ class KnowledgeGraphEntity(NamedEntity):
         self.__relevant_type = value
 
     def __repr__(self):
-        return f'{self.ref_text} [{self.start_idx}-{self.end_idx}] -> {self.entity_source} [{self.entity_type}]'
+        return f"{self.ref_text} [{self.start_idx}-{self.end_idx}] -> {self.entity_source} [{self.entity_type}]"
 
 
 class BasicNamedEntity(NamedEntity):
@@ -262,7 +274,7 @@ class BasicNamedEntity(NamedEntity):
         return self.__basic_type
 
     def __repr__(self):
-        return f'{self.ref_text} [{self.start_idx}-{self.end_idx}] -> {self.basic_type}'
+        return f"{self.ref_text} [{self.start_idx}-{self.end_idx}] -> {self.basic_type}"
 
 
 class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
@@ -282,14 +294,18 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
     """
 
     def __init__(self, service_url: str = str, supported_languages: List[str] = None, verify_calls: bool = True):
-        super().__init__(application_name="Personal entity linking", service_url=service_url,
-                         service_endpoint='graph/v1', verify_calls=verify_calls)
+        super().__init__(
+            application_name="Personal entity linking",
+            service_url=service_url,
+            service_endpoint="graph/v1",
+            verify_calls=verify_calls,
+        )
         self.__supported_languages: List[str] = supported_languages if supported_languages else []
 
     @abc.abstractmethod
-    def link_personal_entities(self, text: str, language_code: LocaleCode = EN_US, auth_key: Optional[str] = None,
-                               max_retries: int = 5) \
-            -> List[KnowledgeGraphEntity]:
+    def link_personal_entities(
+        self, text: str, language_code: LocaleCode = EN_US, auth_key: Optional[str] = None, max_retries: int = 5
+    ) -> List[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
@@ -332,7 +348,7 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
         return language_code in self.supported_language
 
     def __repr__(self):
-        return f'Personal Entity Linking:= {self.service_url}'
+        return f"Personal Entity Linking:= {self.service_url}"
 
 
 class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
@@ -351,10 +367,13 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
         Verifies all HTTPS calls and the associated certificate.
     """
 
-    def __init__(self, service_url: str, supported_languages: List[LocaleCode] = None,
-                 verify_calls: bool = False):
-        super().__init__(application_name='Named Entity Linking', service_url=service_url, service_endpoint="graph",
-                         verify_calls=verify_calls)
+    def __init__(self, service_url: str, supported_languages: List[LocaleCode] = None, verify_calls: bool = False):
+        super().__init__(
+            application_name="Named Entity Linking",
+            service_url=service_url,
+            service_endpoint="graph",
+            verify_calls=verify_calls,
+        )
         self.__supported_languages: List[LocaleCode] = supported_languages if supported_languages else []
 
     @abc.abstractmethod
@@ -397,7 +416,7 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
         return language_code in self.supported_language
 
     def __repr__(self):
-        return f'Public entity linking:= {self.__service_url}'
+        return f"Public entity linking:= {self.__service_url}"
 
 
 class PublicEntityLinkingProcessor(RESTAPIClient):
@@ -416,8 +435,13 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
         Verifies all HTTPS calls and the associated certificate.
     """
 
-    def __init__(self, service_url: str, provider: str = "external", supported_languages: List[str] = None,
-                 verify_calls: bool = False):
+    def __init__(
+        self,
+        service_url: str,
+        provider: str = "external",
+        supported_languages: List[str] = None,
+        verify_calls: bool = False,
+    ):
         super().__init__(service_url=service_url, verify_calls=verify_calls)
         self.__provider: str = provider
         self.__supported_languages: List[str] = supported_languages if supported_languages else []
@@ -468,4 +492,4 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
         return self.__provider
 
     def __repr__(self):
-        return f'Public Entity Linking:= {self.service_url}'
+        return f"Public Entity Linking:= {self.service_url}"

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2021-2024 Wacom. All rights reserved.
+# Copyright © 2021-present Wacom. All rights reserved.
 import abc
 import enum
 from typing import Any, List, Dict, Union
@@ -17,57 +17,57 @@ class KnowledgeException(Exception):
 
 
 #  ---------------------------------------- Constants ------------------------------------------------------------------
-RDF_SYNTAX_NS_TYPE: str = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
-RDF_SCHEMA_COMMENT: str = 'http://www.w3.org/2000/01/rdf-schema#comment'
-RDF_SCHEMA_LABEL: str = 'http://www.w3.org/2000/01/rdf-schema#label'
-ALIAS_TAG: str = 'alias'
-DATA_PROPERTY_TAG: str = 'literal'
-VALUE_TAG: str = 'value'
-LANGUAGE_TAG: str = 'lang'
-LOCALE_TAG: str = 'locale'
-DATA_PROPERTIES_TAG: str = 'literals'
-SEND_TO_NEL_TAG: str = 'sendToNEL'
-SEND_VECTOR_INDEX_TAG: str = 'sendToVectorIndex'
-SOURCE_REFERENCE_ID_TAG: str = 'source_reference_id'
-EXTERNAL_USER_ID_TAG: str = 'external_user_id'
-SOURCE_SYSTEM_TAG: str = 'source_system'
-OBJECT_PROPERTIES_TAG: str = 'relations'
-OWNER_TAG: str = 'owner'
-OWNER_ID_TAG: str = 'ownerId'
-GROUP_IDS: str = 'groupIds'
-LOCALIZED_CONTENT_TAG: str = 'LocalizedContent'
-STATUS_FLAG_TAG: str = 'status'
-CONTENT_TAG: str = 'value'
-URI_TAG: str = 'uri'
-URIS_TAG: str = 'uris'
-FORCE_TAG: str = 'force'
-ERRORS_TAG: str = 'errors'
-TEXT_TAG: str = 'text'
-TYPE_TAG: str = 'type'
-IMAGE_TAG: str = 'image'
-DESCRIPTION_TAG: str = 'description'
-COMMENT_TAG: str = 'text'
-COMMENTS_TAG: str = 'comments'
-DESCRIPTIONS_TAG: str = 'descriptions'
-REPOSITORY_TAG: str = 'repository'
-DISPLAY_TAG: str = 'display'
-USE_NEL_TAG: str = 'use_for_nel'
-USE_VECTOR_INDEX_TAG: str = 'use_for_vector_index'
-USE_VECTOR_DOCUMENT_INDEX_TAG: str = 'use_for_vector_document_index'
-USE_FULLTEXT_TAG: str = 'user_full_text'
-TARGETS_TAG: str = 'targets'
-VISIBILITY_TAG: str = 'visibility'
-RELATIONS_TAG: str = 'relations'
-LABELS_TAG: str = 'labels'
-IS_MAIN_TAG: str = 'isMain'
-DATA_TYPE_TAG: str = 'dataType'
-RELATION_TAG: str = 'relation'
-OUTGOING_TAG: str = 'out'
-INCOMING_TAG: str = 'in'
-TENANT_RIGHTS_TAG: str = 'tenantRights'
-INFLECTION_CONCEPT_CLASS: str = 'concept'
-INFLECTION_SETTING: str = 'inflection'
-INFLECTION_CASE_SENSITIVE: str = 'caseSensitive'
+RDF_SYNTAX_NS_TYPE: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+RDF_SCHEMA_COMMENT: str = "http://www.w3.org/2000/01/rdf-schema#comment"
+RDF_SCHEMA_LABEL: str = "http://www.w3.org/2000/01/rdf-schema#label"
+ALIAS_TAG: str = "alias"
+DATA_PROPERTY_TAG: str = "literal"
+VALUE_TAG: str = "value"
+LANGUAGE_TAG: str = "lang"
+LOCALE_TAG: str = "locale"
+DATA_PROPERTIES_TAG: str = "literals"
+SEND_TO_NEL_TAG: str = "sendToNEL"
+SEND_VECTOR_INDEX_TAG: str = "sendToVectorIndex"
+SOURCE_REFERENCE_ID_TAG: str = "source_reference_id"
+EXTERNAL_USER_ID_TAG: str = "external_user_id"
+SOURCE_SYSTEM_TAG: str = "source_system"
+OBJECT_PROPERTIES_TAG: str = "relations"
+OWNER_TAG: str = "owner"
+OWNER_ID_TAG: str = "ownerId"
+GROUP_IDS: str = "groupIds"
+LOCALIZED_CONTENT_TAG: str = "LocalizedContent"
+STATUS_FLAG_TAG: str = "status"
+CONTENT_TAG: str = "value"
+URI_TAG: str = "uri"
+URIS_TAG: str = "uris"
+FORCE_TAG: str = "force"
+ERRORS_TAG: str = "errors"
+TEXT_TAG: str = "text"
+TYPE_TAG: str = "type"
+IMAGE_TAG: str = "image"
+DESCRIPTION_TAG: str = "description"
+COMMENT_TAG: str = "text"
+COMMENTS_TAG: str = "comments"
+DESCRIPTIONS_TAG: str = "descriptions"
+REPOSITORY_TAG: str = "repository"
+DISPLAY_TAG: str = "display"
+USE_NEL_TAG: str = "use_for_nel"
+USE_VECTOR_INDEX_TAG: str = "use_for_vector_index"
+USE_VECTOR_DOCUMENT_INDEX_TAG: str = "use_for_vector_document_index"
+USE_FULLTEXT_TAG: str = "user_full_text"
+TARGETS_TAG: str = "targets"
+VISIBILITY_TAG: str = "visibility"
+RELATIONS_TAG: str = "relations"
+LABELS_TAG: str = "labels"
+IS_MAIN_TAG: str = "isMain"
+DATA_TYPE_TAG: str = "dataType"
+RELATION_TAG: str = "relation"
+OUTGOING_TAG: str = "out"
+INCOMING_TAG: str = "in"
+TENANT_RIGHTS_TAG: str = "tenantRights"
+INFLECTION_CONCEPT_CLASS: str = "concept"
+INFLECTION_SETTING: str = "inflection"
+INFLECTION_CASE_SENSITIVE: str = "caseSensitive"
 # ------------------------------------------ Indexing targets ----------------------------------------------------------
 INDEXING_NEL_TARGET: str = "NEL"
 INDEXING_VECTOR_SEARCH_TARGET: str = "VectorSearchWord"
@@ -81,6 +81,7 @@ class EntityStatus(enum.Enum):
     -------------
     Status of the entity synchronization (client and knowledge graph).
     """
+
     UNKNOWN = 0
     """Unknown status."""
     CREATED = 1
@@ -120,11 +121,11 @@ class LocalizedContent(abc.ABC):
 
     @property
     def language_code(self) -> Union[LocaleCode, LanguageCode]:
-        """Locale """
+        """Locale"""
         return self.__language_code
 
     def __repr__(self):
-        return f'{self.content}@{self.language_code}'
+        return f"{self.content}@{self.language_code}"
 
 
 class Label(LocalizedContent):
@@ -153,8 +154,9 @@ class Label(LocalizedContent):
         return self.__main
 
     @staticmethod
-    def create_from_dict(dict_label: Dict[str, Any], tag_name: str = CONTENT_TAG, locale_name: str = LOCALE_TAG) \
-            -> 'Label':
+    def create_from_dict(
+        dict_label: Dict[str, Any], tag_name: str = CONTENT_TAG, locale_name: str = LOCALE_TAG
+    ) -> "Label":
         """
         Create a label from a dictionary.
         Parameters
@@ -197,11 +199,7 @@ class Label(LocalizedContent):
         return [Label.create_from_dict(p) for p in param]
 
     def __dict__(self):
-        return {
-            CONTENT_TAG: self.content,
-            LOCALE_TAG: self.language_code,
-            IS_MAIN_TAG: self.main
-        }
+        return {CONTENT_TAG: self.content, LOCALE_TAG: self.language_code, IS_MAIN_TAG: self.main}
 
 
 class Description(LocalizedContent):
@@ -222,8 +220,9 @@ class Description(LocalizedContent):
         super().__init__(description, language_code)
 
     @staticmethod
-    def create_from_dict(dict_description: Dict[str, Any], tag_name: str = DESCRIPTION_TAG,
-                         locale_name: str = LOCALE_TAG) -> 'Description':
+    def create_from_dict(
+        dict_description: Dict[str, Any], tag_name: str = DESCRIPTION_TAG, locale_name: str = LOCALE_TAG
+    ) -> "Description":
         """
         Create a description from a dictionary.
 
@@ -246,8 +245,8 @@ class Description(LocalizedContent):
         return Description(dict_description[tag_name], LocaleCode(dict_description[locale_name]))
 
     @staticmethod
-    def create_from_list(param: List[Dict[str, Any]]) -> List['Description']:
-        """ Create a list of descriptions from a list of dictionaries.
+    def create_from_list(param: List[Dict[str, Any]]) -> List["Description"]:
+        """Create a list of descriptions from a list of dictionaries.
 
         Parameters
         ----------

@@ -274,6 +274,7 @@ class WikidataClass:
         self.__qid: str = qid
         self.__label: Optional[str] = label
         self.__superclasses: List[WikidataClass] = []
+        self.__subclasses: List[WikidataClass] = []
 
     @property
     def qid(self):
@@ -298,6 +299,11 @@ class WikidataClass:
     def superclasses(self) -> List["WikidataClass"]:
         """Superclasses."""
         return self.__superclasses
+
+    @property
+    def subclasses(self) -> List["WikidataClass"]:
+        """Subclasses."""
+        return self.__subclasses
 
     @classmethod
     def create_from_dict(cls, class_dict: Dict[str, Any]) -> "WikidataClass":
@@ -1036,7 +1042,7 @@ class WikiDataAPIClient(ABC):
 
             # Make a request using the session
             response: Response = session.get(
-                wikidata_sparql_url, params={"query": query_string, "format": "json"}, timeout=200000
+                wikidata_sparql_url, params={"query": query_string, "format": "json"}, timeout=10000
             )
         if response.ok:
             return response.json()
@@ -1101,6 +1107,74 @@ class WikiDataAPIClient(ABC):
                         wikidata_classes[current_qid].superclasses.append(wikidata_classes[superclass_qid])
                         queue.append(superclass_qid)
                         cycle_detector.add((current_qid, superclass_qid))
+
+        return wikidata_classes
+
+    @staticmethod
+    def subclasses(qid: str) -> Dict[str, WikidataClass]:
+        """
+        Returns the Wikidata class with all its subclasses for the given QID.
+
+        Parameters
+        ----------
+        qid: str
+            Wikidata QID (e.g., 'Q146' for house cat).
+
+        Returns
+        -------
+        classes: Dict[str, WikidataClass]
+            A dictionary of WikidataClass objects, where the keys are QIDs and the values are the corresponding
+            classes with their subclasses populated.
+        """
+        # Fetch subclasses
+        query = f"""
+            SELECT DISTINCT ?class ?classLabel ?subclass ?subclassLabel
+            WHERE
+            {{
+                ?subclass wdt:P279* wd:{qid}.
+                ?subclass wdt:P279 ?class.
+                SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
+            }}
+            LIMIT 1000
+            """
+        reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
+        wikidata_classes: Dict[str, WikidataClass] = {}
+        cycle_detector: Set[Tuple[str, str]] = set()
+        adjacency_list: Dict[str, Set[str]] = {}
+
+        if "results" in reply:
+            for b in reply["results"]["bindings"]:
+                subclass_qid = b["subclass"]["value"].rsplit("/", 1)[-1]
+                class_qid = b["class"]["value"].rsplit("/", 1)[-1]
+                subclass_label = b["subclassLabel"]["value"]
+                class_label = b["classLabel"]["value"]
+
+                wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
+                wikidata_classes.setdefault(subclass_qid, WikidataClass(subclass_qid, subclass_label))
+
+                # subclass -> class relationship (reverse of superclass logic)
+                adjacency_list.setdefault(class_qid, set()).add(subclass_qid)
+
+        queue = deque([qid])
+        visited = set()
+
+        while queue:
+            current_qid = queue.popleft()
+            if current_qid in visited:
+                continue
+            visited.add(current_qid)
+
+            # Ensure the starting QID is in the dictionary
+            if current_qid not in wikidata_classes:
+                # If not present, we might need to fetch its label separately
+                wikidata_classes[current_qid] = WikidataClass(current_qid, f"Class {current_qid}")
+
+            if current_qid in adjacency_list:
+                for subclass_qid in adjacency_list[current_qid]:
+                    if (current_qid, subclass_qid) not in cycle_detector:
+                        wikidata_classes[current_qid].subclasses.append(wikidata_classes[subclass_qid])
+                        queue.append(subclass_qid)
+                        cycle_detector.add((current_qid, subclass_qid))
 
         return wikidata_classes
 

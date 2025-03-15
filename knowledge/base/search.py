@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2024 Wacom. All rights reserved.
+# Copyright © 2024-present Wacom. All rights reserved.
 from typing import List, Any, Dict, Optional
 
 from knowledge.base.entity import Label
@@ -33,13 +33,14 @@ class LabelSearchResult:
         self.__score: float = score
         self.__content_uri: str = content_uri
         self.__metadata: Dict[str, Any] = metadata
-        self.__concept_type: OntologyClassReference = OntologyClassReference.parse(metadata.get('concept_type',
-                                                                                                'wacom:core#Topic'))
-        self.__locale: LocaleCode = LocaleCode(metadata.get('locale', 'en_US'))
-        if 'concept_type' in self.__metadata:
-            del self.__metadata['concept_type']
-        if 'locale' in self.__metadata:
-            del self.__metadata['locale']
+        self.__concept_type: OntologyClassReference = OntologyClassReference.parse(
+            metadata.get("concept_type", "wacom:core#Topic")
+        )
+        self.__locale: LocaleCode = LocaleCode(metadata.get("locale", "en_US"))
+        if "concept_type" in self.__metadata:
+            del self.__metadata["concept_type"]
+        if "locale" in self.__metadata:
+            del self.__metadata["locale"]
         self.__label: Label = Label(content=content, language_code=self.__locale)
 
     @property
@@ -73,8 +74,10 @@ class LabelSearchResult:
         return self.__concept_type
 
     def __repr__(self):
-        return f"LabelSearchResult(score={self.score}, entity_uri={self.entity_uri}, label={self.label}, " \
-               f"locale={self.locale}, concept_type={self.concept_type}, metadata={self.metadata})"
+        return (
+            f"LabelSearchResult(score={self.score}, entity_uri={self.entity_uri}, label={self.label}, "
+            f"locale={self.locale}, concept_type={self.concept_type}, metadata={self.metadata})"
+        )
 
 
 class DocumentSearchResult:
@@ -104,13 +107,14 @@ class DocumentSearchResult:
         self.__content_uri: str = content_uri
         self.__content: str = content
         self.__metadata: Dict[str, Any] = metadata
-        self.__concept_type: OntologyClassReference = OntologyClassReference.parse(metadata.get('concept_type',
-                                                                                                'wacom:core#Thing'))
-        self.__locale: LocaleCode = LocaleCode(metadata.get('locale', 'en_US'))
-        if 'concept_type' in self.__metadata:
-            del self.__metadata['concept_type']
-        if 'locale' in self.__metadata:
-            del self.__metadata['locale']
+        self.__concept_type: OntologyClassReference = OntologyClassReference.parse(
+            metadata.get("concept_type", "wacom:core#Thing")
+        )
+        self.__locale: LocaleCode = LocaleCode(metadata.get("locale", "en_US"))
+        if "concept_type" in self.__metadata:
+            del self.__metadata["concept_type"]
+        if "locale" in self.__metadata:
+            del self.__metadata["locale"]
 
     @property
     def score(self) -> float:
@@ -166,13 +170,13 @@ class PerformanceStats:
     """
 
     def __init__(self, stats: Dict[str, Any]):
-        self.__locale: LocaleCode = stats.get('locale')
-        self.__model_name: str = stats.get('model-name', "unknown")
-        self.__top_k: int = stats.get('top-k', 10)
-        self.__loading_time: float = stats.get('loading', 0.0) * 1000
-        self.__embedding_time: float = stats.get('embedding', 0.0) * 1000
-        self.__vector_db_response_time: float = stats.get('request', 0.0) * 1000
-        self.__overall_time: float = stats.get('overall', 0.0) * 1000
+        self.__locale: LocaleCode = stats.get("locale")
+        self.__model_name: str = stats.get("model-name", "unknown")
+        self.__top_k: int = stats.get("top-k", 10)
+        self.__loading_time: float = stats.get("loading", 0.0) * 1000
+        self.__embedding_time: float = stats.get("embedding", 0.0) * 1000
+        self.__vector_db_response_time: float = stats.get("request", 0.0) * 1000
+        self.__overall_time: float = stats.get("overall", 0.0) * 1000
 
     @property
     def locale_code(self) -> LocaleCode:
@@ -210,9 +214,11 @@ class PerformanceStats:
         return self.__overall_time
 
     def __repr__(self):
-        return f"PerformanceStats(locale_code={self.locale_code}, model_name={self.model_name}, top_k={self.top_k}, " \
-               f"model_loading_time={self.model_loading_time}, embedding_time={self.embedding_time}, " \
-               f"vector_db_response_time={self.vector_db_response_time})"
+        return (
+            f"PerformanceStats(locale_code={self.locale_code}, model_name={self.model_name}, top_k={self.top_k}, "
+            f"model_loading_time={self.model_loading_time}, embedding_time={self.embedding_time}, "
+            f"vector_db_response_time={self.vector_db_response_time})"
+        )
 
 
 class DocumentSearchStats(PerformanceStats):
@@ -242,7 +248,7 @@ class DocumentSearchStats(PerformanceStats):
 
     def __init__(self, stats: Dict[str, Any]):
         super().__init__(stats)
-        self.__preprocessing: float = stats.get('preprocessing', 0.) * 1000.
+        self.__preprocessing: float = stats.get("preprocessing", 0.0) * 1000.0
 
     @property
     def preprocessing_time(self) -> float:
@@ -250,10 +256,12 @@ class DocumentSearchStats(PerformanceStats):
         return self.__preprocessing
 
     def __repr__(self):
-        return f"DocumentSearchStats(locale_code={self.locale_code}, model_name={self.model_name}, " \
-               f"top_k={self.top_k}, " \
-               f"model_loading_time={self.model_loading_time}, embedding_time={self.embedding_time}, " \
-               f"vector_db_response_time={self.vector_db_response_time}, preprocessing_time={self.preprocessing_time})"
+        return (
+            f"DocumentSearchStats(locale_code={self.locale_code}, model_name={self.model_name}, "
+            f"top_k={self.top_k}, "
+            f"model_loading_time={self.model_loading_time}, embedding_time={self.embedding_time}, "
+            f"vector_db_response_time={self.vector_db_response_time}, preprocessing_time={self.preprocessing_time})"
+        )
 
 
 class LabelSearchStats(PerformanceStats):
@@ -284,8 +292,8 @@ class LabelSearchStats(PerformanceStats):
 
     def __init__(self, stats: Dict[str, Any]):
         super().__init__(stats)
-        self.__tokenizer: float = stats.get('tokenizer')
-        self.__number_of_tokens: int = stats.get('number-of-tokens')
+        self.__tokenizer: float = stats.get("tokenizer")
+        self.__number_of_tokens: int = stats.get("number-of-tokens")
 
     @property
     def tokenizer_time(self) -> float:
@@ -298,11 +306,13 @@ class LabelSearchStats(PerformanceStats):
         return self.__number_of_tokens
 
     def __repr__(self):
-        return f"LabelSearchStats(locale_code={self.locale_code}, model_name={self.model_name}, " \
-               f"top_k={self.top_k}, " \
-               f"model_loading_time={self.model_loading_time}, embedding_time={self.embedding_time}, " \
-               f"vector_db_response_time={self.vector_db_response_time}, tokenizer_time={self.tokenizer_time}, " \
-               f"number_of_tokens={self.number_of_tokens})"
+        return (
+            f"LabelSearchStats(locale_code={self.locale_code}, model_name={self.model_name}, "
+            f"top_k={self.top_k}, "
+            f"model_loading_time={self.model_loading_time}, embedding_time={self.embedding_time}, "
+            f"vector_db_response_time={self.vector_db_response_time}, tokenizer_time={self.tokenizer_time}, "
+            f"number_of_tokens={self.number_of_tokens})"
+        )
 
 
 class DocumentSearchResponse:
@@ -321,8 +331,9 @@ class DocumentSearchResponse:
         Performance stats
     """
 
-    def __init__(self, results: List[DocumentSearchResult], max_results: int = 10,
-                 stats: Optional[DocumentSearchStats] = None):
+    def __init__(
+        self, results: List[DocumentSearchResult], max_results: int = 10, stats: Optional[DocumentSearchStats] = None
+    ):
         self.__results: List[DocumentSearchResult] = results
         self.__max_results = max_results
         self.__stats: Optional[DocumentSearchStats] = stats
@@ -343,7 +354,7 @@ class DocumentSearchResponse:
         return self.__stats
 
     @staticmethod
-    def from_dict(data: Dict[str, Any]) -> 'DocumentSearchResponse':
+    def from_dict(data: Dict[str, Any]) -> "DocumentSearchResponse":
         """
         Create a DocumentSearchResponse from a dictionary.
         Parameters
@@ -354,12 +365,12 @@ class DocumentSearchResponse:
         Returns
         -------
         DocumentSearchResponse
-            Document search response.
+            SegmentedContent search response.
         """
         return DocumentSearchResponse(
-            results=[DocumentSearchResult(**result) for result in data['results']],
-            max_results=data['max_results'],
-            stats=DocumentSearchStats(data['stats']) if 'stats' in data and data['stats'] else None
+            results=[DocumentSearchResult(**result) for result in data["results"]],
+            max_results=data["max_results"],
+            stats=DocumentSearchStats(data["stats"]) if "stats" in data and data["stats"] else None,
         )
 
 
@@ -379,8 +390,9 @@ class LabelMatchingResponse:
         Performance stats
     """
 
-    def __init__(self, results: List[LabelSearchResult], max_results: int = 10,
-                 stats: Optional[LabelSearchStats] = None):
+    def __init__(
+        self, results: List[LabelSearchResult], max_results: int = 10, stats: Optional[LabelSearchStats] = None
+    ):
         self.__results = results
         self.__max_results = max_results
         self.__stats: Optional[LabelSearchStats] = stats
@@ -415,9 +427,9 @@ class LabelMatchingResponse:
             Label matching response.
         """
         return LabelMatchingResponse(
-            results=[LabelSearchResult(**result) for result in data['results']],
-            max_results=data['max_results'],
-            stats=LabelSearchStats(data['stats']) if 'stats' in data and data['stats'] else None
+            results=[LabelSearchResult(**result) for result in data["results"]],
+            max_results=data["max_results"],
+            stats=LabelSearchStats(data["stats"]) if "stats" in data and data["stats"] else None,
         )
 
 
@@ -425,16 +437,17 @@ class VectorDBDocument:
     """
     VectorDBDocument
     ================
-    Document model for the vector database.
+    SegmentedContent model for the vector database.
 
     Properties
     ----------
     """
+
     def __init__(self, data: Dict[str, Any]):
-        self.__id: str = data.get('id', "")
-        self.__content: str = data.get('content', "")
-        self.__uri: str = data.get('uri', "")
-        self.__metadata: Dict[str, Any] = data.get('meta', {})
+        self.__id: str = data.get("id", "")
+        self.__content: str = data.get("content", "")
+        self.__uri: str = data.get("uri", "")
+        self.__metadata: Dict[str, Any] = data.get("meta", {})
 
     @property
     def id(self) -> str:

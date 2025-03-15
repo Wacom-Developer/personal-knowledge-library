@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2023-24 Wacom. All rights reserved.
+# Copyright © 2023-present Wacom. All rights reserved.
 from pathlib import Path
 from typing import Optional, Dict
 
@@ -33,7 +33,7 @@ def get_wikidata_object(qid_object: str) -> WikidataThing:
         The Wikidata object.
     """
     if qid_object not in wikidata_cache:
-        raise ValueError(f'Wikidata object {qid_object} not in cache.')
+        raise ValueError(f"Wikidata object {qid_object} not in cache.")
     return wikidata_cache[qid_object]
 
 
@@ -87,7 +87,7 @@ def load_cache(cache: Path):
         The path to the cache file.
     """
     if cache.exists():
-        with cache.open('r') as r:
+        with cache.open("r") as r:
             reader = ndjson.reader(r)
             for line in reader:
                 wiki_data_thing: WikidataThing = WikidataThing.create_from_dict(line)
