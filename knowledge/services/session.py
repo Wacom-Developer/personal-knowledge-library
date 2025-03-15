@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2024 Wacom. All rights reserved.
+# Copyright © 2024-present Wacom. All rights reserved.
 """
 This module contains the session management.
 There are three types of sessions:
@@ -109,14 +109,19 @@ class TimedSession(Session):
             Authentication token
         """
         structures: Dict[str, Any] = jwt.decode(auth_token, options={"verify_signature": False})
-        if ('tenant' not in structures or 'roles' not in structures or 'exp' not in structures
-                or 'iss' not in structures or 'ext-sub' not in structures):
-            raise ValueError('Invalid authentication token.')
-        self.__tenant_id: str = structures['tenant']
-        self.__roles: str = structures['roles']
-        self.__timestamp: datetime = datetime.fromtimestamp(structures['exp'], tz=timezone.utc)
-        self.__service_url: str = structures['iss']
-        self.__external_user_id: str = structures['ext-sub']
+        if (
+            "tenant" not in structures
+            or "roles" not in structures
+            or "exp" not in structures
+            or "iss" not in structures
+            or "ext-sub" not in structures
+        ):
+            raise ValueError("Invalid authentication token.")
+        self.__tenant_id: str = structures["tenant"]
+        self.__roles: str = structures["roles"]
+        self.__timestamp: datetime = datetime.fromtimestamp(structures["exp"], tz=timezone.utc)
+        self.__service_url: str = structures["iss"]
+        self.__external_user_id: str = structures["ext-sub"]
         self.__id: str = TimedSession._session_id_(self.__service_url, self.__tenant_id, self.__external_user_id)
 
     @staticmethod
@@ -138,7 +143,7 @@ class TimedSession(Session):
         session_id: str
             Session id.
         """
-        unique: str = f'{service_url}{tenant_id}{external_user_id}'
+        unique: str = f"{service_url}{tenant_id}{external_user_id}"
         return hashlib.sha256(unique.encode()).hexdigest()
 
     @staticmethod
@@ -156,11 +161,11 @@ class TimedSession(Session):
             Session id.
         """
         structures: Dict[str, Any] = jwt.decode(auth_key, options={"verify_signature": False})
-        if 'ext-sub' not in structures:
-            raise ValueError('Invalid authentication key.')
-        service_url: str = structures['iss']
-        tenant_id: str = structures['tenant']
-        external_user_id: str = structures['ext-sub']
+        if "ext-sub" not in structures:
+            raise ValueError("Invalid authentication key.")
+        service_url: str = structures["iss"]
+        tenant_id: str = structures["tenant"]
+        external_user_id: str = structures["ext-sub"]
         return TimedSession._session_id_(service_url, tenant_id, external_user_id)
 
     @property
@@ -211,7 +216,7 @@ class TimedSession(Session):
     @property
     def expired(self) -> bool:
         """Is the session expired."""
-        return self.expires_in <= 0.
+        return self.expires_in <= 0.0
 
     @property
     def refreshable(self) -> bool:
@@ -222,7 +227,7 @@ class TimedSession(Session):
         raise NotImplementedError
 
     def __str__(self):
-        return f'TimedSession(auth_token={self.auth_token})'
+        return f"TimedSession(auth_token={self.auth_token})"
 
 
 class RefreshableSession(TimedSession):
@@ -257,12 +262,20 @@ class RefreshableSession(TimedSession):
             The refreshed refresh token.
         """
         structures = jwt.decode(auth_token, options={"verify_signature": False})
-        if ('tenant' not in structures or 'roles' not in structures or 'exp' not in structures
-                or 'iss' not in structures or 'ext-sub' not in structures):
-            raise ValueError('Invalid authentication token.')
-        if self.tenant_id != structures['tenant'] or self.external_user_id != structures['ext-sub'] or \
-                self.service_url != structures['iss']:
-            raise ValueError('The token is from a different user, tenant, or instance.')
+        if (
+            "tenant" not in structures
+            or "roles" not in structures
+            or "exp" not in structures
+            or "iss" not in structures
+            or "ext-sub" not in structures
+        ):
+            raise ValueError("Invalid authentication token.")
+        if (
+            self.tenant_id != structures["tenant"]
+            or self.external_user_id != structures["ext-sub"]
+            or self.service_url != structures["iss"]
+        ):
+            raise ValueError("The token is from a different user, tenant, or instance.")
         self._auth_token_details_(auth_token)
         self.auth_token = auth_token
         self.refresh_token = refresh_token
@@ -273,7 +286,7 @@ class RefreshableSession(TimedSession):
         return self.refresh_token is not None
 
     def __str__(self):
-        return f'RefreshableSession(auth_token={self.auth_token}, refresh_token={self.refresh_token})'
+        return f"RefreshableSession(auth_token={self.auth_token}, refresh_token={self.refresh_token})"
 
 
 class PermanentSession(RefreshableSession):
@@ -300,8 +313,10 @@ class PermanentSession(RefreshableSession):
         return self.__external_user_id
 
     def __str__(self):
-        return f'PermanentSession(tenant_api_key={self.tenant_api_key}, external_user_id={self.external_user_id}, ' \
-               f'auth_token={self.auth_token}, refresh_token={self.refresh_token})'
+        return (
+            f"PermanentSession(tenant_api_key={self.tenant_api_key}, external_user_id={self.external_user_id}, "
+            f"auth_token={self.auth_token}, refresh_token={self.refresh_token})"
+        )
 
 
 class TokenManager:
@@ -310,7 +325,8 @@ class TokenManager:
     ------------
     The token manager is a singleton that holds all the sessions for the users.
     """
-    __instance: 'TokenManager' = None
+
+    __instance: "TokenManager" = None
     __lock: threading.Lock = threading.Lock()  # Asynchronous lock for thread safety
 
     def __new__(cls):
@@ -324,9 +340,13 @@ class TokenManager:
     def __initialize__(self):
         self.sessions: Dict[str, Union[TimedSession, RefreshableSession, PermanentSession]] = {}
 
-    def add_session(self, auth_token: str, refresh_token: Optional[str] = None,
-                    tenant_api_key: Optional[str] = None, external_user_id: Optional[str] = None) \
-            -> Union[PermanentSession, RefreshableSession, TimedSession]:
+    def add_session(
+        self,
+        auth_token: str,
+        refresh_token: Optional[str] = None,
+        tenant_api_key: Optional[str] = None,
+        external_user_id: Optional[str] = None,
+    ) -> Union[PermanentSession, RefreshableSession, TimedSession]:
         """
         Add a session.
         Parameters
@@ -347,10 +367,12 @@ class TokenManager:
         """
         with self.__lock:
             if tenant_api_key is not None and external_user_id is not None:
-                session = PermanentSession(tenant_api_key=tenant_api_key,
-                                           external_user_id=external_user_id,
-                                           auth_token=auth_token,
-                                           refresh_token=refresh_token)
+                session = PermanentSession(
+                    tenant_api_key=tenant_api_key,
+                    external_user_id=external_user_id,
+                    auth_token=auth_token,
+                    refresh_token=refresh_token,
+                )
                 # If there is a tenant api key and an external user id, then the session is permanent
             elif refresh_token is not None:
                 session = RefreshableSession(auth_token=auth_token, refresh_token=refresh_token)
@@ -360,13 +382,17 @@ class TokenManager:
                 # If there is no refresh token, then the session is timed
             if session.id in self.sessions:
                 if type(session) is not type(self.sessions[session.id]):
-                    logger.warning(f'Session {session.id} already exists. '
-                                   f'Overwriting with new type of session {type(session)}, '
-                                   f'before {type(self.sessions[session.id])}.')
+                    logger.warning(
+                        f"Session {session.id} already exists. "
+                        f"Overwriting with new type of session {type(session)}, "
+                        f"before {type(self.sessions[session.id])}."
+                    )
                 if not isinstance(self.sessions[session.id], type(session)):
-                    logger.warning(f'The session {session.id} is of a different type. '
-                                   f'Cached version is a {type(self.sessions[session.id])} '
-                                   f'and the new session is a {type(session)}.')
+                    logger.warning(
+                        f"The session {session.id} is of a different type. "
+                        f"Cached version is a {type(self.sessions[session.id])} "
+                        f"and the new session is a {type(session)}."
+                    )
             self.sessions[session.id] = session
             return session
 

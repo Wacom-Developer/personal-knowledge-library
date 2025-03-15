@@ -3,9 +3,22 @@
 from typing import Any
 from typing import Dict, List, Iterator
 
-from knowledge.base.entity import DATA_PROPERTIES_TAG, DATA_PROPERTY_TAG, VALUE_TAG, DESCRIPTION_TAG, TYPE_TAG, \
-    LABELS_TAG, IS_MAIN_TAG, DESCRIPTIONS_TAG, LOCALE_TAG, INDEXING_NEL_TARGET, \
-    INDEXING_VECTOR_SEARCH_TARGET, INDEXING_FULLTEXT_TARGET, TARGETS_TAG, INDEXING_VECTOR_SEARCH_DOCUMENT_TARGET
+from knowledge.base.entity import (
+    DATA_PROPERTIES_TAG,
+    DATA_PROPERTY_TAG,
+    VALUE_TAG,
+    DESCRIPTION_TAG,
+    TYPE_TAG,
+    LABELS_TAG,
+    IS_MAIN_TAG,
+    DESCRIPTIONS_TAG,
+    LOCALE_TAG,
+    INDEXING_NEL_TARGET,
+    INDEXING_VECTOR_SEARCH_TARGET,
+    INDEXING_FULLTEXT_TARGET,
+    TARGETS_TAG,
+    INDEXING_VECTOR_SEARCH_DOCUMENT_TARGET,
+)
 from knowledge.base.language import SUPPORTED_LOCALES
 from knowledge.base.ontology import OntologyPropertyReference
 from knowledge.base.ontology import ThingObject, EN_US
@@ -17,8 +30,9 @@ In one request only 30 relations can be created, otherwise the database operatio
 """
 
 
-def split_updates(updates: Dict[OntologyPropertyReference, List[str]],
-                  max_operations: int = RELATIONS_BULK_LIMIT) -> Iterator[Dict[str, List[str]]]:
+def split_updates(
+    updates: Dict[OntologyPropertyReference, List[str]], max_operations: int = RELATIONS_BULK_LIMIT
+) -> Iterator[Dict[str, List[str]]]:
     """
 
     Parameters
@@ -36,15 +50,15 @@ def split_updates(updates: Dict[OntologyPropertyReference, List[str]],
     batch: List[Dict[str, List[str]]] = []
     current_batch_size: int = 0
     for predicate, targets in updates.items():
-        target_entry: Dict[str, List[str]] = {'relation': predicate.iri, 'targets': []}
+        target_entry: Dict[str, List[str]] = {"relation": predicate.iri, "targets": []}
         batch.append(target_entry)
         for target in targets:
             if current_batch_size >= max_operations:
                 yield batch
-                target_entry = {'relation': predicate.iri, 'targets': []}
+                target_entry = {"relation": predicate.iri, "targets": []}
                 batch = [target_entry]
                 current_batch_size = 0
-            target_entry['targets'].append(target)
+            target_entry["targets"].append(target)
             current_batch_size += 1
     if current_batch_size > 0:
         yield batch
@@ -69,46 +83,37 @@ def entity_payload(entity: ThingObject) -> Dict[str, Any]:
     literals: List[dict] = []
     # Add description in different languages
     for desc in entity.description:
-        if len(desc.content) > 0 and not desc.content == ' ':
-            descriptions.append({
-                DESCRIPTION_TAG: desc.content,
-                LOCALE_TAG: desc.language_code
-            })
+        if len(desc.content) > 0 and not desc.content == " ":
+            descriptions.append({DESCRIPTION_TAG: desc.content, LOCALE_TAG: desc.language_code})
     if len(descriptions) == 0:
         #  Adding an empty description
         for label in entity.label:
-            if len(label.content) > 0 and not label.content == ' ':
-                descriptions.append({
-                    DESCRIPTION_TAG: f'Description of {label.content}',
-                    LOCALE_TAG: label.language_code
-                })
+            if len(label.content) > 0 and not label.content == " ":
+                descriptions.append(
+                    {DESCRIPTION_TAG: f"Description of {label.content}", LOCALE_TAG: label.language_code}
+                )
 
     # Labels are tagged as main label
     for label in entity.label:
         if label is not None and label.content is not None and len(label.content) > 0 and label.content != " ":
-            labels.append({
-                VALUE_TAG: label.content,
-                LOCALE_TAG: label.language_code,
-                IS_MAIN_TAG: True
-            })
+            labels.append({VALUE_TAG: label.content, LOCALE_TAG: label.language_code, IS_MAIN_TAG: True})
     # Alias are no main labels
     for label in entity.alias:
         if label is not None and len(label.content) > 0 and label.content != " ":
-            labels.append({
-                VALUE_TAG: label.content,
-                LOCALE_TAG: label.language_code,
-                IS_MAIN_TAG: False
-            })
+            labels.append({VALUE_TAG: label.content, LOCALE_TAG: label.language_code, IS_MAIN_TAG: False})
     # Labels are tagged as main label
     for _, list_literals in entity.data_properties.items():
         for li in list_literals:
             if li.data_property_type:
-                literals.append({
-                    VALUE_TAG: li.value,
-                    LOCALE_TAG: li.language_code
-                    if li.language_code and li.language_code in SUPPORTED_LOCALES else EN_US,
-                    DATA_PROPERTY_TAG: li.data_property_type.iri
-                })
+                literals.append(
+                    {
+                        VALUE_TAG: li.value,
+                        LOCALE_TAG: (
+                            li.language_code if li.language_code and li.language_code in SUPPORTED_LOCALES else EN_US
+                        ),
+                        DATA_PROPERTY_TAG: li.data_property_type.iri,
+                    }
+                )
     payload: Dict[str, Any] = {
         TYPE_TAG: entity.concept_type.iri,
         DESCRIPTIONS_TAG: descriptions,

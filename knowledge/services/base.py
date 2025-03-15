@@ -10,16 +10,68 @@ from requests import Response
 
 from knowledge import __version__, logger
 from knowledge.services import DEFAULT_TIMEOUT
-from knowledge.services import USER_AGENT_HEADER_FLAG, TENANT_API_KEY, CONTENT_TYPE_HEADER_FLAG, \
-    REFRESH_TOKEN_TAG, EXPIRATION_DATE_TAG, ACCESS_TOKEN_TAG, APPLICATION_JSON_HEADER, EXTERNAL_USER_ID
+from knowledge.services import (
+    USER_AGENT_HEADER_FLAG,
+    TENANT_API_KEY,
+    CONTENT_TYPE_HEADER_FLAG,
+    REFRESH_TOKEN_TAG,
+    EXPIRATION_DATE_TAG,
+    ACCESS_TOKEN_TAG,
+    APPLICATION_JSON_HEADER,
+    EXTERNAL_USER_ID,
+)
 from knowledge.services.session import TokenManager, RefreshableSession, TimedSession, PermanentSession
 
 
 class WacomServiceException(Exception):
-    """Exception thrown if Wacom service fails."""
-    def __init__(self, message: str, headers: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None,
-                 params: Optional[Dict[str, Any]] = None, method: Optional[str] = None,
-                 url: Optional[str] = None,  service_response: Optional[str] = None,  status_code: int = 500):
+    """Exception thrown if Wacom service fails.
+
+    Parameters
+    ----------
+    message: str
+        Error message
+    payload: Optional[Dict[str, Any]] (Default:= None)
+        Payload
+    params: Optional[Dict[str, Any]] (Default:= None)
+        Parameters
+    method: Optional[str] (Default:= None)
+        Method
+    url: Optional[str] (Default:= None)
+        URL
+    service_response: Optional[str] (Default:= None)
+        Service response
+    status_code: int (Default:= 500)
+        Status code
+
+    Attributes
+    ----------
+    headers: Optional[Dict[str, Any]]
+        Headers of the exception
+    method: Optional[str]
+        Method of the exception
+    params: Optional[Dict[str, Any]]
+        Parameters of the exception
+    payload: Optional[Dict[str, Any]]
+        Payload of the exception
+    url: Optional[str]
+        URL of the exception
+    message: str
+        Message of the exception
+    status_code: int
+        Status code of the exception
+    """
+
+    def __init__(
+        self,
+        message: str,
+        headers: Optional[Dict[str, Any]] = None,
+        payload: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        method: Optional[str] = None,
+        url: Optional[str] = None,
+        service_response: Optional[str] = None,
+        status_code: int = 500,
+    ):
         super().__init__(message)
         self.__status_code: int = status_code
         self.__service_response: Optional[str] = service_response
@@ -85,20 +137,26 @@ def format_exception(exception: WacomServiceException) -> str:
     formatted_exception: str
         Formatted exception
     """
-    return (f'WacomServiceException: {exception.message}\n'
-            '--------------------------------------------------\n'
-            f'URL:= {exception.url}\n,'
-            f'method:= {exception.method}\n,'
-            f'parameters:= {exception.params}\n,'
-            f'payload:= {exception.payload}\n,'
-            f'headers:= {exception.headers}\n,'
-            f'status code=: {exception.status_code}\n,'
-            f'service response:= {exception.service_response}')
+    return (
+        f"WacomServiceException: {exception.message}\n"
+        "--------------------------------------------------\n"
+        f"URL:= {exception.url}\n,"
+        f"method:= {exception.method}\n,"
+        f"parameters:= {exception.params}\n,"
+        f"payload:= {exception.payload}\n,"
+        f"headers:= {exception.headers}\n,"
+        f"status code=: {exception.status_code}\n,"
+        f"service response:= {exception.service_response}"
+    )
 
 
-def handle_error(message: str, response: Response, parameters: Optional[Dict[str, Any]] = None,
-                 payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) \
-        -> WacomServiceException:
+def handle_error(
+    message: str,
+    response: Response,
+    parameters: Optional[Dict[str, Any]] = None,
+    payload: Optional[Dict[str, Any]] = None,
+    headers: Optional[Dict[str, str]] = None,
+) -> WacomServiceException:
     """
     Handles an error response.
 
@@ -120,14 +178,16 @@ def handle_error(message: str, response: Response, parameters: Optional[Dict[str
     WacomServiceException
         Returns the generated exception.
     """
-    return WacomServiceException(message,
-                                 url=response.url,
-                                 method=response.request.method,
-                                 params=parameters,
-                                 payload=payload,
-                                 headers=headers,
-                                 status_code=response.status_code,
-                                 service_response=response.text)
+    return WacomServiceException(
+        message,
+        url=response.url,
+        method=response.request.method,
+        params=parameters,
+        payload=payload,
+        headers=headers,
+        status_code=response.status_code,
+        service_response=response.text,
+    )
 
 
 class RESTAPIClient(ABC):
@@ -143,8 +203,9 @@ class RESTAPIClient(ABC):
     verify_calls: bool (default:= False)
         Flag if the service calls should be verified
     """
+
     def __init__(self, service_url: str, verify_calls: bool = False):
-        self.__service_url: str = service_url.rstrip('/')
+        self.__service_url: str = service_url.rstrip("/")
         self.__verify_calls: bool = verify_calls
 
     @property
@@ -181,16 +242,23 @@ class WacomServiceAPIClient(RESTAPIClient):
     verify_calls: bool (Default:= True)
         Flag if  API calls should be verified.
     """
-    USER_ENDPOINT: str = 'user'
-    USER_LOGIN_ENDPOINT: str = f'{USER_ENDPOINT}/login'
-    USER_REFRESH_ENDPOINT: str = f'{USER_ENDPOINT}/refresh'
-    SERVICE_URL: str = 'https://private-knowledge.wacom.com'
+
+    USER_ENDPOINT: str = "user"
+    USER_LOGIN_ENDPOINT: str = f"{USER_ENDPOINT}/login"
+    USER_REFRESH_ENDPOINT: str = f"{USER_ENDPOINT}/refresh"
+    SERVICE_URL: str = "https://private-knowledge.wacom.com"
     """Production service URL"""
-    STAGING_SERVICE_URL: str = 'https://stage-private-knowledge.wacom.com'
+    STAGING_SERVICE_URL: str = "https://stage-private-knowledge.wacom.com"
     """Staging service URL"""
 
-    def __init__(self, application_name: str, service_url: str, service_endpoint: str,
-                 auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True):
+    def __init__(
+        self,
+        application_name: str,
+        service_url: str,
+        service_endpoint: str,
+        auth_service_endpoint: str = "graph/v1",
+        verify_calls: bool = True,
+    ):
         self.__application_name: str = application_name
         self.__service_endpoint: str = service_endpoint
         self.__auth_service_endpoint: str = auth_service_endpoint
@@ -207,7 +275,7 @@ class WacomServiceAPIClient(RESTAPIClient):
     def auth_endpoint(self) -> str:
         """Authentication endpoint."""
         # This is in graph service REST API
-        return f'{self.service_url}/{self.__auth_service_endpoint}/{self.USER_LOGIN_ENDPOINT}'
+        return f"{self.service_url}/{self.__auth_service_endpoint}/{self.USER_LOGIN_ENDPOINT}"
 
     @property
     def current_session(self) -> Union[RefreshableSession, TimedSession, PermanentSession, None]:
@@ -224,11 +292,12 @@ class WacomServiceAPIClient(RESTAPIClient):
             Exception if no session is available.
         """
         if self.__current_session_id is None:
-            raise WacomServiceException('No session set. Please login first.')
-        session: Union[RefreshableSession, TimedSession, PermanentSession, None] = (
-            self.__token_manager.get_session(self.__current_session_id))
+            raise WacomServiceException("No session set. Please login first.")
+        session: Union[RefreshableSession, TimedSession, PermanentSession, None] = self.__token_manager.get_session(
+            self.__current_session_id
+        )
         if session is None:
-            raise WacomServiceException(f'Unknown session id:= {self.__current_session_id}. Please login first.')
+            raise WacomServiceException(f"Unknown session id:= {self.__current_session_id}. Please login first.")
         return session
 
     def request_user_token(self, tenant_api_key: str, external_id: str) -> Tuple[str, str, datetime]:
@@ -256,38 +325,39 @@ class WacomServiceAPIClient(RESTAPIClient):
         WacomServiceException
             Exception if service returns HTTP error code.
         """
-        url: str = f'{self.auth_endpoint}'
+        url: str = f"{self.auth_endpoint}"
         headers: dict = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             TENANT_API_KEY: tenant_api_key,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
         }
-        payload: dict = {
-            EXTERNAL_USER_ID: external_id
-        }
-        response: Response = requests.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT,
-                                           verify=self.verify_calls)
+        payload: dict = {EXTERNAL_USER_ID: external_id}
+        response: Response = requests.post(
+            url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls
+        )
         if response.ok:
             try:
                 response_token: Dict[str, str] = response.json()
-                timestamp_str_truncated: str = ''
+                timestamp_str_truncated: str = ""
                 try:
                     if sys.version_info <= (3, 10):
-                        timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG][:19] + '+00:00'
+                        timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG][:19] + "+00:00"
                     else:
                         timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
                     date_object: datetime = datetime.fromisoformat(timestamp_str_truncated)
                 except (TypeError, ValueError) as _:
                     date_object: datetime = datetime.now()
-                    logger.warning(f'Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]} '
-                                   f'-> {timestamp_str_truncated}')
-                return response_token['accessToken'], response_token['refreshToken'], date_object
+                    logger.warning(
+                        f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]} "
+                        f"-> {timestamp_str_truncated}"
+                    )
+                return response_token["accessToken"], response_token["refreshToken"], date_object
             except Exception as e:
-                raise handle_error(f'Parsing of response failed. {e}', response) from e
-        raise handle_error('User login failed.', response)
+                raise handle_error(f"Parsing of response failed. {e}", response) from e
+        raise handle_error("User login failed.", response)
 
     def login(self, tenant_api_key: str, external_user_id: str) -> PermanentSession:
-        """ Login as user by using the tenant id and its external user id.
+        """Login as user by using the tenant id and its external user id.
         Parameters
         ----------
         tenant_api_key: str
@@ -301,19 +371,23 @@ class WacomServiceAPIClient(RESTAPIClient):
             calls.
         """
         auth_key, refresh_token, _ = self.request_user_token(tenant_api_key, external_user_id)
-        session: PermanentSession = self.__token_manager.add_session(auth_token=auth_key, refresh_token=refresh_token,
-                                                                     tenant_api_key=tenant_api_key,
-                                                                     external_user_id=external_user_id)
+        session: PermanentSession = self.__token_manager.add_session(
+            auth_token=auth_key,
+            refresh_token=refresh_token,
+            tenant_api_key=tenant_api_key,
+            external_user_id=external_user_id,
+        )
         self.__current_session_id = session.id
         return session
 
     def logout(self):
-        """ Logout user."""
+        """Logout user."""
         self.__current_session_id = None
 
-    def register_token(self, auth_key: str, refresh_token: Optional[str] = None) \
-            -> Union[RefreshableSession, TimedSession]:
-        """ Register token.
+    def register_token(
+        self, auth_key: str, refresh_token: Optional[str] = None
+    ) -> Union[RefreshableSession, TimedSession]:
+        """Register token.
         Parameters
         ----------
         auth_key: str
@@ -331,10 +405,10 @@ class WacomServiceAPIClient(RESTAPIClient):
         self.__current_session_id = session.id
         if isinstance(session, (RefreshableSession, TimedSession)):
             return session
-        raise WacomServiceException(f'Wrong session type:= {type(session)}.')
+        raise WacomServiceException(f"Wrong session type:= {type(session)}.")
 
     def use_session(self, session_id: str):
-        """ Use session.
+        """Use session.
         Parameters
         ----------
         session_id: str
@@ -343,7 +417,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         if self.__token_manager.has_session(session_id):
             self.__current_session_id = session_id
         else:
-            raise WacomServiceException(f'Unknown session id:= {session_id}.')
+            raise WacomServiceException(f"Unknown session id:= {session_id}.")
 
     def refresh_token(self, refresh_token: str) -> Tuple[str, str, datetime]:
         """
@@ -368,25 +442,24 @@ class WacomServiceAPIClient(RESTAPIClient):
         WacomServiceException
             Exception if service returns HTTP error code.
         """
-        url: str = f'{self.service_base_url}{WacomServiceAPIClient.USER_REFRESH_ENDPOINT}/'
+        url: str = f"{self.service_base_url}{WacomServiceAPIClient.USER_REFRESH_ENDPOINT}/"
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
         }
-        payload: Dict[str, str] = {
-            REFRESH_TOKEN_TAG: refresh_token
-        }
-        response: Response = requests.post(url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT,
-                                           verify=self.verify_calls)
+        payload: Dict[str, str] = {REFRESH_TOKEN_TAG: refresh_token}
+        response: Response = requests.post(
+            url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls
+        )
         if response.ok:
             response_token: Dict[str, str] = response.json()
             try:
                 date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
             except (TypeError, ValueError) as _:
                 date_object: datetime = datetime.now()
-                logger.warning(f'Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}')
+                logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
             return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
-        raise handle_error('Refreshing token failed.', response)
+        raise handle_error("Refreshing token failed.", response)
 
     def handle_token(self, force_refresh: bool = False, force_refresh_timeout: float = 120) -> Tuple[str, str]:
         """
@@ -407,48 +480,52 @@ class WacomServiceAPIClient(RESTAPIClient):
         """
         # The session is not set
         if self.current_session is None:
-            raise WacomServiceException('Authentication key is not set. Please login first.')
+            raise WacomServiceException("Authentication key is not set. Please login first.")
 
         # The token expired and is not refreshable
         if not self.current_session.refreshable and self.current_session.expired:
-            raise WacomServiceException('Authentication key is expired and cannot be refreshed. Please login again.')
+            raise WacomServiceException("Authentication key is expired and cannot be refreshed. Please login again.")
 
         # The token is not refreshable and the force refresh flag is set
         if not self.current_session.refreshable and force_refresh:
-            raise WacomServiceException('Authentication key is not refreshable. Please login again.')
+            raise WacomServiceException("Authentication key is not refreshable. Please login again.")
 
         # Refresh token if needed
-        if (self.current_session.refreshable and
-                (self.current_session.expires_in < force_refresh_timeout or force_refresh)):
+        if self.current_session.refreshable and (
+            self.current_session.expires_in < force_refresh_timeout or force_refresh
+        ):
             try:
                 auth_key, refresh_token, _ = self.refresh_token(self.current_session.refresh_token)
             except WacomServiceException as e:
                 if isinstance(self.current_session, PermanentSession):
                     permanent_session: PermanentSession = self.current_session
-                    auth_key, refresh_token, _ = self.request_user_token(permanent_session.tenant_api_key,
-                                                                         permanent_session.external_user_id)
+                    auth_key, refresh_token, _ = self.request_user_token(
+                        permanent_session.tenant_api_key, permanent_session.external_user_id
+                    )
                 else:
                     logger.error(f"Error refreshing token: {e}")
                     raise e
             self.current_session.update_session(auth_key, refresh_token)
             return auth_key, refresh_token
         return self.current_session.auth_token, self.current_session.refresh_token
-    
+
     @property
     def user_agent(self) -> str:
         """User agent."""
-        return (f"Personal Knowledge Library({self.application_name})/{__version__}"
-                f"(+https://github.com/Wacom-Developer/personal-knowledge-library)")
+        return (
+            f"Personal Knowledge Library({self.application_name})/{__version__}"
+            f"(+https://github.com/Wacom-Developer/personal-knowledge-library)"
+        )
 
     @property
     def service_endpoint(self):
         """Service endpoint."""
-        return '' if len(self.__service_endpoint) == 0 else f'{self.__service_endpoint}/'
+        return "" if len(self.__service_endpoint) == 0 else f"{self.__service_endpoint}/"
 
     @property
     def service_base_url(self):
         """Service endpoint."""
-        return f'{self.service_url}/{self.service_endpoint}'
+        return f"{self.service_url}/{self.service_endpoint}"
 
     @property
     def application_name(self):
