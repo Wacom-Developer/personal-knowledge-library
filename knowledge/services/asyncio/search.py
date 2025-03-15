@@ -7,8 +7,13 @@ import orjson
 
 from knowledge.base.language import LocaleCode
 from knowledge.base.search import DocumentSearchResponse, LabelMatchingResponse, VectorDBDocument
-from knowledge.services import DEFAULT_TIMEOUT, AUTHORIZATION_HEADER_FLAG, APPLICATION_JSON_HEADER, \
-    CONTENT_TYPE_HEADER_FLAG, USER_AGENT_HEADER_FLAG
+from knowledge.services import (
+    DEFAULT_TIMEOUT,
+    AUTHORIZATION_HEADER_FLAG,
+    APPLICATION_JSON_HEADER,
+    CONTENT_TYPE_HEADER_FLAG,
+    USER_AGENT_HEADER_FLAG,
+)
 from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error
 
 
@@ -26,11 +31,12 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         Service endpoint for the client.
     """
 
-    def __init__(self, service_url: str, service_endpoint: str = 'vector/api/v1'):
+    def __init__(self, service_url: str, service_endpoint: str = "vector/api/v1"):
         super().__init__("Async Semantic Search ", service_url, service_endpoint)
 
-    async def retrieve_document_chunks(self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None) \
-            -> List[VectorDBDocument]:
+    async def retrieve_document_chunks(
+        self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None
+    ) -> List[VectorDBDocument]:
         """
         Retrieve document chunks from vector database. The service is automatically chunking the document into
         smaller parts. The chunks are returned as a list of dictionaries, with metadata and content.
@@ -61,21 +67,29 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         async with self.__async_session__() as session:
-            async with session.get(url, params={"locale": locale, "uri": uri},
-                                   headers=headers, timeout=DEFAULT_TIMEOUT) as response:
+            async with session.get(
+                url, params={"locale": locale, "uri": uri}, headers=headers, timeout=DEFAULT_TIMEOUT
+            ) as response:
                 if response.ok:
-                    docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in await response.json(loads=orjson.loads)]
+                    docs: List[VectorDBDocument] = [
+                        VectorDBDocument(vec_doc) for vec_doc in await response.json(loads=orjson.loads)
+                    ]
                 else:
-                    raise await handle_error("Failed to retrieve the document.", response, headers=headers,
-                                             parameters={"locale": locale, "uri": uri})
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+                    raise await handle_error(
+                        "Failed to retrieve the document.",
+                        response,
+                        headers=headers,
+                        parameters={"locale": locale, "uri": uri},
+                    )
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return docs
 
-    async def retrieve_labels(self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None) \
-            -> List[VectorDBDocument]:
+    async def retrieve_labels(
+        self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None
+    ) -> List[VectorDBDocument]:
         """
         Retrieve labels from vector database.
 
@@ -105,22 +119,29 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         async with self.__async_session__() as session:
-            async with session.get(url, params={"locale": locale, "uri": uri},
-                                   headers=headers, timeout=DEFAULT_TIMEOUT) as response:
+            async with session.get(
+                url, params={"locale": locale, "uri": uri}, headers=headers, timeout=DEFAULT_TIMEOUT
+            ) as response:
                 if response.ok:
-                    docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in
-                                                    await response.json(loads=orjson.loads)]
+                    docs: List[VectorDBDocument] = [
+                        VectorDBDocument(vec_doc) for vec_doc in await response.json(loads=orjson.loads)
+                    ]
                 else:
-                    raise await handle_error("Failed to retrieve the document.", response, headers=headers,
-                                             parameters={"locale": locale, "uri": uri})
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+                    raise await handle_error(
+                        "Failed to retrieve the document.",
+                        response,
+                        headers=headers,
+                        parameters={"locale": locale, "uri": uri},
+                    )
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return docs
 
-    async def count_documents(self, locale: LocaleCode, concept_type: Optional[str] = None,
-                              auth_key: Optional[str] = None) -> int:
+    async def count_documents(
+        self, locale: LocaleCode, concept_type: Optional[str] = None, auth_key: Optional[str] = None
+    ) -> int:
         """
         Count all documents for a tenant.
 
@@ -149,23 +170,25 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         params: Dict[str, Any] = {"locale": locale}
         if concept_type:
-            params['concept_type'] = concept_type
+            params["concept_type"] = concept_type
         async with self.__async_session__() as session:
             async with session.get(url, params=params, headers=headers) as response:
                 if response.ok:
                     count: int = (await response.json(loads=orjson.loads)).get("count", 0)
                 else:
-                    raise await handle_error("Counting documents failed.", response,
-                                             headers=headers, parameters={"locale": locale})
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+                    raise await handle_error(
+                        "Counting documents failed.", response, headers=headers, parameters={"locale": locale}
+                    )
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return count
 
-    async def count_documents_filter(self, locale: LocaleCode, filters: Dict[str, Any],
-                                     auth_key: Optional[str] = None) -> int:
+    async def count_documents_filter(
+        self, locale: LocaleCode, filters: Dict[str, Any], auth_key: Optional[str] = None
+    ) -> int:
         """
         Count all documents for a tenant using a filter.
 
@@ -194,20 +217,25 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         async with self.__async_session__() as session:
             async with session.post(url, json={"locale": locale, "filter": filters}, headers=headers) as response:
                 if response.ok:
                     count: int = (await response.json(loads=orjson.loads)).get("count", 0)
                 else:
-                    raise await handle_error("Counting documents failed.", response, headers=headers,
-                                             parameters={"locale": locale, "filter": filters})
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+                    raise await handle_error(
+                        "Counting documents failed.",
+                        response,
+                        headers=headers,
+                        parameters={"locale": locale, "filter": filters},
+                    )
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return count
 
-    async def count_labels(self, locale: str, concept_type: Optional[str] = None,
-                           auth_key: Optional[str] = None) -> int:
+    async def count_labels(
+        self, locale: str, concept_type: Optional[str] = None, auth_key: Optional[str] = None
+    ) -> int:
         """
         Count all labels entries for a tenant.
 
@@ -236,23 +264,25 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         params: Dict[str, Any] = {"locale": locale}
         if concept_type:
-            params['concept_type'] = concept_type
+            params["concept_type"] = concept_type
         async with self.__async_session__() as session:
-            async with session.get(url, params=params,  headers=headers) as response:
+            async with session.get(url, params=params, headers=headers) as response:
                 if response.ok:
                     count: int = (await response.json(loads=orjson.loads)).get("count", 0)
                 else:
-                    raise await handle_error("Counting labels failed.", response, headers=headers,
-                                             parameters={"locale": locale})
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+                    raise await handle_error(
+                        "Counting labels failed.", response, headers=headers, parameters={"locale": locale}
+                    )
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return count
 
-    async def count_labels_filter(self, locale: LocaleCode, filters: Dict[str, Any],
-                                  auth_key: Optional[str] = None) -> int:
+    async def count_labels_filter(
+        self, locale: LocaleCode, filters: Dict[str, Any], auth_key: Optional[str] = None
+    ) -> int:
         """
         Count all labels for a tenant using a filter.
 
@@ -281,20 +311,30 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         async with self.__async_session__() as session:
             async with session.post(url, json={"locale": locale, "filter": filters}, headers=headers) as response:
                 if response.ok:
                     count: int = (await response.json(loads=orjson.loads)).get("count", 0)
                 else:
-                    raise await handle_error("Counting documents failed.", response, headers=headers,
-                                             parameters={"locale": locale, "filter": filters})
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+                    raise await handle_error(
+                        "Counting documents failed.",
+                        response,
+                        headers=headers,
+                        parameters={"locale": locale, "filter": filters},
+                    )
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return count
 
-    async def document_search(self, query: str, locale: str, filters: Optional[Dict[str, Any]] = None,
-                              max_results: int = 10, auth_key: Optional[str] = None) -> DocumentSearchResponse:
+    async def document_search(
+        self,
+        query: str,
+        locale: str,
+        filters: Optional[Dict[str, Any]] = None,
+        max_results: int = 10,
+        auth_key: Optional[str] = None,
+    ) -> DocumentSearchResponse:
         """
         Async Semantic search.
 
@@ -327,13 +367,13 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         params: Dict[str, Any] = {
             "query": query,
             "metadata": filters if filters else {},
             "locale": locale,
-            "max_results": max_results
+            "max_results": max_results,
         }
         async with self.__async_session__() as session:
             async with session.post(url, headers=headers, json=params) as response:
@@ -341,11 +381,17 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
                     response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
                 else:
                     raise await handle_error("Semantic Search failed.", response, headers=headers, parameters=params)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return DocumentSearchResponse.from_dict(response_dict)
 
-    async def labels_search(self, query: str, locale: str, filters: Optional[Dict[str, Any]] = None,
-                            max_results: int = 10, auth_key: Optional[str] = None) -> LabelMatchingResponse:
+    async def labels_search(
+        self,
+        query: str,
+        locale: str,
+        filters: Optional[Dict[str, Any]] = None,
+        max_results: int = 10,
+        auth_key: Optional[str] = None,
+    ) -> LabelMatchingResponse:
         """
         Async search for semantically similar labels.
 
@@ -373,20 +419,21 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f'Bearer {auth_key}'
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         params: Dict[str, Any] = {
             "query": query,
             "metadata": filters if filters else {},
             "locale": locale,
-            "max_results": max_results
+            "max_results": max_results,
         }
         async with self.__async_session__() as session:
             async with session.post(url, headers=headers, json=params) as response:
                 if response.ok:
                     response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
                 else:
-                    raise await handle_error("Label fuzzy matching failed.", response, headers=headers,
-                                             parameters=params)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.)
+                    raise await handle_error(
+                        "Label fuzzy matching failed.", response, headers=headers, parameters=params
+                    )
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return LabelMatchingResponse.from_dict(response_dict)
