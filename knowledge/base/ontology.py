@@ -6,6 +6,7 @@ from datetime import datetime
 from json import JSONEncoder
 from typing import Union, Optional, Any, List, Dict, Tuple, Set
 
+import loguru
 from rdflib import Literal, RDFS, OWL, URIRef, RDF, Graph
 
 from knowledge.base.access import TenantAccessRight
@@ -55,6 +56,7 @@ from knowledge.base.entity import (
     USE_VECTOR_DOCUMENT_INDEX_TAG,
     INDEXING_VECTOR_SEARCH_DOCUMENT_TARGET,
     EXTERNAL_USER_ID_TAG,
+    DESCRIPTION_TAG,
 )
 from knowledge.base.language import EN_US, SUPPORTED_LOCALES, EN, LanguageCode, LocaleCode
 
@@ -69,6 +71,7 @@ NAME_TAG: str = "name"
 SEND_TO_NEL: str = "sendToNEL"
 # ---------------------------------------------------- RDFLib ----------------------------------------------------------
 PREFERRED_LABEL: URIRef = URIRef("wacom:core#prefLabel")
+logger = loguru.logger
 
 
 # ---------------------------------------------------- Ontology --------------------------------------------------------
@@ -2247,7 +2250,10 @@ class ThingObject(abc.ABC):
 
         for desc in entity[DESCRIPTIONS_TAG]:
             if desc[LOCALE_TAG] in SUPPORTED_LOCALES:
-                descriptions.append(Description.create_from_dict(desc))
+                if desc[DESCRIPTION_TAG] is None:
+                    logger.warning(f"Description is None for {desc}")
+                else:
+                    descriptions.append(Description.create_from_dict(desc))
         # Backwards-compatibility
         use_nel: bool = entity.get(USE_NEL_TAG, False)
         use_vector_index: bool = entity.get(USE_VECTOR_INDEX_TAG, False)
