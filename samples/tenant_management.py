@@ -32,8 +32,8 @@ if __name__ == "__main__":
         if tidx > 0:
             print("-" * 120)
         print(f"{tidx}. Identifier: {tenant.identifier}, name: {tenant.name}")
-        print("   - Ontology Name: {tenant.ontology_name}, version: {tenant.ontology_version}")
-        print("   - Locked: {tenant.is_locked}")
+        print(f"   - Ontology Name: {tenant.ontology_name}, version: {tenant.ontology_version}")
+        print(f"   - Locked: {tenant.is_locked}")
         print("   - Rights: ")
         for r in tenant.rights:
             print(f"      ◦ {r} ")
