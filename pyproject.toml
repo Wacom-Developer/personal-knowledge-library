@@ -39,16 +39,14 @@ dev = [
     "pylint>=2.17.0",       # Code analysis
     "mypy>=1.8.0",          # Type checking
     "black>=24.2.0",        # Formatting
-    "tox>=4.0.0"
+    "tox>=4.0.0",
+    "pdoc3"
 ]
 
 [tool.poetry]
 packages = [
     { include = "knowledge" }
 ]
-
-[tool.poetry.group.dev.dependencies]
-pdoc3 = "^0.11.5"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
