@@ -45,13 +45,30 @@ Classes
 
     ### Methods
 
-    `create_tenant(self, name: str) ‑> Dict[str, str]`
+    `create_tenant(self, name: str, create_and_apply_onto: bool = True, rights: List[str] | None = None, vector_search_data_properties: List[str] | None = None, vector_search_object_properties: List[str] | None = None, content_data_property_name: str = '', timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1) ‑> Dict[str, str]`
     :   Creates a tenant.
         
         Parameters
         ----------
         name: str -
             Name of the tenant
+        create_and_apply_onto: bool
+            Creates and applies the ontology.
+        rights: List[str]
+            List of rights for the tenant. They are encoded in the user token, e.g., "ink-to-text"
+        vector_search_data_properties: List[str]
+            List of data properties that are automatically added to meta-data of the vector search index documents.
+        vector_search_object_properties: List[str]
+            List of object properties that are automatically added to meta-data of the vector search index documents.
+        content_data_property_name: str
+            The data property that is used to indexing its content to the document index.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Returns
         -------
@@ -68,24 +85,67 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `listing_tenant(self) ‑> List[Dict[str, str]]`
-    :   Listing all tenants configured for this instance.
+    `delete_tenant(self, identifier: str, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1)`
+    :   Delete a tenant.
+        Parameters
+        ----------
+        identifier: str
+            Tenant identifier.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
-        Returns
-        -------
-        tenants:  List[Dict[str, str]]
-            List of tenants:
-            >>> [
-            >>>     {
-            >>>        "id": "<Tenant-ID>",
-            >>>        "ontologyName": "<Name-Of-Ontology>",
-            >>>        "ontologyVersion": "<Version-Of-Ontology>",
-            >>>        "isLocked": "<Lock-Flag>",
-            >>>        "name": "<Tenant-Name>"
-            >>>     },
-            >>>     ...
-            >>> ]
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
+
+    `listing_tenant(self, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1) ‑> List[knowledge.base.tenant.TenantConfiguration]`
+    :   Listing all tenants configured for this instance.
+        
+        Parameters
+        ----------
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+        
+        Returns
+        -------
+        tenants:  List[TenantConfiguration]
+            List of tenants
+        
+        Raises
+        ------
+        WacomServiceException
+            If the tenant service returns an error code.
+
+    `update_tenant_configuration(self, identifier: str, rights: List[str], vector_search_data_properties: List[str], vector_search_object_properties: List[str], content_data_property_name: str, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1)`
+    :   Update the configuration of a tenant.
+        
+        Parameters
+        ----------
+        identifier: str
+            Tenant identifier.
+        rights: List[str]
+            List of rights for the tenant. They are encoded in the user token, e.g., "ink-to-text"
+        vector_search_data_properties: List[str]
+            List of data properties that are automatically added to meta-data of the vector search index documents.
+        vector_search_object_properties: List[str]
+            List of object properties that are automatically added to meta-data of the vector search index documents.
+        content_data_property_name: str
+            The data property that is used to indexing its content to the document index.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)

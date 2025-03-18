@@ -4,14 +4,12 @@ Module knowledge.services.asyncio.base
 Variables
 ---------
 
-    
 `cached_resolver: knowledge.services.asyncio.base.CachedResolver`
 :   Cached resolver for aiohttp.
 
 Functions
 ---------
 
-    
 `cached_getaddrinfo(host: str, *args, **kwargs) ‑> Any`
 :   Cached address information.
     
@@ -29,8 +27,7 @@ Functions
     addr_info: Any
         Address information
 
-    
-`handle_error(message: str, response: aiohttp.client_reqrep.ClientResponse, parameters: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) ‑> knowledge.services.base.WacomServiceException`
+`handle_error(message: str, response: aiohttp.client_reqrep.ClientResponse, parameters: Dict[str, Any] | None = None, payload: Dict[str, Any] | None = None, headers: Dict[str, str] | None = None) ‑> knowledge.services.base.WacomServiceException`
 :   Handles an error response.
     
     Parameters
@@ -54,7 +51,7 @@ Functions
 Classes
 -------
 
-`AsyncServiceAPIClient(application_name: str = 'Async Knowledge Client', service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1', auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True)`
+`AsyncServiceAPIClient(application_name: str = 'Async Knowledge Client', service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1', auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True, graceful_shutdown: bool = False)`
 :   Async Wacom Service API Client
     ------------------------------
     Abstract class for Wacom service APIs.
@@ -107,7 +104,7 @@ Classes
     `auth_endpoint: str`
     :   Authentication endpoint.
 
-    `current_session: knowledge.services.session.Session`
+    `current_session: knowledge.services.session.RefreshableSession | knowledge.services.session.TimedSession | knowledge.services.session.PermanentSession | None`
     :   Current session.
         
         Returns
@@ -125,6 +122,9 @@ Classes
 
     `service_endpoint`
     :   Service endpoint.
+
+    `use_graceful_shutdown: bool`
+    :   Use graceful shutdown.
 
     `user_agent: str`
     :   User agent.
@@ -186,7 +186,7 @@ Classes
         WacomServiceException
             Exception if service returns HTTP error code.
 
-    `register_token(self, auth_key: str, refresh_token: Optional[str] = None) ‑> Union[knowledge.services.session.RefreshableSession, knowledge.services.session.TimedSession]`
+    `register_token(self, auth_key: str, refresh_token: str | None = None) ‑> knowledge.services.session.RefreshableSession | knowledge.services.session.TimedSession`
     :   Register token.
         Parameters
         ----------

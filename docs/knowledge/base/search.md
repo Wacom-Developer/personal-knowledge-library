@@ -4,27 +4,7 @@ Module knowledge.base.search
 Classes
 -------
 
-`DocumentCount(count: int, metadata: Dict[str, Any])`
-:   Document Count
-    ===============
-    Response model for the number of documents in the index.
-    
-    Properties
-    ----------
-    count: int
-        Number of documents.
-    metadata: Dict[str, Any]
-        Metadata filters.
-
-    ### Instance variables
-
-    `count: int`
-    :   Number of documents.
-
-    `metadata: Dict[str, Any]`
-    :   Metadata filters.
-
-`DocumentSearchResponse(results: List[knowledge.base.search.DocumentSearchResult], max_results: int = 10, stats: Optional[knowledge.base.search.DocumentSearchStats] = None)`
+`DocumentSearchResponse(results: List[knowledge.base.search.DocumentSearchResult], max_results: int = 10, stats: knowledge.base.search.DocumentSearchStats | None = None)`
 :   DocumentSearchResponse
     ======================
     Response model for semantic search service.
@@ -50,7 +30,7 @@ Classes
         Returns
         -------
         DocumentSearchResponse
-            Document search response.
+            SegmentedContent search response.
 
     ### Instance variables
 
@@ -60,7 +40,7 @@ Classes
     `results: List[knowledge.base.search.DocumentSearchResult]`
     :   List of search results.
 
-    `stats: Optional[knowledge.base.search.DocumentSearchStats]`
+    `stats: knowledge.base.search.DocumentSearchStats | None`
     :   Performance stats.
 
 `DocumentSearchResult(score: float, content_uri: str, metadata: Dict[str, Any], content: str)`
@@ -134,20 +114,7 @@ Classes
     `preprocessing_time: float`
     :   Preprocessing time in milliseconds for search query.
 
-`LabelCount(count: int, metadata: Dict[str, Any])`
-:   LabelCount
-    =========
-    Request model to rebuild the index for a specific tenant.
-
-    ### Instance variables
-
-    `count: int`
-    :   Number of labels.
-
-    `metadata: Dict[str, Any]`
-    :   Metadata filters.
-
-`LabelMatchingResponse(results: List[knowledge.base.search.LabelSearchResult], max_results: int = 10, stats: Optional[knowledge.base.search.LabelSearchStats] = None)`
+`LabelMatchingResponse(results: List[knowledge.base.search.LabelSearchResult], max_results: int = 10, stats: knowledge.base.search.LabelSearchStats | None = None)`
 :   SemanticSearchResponse
     ======================
     Response model for semantic search service.
@@ -183,7 +150,7 @@ Classes
     `results: List[knowledge.base.search.LabelSearchResult]`
     :   List of label search results.
 
-    `stats: Optional[knowledge.base.search.LabelSearchStats]`
+    `stats: knowledge.base.search.LabelSearchStats | None`
     :   Performance stats.
 
 `LabelSearchResult(score: float, content_uri: str, metadata: Dict[str, Any], content: str)`
@@ -313,7 +280,7 @@ Classes
 `VectorDBDocument(data: Dict[str, Any])`
 :   VectorDBDocument
     ================
-    Document model for the vector database.
+    SegmentedContent model for the vector database.
     
     Properties
     ----------

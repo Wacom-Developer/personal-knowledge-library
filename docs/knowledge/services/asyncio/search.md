@@ -24,7 +24,7 @@ Classes
 
     ### Methods
 
-    `count_documents(self, locale: knowledge.base.language.LocaleCode, concept_type: Optional[str] = None, auth_key: Optional[str] = None) ‑> int`
+    `count_documents(self, locale: knowledge.base.language.LocaleCode, concept_type: str | None = None, auth_key: str | None = None) ‑> int`
     :   Count all documents for a tenant.
         
         Parameters
@@ -46,7 +46,29 @@ Classes
         WacomServiceException
             If the request fails.
 
-    `count_labels(self, locale: str, concept_type: Optional[str] = None, auth_key: Optional[str] = None) ‑> int`
+    `count_documents_filter(self, locale: knowledge.base.language.LocaleCode, filters: Dict[str, Any], auth_key: str | None = None) ‑> int`
+    :   Count all documents for a tenant using a filter.
+        
+        Parameters
+        ----------
+        locale: str
+            Locale
+        filters: Dict[str, Any]
+            Filters for the search
+        auth_key: Optional[str] (Default:= None)
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        
+        Returns
+        -------
+        number_of_docs: int
+            Number of documents.
+        
+        Raises
+        ------
+        WacomServiceException
+            If the request fails.
+
+    `count_labels(self, locale: str, concept_type: str | None = None, auth_key: str | None = None) ‑> int`
     :   Count all labels entries for a tenant.
         
         Parameters
@@ -68,7 +90,29 @@ Classes
         WacomServiceException
             If the request fails.
 
-    `document_search(self, query: str, locale: str, filters: Optional[Dict[str, Any]] = None, max_results: int = 10, auth_key: Optional[str] = None) ‑> knowledge.base.search.DocumentSearchResponse`
+    `count_labels_filter(self, locale: knowledge.base.language.LocaleCode, filters: Dict[str, Any], auth_key: str | None = None) ‑> int`
+    :   Count all labels for a tenant using a filter.
+        
+        Parameters
+        ----------
+        locale: str
+            Locale
+        filters: Dict[str, Any]
+            Filters for the search
+        auth_key: Optional[str] (Default:= None)
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        
+        Returns
+        -------
+        number_of_docs: int
+            Number of documents.
+        
+        Raises
+        ------
+        WacomServiceException
+            If the request fails.
+
+    `document_search(self, query: str, locale: str, filters: Dict[str, Any] | None = None, max_results: int = 10, auth_key: str | None = None) ‑> knowledge.base.search.DocumentSearchResponse`
     :   Async Semantic search.
         
         Parameters
@@ -94,7 +138,7 @@ Classes
         WacomServiceException
             If the request fails.
 
-    `labels_search(self, query: str, locale: str, filters: Optional[Dict[str, Any]] = None, max_results: int = 10, auth_key: Optional[str] = None) ‑> knowledge.base.search.LabelMatchingResponse`
+    `labels_search(self, query: str, locale: str, filters: Dict[str, Any] | None = None, max_results: int = 10, auth_key: str | None = None) ‑> knowledge.base.search.LabelMatchingResponse`
     :   Async search for semantically similar labels.
         
         Parameters
@@ -115,7 +159,7 @@ Classes
         response: LabelMatchingResponse
             Search results response.
 
-    `retrieve_document_chunks(self, locale: knowledge.base.language.LocaleCode, uri: str, auth_key: Optional[str] = None) ‑> List[knowledge.base.search.VectorDBDocument]`
+    `retrieve_document_chunks(self, locale: knowledge.base.language.LocaleCode, uri: str, auth_key: str | None = None) ‑> List[knowledge.base.search.VectorDBDocument]`
     :   Retrieve document chunks from vector database. The service is automatically chunking the document into
         smaller parts. The chunks are returned as a list of dictionaries, with metadata and content.
         
@@ -138,7 +182,7 @@ Classes
         WacomServiceException
             If the request fails.
 
-    `retrieve_labels(self, locale: knowledge.base.language.LocaleCode, uri: str, auth_key: Optional[str] = None) ‑> List[knowledge.base.search.VectorDBDocument]`
+    `retrieve_labels(self, locale: knowledge.base.language.LocaleCode, uri: str, auth_key: str | None = None) ‑> List[knowledge.base.search.VectorDBDocument]`
     :   Retrieve labels from vector database.
         
         Parameters

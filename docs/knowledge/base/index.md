@@ -21,3 +21,4 @@ Sub-modules
 * knowledge.base.language
 * knowledge.base.ontology
 * knowledge.base.search
+* knowledge.base.tenant

@@ -139,7 +139,7 @@ Classes
     `main: bool`
     :   Flag if the content is the  main content or an alias.
 
-`LocalizedContent(content: str, language_code: Union[knowledge.base.language.LocaleCode, knowledge.base.language.LanguageCode])`
+`LocalizedContent(content: str, language_code: knowledge.base.language.LocaleCode | knowledge.base.language.LanguageCode)`
 :   Localized content
     -----------------
     Content that is multilingual.
@@ -167,7 +167,7 @@ Classes
     `content: str`
     :   String representation of the content.
 
-    `language_code: Union[knowledge.base.language.LocaleCode, knowledge.base.language.LanguageCode]`
+    `language_code: knowledge.base.language.LocaleCode | knowledge.base.language.LanguageCode`
     :   Locale
 
 `ServiceException(*args, **kwargs)`

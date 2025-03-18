@@ -141,7 +141,7 @@ Classes
     `content_link: str`
     :   Link to content page.
 
-    `description: Optional[str]`
+    `description: str | None`
     :   Description of the entity if available.
 
     `entity_source: knowledge.nel.base.EntitySource`
@@ -156,7 +156,7 @@ Classes
     `relevant_type: knowledge.base.ontology.OntologyClassReference`
     :   Most relevant ontology type. That likes to Wacom's personal knowledge base ontology.
 
-    `thumbnail: Optional[str]`
+    `thumbnail: str | None`
     :   Thumbnail to describes the entity.
 
 `KnowledgeSource(*args, **kwds)`
@@ -318,7 +318,7 @@ Classes
         flag: bool
             Flag if this language_code code is supported.
 
-    `link_personal_entities(self, text: str, language_code: knowledge.base.language.LocaleCode = 'en_US', auth_key: Optional[str] = None, max_retries: int = 5) ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
+    `link_personal_entities(self, text: str, language_code: knowledge.base.language.LocaleCode = 'en_US', auth_key: str | None = None, max_retries: int = 5) ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
     :   Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
         

@@ -23,6 +23,21 @@ Classes
         Key which is required to join the group
     rights: GroupAccessRight
         Access right for group
+    
+    Attributes
+    ----------
+    id: str
+        Group identifier
+    tenant_id: str
+        Tenant identifier
+    owner_id: str
+        Owner identifier
+    name: str
+        Name of the group
+    join_key: str
+        Key which is required to join the group
+    group_access_rights: GroupAccessRight
+        Access rights for the group
 
     ### Descendants
 
@@ -57,7 +72,7 @@ Classes
     `name: str`
     :   Name of the group.
 
-    `owner_id: Optional[str]`
+    `owner_id: str | None`
     :   Owner id (internal id) of the user, who owns the group.
 
     `tenant_id: str`
@@ -68,6 +83,28 @@ Classes
     -----------------
     Provides additional information on the group.
     Users within the group are listed.
+    
+    Parameters
+    ----------
+    tenant_id: str
+        Tenant id
+    group_id: str
+        Group id
+    owner: str
+        User id who has created the group.
+    name: str
+        Name of the group.
+    join_key: str
+        Key which is required to join the group
+    rights: GroupAccessRight
+        Access right for group
+    group_users: List[User]
+        List of users within the group.
+    
+    Attributes
+    ----------
+    group_users: List[User]
+        List of all users that are part of the group.
 
     ### Ancestors (in MRO)
 
@@ -109,7 +146,7 @@ Classes
 
     ### Methods
 
-    `add_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None)`
+    `add_entity_to_group(self, group_id: str, entity_uri: str, auth_key: str | None = None, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Adding an entity to group.
         
         Parameters
@@ -120,13 +157,19 @@ Classes
             Entity URI
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
 
-    `add_user_to_group(self, group_id: str, user_id: str, auth_key: Optional[str] = None)`
+    `add_user_to_group(self, group_id: str, user_id: str, auth_key: str | None = None, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Adding a user to group.
         
         Parameters
@@ -137,13 +180,19 @@ Classes
             User who is added to the group
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
 
-    `create_group(self, name: str, rights: knowledge.base.access.GroupAccessRight = [Read], auth_key: Optional[str] = None) ‑> knowledge.services.group.Group`
+    `create_group(self, name: str, rights: knowledge.base.access.GroupAccessRight = [Read], auth_key: str | None = None, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1) ‑> knowledge.services.group.Group`
     :   Creates a group.
         
         Parameters
@@ -154,7 +203,13 @@ Classes
             Access rights
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Returns
         -------
         group: Group
@@ -165,24 +220,31 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `delete_group(self, group_id: str, force: bool = False, auth_key: Optional[str] = None)`
+    `delete_group(self, group_id: str, force: bool = False, auth_key: str | None = None, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Delete a group.
         
         Parameters
         ----------
         group_id: str
-         ID of the group.
+            ID of the group.
         force: bool (Default = False)
-        If True, the group will be deleted even if it is not empty.
+            If True, the group will be deleted even if it is not empty.
         auth_key: Optional[str]
-        If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Raises
         ------
         WacomServiceException
         If the tenant service returns an error code.
 
-    `group(self, group_id: str, auth_key: Optional[str] = None) ‑> knowledge.services.group.GroupInfo`
+    `group(self, group_id: str, auth_key: str | None = None, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1) ‑> knowledge.services.group.GroupInfo`
     :   Get a group.
         
         Parameters
@@ -191,10 +253,16 @@ Classes
             Group ID
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Returns
         -------
-        group: Group
+        group: GroupInfo
             Instance of the group
         
         Raises
@@ -202,7 +270,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `join_group(self, group_id: str, join_key: str, auth_key: Optional[str] = None)`
+    `join_group(self, group_id: str, join_key: str, auth_key: str | None = None, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   User joining a group with his auth token.
         
         Parameters
@@ -213,13 +281,19 @@ Classes
             Key which is used to join the group.
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
 
-    `leave_group(self, group_id: str, auth_key: Optional[str] = None)`
+    `leave_group(self, group_id: str, auth_key: str | None = None, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   User leaving a group with his auth token.
         
         Parameters
@@ -228,13 +302,19 @@ Classes
             Group ID
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
 
-    `listing_groups(self, admin: bool = False, limit: int = 20, offset: int = 0, auth_key: Optional[str] = None) ‑> List[knowledge.services.group.Group]`
+    `listing_groups(self, admin: bool = False, limit: int = 20, offset: int = 0, auth_key: str | None = None, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1) ‑> List[knowledge.services.group.Group]`
     :   Listing all groups configured for this instance.
         
         Parameters
@@ -248,13 +328,19 @@ Classes
             Offset of the first group to return.
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Returns
         -------
         user:  List[Groups]
             List of groups.
 
-    `remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None)`
+    `remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: str | None = None, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Remove an entity from group.
         
         Parameters
@@ -265,13 +351,19 @@ Classes
             URI of entity
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
 
-    `remove_user_from_group(self, group_id: str, user_id: str, force: bool = False, auth_key: Optional[str] = None)`
+    `remove_user_from_group(self, group_id: str, user_id: str, force: bool = False, auth_key: str | None = None, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Remove a user from group.
         
         Parameters
@@ -284,13 +376,19 @@ Classes
             If true remove user and entities owned by the user if any
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
 
-    `update_group(self, group_id: str, name: str, rights: knowledge.base.access.GroupAccessRight = knowledge.base.access.GroupAccessRight, auth_key: Optional[str] = None)`
+    `update_group(self, group_id: str, name: str, rights: knowledge.base.access.GroupAccessRight = knowledge.base.access.GroupAccessRight, auth_key: str | None = None, timeout: int = 60, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Updates a group.
         
         Parameters
@@ -303,6 +401,14 @@ Classes
             Access rights
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+        
         Raises
         ------
         WacomServiceException

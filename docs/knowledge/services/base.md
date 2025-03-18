@@ -4,7 +4,6 @@ Module knowledge.services.base
 Functions
 ---------
 
-    
 `format_exception(exception: knowledge.services.base.WacomServiceException) ‑> str`
 :   Formats the exception.
     
@@ -18,8 +17,7 @@ Functions
     formatted_exception: str
         Formatted exception
 
-    
-`handle_error(message: str, response: requests.models.Response, parameters: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) ‑> knowledge.services.base.WacomServiceException`
+`handle_error(message: str, response: requests.models.Response, parameters: Dict[str, Any] | None = None, payload: Dict[str, Any] | None = None, headers: Dict[str, str] | None = None) ‑> knowledge.services.base.WacomServiceException`
 :   Handles an error response.
     
     Parameters
@@ -132,7 +130,7 @@ Classes
     `auth_endpoint: str`
     :   Authentication endpoint.
 
-    `current_session: knowledge.services.session.Session`
+    `current_session: knowledge.services.session.RefreshableSession | knowledge.services.session.TimedSession | knowledge.services.session.PermanentSession | None`
     :   Current session.
         
         Returns
@@ -150,6 +148,9 @@ Classes
 
     `service_endpoint`
     :   Service endpoint.
+
+    `token_manager: knowledge.services.session.TokenManager`
+    :   Token manager.
 
     `user_agent: str`
     :   User agent.
@@ -211,7 +212,7 @@ Classes
         WacomServiceException
             Exception if service returns HTTP error code.
 
-    `register_token(self, auth_key: str, refresh_token: Optional[str] = None) ‑> Union[knowledge.services.session.RefreshableSession, knowledge.services.session.TimedSession]`
+    `register_token(self, auth_key: str, refresh_token: str | None = None) ‑> knowledge.services.session.RefreshableSession | knowledge.services.session.TimedSession`
     :   Register token.
         Parameters
         ----------
@@ -257,8 +258,42 @@ Classes
         session_id: str
             Session id
 
-`WacomServiceException(message: str, headers: Optional[Dict[str, Any]] = None, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None, method: Optional[str] = None, url: Optional[str] = None, service_response: Optional[str] = None, status_code: int = 500)`
+`WacomServiceException(message: str, headers: Dict[str, Any] | None = None, payload: Dict[str, Any] | None = None, params: Dict[str, Any] | None = None, method: str | None = None, url: str | None = None, service_response: str | None = None, status_code: int = 500)`
 :   Exception thrown if Wacom service fails.
+    
+    Parameters
+    ----------
+    message: str
+        Error message
+    payload: Optional[Dict[str, Any]] (Default:= None)
+        Payload
+    params: Optional[Dict[str, Any]] (Default:= None)
+        Parameters
+    method: Optional[str] (Default:= None)
+        Method
+    url: Optional[str] (Default:= None)
+        URL
+    service_response: Optional[str] (Default:= None)
+        Service response
+    status_code: int (Default:= 500)
+        Status code
+    
+    Attributes
+    ----------
+    headers: Optional[Dict[str, Any]]
+        Headers of the exception
+    method: Optional[str]
+        Method of the exception
+    params: Optional[Dict[str, Any]]
+        Parameters of the exception
+    payload: Optional[Dict[str, Any]]
+        Payload of the exception
+    url: Optional[str]
+        URL of the exception
+    message: str
+        Message of the exception
+    status_code: int
+        Status code of the exception
 
     ### Ancestors (in MRO)
 
@@ -267,26 +302,26 @@ Classes
 
     ### Instance variables
 
-    `headers: Optional[Dict[str, Any]]`
+    `headers: Dict[str, Any] | None`
     :   Headers of the exception.
 
     `message: str`
     :   Message of the exception.
 
-    `method: Optional[str]`
+    `method: str | None`
     :   Method of the exception.
 
-    `params: Optional[Dict[str, Any]]`
+    `params: Dict[str, Any] | None`
     :   Parameters of the exception.
 
-    `payload: Optional[Dict[str, Any]]`
+    `payload: Dict[str, Any] | None`
     :   Payload of the exception.
 
-    `service_response: Optional[requests.models.Response]`
+    `service_response: requests.models.Response | None`
     :   Service response.
 
     `status_code: int`
     :   Status code of the exception.
 
-    `url: Optional[str]`
+    `url: str | None`
     :   URL of the exception.

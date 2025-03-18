@@ -4,7 +4,6 @@ Module knowledge.public.wikidata
 Functions
 ---------
 
-    
 `chunks(lst: List[str], chunk_size: int)`
 :   Yield successive n-sized chunks from lst.Yield successive n-sized chunks from lst.
     Parameters
@@ -13,21 +12,6 @@ Functions
         Full length.
     chunk_size: int
         Chunk size.
-
-    
-`detect_cycle(super_class_qid: str, cycle_detector: List[Tuple[str, str]]) ‑> bool`
-:   Detects if there is a cycle in the super class hierarchy.
-    Parameters
-    ----------
-    super_class_qid: str
-        Super class QID
-    cycle_detector: List[Tuple[str, str]]
-        List of tuples of the form (subclass_qid, super_class_qid)
-    
-    Returns
-    -------
-    cycle: bool
-        True if there is a cycle, False otherwise.
 
 Classes
 -------
@@ -66,7 +50,7 @@ Classes
     `qualifiers: List[Dict[str, Any]]`
     :   Qualifiers.
 
-`SiteLinks(source: str, urls: Optional[Dict[str, str]] = None, titles: Optional[Dict[str, str]] = None)`
+`SiteLinks(source: str, urls: Dict[str, str] | None = None, titles: Dict[str, str] | None = None)`
 :   SiteLinks
     ---------
     Sitelinks in Wikidata are links between items in Wikidata and pages on external websites, such as Wikipedia,
@@ -126,7 +110,7 @@ Classes
 
     ### Static methods
 
-    `retrieve_entities(qids: Union[List[str], Set[str]]) ‑> List[knowledge.public.wikidata.WikidataThing]`
+    `retrieve_entities(qids: List[str] | Set[str]) ‑> List[knowledge.public.wikidata.WikidataThing]`
     :   Retrieve multiple Wikidata things.
         Parameters
         ----------
@@ -179,19 +163,34 @@ Classes
         max_retries: int
             Maximum number of retries
 
-    `superclasses(qid: str) ‑> Optional[knowledge.public.wikidata.WikidataClass]`
-    :   Returns the superclasses of the given QID.
+    `subclasses(qid: str) ‑> Dict[str, knowledge.public.wikidata.WikidataClass]`
+    :   Returns the Wikidata class with all its subclasses for the given QID.
+        
         Parameters
         ----------
         qid: str
-            Wikidata QID
+            Wikidata QID (e.g., 'Q146' for house cat).
         
         Returns
         -------
-        wikidata_classes: Optional[WikidataClass]
-            Wikidata class
+        classes: Dict[str, WikidataClass]
+            A dictionary of WikidataClass objects, where the keys are QIDs and the values are the corresponding
+            classes with their subclasses populated.
 
-`WikidataClass(qid: str, label: Optional[str] = None)`
+    `superclasses(qid: str) ‑> Dict[str, knowledge.public.wikidata.WikidataClass]`
+    :   Returns the Wikidata class with all its superclasses for the given QID.
+        
+        Parameters
+        ----------
+        qid: str
+            Wikidata QID (e.g., 'Q146' for house cat).
+        
+        Returns
+        -------
+        classes: Dict[str, WikidataClass]
+            A dictionary of WikidataClass objects, where the keys are QIDs and the values are the corresponding
+
+`WikidataClass(qid: str, label: str | None = None)`
 :   WikidataClass
     ----------------
     In Wikidata, classes are used to group items together based on their common characteristics.
@@ -243,10 +242,13 @@ Classes
     `qid`
     :   Property id.
 
-    `superclasses: List[knowledge.public.wikidata.WikidataClass]`
+    `subclasses: List[WikidataClass]`
+    :   Subclasses.
+
+    `superclasses: List[WikidataClass]`
     :   Superclasses.
 
-`WikidataProperty(pid: str, label: Optional[str] = None)`
+`WikidataProperty(pid: str, label: str | None = None)`
 :   WikidataProperty
     ----------------
     Property id and its label from wikidata.
@@ -255,6 +257,8 @@ Classes
     ----------
     pid: str
         Property ID.
+    label: Optional[str] (default: None)
+        Label of the property.
 
     ### Static methods
 
@@ -274,6 +278,11 @@ Classes
 
     `label: str`
     :   Label with lazy loading mechanism.
+        
+        Returns
+        -------
+        label: str
+            Label of the property.
 
     `label_cached: str`
     :   Label with cached value.
@@ -281,7 +290,7 @@ Classes
     `pid`
     :   Property id.
 
-`WikidataSearchResult(qid: str, label: knowledge.base.entity.Label, description: Optional[knowledge.base.entity.Description], repository: str, aliases: List[str])`
+`WikidataSearchResult(qid: str, label: knowledge.base.entity.Label, description: knowledge.base.entity.Description | None, repository: str, aliases: List[str])`
 :   WikidataSearchResult
     --------------------
     Search result from wikidata.
@@ -305,7 +314,7 @@ Classes
     `aliases: List[str]`
     :   Aliases of the search result.
 
-    `description: Optional[knowledge.base.entity.Description]`
+    `description: knowledge.base.entity.Description | None`
     :   Description of the search result.
 
     `label: knowledge.base.entity.Label`
@@ -317,7 +326,7 @@ Classes
     `repository: str`
     :   Repository of the search result.
 
-`WikidataThing(revision: str, qid: str, modified: datetime.datetime, label: Optional[Dict[str, knowledge.base.entity.Label]] = None, aliases: Optional[Dict[str, List[knowledge.base.entity.Label]]] = None, description: Optional[Dict[str, knowledge.base.entity.Description]] = None)`
+`WikidataThing(revision: str, qid: str, modified: datetime.datetime, label: Dict[str, knowledge.base.entity.Label] | None = None, aliases: Dict[str, List[knowledge.base.entity.Label]] | None = None, description: Dict[str, knowledge.base.entity.Description] | None = None)`
 :   WikidataEntity
     -----------
     Generic entity within wikidata.
@@ -357,7 +366,7 @@ Classes
         thing: WikidataThing
             Instance of WikidataThing
 
-    `from_wikidata(entity_dict: Dict[str, Any], supported_languages: Optional[List[str]] = None) ‑> knowledge.public.wikidata.WikidataThing`
+    `from_wikidata(entity_dict: Dict[str, Any], supported_languages: List[str] | None = None) ‑> knowledge.public.wikidata.WikidataThing`
     :   Create WikidataThing from Wikidata JSON response.
         Parameters
         ----------
@@ -472,7 +481,7 @@ Classes
         aliases: List[Label]
             Returns a list of aliases for a specific language code
 
-    `description_lang(self, language_code: str) ‑> Optional[knowledge.base.entity.Description]`
+    `description_lang(self, language_code: str) ‑> knowledge.base.entity.Description | None`
     :   Get description for entity.
         
         Parameters
@@ -484,7 +493,7 @@ Classes
         label: LocalizedContent
             Returns the  label for a specific language_code code
 
-    `image(self, dpi: int = 500) ‑> Optional[str]`
+    `image(self, dpi: int = 500) ‑> str | None`
     :   Generate URL for image from Wikimedia.
         
         Parameters
@@ -497,7 +506,7 @@ Classes
         wikimedia_url: str
             URL for Wikimedia
 
-    `label_lang(self, language_code: str) ‑> Optional[knowledge.base.entity.Label]`
+    `label_lang(self, language_code: str) ‑> knowledge.base.entity.Label | None`
     :   Get label for language_code code.
         
         Parameters

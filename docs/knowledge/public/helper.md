@@ -4,7 +4,6 @@ Module knowledge.public.helper
 Functions
 ---------
 
-    
 `image_url(img: str, dpi: int = 500)`
 :   Helper to generate image URL for Wikipedia.
     
@@ -19,8 +18,7 @@ Functions
     wikimedia_url: str
         URL of wikimedia
 
-    
-`parse_date(date_string: str) ‑> Optional[datetime.datetime]`
+`parse_date(date_string: str) ‑> datetime.datetime | None`
 :   Parse date string to datetime object.
     Parameters
     ----------
@@ -32,13 +30,12 @@ Functions
     parsed_date: datetime
         Parsed date
 
-    
 `wikidate(param: Dict[str, Any]) ‑> Dict[str, Any]`
 :   Parse and extract wikidata structure.
     Parameters
     ----------
     param: Dict[str, Any]
-        Entity wikidata
+        Entities wikidata
     
     Returns
     -------

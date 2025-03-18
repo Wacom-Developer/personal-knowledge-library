@@ -4,7 +4,6 @@ Module knowledge.utils.wikipedia
 Functions
 ---------
 
-    
 `get_wikipedia_summary(title: str, lang: str = 'en') ‑> str`
 :   Extracting summary wikipedia URL.
     
@@ -20,7 +19,6 @@ Functions
     result: Dict[str, str]
         Summary dict with image and summary text
 
-    
 `get_wikipedia_summary_image(title: str, lang: str = 'en') ‑> Dict[str, str]`
 :   Extracting summary image and abstract for wikipedia URL.
     
@@ -36,7 +34,6 @@ Functions
     result: Dict[str, str]
         Summary dict with image and summary text
 
-    
 `get_wikipedia_summary_url(wiki_url: str, lang: str = 'en') ‑> Dict[str, str]`
 :   Extracting summary image and abstract for wikipedia URL.
     Parameters

@@ -44,7 +44,7 @@ Classes
 
     ### Methods
 
-    `commit(self, context: str, auth_key: Optional[str] = None)`
+    `commit(self, context: str, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Commit the ontology.
         
         Parameters
@@ -53,8 +53,15 @@ Classes
             Name of the context.
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
 
-    `concept(self, context: str, concept_name: str, auth_key: Optional[str] = None) ‑> knowledge.base.ontology.OntologyClass`
+    `concept(self, context: str, concept_name: str, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> knowledge.base.ontology.OntologyClass`
     :   Retrieve a concept instance.
         
         **Remark:**
@@ -68,13 +75,19 @@ Classes
             IRI of the concept
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Returns
         -------
         instance: OntologyClass
             Instance of the concept
 
-    `concepts(self, context: str, auth_key: Optional[str] = None) ‑> List[Tuple[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.OntologyClassReference]]`
+    `concepts(self, context: str, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> List[Tuple[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.OntologyClassReference]]`
     :   Retrieve all concept classes.
         
         **Remark:**
@@ -82,30 +95,68 @@ Classes
         
         Parameters
         ----------
-        auth_key: str
-            Auth key from user.
         context: str
             Context of the ontology
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Returns
         -------
         concepts: List[Tuple[OntologyClassReference, OntologyClassReference]]
             List of ontology classes. Tuple<Classname, Superclass>
 
-    `context(self, auth_key: Optional[str] = None) ‑> Optional[knowledge.base.ontology.OntologyContext]`
+    `concepts_types(self, context: str, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> List[knowledge.base.ontology.OntologyClass]`
+    :   Retrieve all concept class types.
+        
+        **Remark:**
+        Works for users with role 'User' and 'TenantAdmin'.
+        
+        Parameters
+        ----------
+        context: str
+            Context of the ontology
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+        Returns
+        -------
+        concepts: List[OntologyClass]
+            List of ontology classes.
+
+    `context(self, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> knowledge.base.ontology.OntologyContext | None`
     :   Getting the information on the context.
         
         Parameters
         ----------
-        auth_key: Optional[str] [default:= None]
-            Auth
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Returns
         -------
         context_description: Optional[OntologyContext]
             Context of the Ontology
 
-    `context_metadata(self, context: str, auth_key: Optional[str] = None) ‑> List[knowledge.base.ontology.InflectionSetting]`
+    `context_metadata(self, context: str, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> List[knowledge.base.ontology.InflectionSetting]`
     :   Getting the meta-data on the context.
         
         Parameters
@@ -114,13 +165,20 @@ Classes
             Name of the context.
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Returns
         -------
         list_inflection_settings: List[InflectionSetting]
             List of inflection settings.
 
-    `create_concept(self, context: str, reference: knowledge.base.ontology.OntologyClassReference, subclass_of: knowledge.base.ontology.OntologyClassReference = wacom:core#Thing, icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None, auth_key: Optional[str] = None) ‑> Dict[str, str]`
+    `create_concept(self, context: str, reference: knowledge.base.ontology.OntologyClassReference, subclass_of: knowledge.base.ontology.OntologyClassReference = wacom:core#Thing, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> Dict[str, str]`
     :   Create concept class.
         
         **Remark:**
@@ -142,6 +200,14 @@ Classes
             Comments for the class
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+        
         Returns
         -------
         result: Dict[str, str]
@@ -152,7 +218,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_context(self, name: str, context: Optional[str] = None, base_uri: Optional[str] = None, icon: Optional[str] = None, labels: List[knowledge.base.ontology.OntologyLabel] = None, comments: List[knowledge.base.ontology.Comment] = None, auth_key: Optional[str] = None) ‑> Dict[str, str]`
+    `create_context(self, name: str, context: str | None = None, base_uri: str | None = None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] = None, comments: List[knowledge.base.ontology.Comment] = None, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> Dict[str, str]`
     :   Create context.
         
         **Remark:**
@@ -163,7 +229,7 @@ Classes
         base_uri: str
             Base URI
         name: str
-            Name of the context
+            Name of the context.
         context: Optional[str] [default:= None]
             Context of ontology
         icon: Optional[str] (default:= None)
@@ -174,6 +240,16 @@ Classes
             Comments for the context
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+                timeout: int
+            Timeout for the request (default: 60 seconds)
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+        
         Returns
         -------
         result: Dict[str, str]
@@ -184,7 +260,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_data_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.DataPropertyType], subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None, auth_key: Optional[str] = None) ‑> Dict[str, str]`
+    `create_data_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.DataPropertyType], subproperty_of: knowledge.base.ontology.OntologyPropertyReference | None = None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> Dict[str, str]`
     :   Create data property.
         
         **Remark:**
@@ -210,6 +286,13 @@ Classes
             Comments for the class
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Returns
         -------
@@ -221,7 +304,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_object_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.OntologyClassReference], inverse_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, subproperty_of: Optional[knowledge.base.ontology.OntologyPropertyReference] = None, icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None, auth_key: Optional[str] = None) ‑> Dict[str, str]`
+    `create_object_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.OntologyClassReference], inverse_of: knowledge.base.ontology.OntologyPropertyReference | None = None, subproperty_of: knowledge.base.ontology.OntologyPropertyReference | None = None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> Dict[str, str]`
     :   Create property.
         
         **Remark:**
@@ -249,6 +332,13 @@ Classes
             Comments for the class
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Returns
         -------
@@ -260,7 +350,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `delete_concept(self, context: str, reference: knowledge.base.ontology.OntologyClassReference, auth_key: Optional[str] = None)`
+    `delete_concept(self, context: str, reference: knowledge.base.ontology.OntologyClassReference, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Delete concept class.
         
         **Remark:**
@@ -274,13 +364,20 @@ Classes
             Name of the concept
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Raises
         ------
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `delete_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, auth_key: Optional[str] = None)`
+    `delete_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Delete property.
         
         **Remark:**
@@ -294,13 +391,20 @@ Classes
             Name of the property
         auth_key: Optional[str] [default:= None]
             If auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Raises
         ------
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `properties(self, context: str, auth_key: Optional[str] = None) ‑> List[Tuple[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.OntologyPropertyReference]]`
+    `properties(self, context: str, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> List[Tuple[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.OntologyPropertyReference]]`
     :   List all properties.
         
         **Remark:**
@@ -312,13 +416,44 @@ Classes
             Name of the context
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Returns
         -------
         contexts: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]
             List of ontology contexts
 
-    `property(self, context: str, property_name: str, auth_key: Optional[str] = None) ‑> knowledge.base.ontology.OntologyProperty`
+    `properties_types(self, context: str, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> List[knowledge.base.ontology.OntologyProperty]`
+    :   List all properties types.
+        
+        **Remark:**
+        Works for users with role 'User' and 'TenantAdmin'.
+        
+        Parameters
+        ----------
+        context: str
+            Name of the context
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+        Returns
+        -------
+        contexts: List[OntologyProperty]
+            List of ontology contexts
+
+    `property(self, context: str, property_name: str, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> knowledge.base.ontology.OntologyProperty`
     :   Retrieve a property instance.
         
         **Remark:**
@@ -332,28 +467,43 @@ Classes
             IRI of the property
         auth_key: Optional[str] [default:= None]
             If auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Returns
         -------
         instance: OntologyProperty
             Instance of the property
 
-    `rdf_export(self, context: str, auth_key: Optional[str] = None) ‑> str`
+    `rdf_export(self, context: str, version: int = 0, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> str`
     :   Export RDF.
         
         Parameters
         ----------
         context: str
             Name of the context.
+        version: int (default:= 0)
+            Version of the context if 0 is set the latest version will be exported.
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         Returns
         -------
         rdf: str
             Ontology as RDFS / OWL  ontology
 
-    `remove_context(self, name: str, force: bool = False, auth_key: Optional[str] = None)`
+    `remove_context(self, name: str, force: bool = False, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1)`
     :   Remove context.
         
         Parameters
@@ -364,12 +514,20 @@ Classes
             Force removal of context
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+        
         Returns
         -------
         result: Dict[str, str]
             Result from the service
 
-    `update_concept(self, context: str, name: str, subclass_of: Optional[str], icon: Optional[str] = None, labels: Optional[List[knowledge.base.ontology.OntologyLabel]] = None, comments: Optional[List[knowledge.base.ontology.Comment]] = None, auth_key: Optional[str] = None) ‑> Dict[str, str]`
+    `update_concept(self, context: str, name: str, subclass_of: str | None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, auth_key: str | None = None, timeout: int = 30, max_retries: int = 3, backoff_factor: float = 0.1) ‑> Dict[str, str]`
     :   Update concept class.
         
         **Remark:**
@@ -391,6 +549,13 @@ Classes
             Comments for the class
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
         
         Returns
         -------

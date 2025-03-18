@@ -4,7 +4,7 @@ Module knowledge.services.asyncio.graph
 Classes
 -------
 
-`AsyncWacomKnowledgeService(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
+`AsyncWacomKnowledgeService(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1', graceful_shutdown: bool = False)`
 :   AsyncWacomKnowledgeService
     ---------------------
     Client for the Semantic Ink Private knowledge system.
@@ -79,7 +79,7 @@ Classes
 
     ### Methods
 
-    `activations(self, uris: List[str], depth: int, auth_key: Optional[str] = None) ‑> Tuple[Dict[str, knowledge.base.ontology.ThingObject], List[Tuple[str, knowledge.base.ontology.OntologyPropertyReference, str]]]`
+    `activations(self, uris: List[str], depth: int, auth_key: str | None = None) ‑> Tuple[Dict[str, knowledge.base.ontology.ThingObject], List[Tuple[str, knowledge.base.ontology.OntologyPropertyReference, str]]]`
     :   Spreading activation, retrieving the entities related to an entity.
         
         Parameters
@@ -103,13 +103,13 @@ Classes
         WacomServiceException
             If the graph service returns an error code, and activation failed.
 
-    `create_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: Optional[str] = None, ignore_image: bool = False) ‑> str`
+    `create_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: str | None = None, ignore_image: bool = False) ‑> str`
     :   Creates entity in graph.
         
         Parameters
         ----------
         entity: ThingObject
-            Entity object that needs to be created
+            Entities object that needs to be created
         auth_key: Optional[str]
             Use a different auth key than the one from the client
         ignore_image: bool
@@ -125,7 +125,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `create_entity_bulk(self, entities: List[knowledge.base.ontology.ThingObject], batch_size: int = 10, ignore_images: bool = False, auth_key: Optional[str] = None) ‑> List[knowledge.base.ontology.ThingObject]`
+    `create_entity_bulk(self, entities: List[knowledge.base.ontology.ThingObject], batch_size: int = 10, ignore_images: bool = False, auth_key: str | None = None) ‑> List[knowledge.base.ontology.ThingObject]`
     :   Creates entity in graph.
         
         Parameters
@@ -149,17 +149,17 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `create_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: Optional[str] = None)`
+    `create_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: str | None = None)`
     :   Creates a relation for an entity to a source entity.
         
         Parameters
         ----------
         source: str
-            Entity URI of the source
+            Entities URI of the source
         relation: OntologyPropertyReference
             ObjectProperty property
         target: str
-            Entity URI of the target
+            Entities URI of the target
         auth_key: Optional[str] [default:=None]
             Use a different auth key than the one from the client
         
@@ -168,7 +168,26 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `delete_entities(self, uris: List[str], force: bool = False, auth_key: Optional[str] = None)`
+    `create_relations_bulk(self, source: str, relations: Dict[knowledge.base.ontology.OntologyPropertyReference, List[str]], auth_key: str | None = None)`
+    :   Creates all the relations for an entity to a source entity.
+        
+        Parameters
+        ----------
+        source: str
+            Entities URI of the source
+        
+        relations: Dict[OntologyPropertyReference, List[str]]
+            ObjectProperty property and targets mapping.
+        
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code
+
+    `delete_entities(self, uris: List[str], force: bool = False, auth_key: str | None = None)`
     :   Delete a list of entities.
         
         Parameters
@@ -187,7 +206,7 @@ Classes
         ValueError
             If more than 100 entities are given
 
-    `delete_entity(self, uri: str, force: bool = False, auth_key: Optional[str] = None)`
+    `delete_entity(self, uri: str, force: bool = False, auth_key: str | None = None)`
     :   Deletes an entity.
         
         Parameters
@@ -204,7 +223,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `entity(self, uri: str, auth_key: Optional[str] = None) ‑> knowledge.base.ontology.ThingObject`
+    `entity(self, uri: str, auth_key: str | None = None) ‑> knowledge.base.ontology.ThingObject`
     :   Retrieve entity information from personal knowledge, using the  URI as identifier.
         
         **Remark:** Object properties (relations) must be requested separately.
@@ -219,7 +238,7 @@ Classes
         Returns
         -------
         thing: ThingObject
-            Entity with is type URI, description, an image/icon, and tags (labels).
+            Entities with is type URI, description, an image/icon, and tags (labels).
         
         Raises
         ------
@@ -239,13 +258,13 @@ Classes
         flag: bool
             Flag if entity does exist
 
-    `labels(self, uri: str, locale: knowledge.base.language.LocaleCode = 'en_US', auth_key: Optional[str] = None) ‑> List[knowledge.base.entity.Label]`
+    `labels(self, uri: str, locale: knowledge.base.language.LocaleCode = 'en_US', auth_key: str | None = None) ‑> List[knowledge.base.entity.Label]`
     :   Extract list labels of entity.
         
         Parameters
         ----------
         uri: str
-            Entity URI of the source
+            Entities URI of the source
         locale: str
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str] = None
@@ -261,8 +280,8 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `link_personal_entities(self, text: str, language_code: knowledge.base.language.LocaleCode = 'en_US', auth_key: Optional[str] = None) ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
-    :   Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
+    `link_personal_entities(self, text: str, language_code: knowledge.base.language.LocaleCode = 'en_US', auth_key: str | None = None) ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
+    :   Performs Named Entities Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
         
         Parameters
@@ -282,9 +301,9 @@ Classes
         Raises
         ------
         WacomServiceException
-            If the Named Entity Linking service returns an error code.
+            If the Named Entities Linking service returns an error code.
 
-    `listing(self, filter_type: knowledge.base.ontology.OntologyClassReference, page_id: Optional[str] = None, limit: int = 30, locale: Optional[knowledge.base.language.LocaleCode] = None, visibility: Optional[knowledge.services.graph.Visibility] = None, is_owner: Optional[bool] = None, estimate_count: bool = False, auth_key: Optional[str] = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], int, str]`
+    `listing(self, filter_type: knowledge.base.ontology.OntologyClassReference, page_id: str | None = None, limit: int = 30, locale: knowledge.base.language.LocaleCode | None = None, visibility: knowledge.services.graph.Visibility | None = None, is_owner: bool | None = None, estimate_count: bool = False, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], int, str]`
     :   List all entities visible to users.
         
         Parameters
@@ -320,13 +339,13 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `literals(self, uri: str, locale: knowledge.base.language.LocaleCode = 'en_US', auth_key: Optional[str] = None) ‑> List[knowledge.base.ontology.DataProperty]`
+    `literals(self, uri: str, locale: knowledge.base.language.LocaleCode = 'en_US', auth_key: str | None = None) ‑> List[knowledge.base.ontology.DataProperty]`
     :   Collect all literals of entity.
         
         Parameters
         ----------
         uri: str
-            Entity URI of the source
+            Entities URI of the source
         locale: LocaleCode [default:=EN_US]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str] [default:=None]
@@ -341,7 +360,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `ontology_update(self, fix: bool = False, auth_key: Optional[str] = None)`
+    `ontology_update(self, fix: bool = False, auth_key: str | None = None)`
     :   Update the ontology.
         
         **Remark:**
@@ -359,13 +378,13 @@ Classes
         WacomServiceException
             If the graph service returns an error code and commit failed.
 
-    `relations(self, uri: str, auth_key: Optional[str] = None) ‑> Dict[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.ObjectProperty]`
+    `relations(self, uri: str, auth_key: str | None = None) ‑> Dict[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.ObjectProperty]`
     :   Retrieve the relations (object properties) of an entity.
         
         Parameters
         ----------
         uri: str
-            Entity URI of the source
+            Entities URI of the source
         
         auth_key: Optional[str]
             Use a different auth key than the one from the client
@@ -380,17 +399,17 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `remove_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: Optional[str] = None)`
+    `remove_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: str | None = None)`
     :   Removes a relation.
         
         Parameters
         ----------
         source: str
-            Entity uri of the source
+            Entities uri of the source
         relation: OntologyPropertyReference
             ObjectProperty property
         target: str
-            Entity uri of the target
+            Entities uri of the target
         auth_key: Optional[str] [default:=None]
             Use a different auth key than the one from the client
         
@@ -399,7 +418,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `search_all(self, search_term: str, language_code: knowledge.base.language.LocaleCode, types: List[knowledge.base.ontology.OntologyClassReference], limit: int = 30, next_page_id: str = None, auth_key: Optional[str] = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_all(self, search_term: str, language_code: knowledge.base.language.LocaleCode, types: List[knowledge.base.ontology.OntologyClassReference], limit: int = 30, next_page_id: str = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search term in labels, literals and description.
         
         Parameters
@@ -429,7 +448,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_description(self, search_term: str, language_code: knowledge.base.language.LocaleCode, limit: int = 30, auth_key: Optional[str] = None, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_description(self, search_term: str, language_code: knowledge.base.language.LocaleCode, limit: int = 30, auth_key: str | None = None, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in description.
         
         Parameters
@@ -457,7 +476,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_labels(self, search_term: str, language_code: knowledge.base.language.LocaleCode, exact_match: bool = False, limit: int = 30, next_page_id: str = None, auth_key: Optional[str] = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_labels(self, search_term: str, language_code: knowledge.base.language.LocaleCode, exact_match: bool = False, limit: int = 30, next_page_id: str = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in labels.
         
         Parameters
@@ -487,7 +506,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_literal(self, search_term: str, literal: knowledge.base.ontology.OntologyPropertyReference, pattern: knowledge.services.graph.SearchPattern = SearchPattern.REGEX, language_code: knowledge.base.language.LocaleCode = 'en_US', limit: int = 30, next_page_id: str = None, auth_key: Optional[str] = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_literal(self, search_term: str, literal: knowledge.base.ontology.OntologyPropertyReference, pattern: knowledge.services.graph.SearchPattern = SearchPattern.REGEX, language_code: knowledge.base.language.LocaleCode = 'en_US', limit: int = 30, next_page_id: str = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in literals.
         
          Parameters
@@ -518,7 +537,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_relation(self, relation: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.language.LocaleCode, subject_uri: str = None, object_uri: str = None, limit: int = 30, next_page_id: str = None, auth_key: Optional[str] = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_relation(self, relation: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.language.LocaleCode, subject_uri: str = None, object_uri: str = None, limit: int = 30, next_page_id: str = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in literals.
         
          Parameters
@@ -550,7 +569,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `set_entity_image(self, entity_uri: str, image_byte: bytes, file_name: str = 'icon.jpg', mime_type: str = 'image/jpeg', auth_key: Optional[str] = None) ‑> str`
+    `set_entity_image(self, entity_uri: str, image_byte: bytes, file_name: str = 'icon.jpg', mime_type: str = 'image/jpeg', auth_key: str | None = None) ‑> str`
     :   Setting the image of the entity.
         The image for the URL is downloaded and then pushed to the backend.
         
@@ -576,7 +595,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `set_entity_image_local(self, entity_uri: str, path: pathlib.Path, auth_key: Optional[str] = None) ‑> str`
+    `set_entity_image_local(self, entity_uri: str, path: pathlib.Path, auth_key: str | None = None) ‑> str`
     :   Setting the image of the entity.
         The image is stored locally.
         
@@ -599,7 +618,7 @@ Classes
         WacomServiceException
            If the graph service returns an error code.
 
-    `set_entity_image_url(self, entity_uri: str, image_url: str, file_name: Optional[str] = None, mime_type: Optional[str] = None, auth_key: Optional[str] = None) ‑> str`
+    `set_entity_image_url(self, entity_uri: str, image_url: str, file_name: str | None = None, mime_type: str | None = None, auth_key: str | None = None) ‑> str`
     :   Setting the image of the entity.
         The image for the URL is downloaded and then pushed to the backend.
         
@@ -628,7 +647,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `update_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: Optional[str] = None)`
+    `update_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: str | None = None)`
     :   Updates entity in graph.
         
         Parameters

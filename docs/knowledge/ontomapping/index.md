@@ -8,20 +8,33 @@ Sub-modules
 Functions
 ---------
 
-    
-`build_configuration(mapping: Dict[str, Any]) ‑> knowledge.ontomapping.MappingConfiguration`
+`build_configuration(mapping: Dict[str, Any], subclasses: Dict[str, List[str]]) ‑> knowledge.ontomapping.MappingConfiguration`
 :   Builds the configuration from the mapping file.
     Parameters
     ----------
     mapping: Dict[str, Any]
         The mapping file
+    subclasses: Dict[str, List[str]]
+        The subclasses
     
     Returns
     -------
     conf: MappingConfiguration
         The mapping configuration
 
+`flatten(hierarchy: knowledge.public.wikidata.WikidataClass) ‑> Set[str]`
+:   Flattens the hierarchy.
     
+    Parameters
+    ----------
+    hierarchy: WikidataClass
+        Hierarchy
+    
+    Returns
+    -------
+    hierarchy: Set[str]
+        Hierarchy
+
 `get_mapping_configuration() ‑> knowledge.ontomapping.MappingConfiguration`
 :   Returns the mapping configuration.
     
@@ -30,7 +43,6 @@ Functions
     mapping_configuration: MappingConfiguration
         The mapping configuration
 
-    
 `is_iso_date(date_string: str) ‑> bool`
 :   Checks if a date string is an ISO date.
     Parameters
@@ -43,8 +55,7 @@ Functions
     is_iso_date: bool
         True if the date string is an ISO date, otherwise False.
 
-    
-`load_configuration(configuration: pathlib.Path = PosixPath('.pkl-cache/ontology_mapping.json'))`
+`load_configuration(configuration: pathlib.Path)`
 :   Loads the configuration.
     
     Raises
@@ -52,7 +63,6 @@ Functions
     ValueError
         If the configuration file is not found.
 
-    
 `register_ontology(rdf_str: str)`
 :   Registers the ontology.
     Parameters
@@ -60,7 +70,35 @@ Functions
     rdf_str: str
         The ontology in RDF/XML format.
 
+`save_subclasses_cache(path: pathlib.Path)`
+:   Saves the taxonomy cache.
     
+    Parameters
+    ----------
+    path: Path
+        The path to the cache file.
+
+`save_superclasses_cache(path: pathlib.Path)`
+:   Saves the taxonomy cache.
+    
+    Parameters
+    ----------
+    path: Path
+        The path to the cache file.
+
+`subclass_path_from(path: pathlib.Path)`
+:   Returns the path to the subclass cache file.
+    
+    Parameters
+    ----------
+    path: Path
+        The path to the configuration file.
+    
+    Returns
+    -------
+    subclass_path: Path
+        The path to the subclass cache file.
+
 `subclasses_of(iri: str) ‑> List[str]`
 :   Returns the subclasses of an ontology class.
     Parameters
@@ -73,8 +111,20 @@ Functions
     subclasses: List[str]
         Subclasses of the ontology class.
 
+`superclass_path_from(configuration_path: pathlib.Path) ‑> pathlib.Path`
+:   Returns the path to the superclass cache file.
     
-`update_taxonomy_cache(path: pathlib.Path = PosixPath('.pkl-cache'))`
+    Parameters
+    ----------
+    configuration_path: Path
+        The path to the configuration file.
+    
+    Returns
+    -------
+    path: Path
+        The path to the superclass cache file.
+
+`update_superclass_cache(path: pathlib.Path)`
 :   Updates the taxonomy cache.
     
     Parameters
@@ -89,6 +139,11 @@ Classes
 :   Class configuration
     -------------------
     This class contains the configuration for a class.
+    
+    Parameters
+    ----------
+    ontology_class: str
+        Ontology class
 
     ### Instance variables
 
@@ -119,13 +174,15 @@ Classes
 
     ### Methods
 
-    `add_class(self, class_configuration: knowledge.ontomapping.ClassConfiguration)`
+    `add_class(self, class_configuration: knowledge.ontomapping.ClassConfiguration, subclasses: Dict[str, List[str]])`
     :   Adds a class configuration.
         
         Parameters
         ----------
         class_configuration: ClassConfiguration
             The class configuration
+        subclasses: Dict[str, List[str]]
+            The subclasses
 
     `add_property(self, property_configuration: knowledge.ontomapping.PropertyConfiguration)`
     :   Adds a property configuration.
@@ -135,7 +192,7 @@ Classes
         property_configuration: PropertyConfiguration
             The property configuration
 
-    `check_data_property_range(self, property_type: knowledge.base.ontology.OntologyPropertyReference, content: Optional[Any]) ‑> bool`
+    `check_data_property_range(self, property_type: knowledge.base.ontology.OntologyPropertyReference, content: Any | None) ‑> bool`
     :   Checks if the content is in the range of the property.
         
         Parameters
@@ -166,7 +223,7 @@ Classes
         valid: bool
             True if the target is in the range, False otherwise.
 
-    `guess_classed(self, classes: List[str]) ‑> Optional[knowledge.ontomapping.ClassConfiguration]`
+    `guess_classed(self, classes: List[str]) ‑> knowledge.ontomapping.ClassConfiguration | None`
     :   Guesses the class from the label.
         Parameters
         ----------
@@ -178,7 +235,7 @@ Classes
         class: Optional[ClassConfiguration]
             If a mapping exists, the class configuration, otherwise None.
 
-    `guess_property(self, property_pid: str, concept_type: knowledge.base.ontology.OntologyClassReference) ‑> Optional[knowledge.ontomapping.PropertyConfiguration]`
+    `guess_property(self, property_pid: str, concept_type: knowledge.base.ontology.OntologyClassReference) ‑> knowledge.ontomapping.PropertyConfiguration | None`
     :   Guesses the property from the label.
         Parameters
         ----------
@@ -191,7 +248,7 @@ Classes
         property_config: Optional[PropertyConfiguration]
             If a mapping exists, the property configuration, otherwise None.
 
-    `property_for(self, class_ref: knowledge.base.ontology.OntologyClassReference, property_type: Optional[knowledge.ontomapping.PropertyType]) ‑> List[knowledge.ontomapping.PropertyConfiguration]`
+    `property_for(self, class_ref: knowledge.base.ontology.OntologyClassReference, property_type: knowledge.ontomapping.PropertyType | None) ‑> List[knowledge.ontomapping.PropertyConfiguration]`
     :   Returns the properties for a class.
         Parameters
         ----------
@@ -222,7 +279,7 @@ Classes
         ValueError
             If the property is not found.
 
-`PropertyConfiguration(iri: str, property_type: knowledge.ontomapping.PropertyType, pids: Optional[List[str]] = None)`
+`PropertyConfiguration(iri: str, property_type: knowledge.ontomapping.PropertyType, pids: List[str] | None = None)`
 :   Property configuration.
     -----------------------
     This class contains the configuration for a property.
@@ -241,7 +298,7 @@ Classes
     `domains: List[str]`
     :   List of domains.
 
-    `inverse: Optional[str]`
+    `inverse: str | None`
     :   Inverse property.
 
     `iri: str`

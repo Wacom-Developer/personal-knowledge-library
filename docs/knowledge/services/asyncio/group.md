@@ -35,7 +35,7 @@ Classes
 
     ### Methods
 
-    `add_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None)`
+    `add_entity_to_group(self, group_id: str, entity_uri: str, auth_key: str | None = None)`
     :   Adding an entity to group.
         
         Parameters
@@ -43,7 +43,7 @@ Classes
         group_id: str
             Group ID
         entity_uri: str
-            Entity URI
+            Entities URI
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         Raises
@@ -51,7 +51,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `add_user_to_group(self, group_id: str, user_id: str, auth_key: Optional[str] = None)`
+    `add_user_to_group(self, group_id: str, user_id: str, auth_key: str | None = None)`
     :   Adding a user to group.
         
         Parameters
@@ -68,7 +68,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `create_group(self, name: str, rights: knowledge.base.access.GroupAccessRight = [Read], auth_key: Optional[str] = None) ‑> knowledge.services.group.Group`
+    `create_group(self, name: str, rights: knowledge.base.access.GroupAccessRight = [Read], auth_key: str | None = None) ‑> knowledge.services.group.Group`
     :   Creates a group.
         
         Parameters
@@ -92,7 +92,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `delete_group(self, group_id: str, force: bool = False, auth_key: Optional[str] = None)`
+    `delete_group(self, group_id: str, force: bool = False, auth_key: str | None = None)`
     :   Delete a group.
         
          Parameters
@@ -109,7 +109,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `group(self, group_id: str, auth_key: Optional[str] = None) ‑> knowledge.services.group.GroupInfo`
+    `group(self, group_id: str, auth_key: str | None = None) ‑> knowledge.services.group.GroupInfo`
     :   Get a group.
         
         Parameters
@@ -129,7 +129,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `join_group(self, group_id: str, join_key: str, auth_key: Optional[str] = None)`
+    `join_group(self, group_id: str, join_key: str, auth_key: str | None = None)`
     :   User joining a group with his auth token.
         
         Parameters
@@ -146,7 +146,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `leave_group(self, group_id: str, auth_key: Optional[str] = None)`
+    `leave_group(self, group_id: str, auth_key: str | None = None)`
     :   User leaving a group with his auth token.
         
         Parameters
@@ -161,7 +161,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `listing_groups(self, admin: bool = False, limit: int = 20, offset: int = 0, auth_key: Optional[str] = None) ‑> List[knowledge.services.group.Group]`
+    `listing_groups(self, admin: bool = False, limit: int = 20, offset: int = 0, auth_key: str | None = None) ‑> List[knowledge.services.group.Group]`
     :   Listing all groups configured for this instance.
         
         Parameters
@@ -186,7 +186,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None)`
+    `remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: str | None = None)`
     :   Remove an entity from group.
         
         Parameters
@@ -203,7 +203,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `remove_user_from_group(self, group_id: str, user_id: str, force: bool = False, auth_key: Optional[str] = None)`
+    `remove_user_from_group(self, group_id: str, user_id: str, force: bool = False, auth_key: str | None = None)`
     :   Remove a user from group.
         
         Parameters
@@ -222,7 +222,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `update_group(self, group_id: str, name: str, rights: knowledge.base.access.GroupAccessRight = knowledge.base.access.GroupAccessRight, auth_key: Optional[str] = None)`
+    `update_group(self, group_id: str, name: str, rights: knowledge.base.access.GroupAccessRight = knowledge.base.access.GroupAccessRight, auth_key: str | None = None)`
     :   Updates a group.
         
         Parameters

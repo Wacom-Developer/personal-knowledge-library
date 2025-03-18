@@ -8,6 +8,7 @@ Sub-modules
 * knowledge.services.base
 * knowledge.services.graph
 * knowledge.services.group
+* knowledge.services.helper
 * knowledge.services.ontology
 * knowledge.services.search
 * knowledge.services.session
@@ -17,6 +18,5 @@ Sub-modules
 Variables
 ---------
 
-    
-`DEFAULT_TOKEN_REFRESH_TIME: int`
+`DEFAULT_MAX_RETRIES: int`
 :   Refresh token time in seconds. 360 seconds = 6 minutes

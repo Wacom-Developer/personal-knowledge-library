@@ -13,6 +13,8 @@ Classes
     ---------
     service_url: str
         URL of the service
+    service_endpoint: str
+        Endpoint of the service
 
     ### Ancestors (in MRO)
 
@@ -31,7 +33,7 @@ Classes
 
     ### Methods
 
-    `link_personal_entities(self, text: str, language_code: knowledge.base.language.LocaleCode = 'en_US', auth_key: Optional[str] = None, max_retries: int = 5) ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
+    `link_personal_entities(self, text: str, language_code: knowledge.base.language.LocaleCode = 'en_US', auth_key: str | None = None, max_retries: int = 5) ‑> List[knowledge.nel.base.KnowledgeGraphEntity]`
     :   Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
         the auth key.
         

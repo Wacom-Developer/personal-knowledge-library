@@ -91,7 +91,7 @@ Classes
     :   Unique session id, which will be the same for the same external user id, tenant,
         and instance of the service.
 
-    `refresh_token: Optional[str]`
+    `refresh_token: str | None`
     :   Refresh token. The refresh token is used to refresh the session.
 
     `refreshable: bool`
@@ -168,7 +168,7 @@ Classes
 
     ### Methods
 
-    `add_session(self, auth_token: str, refresh_token: Optional[str] = None, tenant_api_key: Optional[str] = None, external_user_id: Optional[str] = None) ‑> Union[knowledge.services.session.PermanentSession, knowledge.services.session.RefreshableSession, knowledge.services.session.TimedSession]`
+    `add_session(self, auth_token: str, refresh_token: str | None = None, tenant_api_key: str | None = None, external_user_id: str | None = None) ‑> knowledge.services.session.PermanentSession | knowledge.services.session.RefreshableSession | knowledge.services.session.TimedSession`
     :   Add a session.
         Parameters
         ----------
@@ -186,7 +186,7 @@ Classes
         session: Union[PermanentSession, RefreshableSession, TimedSession]
             The logged-in session.
 
-    `get_session(self, session_id: str) ‑> Union[knowledge.services.session.RefreshableSession, knowledge.services.session.TimedSession, knowledge.services.session.PermanentSession, ForwardRef(None)]`
+    `get_session(self, session_id: str) ‑> knowledge.services.session.RefreshableSession | knowledge.services.session.TimedSession | knowledge.services.session.PermanentSession | None`
     :   Get a session by its id.
         
         Parameters

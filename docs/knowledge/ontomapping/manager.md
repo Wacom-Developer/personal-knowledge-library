@@ -4,8 +4,7 @@ Module knowledge.ontomapping.manager
 Functions
 ---------
 
-    
-`convert_dict(structure: Dict[str, Any], locale: str) ‑> Optional[str]`
+`convert_dict(structure: Dict[str, Any], locale: str) ‑> str | None`
 :   Converts a dictionary to a string.
     Parameters
     ----------
@@ -19,7 +18,6 @@ Functions
     string: str
         String representation of the dictionary.
 
-    
 `flatten(hierarchy: knowledge.public.wikidata.WikidataClass, use_names: bool = False) ‑> List[str]`
 :   Flattens the hierarchy.
     
@@ -35,8 +33,7 @@ Functions
     hierarchy: List[str]
         Hierarchy
 
-    
-`wikidata_taxonomy(qid: str) ‑> Optional[knowledge.public.wikidata.WikidataClass]`
+`wikidata_taxonomy(qid: str) ‑> knowledge.public.wikidata.WikidataClass | None`
 :   Returns the taxonomy of a Wikidata thing.
     Parameters
     ----------
@@ -48,7 +45,6 @@ Functions
     hierarchy: WikidataClass
         Hierarchy.
 
-    
 `wikidata_to_thing(wikidata_thing: knowledge.public.wikidata.WikidataThing, all_relations: Dict[str, Any], supported_locales: List[str], all_wikidata_objects: Dict[str, knowledge.public.wikidata.WikidataThing], pull_wikipedia: bool = False, guess_concept_type: bool = True) ‑> Tuple[knowledge.base.ontology.ThingObject, List[Dict[str, Any]]]`
 :   Converts a Wikidata thing to a ThingObject.
     
