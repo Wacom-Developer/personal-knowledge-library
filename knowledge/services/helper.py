@@ -3,6 +3,8 @@
 from typing import Any
 from typing import Dict, List, Iterator
 
+import loguru
+
 from knowledge.base.entity import (
     DATA_PROPERTIES_TAG,
     DATA_PROPERTY_TAG,
@@ -28,6 +30,7 @@ RELATIONS_BULK_LIMIT: int = 30
 """
 In one request only 30 relations can be created, otherwise the database operations are too many.
 """
+logger = loguru.logger
 
 
 def split_updates(
@@ -42,10 +45,10 @@ def split_updates(
     max_operations: int (default: RELATIONS_BULK_LIMIT)
         The maximum number of operations
 
-    Returns
+    Yields
     -------
-    Iterator[Dict[str, List[str]]]
-        Iterator over the batches of updates.
+    batch: List[Dict[str, List[str]]]
+        The batch of updates to process.
     """
     batch: List[Dict[str, List[str]]] = []
     current_batch_size: int = 0
@@ -83,6 +86,10 @@ def entity_payload(entity: ThingObject) -> Dict[str, Any]:
     literals: List[dict] = []
     # Add description in different languages
     for desc in entity.description:
+        if desc is None or desc.content is None:
+            logger.warning("Description is None")
+            continue
+
         if len(desc.content) > 0 and not desc.content == " ":
             descriptions.append({DESCRIPTION_TAG: desc.content, LOCALE_TAG: desc.language_code})
     if len(descriptions) == 0:
