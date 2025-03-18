@@ -1044,11 +1044,12 @@ class WikiDataAPIClient(ABC):
             response: Response = session.get(
                 wikidata_sparql_url, params={"query": query_string, "format": "json"}, timeout=10000
             )
-        if response.ok:
-            return response.json()
-        raise WikiDataAPIException(
-            f"Failed to query entities. " f"Response code:={response.status_code}, Exception:= {response.content}."
-        )
+            if response.ok:
+                return response.json()
+
+            raise WikiDataAPIException(
+                f"Failed to query entities. " f"Response code:={response.status_code}, Exception:= {response.content}."
+            )
 
     @staticmethod
     def superclasses(qid: str) -> Dict[str, WikidataClass]:
@@ -1075,23 +1076,26 @@ class WikiDataAPIClient(ABC):
             SERVICE wikibase:label {{bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
         }}
         """
-        reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
-        wikidata_classes: Dict[str, WikidataClass] = {}
-        cycle_detector: Set[Tuple[str, str]] = set()
-        adjacency_list: Dict[str, Set[str]] = {}
+        try:
+            reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
+            wikidata_classes: Dict[str, WikidataClass] = {}
+            cycle_detector: Set[Tuple[str, str]] = set()
+            adjacency_list: Dict[str, Set[str]] = {}
 
-        if "results" in reply:
-            for b in reply["results"]["bindings"]:
-                superclass_qid = b["superclass"]["value"].rsplit("/", 1)[-1]
-                class_qid = b["class"]["value"].rsplit("/", 1)[-1]
-                superclass_label = b["superclassLabel"]["value"]
-                class_label = b["classLabel"]["value"]
+            if "results" in reply:
+                for b in reply["results"]["bindings"]:
+                    superclass_qid = b["superclass"]["value"].rsplit("/", 1)[-1]
+                    class_qid = b["class"]["value"].rsplit("/", 1)[-1]
+                    superclass_label = b["superclassLabel"]["value"]
+                    class_label = b["classLabel"]["value"]
 
-                wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
-                wikidata_classes.setdefault(superclass_qid, WikidataClass(superclass_qid, superclass_label))
+                    wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
+                    wikidata_classes.setdefault(superclass_qid, WikidataClass(superclass_qid, superclass_label))
 
-                adjacency_list.setdefault(class_qid, set()).add(superclass_qid)
-
+                    adjacency_list.setdefault(class_qid, set()).add(superclass_qid)
+        except Exception as e:
+            logger.exception(e)
+            return {qid: WikidataClass(qid, f"Class {qid}")}
         queue = deque([qid])
         visited = set()
 
@@ -1131,29 +1135,33 @@ class WikiDataAPIClient(ABC):
             SELECT DISTINCT ?class ?classLabel ?subclass ?subclassLabel
             WHERE
             {{
-                ?subclass wdt:P279* wd:{qid}.
+                ?subclass wdt:P279 wd:{qid}.
                 ?subclass wdt:P279 ?class.
                 SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
             }}
             LIMIT 1000
             """
-        reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
-        wikidata_classes: Dict[str, WikidataClass] = {}
-        cycle_detector: Set[Tuple[str, str]] = set()
-        adjacency_list: Dict[str, Set[str]] = {}
+        try:
+            reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
+            wikidata_classes: Dict[str, WikidataClass] = {}
+            cycle_detector: Set[Tuple[str, str]] = set()
+            adjacency_list: Dict[str, Set[str]] = {}
 
-        if "results" in reply:
-            for b in reply["results"]["bindings"]:
-                subclass_qid = b["subclass"]["value"].rsplit("/", 1)[-1]
-                class_qid = b["class"]["value"].rsplit("/", 1)[-1]
-                subclass_label = b["subclassLabel"]["value"]
-                class_label = b["classLabel"]["value"]
+            if "results" in reply:
+                for b in reply["results"]["bindings"]:
+                    subclass_qid = b["subclass"]["value"].rsplit("/", 1)[-1]
+                    class_qid = b["class"]["value"].rsplit("/", 1)[-1]
+                    subclass_label = b["subclassLabel"]["value"]
+                    class_label = b["classLabel"]["value"]
 
-                wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
-                wikidata_classes.setdefault(subclass_qid, WikidataClass(subclass_qid, subclass_label))
+                    wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
+                    wikidata_classes.setdefault(subclass_qid, WikidataClass(subclass_qid, subclass_label))
 
-                # subclass -> class relationship (reverse of superclass logic)
-                adjacency_list.setdefault(class_qid, set()).add(subclass_qid)
+                    # subclass -> class relationship (reverse of superclass logic)
+                    adjacency_list.setdefault(class_qid, set()).add(subclass_qid)
+        except Exception as e:
+            logger.exception(e)
+            return {qid: WikidataClass(qid, f"Class {qid}")}
 
         queue = deque([qid])
         visited = set()

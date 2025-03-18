@@ -18,11 +18,12 @@ from knowledge.base.ontology import (
 from knowledge.ontomapping import (
     ClassConfiguration,
     TOPIC_CLASS,
-    taxonomy_cache,
+    superclasses_cache,
     PropertyConfiguration,
     PropertyType,
     get_mapping_configuration,
-    save_taxonomy_cache,
+    save_superclasses_cache,
+    superclasses_path,
 )
 from knowledge.public.cache import pull_wikidata_object
 from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient, WikidataClass, WikidataProperty
@@ -77,16 +78,16 @@ def wikidata_taxonomy(qid: str) -> Optional[WikidataClass]:
     hierarchy: WikidataClass
         Hierarchy.
     """
-    if taxonomy_cache and qid in taxonomy_cache:
-        taxonomy: WikidataClass = taxonomy_cache[qid]
+    if superclasses_cache and qid in superclasses_cache:
+        taxonomy: WikidataClass = superclasses_cache[qid]
         return taxonomy
     hierarchy: Dict[str, WikidataClass] = WikiDataAPIClient.superclasses(qid)
     if qid not in hierarchy:
         logging.warning(f"Taxonomy for {qid} not found.")
         return None
     if hierarchy:
-        taxonomy_cache.update(hierarchy)
-        save_taxonomy_cache()
+        superclasses_cache.update(hierarchy)
+        save_superclasses_cache(superclasses_path)
     return hierarchy.get(qid)
 
 
@@ -177,6 +178,9 @@ def wikidata_to_thing(
     qid: str = wikidata_thing.qid
     labels_entity: List[Label] = []
     aliases_entity: List[Label] = []
+    supported_languages: List[str] = [
+        LOCALE_LANGUAGE_MAPPING[locale] for locale in supported_locales if locale in LOCALE_LANGUAGE_MAPPING
+    ]
     # Make sure that the main label are added to labels and aliases to aliases.
     main_languages: Set[str] = set()
     t1: float = time.perf_counter()
@@ -201,7 +205,7 @@ def wikidata_to_thing(
     descriptions: List[Description] = []
     if "wiki" in wikidata_thing.sitelinks and pull_wikipedia:
         for lang, title in wikidata_thing.sitelinks["wiki"].titles.items():
-            if str(lang) in supported_locales:
+            if str(lang) in supported_languages:
                 locale: LocaleCode = LANGUAGE_LOCALE_MAPPING.get(LanguageCode(lang), EN_US)
                 if locale in supported_locales:
                     try:
