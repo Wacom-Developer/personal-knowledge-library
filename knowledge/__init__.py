@@ -57,7 +57,7 @@ if logger is None:
 
     logger = loguru.logger
     logger.remove()
-    logger.info(f"Logger initialized in for pks tools.")
+    logger.info("Logger initialized in for pks tools.")
     today = datetime.now()
     logger.add(
         sys.stderr,
