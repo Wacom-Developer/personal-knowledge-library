@@ -11,19 +11,23 @@ from ontospy import Ontospy
 
 from knowledge.base.entity import LanguageCode
 from knowledge.base.language import EN_US
-from knowledge.base.ontology import ThingObject, OntologyClassReference, OntologyPropertyReference, \
-    SYSTEM_SOURCE_REFERENCE_ID
+from knowledge.base.ontology import (
+    ThingObject,
+    OntologyClassReference,
+    OntologyPropertyReference,
+    SYSTEM_SOURCE_REFERENCE_ID,
+)
 from knowledge.services.graph import WacomKnowledgeService, SearchPattern
 from knowledge.services.group import GroupManagementService
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
 
-THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
-LEONARDO_DA_VINCI: str = 'Leonardo da Vinci'
-MONA_LISA: str = 'Mona Lisa'
-FIRST_NAME: str = 'Leonardo'
-LAST_NAME: str = 'da Vinci'
-HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:creative#hasArtstyle')
+THING_OBJECT: OntologyClassReference = OntologyClassReference("wacom", "core", "Thing")
+LEONARDO_DA_VINCI: str = "Leonardo da Vinci"
+MONA_LISA: str = "Mona Lisa"
+FIRST_NAME: str = "Leonardo"
+LAST_NAME: str = "da Vinci"
+HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:creative#hasArtstyle")
 
 
 @pytest.fixture(scope="class")
@@ -67,70 +71,73 @@ class SearchFlow(TestCase):
     - Create a join group with artist data
 
     """
-    # -----------------------------------------------------------------------------------------------------------------
-    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
-                                                                    service_url=os.environ.get('INSTANCE'))
-    user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get('INSTANCE'))
-    ontology: OntologyService = OntologyService(service_url=os.environ.get('INSTANCE'))
-    group_management: GroupManagementService = GroupManagementService(service_url=os.environ.get('INSTANCE'))
 
-    '''User management service.'''
-    tenant_api_key: str = os.environ.get('TENANT_API_KEY')
+    # -----------------------------------------------------------------------------------------------------------------
+    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
+        application_name="Wacom Knowledge Listing", service_url=os.environ.get("INSTANCE")
+    )
+    user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get("INSTANCE"))
+    ontology: OntologyService = OntologyService(service_url=os.environ.get("INSTANCE"))
+    group_management: GroupManagementService = GroupManagementService(service_url=os.environ.get("INSTANCE"))
+
+    """User management service."""
+    tenant_api_key: str = os.environ.get("TENANT_API_KEY")
     LIMIT: int = 10000
 
     def test_1_create_user(self):
-        """ Create a user and join a group. """
+        """Create a user and join a group."""
         # Create an external user id
         self.cache.external_id = str(uuid.uuid4())
         # Create user
-        _, token, refresh, expire = self.user_management.create_user(self.tenant_api_key,
-                                                                     external_id=self.cache.external_id,
-                                                                     meta_data={'account-type': 'qa-test'},
-                                                                     roles=[UserRole.USER])
+        _, token, refresh, expire = self.user_management.create_user(
+            self.tenant_api_key,
+            external_id=self.cache.external_id,
+            meta_data={"account-type": "qa-test"},
+            roles=[UserRole.USER],
+        )
         self.cache.token = token
 
     def test_2_search_labels(self):
-        res_entities, next_search_page = self.knowledge_client.search_labels(search_term=LEONARDO_DA_VINCI,
-                                                                             language_code=EN_US,
-                                                                             limit=1000,
-                                                                             auth_key=self.cache.token)
+        res_entities, next_search_page = self.knowledge_client.search_labels(
+            search_term=LEONARDO_DA_VINCI, language_code=EN_US, limit=1000, auth_key=self.cache.token
+        )
 
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_3_search_description(self):
-        res_entities, next_search_page = self.knowledge_client.search_description('Michelangelo\'s Sistine Chapel',
-                                                                                  EN_US, limit=1000,
-                                                                                  auth_key=self.cache.token)
-
+        res_entities, next_search_page = self.knowledge_client.search_description(
+            "Michelangelo", EN_US, limit=1000, auth_key=self.cache.token
+        )
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_4_search_relations(self):
         art_style: Optional[ThingObject] = None
-        results, _ = self.knowledge_client.search_labels("portrait", EN_US,
-                                                         limit=1, auth_key=self.cache.token)
+        results, _ = self.knowledge_client.search_labels("portrait", EN_US, limit=1, auth_key=self.cache.token)
         for entity in results:
             art_style = entity
         self.assertIsNotNone(art_style)
-        res_entities, next_search_page = self.knowledge_client.search_relation(relation=HAS_ART_STYLE,
-                                                                               object_uri=art_style.uri,
-                                                                               language_code=EN_US,
-                                                                               auth_key=self.cache.token)
+        res_entities, next_search_page = self.knowledge_client.search_relation(
+            relation=HAS_ART_STYLE, object_uri=art_style.uri, language_code=EN_US, auth_key=self.cache.token
+        )
 
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_5_search_literals(self):
-        res_entities, next_search_page = self.knowledge_client.search_literal(search_term="Q762",
-                                                                              pattern=SearchPattern.REGEX,
-                                                                              literal=SYSTEM_SOURCE_REFERENCE_ID,
-                                                                              language_code=EN_US,
-                                                                              auth_key=self.cache.token)
+        res_entities, next_search_page = self.knowledge_client.search_literal(
+            search_term="Q762",
+            pattern=SearchPattern.REGEX,
+            literal=SYSTEM_SOURCE_REFERENCE_ID,
+            language_code=EN_US,
+            auth_key=self.cache.token,
+        )
 
         self.assertGreaterEqual(len(res_entities), 1)
 
     def teardown_class(self):
         list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=SearchFlow.LIMIT)
         for u_i in list_user_all:
-            if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
-                logging.info(f'Clean user {u_i.external_user_id}')
-                self.user_management.delete_user(self.tenant_api_key,
-                                                 external_id=u_i.external_user_id, internal_id=u_i.id, force=True)
+            if "account-type" in u_i.meta_data and u_i.meta_data.get("account-type") == "qa-test":
+                logging.info(f"Clean user {u_i.external_user_id}")
+                self.user_management.delete_user(
+                    self.tenant_api_key, external_id=u_i.external_user_id, internal_id=u_i.id, force=True
+                )

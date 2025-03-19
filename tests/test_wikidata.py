@@ -40,6 +40,7 @@ def cache_class(request):
         """
         Class to store data for the test cases.
         """
+
         WIKIDATA_QIDS: List[str] = ["Q5582", "Q1028181", "Q19363211", ""]
 
         def __init__(self):
@@ -77,12 +78,12 @@ class WikidataFlow(TestCase):
     4. Check Wikipedia summary
     """
 
-    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
-                                                                    service_url=os.environ.get('INSTANCE'),
-                                                                    service_endpoint="graph/v1")
-    tenant_api_key: str = os.environ.get('TENANT_API_KEY')
-    user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get('INSTANCE'))
-    ontology_client: OntologyService = OntologyService(service_url=os.environ.get('INSTANCE'))
+    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
+        application_name="Wacom Knowledge Listing", service_url=os.environ.get("INSTANCE"), service_endpoint="graph/v1"
+    )
+    tenant_api_key: str = os.environ.get("TENANT_API_KEY")
+    user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get("INSTANCE"))
+    ontology_client: OntologyService = OntologyService(service_url=os.environ.get("INSTANCE"))
     external_id: Optional[str] = None
 
     def setUp(self):
@@ -94,6 +95,7 @@ class WikidataFlow(TestCase):
         context: Optional[OntologyContext] = self.ontology_client.context()
         if not context:
             import sys
+
             sys.exit(0)
         else:
             context_name: str = context.context
@@ -102,7 +104,7 @@ class WikidataFlow(TestCase):
             # Register ontology
             register_ontology(rdf_export)
             # Load configuration
-            load_configuration(Path(__file__).parent.parent / 'pkl-cache' / 'ontology_mapping.json')
+            load_configuration(Path(__file__).parent.parent / "pkl-cache" / "ontology_mapping.json")
 
     def test_1_wikidata(self):
         # Q762 is Leonardo da Vinci and Q12418 is Mona Lisa
@@ -118,8 +120,9 @@ class WikidataFlow(TestCase):
 
     def test_3_wikidata_to_thing(self):
         for qid, wiki_thing in self.cache.wikidata_things.items():
-            thing, warnings = wikidata_to_thing(wiki_thing, self.cache.relations, SUPPORTED_LOCALES,
-                                                self.cache.wikidata_things)
+            thing, warnings = wikidata_to_thing(
+                wiki_thing, self.cache.relations, SUPPORTED_LOCALES, self.cache.wikidata_things
+            )
 
             if qid == "Q762":
                 # Leonardo da Vinci
@@ -166,21 +169,24 @@ class WikidataFlow(TestCase):
             dict_wikidata: Dict[str, Any] = e.__dict__()
             self.assertIsInstance(dict_wikidata, dict)
 
-
         wikidata_things: Dict[str, WikidataThing] = {e.qid: e for e in entities}
         relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(wikidata_things)
-        relations_2: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor_qids(wikidata_things,
-                                                                                         set(wikidata_things.keys()))
+        relations_2: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor_qids(
+            wikidata_things, set(wikidata_things.keys())
+        )
         for qid, rel in relations.items():
             if qid not in relations_2:
                 self.fail(f"QID {qid} is not in the second relations.")
             if len(rel) != len(relations_2[qid]):
                 self.fail(f"QID {qid} has different number of relations.")
-        load_configuration(Path(__file__).parent.parent / 'pkl-cache' / 'ontology_mapping.json')
-        van_gogh, import_warnings = wikidata_to_thing(wikidata_things["Q5582"], all_relations=relations,
-                                                      supported_locales=SUPPORTED_LOCALES,
-                                                      pull_wikipedia=True,
-                                                      all_wikidata_objects=wikidata_things)
+        load_configuration(Path(__file__).parent.parent / "pkl-cache" / "ontology_mapping.json")
+        van_gogh, import_warnings = wikidata_to_thing(
+            wikidata_things["Q5582"],
+            all_relations=relations,
+            supported_locales=SUPPORTED_LOCALES,
+            pull_wikipedia=True,
+            all_wikidata_objects=wikidata_things,
+        )
         check_lang: List[str] = []
 
         for la in van_gogh.label:
@@ -192,8 +198,9 @@ class WikidataFlow(TestCase):
                 raise ValueError(f"There is a label is not tagged as main. {la}")
         for al in van_gogh.alias:
             if str(al.language_code) not in check_lang:
-                raise ValueError(f"There is an alias with a language code {al.language_code} "
-                                 f"that is not in the main labels.")
+                raise ValueError(
+                    f"There is an alias with a language code {al.language_code} " f"that is not in the main labels."
+                )
 
             if al.main:
                 raise ValueError(f"Label is not alias. {al}")
@@ -203,5 +210,15 @@ class WikidataFlow(TestCase):
         search_results: List[WikidataSearchResult] = WikiDataAPIClient.search_term("Leonardo Da Vinci", EN)
         self.assertGreaterEqual(len(search_results), 1)
         qids: List[str] = [sr.qid for sr in search_results]
-        if 'Q762' not in qids:
+        if "Q762" not in qids:
             raise ValueError("Q762 (Leonardo Da Vinci) is not in the search results.")
+
+    def test_7_taxonomy(self):
+        """Test the taxonomy functionality."""
+        taxonomy: Dict[str, WikidataClass] = WikiDataAPIClient.superclasses("Q5")
+        self.assertGreaterEqual(len(taxonomy), 1)
+        for cls in taxonomy.values():
+            self.assertIsInstance(cls, WikidataClass)
+            self.assertIsInstance(cls.qid, str)
+            self.assertIsInstance(cls.label, str)
+            self.assertIsInstance(cls.__dict__(), dict)

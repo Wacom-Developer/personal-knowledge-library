@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2024 Wacom. All rights reserved.
+# Copyright © 2024-present Wacom. All rights reserved.
 import logging
 import os
 import uuid
@@ -11,9 +11,15 @@ from faker import Faker
 
 from knowledge.base.entity import Label
 from knowledge.base.language import JA_JP, EN_US, DE_DE, BG_BG, FR_FR, IT_IT, ES_ES
-from knowledge.base.ontology import ThingObject, OntologyClassReference, OntologyPropertyReference, DataProperty, \
-    ObjectProperty, LAST_UPDATE_DATE, SYSTEM_SOURCE_REFERENCE_ID
-from knowledge.ontomapping import IS_RELATED
+from knowledge.base.ontology import (
+    ThingObject,
+    OntologyClassReference,
+    OntologyPropertyReference,
+    DataProperty,
+    ObjectProperty,
+    LAST_UPDATE_DATE,
+    SYSTEM_SOURCE_REFERENCE_ID,
+)
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
 from knowledge.services.asyncio.group import AsyncGroupManagementService
 from knowledge.services.asyncio.users import AsyncUserManagementService
@@ -21,21 +27,22 @@ from knowledge.services.base import WacomServiceException
 from knowledge.services.graph import Visibility, SearchPattern
 from knowledge.services.group import Group, GroupInfo
 from knowledge.services.users import User, UserRole
-from knowledge.utils.graph import async_things_iter, async_count_things
+from knowledge.utils.graph import async_things_iter, async_count_things, async_things_session_iter
 
-THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
-LEONARDO_DA_VINCI: str = 'Leonardo da Vinci'
-MONA_LISA: str = 'Mona Lisa'
-FIRST_NAME: str = 'Leonardo'
-LAST_NAME: str = 'da Vinci'
+THING_OBJECT: OntologyClassReference = OntologyClassReference("wacom", "core", "Thing")
+LEONARDO_DA_VINCI: str = "Leonardo da Vinci"
+MONA_LISA: str = "Mona Lisa"
+FIRST_NAME: str = "Leonardo"
+LAST_NAME: str = "da Vinci"
 LEONARDO_QID: str = "Q762"
-dummy_image: Path = Path(__file__).parent / '..' / 'assets' / 'dummy.png'
-tenant_api_key: str = os.environ.get('TENANT_API_KEY')
+dummy_image: Path = Path(__file__).parent / ".." / "assets" / "dummy.png"
+tenant_api_key: str = os.environ.get("TENANT_API_KEY")
 # Create an external user id
 external_id: str = str(uuid.uuid4())
 external_id_2: str = str(uuid.uuid4())
 LIMIT: int = 10000
-HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse('wacom:creative#hasArtstyle')
+HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:creative#hasArtstyle")
+IS_RELATED: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:core#isRelated")
 
 
 def create_thing(concept_type: OntologyClassReference) -> ThingObject:
@@ -54,15 +61,19 @@ def create_thing(concept_type: OntologyClassReference) -> ThingObject:
         thing.add_description(fake.text(), lang_inst)
         names: List[str] = name.split()
         if len(names) == 2:
-            thing.add_data_property(DataProperty(names[0],  OntologyPropertyReference.parse('wacom:core#firstName'),
-                                                 language_code=lang_inst))
-            thing.add_data_property(DataProperty(names[1],  OntologyPropertyReference.parse('wacom:core#lastName'),
-                                                 language_code=lang_inst))
+            thing.add_data_property(
+                DataProperty(names[0], OntologyPropertyReference.parse("wacom:core#firstName"), language_code=lang_inst)
+            )
+            thing.add_data_property(
+                DataProperty(names[1], OntologyPropertyReference.parse("wacom:core#lastName"), language_code=lang_inst)
+            )
         elif len(names) == 3:
-            thing.add_data_property(DataProperty(names[1],  OntologyPropertyReference.parse('wacom:core#firstName'),
-                                                 language_code=lang_inst))
-            thing.add_data_property(DataProperty(names[2],  OntologyPropertyReference.parse('wacom:core#lastName'),
-                                                 language_code=lang_inst))
+            thing.add_data_property(
+                DataProperty(names[1], OntologyPropertyReference.parse("wacom:core#firstName"), language_code=lang_inst)
+            )
+            thing.add_data_property(
+                DataProperty(names[2], OntologyPropertyReference.parse("wacom:core#lastName"), language_code=lang_inst)
+            )
     return thing
 
 
@@ -74,22 +85,22 @@ def create_faulty_thing() -> ThingObject:
     instance: ThingObject
         Thing object wrong.
     """
-    thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse('wacom:core#NOT_EXISTING'))
-    thing.add_label('Test', EN_US)
+    thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse("wacom:core#NOT_EXISTING"))
+    thing.add_label("Test", EN_US)
     return thing
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-instance: str = os.environ.get('INSTANCE')
-async_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(application_name="Async client test",
-                                                                      service_url=instance,
-                                                                      service_endpoint="graph/v1")
-group_management: AsyncGroupManagementService = AsyncGroupManagementService(application_name="Async client test",
-                                                                            service_url=instance,
-                                                                            service_endpoint="graph/v1")
-user_management: AsyncUserManagementService = AsyncUserManagementService(application_name="Async client test",
-                                                                         service_url=instance,
-                                                                         service_endpoint="graph/v1")
+instance: str = os.environ.get("INSTANCE")
+async_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(
+    application_name="Async client test", service_url=instance, service_endpoint="graph/v1"
+)
+group_management: AsyncGroupManagementService = AsyncGroupManagementService(
+    application_name="Async client test", service_url=instance, service_endpoint="graph/v1"
+)
+user_management: AsyncUserManagementService = AsyncUserManagementService(
+    application_name="Async client test", service_url=instance, service_endpoint="graph/v1"
+)
 # ----------------------------------------------------------------------------------------------------------------------
 
 
@@ -99,53 +110,56 @@ async def test_01_handle_user():
     users: List[User] = await user_management.listing_users(tenant_api_key, limit=LIMIT)
     for user in users:
         if user.external_user_id == external_id:
-            raise AssertionError('User already exists')
+            raise AssertionError("User already exists")
     # Create user
-    _, token, refresh, expire = await user_management.create_user(tenant_api_key,
-                                                                  external_id=external_id,
-                                                                  meta_data={'account-type': 'qa-test'},
-                                                                  roles=[UserRole.USER])
+    _, token, refresh, expire = await user_management.create_user(
+        tenant_api_key, external_id=external_id, meta_data={"account-type": "qa-test"}, roles=[UserRole.USER]
+    )
     assert token is not None
     assert refresh is not None
     assert expire is not None
     users: List[User] = await user_management.listing_users(tenant_api_key, limit=LIMIT)
     if external_id not in [u.external_user_id for u in users]:
-        raise AssertionError('User not created')
+        raise AssertionError("User not created")
     new_user: Optional[User] = None
     for user in users:
         if user.external_user_id == external_id:
             new_user = user
 
     # Update user
-    await user_management.update_user(tenant_api_key, internal_id=new_user.id, external_id=new_user.external_user_id,
-                                      meta_data={'account-type': 'qa-test', "updated": True})
+    await user_management.update_user(
+        tenant_api_key,
+        internal_id=new_user.id,
+        external_id=new_user.external_user_id,
+        meta_data={"account-type": "qa-test", "updated": True},
+    )
     users: List[User] = await user_management.listing_users(tenant_api_key, limit=LIMIT)
     for u in users:
         if u.external_user_id == external_id:
-            assert u.meta_data.get('updated') == 'true'
+            assert u.meta_data.get("updated") == "true"
 
 
 async def test_02_push_entity():
     """Push entity."""
     global tenant_api_key, external_id, dummy_image
-    thing: ThingObject = create_thing(OntologyClassReference.parse('wacom:core#Person'))
+    thing: ThingObject = create_thing(OntologyClassReference.parse("wacom:core#Person"))
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     await async_client.handle_token(force_refresh=True)
     thing_uri: str = await async_client.create_entity(thing)
     assert thing_uri is not None
     new_thing: ThingObject = await async_client.entity(thing_uri)
     assert new_thing is not None
-    assert new_thing.concept_type == OntologyClassReference.parse('wacom:core#Person')
+    assert new_thing.concept_type == OntologyClassReference.parse("wacom:core#Person")
     assert new_thing.image is None
     await async_client.set_entity_image_local(thing_uri, dummy_image)
     new_image_thing: ThingObject = await async_client.entity(thing_uri)
     assert new_image_thing is not None
     image_url: str = new_image_thing.image
-    await async_client.set_entity_image_url(thing_uri, image_url, mime_type='image/png')
+    await async_client.set_entity_image_url(thing_uri, image_url, mime_type="image/png")
     wrong_thing: ThingObject = create_faulty_thing()
     try:
         await async_client.create_entity(wrong_thing)
-        raise AssertionError('Exception not raised')
+        raise AssertionError("Exception not raised")
     except WacomServiceException as e:
         assert e.status_code == 400
         assert e.url == async_client.service_base_url + AsyncWacomKnowledgeService.ENTITY_ENDPOINT
@@ -161,25 +175,27 @@ async def test_03_get_entity():
     # This user only created one entity
     assert count == 1
     # Test async iterator
-    async for thing, user_token, refresh_token in async_things_iter(async_client, user_token, refresh_token,
-                                                                    THING_OBJECT, only_own=True):
+    async for thing, user_token, refresh_token in async_things_iter(
+        async_client, user_token, refresh_token, THING_OBJECT, only_own=True
+    ):
         full_entity: ThingObject = await async_client.entity(thing.uri)
         # This user only created one entity
-        assert full_entity.concept_type == OntologyClassReference.parse('wacom:core#Person')
-        # Entity must not be empty
+        assert full_entity.concept_type == OntologyClassReference.parse("wacom:core#Person")
+        # Entities must not be empty
         assert full_entity is not None
 
 
 async def test_04_update_entity():
-    """Update entity. """
+    """Update entity."""
     global tenant_api_key, external_id
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
-    async for thing, user_token, refresh_token in async_things_iter(async_client, user_token, refresh_token,
-                                                                    THING_OBJECT, only_own=True):
+    async for thing, user_token, refresh_token in async_things_iter(
+        async_client, user_token, refresh_token, THING_OBJECT, only_own=True
+    ):
         full_entity: ThingObject = await async_client.entity(thing.uri)
-        # Entity must not be empty
+        # Entities must not be empty
         assert full_entity is not None
         # Update entity
         update_time: str = datetime.now().isoformat()
@@ -197,16 +213,17 @@ async def test_05_literal_entity():
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
-    async for thing, user_token, refresh_token in async_things_iter(async_client, user_token, refresh_token,
-                                                                    THING_OBJECT, only_own=True):
+    async for thing, user_token, refresh_token in async_things_iter(
+        async_client, user_token, refresh_token, THING_OBJECT, only_own=True
+    ):
         full_entity: ThingObject = await async_client.entity(thing.uri)
-        # Entity must not be empty
+        # Entities must not be empty
         assert full_entity is not None
         literals: List[DataProperty] = await async_client.literals(full_entity.uri, auth_key=user_token)
         assert len(literals) > 0
         try:
             await async_client.literals(uuid.uuid4().hex, auth_key=user_token)
-            raise AssertionError('Exception not raised')
+            raise AssertionError("Exception not raised")
         except WacomServiceException as e:
             assert e.status_code == 404
             assert isinstance(e, WacomServiceException)
@@ -218,16 +235,17 @@ async def test_06_labels_entity():
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
-    async for thing, user_token, refresh_token in async_things_iter(async_client, user_token, refresh_token,
-                                                                    THING_OBJECT, only_own=True):
+    async for thing, user_token, refresh_token in async_things_iter(
+        async_client, user_token, refresh_token, THING_OBJECT, only_own=True
+    ):
         full_entity: ThingObject = await async_client.entity(thing.uri)
-        # Entity must not be empty
+        # Entities must not be empty
         assert full_entity is not None
         labels: List[Label] = await async_client.labels(full_entity.uri, auth_key=user_token)
         assert len(labels) > 0
         try:
             await async_client.labels(uuid.uuid4().hex, auth_key=user_token)
-            raise AssertionError('Exception not raised')
+            raise AssertionError("Exception not raised")
         except WacomServiceException as e:
             assert e.status_code == 404
             assert isinstance(e, WacomServiceException)
@@ -239,20 +257,23 @@ async def test_07_relations_entity():
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
-    async for thing, user_token, refresh_token in async_things_iter(async_client, user_token, refresh_token,
-                                                                    THING_OBJECT, only_own=True):
+    async for thing, user_token, refresh_token in async_things_iter(
+        async_client, user_token, refresh_token, THING_OBJECT, only_own=True
+    ):
         full_entity: ThingObject = await async_client.entity(thing.uri)
-        # Entity must not be empty
+        # Entities must not be empty
         assert full_entity is not None
         # Pull relations if configured
-        relations: Dict[OntologyPropertyReference, ObjectProperty] = await async_client.relations(uri=full_entity.uri,
-                                                                                                  auth_key=user_token)
+        relations: Dict[OntologyPropertyReference, ObjectProperty] = await async_client.relations(
+            uri=full_entity.uri, auth_key=user_token
+        )
         # Assert relations are
         assert len(relations) == 0
         await async_client.create_relation(full_entity.uri, IS_RELATED, full_entity.uri, auth_key=user_token)
         # Pull relations if configured
-        relations: Dict[OntologyPropertyReference, ObjectProperty] = await async_client.relations(uri=full_entity.uri,
-                                                                                                  auth_key=user_token)
+        relations: Dict[OntologyPropertyReference, ObjectProperty] = await async_client.relations(
+            uri=full_entity.uri, auth_key=user_token
+        )
         # Assert relations are
         assert len(relations) == 1
 
@@ -261,26 +282,23 @@ async def test_08_delete_entity():
     """Delete the entity."""
     global tenant_api_key, external_id
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
-    user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
-    async for thing, user_token, refresh_token in async_things_iter(async_client, user_token, refresh_token,
-                                                                    THING_OBJECT, only_own=True):
+    async for thing in async_things_session_iter(async_client, THING_OBJECT, only_own=True):
         full_entity: ThingObject = await async_client.entity(thing.uri)
-        await async_client.delete_entity(full_entity.uri, force=True, auth_key=user_token)
+        await async_client.delete_entity(full_entity.uri, force=True)
 
 
 async def test_09_search_labels():
     """Search for labels."""
     global tenant_api_key, external_id
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
-    res_entities, next_search_page = await async_client.search_labels(search_term=LEONARDO_DA_VINCI,
-                                                                      language_code=EN_US,
-                                                                      limit=10)
+    res_entities, next_search_page = await async_client.search_labels(
+        search_term=LEONARDO_DA_VINCI, language_code=EN_US, limit=10
+    )
     assert len(res_entities) > 1
-    res_entities, next_search_page = await async_client.search_labels(search_term=LEONARDO_DA_VINCI,
-                                                                      language_code=EN_US,
-                                                                      exact_match=True,
-                                                                      limit=10)
+    res_entities, next_search_page = await async_client.search_labels(
+        search_term=LEONARDO_DA_VINCI, language_code=EN_US, exact_match=True, limit=10
+    )
     assert len(res_entities) >= 1
 
 
@@ -288,8 +306,9 @@ async def test_10_search_description():
     """Test the search for descriptions."""
     global tenant_api_key, external_id
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
-    res_entities, next_search_page = await async_client.search_description('Michelangelo\'s Sistine Chapel',
-                                                                           EN_US, limit=10)
+    res_entities, next_search_page = await async_client.search_description(
+        "Michelangelo's Sistine Chapel", EN_US, limit=10
+    )
 
     assert len(res_entities) >= 1
 
@@ -303,30 +322,35 @@ async def test_11_search_relations():
     for entity in results:
         art_style = entity
     assert art_style is not None
-    res_entities, next_search_page = await async_client.search_relation(relation=HAS_ART_STYLE,
-                                                                        object_uri=art_style.uri, language_code=EN_US)
+    art_style.object_properties = await async_client.relations(art_style.uri)
+    res_entities, next_search_page = await async_client.search_relation(
+        relation=HAS_ART_STYLE, object_uri=art_style.uri, language_code=EN_US
+    )
 
     assert len(res_entities) >= 1
     for entity in res_entities:
-        results, _ = await async_client.search_relation(subject_uri=entity.uri, relation=HAS_ART_STYLE,
-                                                        language_code=EN_US)
+        results, _ = await async_client.search_relation(
+            subject_uri=entity.uri, relation=HAS_ART_STYLE, language_code=EN_US
+        )
         assert len(results) >= 1
 
     try:
         # Only one parameter is allowed: either subject_uri or object_uri
-        r, _ = await async_client.search_relation(subject_uri=art_style.uri, relation=HAS_ART_STYLE,
-                                                  object_uri=art_style.uri, language_code=EN_US)
-        raise AssertionError('Exception not raised')
+        r, _ = await async_client.search_relation(
+            subject_uri=art_style.uri, relation=HAS_ART_STYLE, object_uri=art_style.uri, language_code=EN_US
+        )
+        raise AssertionError("Exception not raised")
     except WacomServiceException as e:
-        assert e.message == 'Only one parameter is allowed: either subject_uri or object_uri!'
+        assert e.message == "Only one parameter is allowed: either subject_uri or object_uri!"
         assert isinstance(e, WacomServiceException)
     try:
         # at least one parameter is allowed: either subject_uri or object_uri
-        r, _ = await async_client.search_relation(subject_uri=None, relation=HAS_ART_STYLE,
-                                                  object_uri=None, language_code=EN_US)
-        raise AssertionError('Exception not raised')
+        r, _ = await async_client.search_relation(
+            subject_uri=None, relation=HAS_ART_STYLE, object_uri=None, language_code=EN_US
+        )
+        raise AssertionError("Exception not raised")
     except WacomServiceException as e:
-        assert e.message == 'At least one parameters is must be defined: either subject_uri or object_uri!'
+        assert e.message == "At least one parameters is must be defined: either subject_uri or object_uri!"
         assert isinstance(e, WacomServiceException)
 
 
@@ -334,11 +358,9 @@ async def test_12_search_literals():
     """Test the search for literals."""
     global tenant_api_key, external_id
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
-    res_entities, next_search_page = await async_client.search_literal(search_term=LEONARDO_QID,
-                                                                       pattern=SearchPattern.REGEX,
-                                                                       literal=SYSTEM_SOURCE_REFERENCE_ID,
-                                                                       language_code=EN_US)
-
+    res_entities, next_search_page = await async_client.search_literal(
+        search_term=LEONARDO_QID, pattern=SearchPattern.REGEX, literal=SYSTEM_SOURCE_REFERENCE_ID, language_code=EN_US
+    )
     assert len(res_entities) >= 1
 
 
@@ -353,8 +375,9 @@ async def test_13_named_entity_linking():
         break
     assert leo is not None
     for label_lang in leo.label:
-        res_entities = await async_client.link_personal_entities(text=label_lang.content,
-                                                                 language_code=label_lang.language_code)
+        res_entities = await async_client.link_personal_entities(
+            text=label_lang.content, language_code=label_lang.language_code
+        )
         assert len(res_entities) >= 1
 
 
@@ -374,20 +397,19 @@ async def test_14_activations():
 
 
 async def test_15_create_group_users():
-    """ Create users."""
+    """Create users."""
     global tenant_api_key, external_id, external_id_2
 
-    info, token, refresh, expire = await user_management.create_user(tenant_api_key,
-                                                                     external_id=external_id_2,
-                                                                     meta_data={'account-type': 'qa-test'},
-                                                                     roles=[UserRole.USER])
+    info, token, refresh, expire = await user_management.create_user(
+        tenant_api_key, external_id=external_id_2, meta_data={"account-type": "qa-test"}, roles=[UserRole.USER]
+    )
     assert token is not None
     assert refresh is not None
     assert expire is not None
 
 
 async def test_16_group_flows():
-    """ Create group."""
+    """Create group."""
     # Now, user 1 creates a group
     global tenant_api_key, external_id, external_id_2
     await group_management.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
@@ -402,11 +424,12 @@ async def test_16_group_flows():
 
     # User 2 joins the group
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
-    thing: ThingObject = create_thing(OntologyClassReference.parse('wacom:core#Person'))
+    thing: ThingObject = create_thing(OntologyClassReference.parse("wacom:core#Person"))
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     thing.uri = await async_client.create_entity(thing)
-    second_user_token, second_refresh_token, _ = await async_client.request_user_token(tenant_api_key=tenant_api_key,
-                                                                                       external_id=external_id_2)
+    second_user_token, second_refresh_token, _ = await async_client.request_user_token(
+        tenant_api_key=tenant_api_key, external_id=external_id_2
+    )
     try:
         await async_client.entity(thing.uri, auth_key=second_user_token)
         raise AssertionError("User 2 should not have access to the entity.")
@@ -426,9 +449,9 @@ async def test_16_group_flows():
     assert groups[0].id == new_group.id
     # Add user to group
     external_id_3 = str(uuid.uuid4())
-    info, token, _, _ = await user_management.create_user(tenant_api_key, external_id=external_id_3,
-                                                          meta_data={'account-type': 'qa-test'},
-                                                          roles=[UserRole.USER])
+    info, token, _, _ = await user_management.create_user(
+        tenant_api_key, external_id=external_id_3, meta_data={"account-type": "qa-test"}, roles=[UserRole.USER]
+    )
     await group_management.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     groups: List[Group] = await group_management.listing_groups()
     assert len(groups) == 1
@@ -436,14 +459,14 @@ async def test_16_group_flows():
     await group_management.add_user_to_group(group.id, info.id)
     # Adding entity to group
     await group_management.login(tenant_api_key=tenant_api_key, external_user_id=external_id_2)
-    user_token, refresh_token, _ = await group_management.request_user_token(tenant_api_key=tenant_api_key,
-                                                                             external_id=external_id)
+    user_token, refresh_token, _ = await group_management.request_user_token(
+        tenant_api_key=tenant_api_key, external_id=external_id
+    )
     groups: List[Group] = await group_management.listing_groups()
     thing_uri: Optional[str] = None
-    async for entity, user_token, refresh_token in async_things_iter(async_client, concept_type=THING_OBJECT,
-                                                                     user_token=user_token,
-                                                                     refresh_token=refresh_token,
-                                                                     only_own=True):
+    async for entity, user_token, refresh_token in async_things_iter(
+        async_client, concept_type=THING_OBJECT, user_token=user_token, refresh_token=refresh_token, only_own=True
+    ):
         thing_uri = entity.uri
         break
     assert thing_uri is not None
@@ -490,19 +513,19 @@ async def test_16_group_flows():
 
 
 async def test_17_public_entity():
-    """ Public entity."""
+    """Public entity."""
     global tenant_api_key, external_id, external_id_2
     thing: Optional[ThingObject] = None
-    user_token, refresh_token, _ = await async_client.request_user_token(tenant_api_key=tenant_api_key,
-                                                                         external_id=external_id)
-    async for entity, user_token, refresh_token in async_things_iter(async_client, concept_type=THING_OBJECT,
-                                                                     user_token=user_token,
-                                                                     refresh_token=refresh_token,
-                                                                     only_own=True):
+    user_token, refresh_token, _ = await async_client.request_user_token(
+        tenant_api_key=tenant_api_key, external_id=external_id
+    )
+    async for entity, user_token, refresh_token in async_things_iter(
+        async_client, concept_type=THING_OBJECT, user_token=user_token, refresh_token=refresh_token, only_own=True
+    ):
         thing = entity
         break
     assert thing is not None
-    # Entity must not be empty
+    # Entities must not be empty
     thing.tenant_access_right.read = True
     await async_client.update_entity(thing, auth_key=user_token)
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id_2)
@@ -530,7 +553,8 @@ async def test_18_delete_users():
     """Clean up the test environment."""
     list_user_all: List[User] = await user_management.listing_users(tenant_api_key, limit=LIMIT)
     for u_i in list_user_all:
-        if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
-            logging.info(f'Clean user {u_i.external_user_id}')
-            await user_management.delete_user(tenant_api_key, external_id=u_i.external_user_id, internal_id=u_i.id,
-                                              force=True)
+        if "account-type" in u_i.meta_data and u_i.meta_data.get("account-type") == "qa-test":
+            logging.info(f"Clean user {u_i.external_user_id}")
+            await user_management.delete_user(
+                tenant_api_key, external_id=u_i.external_user_id, internal_id=u_i.id, force=True
+            )

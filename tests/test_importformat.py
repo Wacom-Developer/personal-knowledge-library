@@ -4,11 +4,11 @@ from unittest import TestCase
 
 from faker import Faker
 
-from knowledge.base.entity import Label, USE_NEL_TAG, LABELS_TAG
+from knowledge.base.entity import Label, LABELS_TAG, INDEXING_NEL_TARGET
 from knowledge.base.language import EN_US, SUPPORTED_LOCALES
 from knowledge.base.ontology import OntologyClassReference, ThingObject
 
-THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
+THING_OBJECT: OntologyClassReference = OntologyClassReference("wacom", "core", "Thing")
 
 
 class ImportFlow(TestCase):
@@ -24,16 +24,13 @@ class ImportFlow(TestCase):
         """
         faker: Faker = Faker(EN_US)
         entity: ThingObject = ThingObject(
-            label=[
-                Label(
-                    content=faker.word(),
-                    language_code=EN_US,
-                    main=True)],
+            label=[Label(content=faker.word(), language_code=EN_US, main=True)],
             concept_type=THING_OBJECT,
-            use_for_nel=False)
+            use_for_nel=True,
+        )
 
         entity_dict = entity.__import_format_dict__()
-        self.assertEqual(entity_dict[USE_NEL_TAG], entity.use_for_nel)
+        self.assertTrue(INDEXING_NEL_TARGET in entity_dict["targets"])
         new_entity = ThingObject.from_import_dict(entity_dict)
         self.assertEqual(new_entity.use_for_nel, entity.use_for_nel)
 
@@ -52,5 +49,3 @@ class ImportFlow(TestCase):
         new_entity = ThingObject.from_import_dict(entity_dict)
         self.assertEqual(len(new_entity.label), len(entity.label))
         self.assertEqual(len(new_entity.alias), len(entity.alias))
-
-

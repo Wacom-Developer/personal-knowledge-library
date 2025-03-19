@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2023 Wacom. All rights reserved.
+# Copyright © 2023-present Wacom. All rights reserved.
 import logging
 import os
 import uuid
@@ -14,16 +14,16 @@ from knowledge.base.language import JA_JP, EN_US, DE_DE
 from knowledge.base.ontology import ThingObject, OntologyClassReference
 from knowledge.services.base import WacomServiceException
 from knowledge.services.graph import WacomKnowledgeService, Visibility
-from knowledge.services.group import GroupManagementService, Group
+from knowledge.services.group import GroupManagementService, Group, GroupInfo
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
-from knowledge.utils.graph import count_things
+from knowledge.utils.graph import count_things, things_iter
 
-THING_OBJECT: OntologyClassReference = OntologyClassReference('wacom', 'core', 'Thing')
+THING_OBJECT: OntologyClassReference = OntologyClassReference("wacom", "core", "Thing")
 
 
 def create_thing() -> ThingObject:
-    thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse('wacom:core#Person'))
+    thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse("wacom:core#Person"))
     for lang_inst in [JA_JP, EN_US, DE_DE]:
         fake: Faker = Faker(lang_inst)
         name: str = fake.name()
@@ -46,6 +46,8 @@ def cache_class(request):
             self.__internal_id_2: Optional[str] = None
             self.__token: Optional[str] = None
             self.__token_2: Optional[str] = None
+            self.__refresh: Optional[str] = None
+            self.__refresh_2: Optional[str] = None
             self.__thing_uri: Optional[str] = None
             self.__join_key: Optional[str] = None
 
@@ -113,6 +115,22 @@ def cache_class(request):
         def token_2(self, token: Optional[str]):
             self.__token_2 = token
 
+        @property
+        def refresh(self) -> Optional[str]:
+            return self.__refresh
+
+        @refresh.setter
+        def refresh(self, refresh: Optional[str]):
+            self.__refresh = refresh
+
+        @property
+        def refresh_2(self) -> Optional[str]:
+            return self.__refresh_2
+
+        @refresh_2.setter
+        def refresh_2(self, refresh_2: Optional[str]):
+            self.__refresh_2 = refresh_2
+
     # set a class attribute on the invoking test context
     request.cls.cache = ClassDB()
 
@@ -127,57 +145,65 @@ class GroupFlow(TestCase):
     - Access
 
     """
-    # -----------------------------------------------------------------------------------------------------------------
-    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
-                                                                    service_url=os.environ.get('INSTANCE'))
-    user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get('INSTANCE'))
-    ontology: OntologyService = OntologyService(service_url=os.environ.get('INSTANCE'))
-    group_management: GroupManagementService = GroupManagementService(service_url=os.environ.get('INSTANCE'))
 
-    '''User management service.'''
-    tenant_api_key: str = os.environ.get('TENANT_API_KEY')
+    # -----------------------------------------------------------------------------------------------------------------
+    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
+        application_name="Wacom Knowledge Listing", service_url=os.environ.get("INSTANCE")
+    )
+    user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get("INSTANCE"))
+    ontology: OntologyService = OntologyService(service_url=os.environ.get("INSTANCE"))
+    group_management: GroupManagementService = GroupManagementService(service_url=os.environ.get("INSTANCE"))
+
+    """User management service."""
+    tenant_api_key: str = os.environ.get("TENANT_API_KEY")
     LIMIT: int = 10000
 
     def test_1_create_users(self):
-        """ Create users."""
+        """Create users."""
         # Create an external user id
         self.cache.external_id = str(uuid.uuid4())
         self.cache.external_id_2 = str(uuid.uuid4())
 
         # Create user
-        _, token, refresh, expire = self.user_management.create_user(self.tenant_api_key,
-                                                                     external_id=self.cache.external_id,
-                                                                     meta_data={'account-type': 'qa-test'},
-                                                                     roles=[UserRole.USER])
+        _, token, refresh, expire = self.user_management.create_user(
+            self.tenant_api_key,
+            external_id=self.cache.external_id,
+            meta_data={"account-type": "qa-test"},
+            roles=[UserRole.USER],
+        )
         self.cache.token = token
-        info, token, refresh, expire = self.user_management.create_user(self.tenant_api_key,
-                                                                        external_id=self.cache.external_id_2,
-                                                                        meta_data={'account-type': 'qa-test'},
-                                                                        roles=[UserRole.USER])
+        self.cache.refresh = refresh
+        info, token, refresh, expire = self.user_management.create_user(
+            self.tenant_api_key,
+            external_id=self.cache.external_id_2,
+            meta_data={"account-type": "qa-test"},
+            roles=[UserRole.USER],
+        )
         self.cache.token_2 = token
         self.cache.internal_id_2 = info.id
+        self.cache.refresh_2 = refresh
 
     def test_2_push_entity(self):
-        """ Push entity."""
+        """Push entity."""
         thing: ThingObject = create_thing()
         before: int = count_things(self.knowledge_client, self.cache.token, THING_OBJECT, only_own=True)
         uri_thing: str = self.knowledge_client.create_entity(thing, auth_key=self.cache.token)
         after: int = count_things(self.knowledge_client, self.cache.token, THING_OBJECT, only_own=True)
-        self.assertEqual(before + 1, after, "Entity was not created.")
+        self.assertEqual(before + 1, after, "Entities was not created.")
         self.cache.thing_uri = uri_thing
-        self.knowledge_client.set_entity_image_local(uri_thing,
-                                                     Path(__file__).parent / '..' / 'assets' / 'dummy.png',
-                                                     auth_key=self.cache.token)
+        self.knowledge_client.set_entity_image_local(
+            uri_thing, Path(__file__).parent / ".." / "assets" / "dummy.png", auth_key=self.cache.token
+        )
 
     def test_3_create_group(self):
-        """ Create group."""
+        """Create group."""
         # Now, user 1 creates a group
         g: Group = self.group_management.create_group("qa-test-group", auth_key=self.cache.token)
         self.cache.group_id = g.id
         self.cache.join_key = g.join_key
 
     def test_4_join_group(self):
-        """ Join group."""
+        """Join group."""
         self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token)
         try:
             self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
@@ -190,43 +216,60 @@ class GroupFlow(TestCase):
         self.assertEqual(len(groups), 1, "User 2 should only be in 1 group.")
 
     def test_5_add_user(self):
-        """ Add user to group."""
+        """Add user to group."""
         external_id_3 = str(uuid.uuid4())
-        info, token, _, _ = self.user_management.create_user(self.tenant_api_key, external_id=external_id_3,
-                                                             meta_data={'account-type': 'qa-test'},
-                                                             roles=[UserRole.USER])
+        info, token, _, _ = self.user_management.create_user(
+            self.tenant_api_key, external_id=external_id_3, meta_data={"account-type": "qa-test"}, roles=[UserRole.USER]
+        )
         self.group_management.add_user_to_group(self.cache.group_id, info.id, auth_key=self.cache.token)
 
     def test_6_add_entity_to_group(self):
-        """ Add entity to group."""
+        """Add entity to group."""
         # Adding entity to group
         groups: List[Group] = self.group_management.listing_groups(auth_key=self.cache.token_2)
-        before_shared_count: int = count_things(self.knowledge_client, self.cache.token, THING_OBJECT,
-                                                visibility=Visibility.SHARED, only_own=True)
+        before_shared_count: int = count_things(
+            self.knowledge_client, self.cache.token, THING_OBJECT, visibility=Visibility.SHARED, only_own=True
+        )
         self.assertEqual(before_shared_count, 0, "User 1 should not have access to the entity.")
-        before_shared_count_u2: int = count_things(self.knowledge_client, self.cache.token_2, THING_OBJECT,
-                                                   visibility=Visibility.SHARED, only_own=False)
+        before_shared_count_u2: int = count_things(
+            self.knowledge_client, self.cache.token_2, THING_OBJECT, visibility=Visibility.SHARED, only_own=False
+        )
         self.assertEqual(before_shared_count_u2, 0, "User 2 should not have access to the entity.")
         self.group_management.add_entity_to_group(groups[0].id, self.cache.thing_uri, auth_key=self.cache.token)
-        after_shared_count: int = count_things(self.knowledge_client, self.cache.token, THING_OBJECT,
-                                               visibility=Visibility.SHARED, only_own=True)
-        after_shared_count_u2: int = count_things(self.knowledge_client, self.cache.token_2, THING_OBJECT,
-                                                  visibility=Visibility.SHARED, only_own=False)
+        after_shared_count: int = count_things(
+            self.knowledge_client, self.cache.token, THING_OBJECT, visibility=Visibility.SHARED, only_own=True
+        )
+        after_shared_count_u2: int = count_things(
+            self.knowledge_client, self.cache.token_2, THING_OBJECT, visibility=Visibility.SHARED, only_own=False
+        )
         self.assertEqual(after_shared_count, 1, "User 1 should have one shared entity.")
         self.assertEqual(after_shared_count_u2, 1, "User 2 should have one shared entity.")
 
         entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token)
         self.assertEqual(groups[0].id, entity.group_ids[0])
-        self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
-        self.group_management.remove_user_from_group(self.cache.group_id, self.cache.internal_id_2,
-                                                     force=True, auth_key=self.cache.token)
+        group_entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
+        self.assertEqual(group_entity.uri, self.cache.thing_uri)
+        group_info_before: GroupInfo = self.group_management.group(self.cache.group_id, auth_key=self.cache.token)
+        users_ids_before: List[str] = [u.id for u in group_info_before.group_users]
+        self.assertIn(self.cache.internal_id_2, users_ids_before)
+        self.group_management.remove_user_from_group(
+            self.cache.group_id, self.cache.internal_id_2, force=True, auth_key=self.cache.token
+        )
+        group_info_after: GroupInfo = self.group_management.group(self.cache.group_id, auth_key=self.cache.token)
+        users_ids_after: List[str]= [u.id for u in group_info_after.group_users]
+        self.assertNotIn(self.cache.internal_id_2, users_ids_after)
         try:
             self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
             self.fail("User 2 should not have access to the entity.")
-        except WacomServiceException as we:
+        except WacomServiceException:
             pass
-        after_removal_shared_count_u2: int = count_things(self.knowledge_client, self.cache.token_2, THING_OBJECT,
-                                                          visibility=Visibility.SHARED, only_own=False)
+        for e, _, _ in things_iter(self.knowledge_client, self.cache.token_2, self.cache.refresh_2, THING_OBJECT,
+                             visibility=Visibility.SHARED, only_own=False):
+            for gid in e.group_ids:
+                self.assertNotEqual(gid, self.cache.group_id)
+        after_removal_shared_count_u2: int = count_things(
+            self.knowledge_client, self.cache.token_2, THING_OBJECT, visibility=Visibility.SHARED, only_own=False
+        )
         self.assertEqual(after_removal_shared_count_u2, 0, "User 2 should not have access to the entity.")
         groups: List[Group] = self.group_management.listing_groups(auth_key=self.cache.token_2)
         self.assertEqual(len(groups), 0)
@@ -236,10 +279,10 @@ class GroupFlow(TestCase):
         self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
 
     def test_7_public_entity(self):
-        """ Public entity."""
+        """Public entity."""
         full_entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token)
         self.assertIsNotNone(full_entity)
-        # Entity must not be empty
+        # Entities must not be empty
         full_entity.tenant_access_right.read = True
         self.knowledge_client.update_entity(full_entity, auth_key=self.cache.token)
         pull_entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
@@ -259,14 +302,15 @@ class GroupFlow(TestCase):
         self.knowledge_client.update_entity(pull_entity, auth_key=self.cache.token_2)
 
     def test_8_delete_entity(self):
-        """ Delete entity."""
+        """Delete entity."""
         self.knowledge_client.delete_entity(self.cache.thing_uri, force=True, auth_key=self.cache.token)
 
     def teardown_class(self):
-        """ Clean up."""
+        """Clean up."""
         list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=GroupFlow.LIMIT)
         for u_i in list_user_all:
-            if 'account-type' in u_i.meta_data and u_i.meta_data.get('account-type') == 'qa-test':
-                logging.info(f'Clean user {u_i.external_user_id}')
-                self.user_management.delete_user(self.tenant_api_key,
-                                                 external_id=u_i.external_user_id, internal_id=u_i.id, force=True)
+            if "account-type" in u_i.meta_data and u_i.meta_data.get("account-type") == "qa-test":
+                logging.info(f"Clean user {u_i.external_user_id}")
+                self.user_management.delete_user(
+                    self.tenant_api_key, external_id=u_i.external_user_id, internal_id=u_i.id, force=True
+                )
