@@ -1,3 +1,10 @@
+2025/03/19 - RELEASE 3.0.0
+==========================
+- Change to Poetry for package management
+- Remove tools from the package
+- Improvements for wikidata import
+- Introduce black for formatting
+
 2025/01/22 - RELEASE 2.5.0
 ==========================
 - Refactoring of the clients, adding the timeout, max_retries, and backoff_factor parameters
@@ -25,7 +32,6 @@
 
 2024/10/10 - RELEASE 2.3.0
 ==========================
-- Splitting the VectorSearch targets in Word and Document index targets
 - Enable ontology to export different versions of the ontology
 
 2024/09/26 - RELEASE 2.2.0
