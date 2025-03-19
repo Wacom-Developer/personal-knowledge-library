@@ -250,6 +250,7 @@ class MappingConfiguration:
         self.__index: Dict[str, int] = {}
         self.__index_properties: Dict[str, List[int]] = {}
         self.__index_iri: Dict[str, int] = {}
+        self.__direct_index: Dict[str, int] = {}
 
     @property
     def classes(self) -> List[ClassConfiguration]:
@@ -275,6 +276,8 @@ class MappingConfiguration:
             If a mapping exists, the class configuration, otherwise None.
         """
         for cls_name in classes:
+            if cls_name in self.__direct_index:
+                return self.__classes[self.__direct_index[cls_name]]
             if cls_name in self.__index:
                 return self.__classes[self.__index[cls_name]]
         return None
@@ -343,26 +346,26 @@ class MappingConfiguration:
             The subclasses
         """
         self.__classes.append(class_configuration)
-        wikidata_classes: Set[str] = set()
         class_idx: int = len(self.__classes) - 1
         number_of_classes: int = len(class_configuration.wikidata_classes)
         if number_of_classes > 0:
             logger.info(f"Adding {number_of_classes} classes for {class_configuration.concept_type.iri}")
         for cls_idx, c in enumerate(class_configuration.wikidata_classes):
             if c in subclasses:
-                wikidata_classes = set(subclasses[c])
+                for subclass in subclasses[c]:
+                    if subclass in self.__index:
+                        logger.warning(f"Class {subclass} already exists in the index.")
+                        class_config: ClassConfiguration = self.__classes[self.__index[subclass]]
+                        logger.warning(f"Class {class_config.concept_type} "
+                                       f"is conflicting with {class_configuration.concept_type}.")
+                    self.__index[subclass] = class_idx
+                self.__direct_index[c] = class_idx
             else:
                 w_classes: Dict[str, WikidataClass] = WikiDataAPIClient.subclasses(c)
                 for subclass in w_classes.values():
                     for cls in flatten(subclass):
-                        wikidata_classes.add(cls)
-        if len(wikidata_classes) > 0:
-            logger.info(
-                f"Adding {len(wikidata_classes)} classes to the mapping "
-                f"configuration for {class_configuration.concept_type.iri}"
-            )
-        for c in wikidata_classes:
-            self.__index[c] = class_idx
+                        self.__index[cls] = class_idx
+
         for c in class_configuration.dbpedia_classes:
             self.__index[c] = len(self.__classes) - 1
 
