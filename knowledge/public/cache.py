@@ -53,7 +53,7 @@ class WikidataCache:
 
     _instance = None  # Singleton instance
 
-    def __init__(self, max_size: int = 10000):
+    def __init__(self, max_size: int = 100000):
         self.max_size = max_size
         self.cache: OrderedDict = OrderedDict()  # Maintain insertion order for LRU eviction
         self.property_cache: OrderedDict = OrderedDict()  # Cache for properties
