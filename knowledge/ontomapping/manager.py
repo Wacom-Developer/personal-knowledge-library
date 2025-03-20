@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2023-present Wacom. All rights reserved.
-import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Any, List, Dict, Tuple, Set
 
+import loguru
+
 from knowledge.base.entity import Label, LanguageCode, Description
+from knowledge.base.language import LOCALE_LANGUAGE_MAPPING, LocaleCode, LANGUAGE_LOCALE_MAPPING, EN_US
 from knowledge.base.ontology import (
     ThingObject,
     DataProperty,
@@ -18,17 +20,18 @@ from knowledge.base.ontology import (
 from knowledge.ontomapping import (
     ClassConfiguration,
     TOPIC_CLASS,
-    superclasses_cache,
     PropertyConfiguration,
     PropertyType,
     get_mapping_configuration,
-    save_superclasses_cache,
-    superclasses_path,
 )
-from knowledge.public.cache import pull_wikidata_object
-from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient, WikidataClass, WikidataProperty
-from knowledge.base.language import LOCALE_LANGUAGE_MAPPING, LocaleCode, LANGUAGE_LOCALE_MAPPING, EN_US
+from knowledge.public.cache import WikidataCache
+from knowledge.public.client import WikiDataAPIClient
+from knowledge.public.wikidata import WikidataThing, WikidataClass, WikidataProperty
 from knowledge.utils.wikipedia import get_wikipedia_summary
+
+logger = loguru.logger
+# Initialize the cache
+cache: WikidataCache = WikidataCache()
 
 
 def flatten(hierarchy: WikidataClass, use_names: bool = False) -> List[str]:
@@ -78,16 +81,10 @@ def wikidata_taxonomy(qid: str) -> Optional[WikidataClass]:
     hierarchy: WikidataClass
         Hierarchy.
     """
-    if superclasses_cache and qid in superclasses_cache:
-        taxonomy: WikidataClass = superclasses_cache[qid]
-        return taxonomy
     hierarchy: Dict[str, WikidataClass] = WikiDataAPIClient.superclasses(qid)
     if qid not in hierarchy:
-        logging.warning(f"Taxonomy for {qid} not found.")
+        logger.warning(f"Taxonomy for {qid} not found.")
         return None
-    if hierarchy:
-        superclasses_cache.update(hierarchy)
-        save_superclasses_cache(superclasses_path)
     return hierarchy.get(qid)
 
 
@@ -116,10 +113,13 @@ def convert_dict(structure: Dict[str, Any], locale: str) -> Optional[str]:
         if structure_type == "quantity" and isinstance(value, dict):
             return value["amount"]
         if structure_type == "wikibase-item" and isinstance(value, dict):
-            wikidata_data: WikidataThing = pull_wikidata_object(value["id"])
+            qid: str = value["id"]
+            if cache.qid_in_cache(qid):
+                wikidata_data: WikidataThing = cache.get_wikidata_object(qid)
+            else:
+                wikidata_data: WikidataThing = WikiDataAPIClient.retrieve_entity(qid)
             if locale in wikidata_data.label:
                 return wikidata_data.label[locale].content
-            return None
         if structure_type == "external-id":
             return value
         if structure_type == "string":
@@ -215,7 +215,7 @@ def wikidata_to_thing(
                             )
                         )
                     except Exception as e:
-                        logging.error(f"Failed to get Wikipedia summary for {title} ({lang}): {e}")
+                        logger.error(f"Failed to get Wikipedia summary for {title} ({lang}): {e}")
     if len(descriptions) == 0:
         descriptions = list(wikidata_thing.description.values())
     t3: float = time.perf_counter()
@@ -228,7 +228,8 @@ def wikidata_to_thing(
     )
     thing.add_data_property(
         DataProperty(
-            content=datetime.utcnow().isoformat(), property_ref=OntologyPropertyReference.parse("wacom:core#lastUpdate")
+            content=datetime.now(timezone.utc).isoformat(),
+            property_ref=OntologyPropertyReference.parse("wacom:core#lastUpdate"),
         )
     )
     t4: float = time.perf_counter()
@@ -291,7 +292,6 @@ def wikidata_to_thing(
                                 "source_concept": thing.concept_type,
                                 "source_classes": class_types,
                                 "property": prop_missing.pid,
-                                "property_label": prop_missing.label,
                                 "target_qid": target_thing.qid,
                                 "target_classes": target_thing.ontology_types,
                             }
@@ -304,7 +304,6 @@ def wikidata_to_thing(
                         "source_concept": thing.concept_type,
                         "source_classes": class_types,
                         "property": prop_missing.pid,
-                        "property_label": prop_missing.label,
                         "target_qid": target_thing.qid,
                         "target_classes": target_thing.ontology_types,
                     }
@@ -312,9 +311,9 @@ def wikidata_to_thing(
     for p, lst in relation_props.items():
         thing.add_relation(ObjectProperty(p, outgoing=lst))
     t7: float = time.perf_counter()
-    logging.debug(
-        f"Wikidata to Thing: {t2 - t1} seconds for labels, {t3 - t2} seconds for descriptions, "
-        f"{t4 - t3} seconds for sources, {t5 - t4} seconds for class types, {t6 - t5} seconds for data "
-        f"properties, {t7 - t6} seconds for object properties"
+    logger.debug(
+        f"Wikidata to Thing: {(t2 - t1) * 1000.:.2f} ms for labels, {(t3 - t2) * 1000.:.2f} ms for descriptions, "
+        f"{(t4 - t3) * 1000.:.2f} ms for sources, {(t5 - t4) * 1000.:.2f} ms for class types, "
+        f"{(t6 - t5) * 1000.:.2f} ms for data properties, {(t7 - t6) * 1000.:.2f} ms for object properties"
     )
     return thing, import_warnings
