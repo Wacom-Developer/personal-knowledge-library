@@ -17,7 +17,7 @@ __license__ = "Wacom"
 __maintainer__ = ["Markus Weber"]
 __email__ = "markus.weber@wacom.com"
 __status__ = "beta"
-__version__ = "3.1.0"
+__version__ = "3.1.1"
 
 import loguru
 

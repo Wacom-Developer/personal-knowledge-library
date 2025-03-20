@@ -1,4 +1,4 @@
-2025/03/20 - RELEASE 3.1.0
+2025/03/20 - RELEASE 3.1.1
 ==========================
 - Improved wikidata cache handling
 
