@@ -1,3 +1,7 @@
+2025/03/20 - RELEASE 3.1.0
+==========================
+- Improved wikidata cache handling
+
 2025/03/19 - RELEASE 3.0.0
 ==========================
 - Change to Poetry for package management
