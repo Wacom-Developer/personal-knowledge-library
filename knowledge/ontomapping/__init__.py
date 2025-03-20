@@ -10,7 +10,9 @@ import loguru
 from rdflib import Graph, RDFS, URIRef
 
 from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, DataPropertyType
-from knowledge.public.wikidata import WikidataClass, WikiDataAPIClient
+from knowledge.public.cache import WikidataCache
+from knowledge.public.wikidata import WikidataClass
+from knowledge.public.client import WikiDataAPIClient
 
 # Classes
 TOPIC_CLASS: str = "wacom:core#Topic"
@@ -25,11 +27,8 @@ CONTEXT_NAME: str = "core"
 CWD: Path = Path(__file__).parent
 ontology_graph: Graph = Graph()
 logger = loguru.logger
-# Mapping configuration
-superclasses_cache: Optional[Dict[str, WikidataClass]] = None
-subclasses_cache: Optional[Dict[str, WikidataClass]] = None
-superclasses_path: Optional[Path] = None
-subclasses_path: Optional[Path] = None
+# Cache
+wikidata_cache: WikidataCache() = WikidataCache()
 
 
 def flatten(hierarchy: WikidataClass) -> Set[str]:
@@ -45,15 +44,24 @@ def flatten(hierarchy: WikidataClass) -> Set[str]:
     -------
     hierarchy: Set[str]
         Hierarchy
-
     """
-    hierarchy_set: Set[str] = {hierarchy.qid}
+    hierarchy_set: Set[str] = set()
     jobs: List[WikidataClass] = [hierarchy]
-    while len(jobs) > 0:
-        job: WikidataClass = jobs.pop()
+
+    while jobs:
+        job = jobs.pop()
+
+        # Skip if already visited
+        if job.qid in hierarchy_set:
+            continue
+
         hierarchy_set.add(job.qid)
+
+        # Add only unvisited subclasses
         for c in job.subclasses:
-            jobs.append(c)
+            if c.qid not in hierarchy_set:
+                jobs.append(c)
+
     return hierarchy_set
 
 
@@ -334,7 +342,7 @@ class MappingConfiguration:
                         properties.append(prop_conf)
         return properties
 
-    def add_class(self, class_configuration: ClassConfiguration, subclasses: Dict[str, List[str]]):
+    def add_class(self, class_configuration: ClassConfiguration):
         """
         Adds a class configuration.
 
@@ -342,30 +350,30 @@ class MappingConfiguration:
         ----------
         class_configuration: ClassConfiguration
             The class configuration
-        subclasses: Dict[str, List[str]]
-            The subclasses
         """
         self.__classes.append(class_configuration)
         class_idx: int = len(self.__classes) - 1
         number_of_classes: int = len(class_configuration.wikidata_classes)
         if number_of_classes > 0:
-            logger.info(f"Adding {number_of_classes} classes for {class_configuration.concept_type.iri}")
-        for cls_idx, c in enumerate(class_configuration.wikidata_classes):
-            if c in subclasses:
-                for subclass in subclasses[c]:
+            logger.debug(f"Adding {number_of_classes} classes for {class_configuration.concept_type.iri}")
+        for _, c in enumerate(class_configuration.wikidata_classes):
+            if wikidata_cache.subclass_in_cache(c):
+                for subclass in wikidata_cache.get_subclass(c).subclasses:
                     if subclass in self.__index:
                         logger.warning(f"Class {subclass} already exists in the index.")
                         class_config: ClassConfiguration = self.__classes[self.__index[subclass]]
-                        logger.warning(f"Class {class_config.concept_type} "
-                                       f"is conflicting with {class_configuration.concept_type}.")
+                        logger.warning(
+                            f"Class {class_config.concept_type} "
+                            f"is conflicting with {class_configuration.concept_type}."
+                        )
                     self.__index[subclass] = class_idx
                 self.__direct_index[c] = class_idx
             else:
                 w_classes: Dict[str, WikidataClass] = WikiDataAPIClient.subclasses(c)
                 for subclass in w_classes.values():
+                    wikidata_cache.cache_subclass(subclass)
                     for cls in flatten(subclass):
                         self.__index[cls] = class_idx
-
         for c in class_configuration.dbpedia_classes:
             self.__index[c] = len(self.__classes) - 1
 
@@ -480,15 +488,13 @@ class MappingConfiguration:
 mapping_configuration: Optional[MappingConfiguration] = None
 
 
-def build_configuration(mapping: Dict[str, Any], subclasses: Dict[str, List[str]]) -> MappingConfiguration:
+def build_configuration(mapping: Dict[str, Any]) -> MappingConfiguration:
     """
     Builds the configuration from the mapping file.
     Parameters
     ----------
     mapping: Dict[str, Any]
         The mapping file
-    subclasses: Dict[str, List[str]]
-        The subclasses
 
     Returns
     -------
@@ -502,7 +508,7 @@ def build_configuration(mapping: Dict[str, Any], subclasses: Dict[str, List[str]
         class_config: ClassConfiguration = ClassConfiguration(c)
         class_config.dbpedia_classes = c_conf[DBPEDIA_TYPES]
         class_config.wikidata_classes = c_conf[WIKIDATA_TYPES]
-        conf.add_class(class_config, subclasses)
+        conf.add_class(class_config)
     dataproperty_count: int = len(mapping["data_properties"])
     logger.debug(f"Adding {dataproperty_count} data properties to the mapping configuration")
     for p, p_conf in mapping["data_properties"].items():
@@ -517,7 +523,6 @@ def build_configuration(mapping: Dict[str, Any], subclasses: Dict[str, List[str]
             for do in p_conf["domains"]:
                 property_config.domains.append(do)
                 property_config.domains.extend(subclasses_of(do))
-
         conf.add_property(property_config)
     object_property_count: int = len(mapping["object_properties"])
     logger.debug(f"Adding {object_property_count} object properties to the mapping configuration")
@@ -538,20 +543,6 @@ def build_configuration(mapping: Dict[str, Any], subclasses: Dict[str, List[str]
         conf.add_property(property_config)
     return conf
 
-
-def update_superclass_cache(path: Path):
-    """
-    Updates the taxonomy cache.
-
-    Parameters
-    ----------
-    path: Path
-        The path to the cache file.
-    """
-    with open(path, "w", encoding="uft-8") as fp_taxonomy_write:
-        fp_taxonomy_write.write(json.dumps(superclasses_cache, indent=2, cls=WikidataClassEncoder))
-
-
 def register_ontology(rdf_str: str):
     """
     Registers the ontology.
@@ -562,41 +553,6 @@ def register_ontology(rdf_str: str):
     """
     ontology_graph.parse(data=rdf_str, format="xml")
 
-
-def superclass_path_from(configuration_path: Path) -> Path:
-    """
-    Returns the path to the superclass cache file.
-
-    Parameters
-    ----------
-    configuration_path: Path
-        The path to the configuration file.
-
-    Returns
-    -------
-    path: Path
-        The path to the superclass cache file.
-    """
-    return configuration_path.parent / "superclasses.json"
-
-
-def subclass_path_from(path: Path):
-    """
-    Returns the path to the subclass cache file.
-
-    Parameters
-    ----------
-    path: Path
-        The path to the configuration file.
-
-    Returns
-    -------
-    subclass_path: Path
-        The path to the subclass cache file.
-    """
-    return path.parent / "subclasses.json"
-
-
 def load_configuration(configuration: Path):
     """
     Loads the configuration.
@@ -606,17 +562,11 @@ def load_configuration(configuration: Path):
     ValueError
         If the configuration file is not found.
     """
-    global mapping_configuration, superclasses_cache, subclasses_cache, superclasses_path, subclasses_path
-    subclasses_path = subclass_path_from(configuration)
-    superclasses_path = superclass_path_from(configuration)
+    global mapping_configuration
     if configuration.exists():
         with configuration.open("r", encoding="utf-8") as fp_configuration:
             configuration = json.loads(fp_configuration.read())
-        subclasses: Dict[str, List[str]] = {}
-        if subclasses_path.exists():
-            with subclasses_path.open("r", encoding="utf-8") as fp_sub:
-                subclasses = json.loads(fp_sub.read())
-        mapping_configuration = build_configuration(configuration, subclasses)
+        mapping_configuration = build_configuration(configuration)
     else:
         raise ValueError(f"Configuration file {configuration} not found.")
 
@@ -633,35 +583,3 @@ def get_mapping_configuration() -> MappingConfiguration:
     if mapping_configuration is None:
         raise ValueError("Please load configuration")
     return mapping_configuration
-
-
-def save_superclasses_cache(path: Path):
-    """
-    Saves the taxonomy cache.
-
-    Parameters
-    ----------
-    path: Path
-        The path to the cache file.
-    """
-    global superclasses_cache
-    if superclasses_cache is None:
-        return
-    with open(path, "w", encoding="utf-8") as fp_taxonomy_write:
-        fp_taxonomy_write.write(json.dumps(superclasses_cache, indent=2, cls=WikidataClassEncoder))
-
-
-def save_subclasses_cache(path: Path):
-    """
-    Saves the taxonomy cache.
-
-    Parameters
-    ----------
-    path: Path
-        The path to the cache file.
-    """
-    global subclasses_cache
-    if subclasses_cache is None:
-        return
-    with open(path, "w", encoding="utf-8") as fp_taxonomy_write:
-        fp_taxonomy_write.write(json.dumps(subclasses_cache, indent=2, cls=WikidataClassEncoder))
