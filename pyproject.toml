@@ -1,6 +1,6 @@
 [project]
 name = "personal_knowledge_library"
-version = "3.0.0"
+version = "3.1.0"
 description = "Library to access Wacom's Personal Knowledge graph."
 authors = [{ name = "Markus Weber", email = "markus.weber@wacom.com" }]
 license = "Apache-2.0"
@@ -23,7 +23,13 @@ dependencies = [
     "loguru==0.7.3"
 ]
 classifiers = [
-    "Topic :: Software Development :: Libraries :: Python Modules"
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
 ]
 
 [project.optional-dependencies]
@@ -59,7 +65,7 @@ extend-ignore = "E203"  # Avoid conflicts with Black (whitespace before colon)
 
 [tool.pylint]
 max-line-length = 120
-disable = ["C0114", " R0801"]  # Example: disable missing module docstring (customize as needed)
+disable = ["C0114", " R0801", "R0917"]  # Example: disable missing module docstring (customize as needed)
 
 [tool.mypy]
 python_version = "3.11"
