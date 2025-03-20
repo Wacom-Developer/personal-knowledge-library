@@ -4,65 +4,209 @@ Module knowledge.public.cache
 Functions
 ---------
 
-`cache_wikidata_object(wikidata_object: knowledge.public.wikidata.WikidataThing)`
-:   Caches a Wikidata object.
-    Parameters
-    ----------
-    wikidata_object: WikidataObject
-        The Wikidata object
+`singleton(cls)`
+:   Singleton decorator to ensure that a class has only one instance and provide a global point of access to it.
 
-`cache_wikidata_objects() ‑> Dict[str, knowledge.public.wikidata.WikidataThing]`
-:   Returns the Wikidata cache.
-    Returns
-    -------
-    wikidata_cache: Dict[str, WikidataThing]
-        Wikidata cache.
+Classes
+-------
 
-`get_wikidata_object(qid_object: str) ‑> knowledge.public.wikidata.WikidataThing`
-:   Returns a Wikidata object from the cache.
+`WikidataCache(max_size: int = 10000)`
+:   WikidataCache
+    --------------
+    A singleton class that manages a cache of Wikidata objects using an LRU (Least Recently Used) strategy.
     
     Parameters
     ----------
-    qid_object: str
-        The QID of the Wikidata object.
-    Returns
-    -------
-    wikidata_object: WikidataThing
-        The Wikidata object.
-
-`load_cache(cache: pathlib.Path)`
-:   Load the cache from the file.
-    Parameters
-    ----------
-    cache: Path
-        The path to the cache file.
-
-`number_of_cached_objects() ‑> int`
-:   Returns the number of cached objects.
-    Returns
-    -------
-    number_of_cached_objects: int
-        Number of cached objects.
-
-`pull_wikidata_object(qid_object: str) ‑> knowledge.public.wikidata.WikidataThing | None`
-:   Pulls a Wikidata object from the cache or from the Wikidata API.
-    Parameters
-    ----------
-    qid_object: str
-        The QID of the Wikidata object.
-    Returns
-    -------
-    wikidata_object: Optional[WikidataThing]
-        The Wikidata object, if it exists, otherwise None.
-
-`qid_in_cache(ref_qid: str) ‑> bool`
-:   Checks if a QID is in the cache.
-    Parameters
-    ----------
-    ref_qid: str
-        The QID to check.
+    max_size: int
+        The maximum size of the cache. When the cache exceeds this size, the least recently used item will be removed.
     
-    Returns
-    -------
-    in_cache: bool
-        True if the QID is in the cache, otherwise False.
+    Attributes
+    ----------
+    cache: OrderedDict
+        The cache that stores Wikidata objects.
+
+    ### Methods
+
+    `cache_property(self, prop: knowledge.public.wikidata.WikidataProperty)`
+    :   Adds a property to the property cache with LRU eviction.
+        
+        Parameters
+        ----------
+        prop: Dict[str, Any]
+            The property to cache.
+
+    `cache_subclass(self, subclass: knowledge.public.wikidata.WikidataClass)`
+    :   Adds a subclass to the subclass cache with LRU eviction.
+        
+        Parameters
+        ----------
+        subclass: WikidataClass
+            The subclass to cache.
+
+    `cache_superclass(self, superclass: knowledge.public.wikidata.WikidataClass)`
+    :   Adds a superclass to the superclass cache with LRU eviction.
+        
+        Parameters
+        ----------
+        superclass: WikidataClass
+            The superclass to cache.
+
+    `cache_wikidata_object(self, wikidata_object: knowledge.public.wikidata.WikidataThing)`
+    :   Adds a Wikidata object to the cache with LRU eviction.
+        
+        Parameters
+        ----------
+        wikidata_object: WikidataThing
+            The Wikidata object to cache.
+
+    `get_property(self, pid: str) ‑> knowledge.public.wikidata.WikidataProperty`
+    :   Retrieves a property from the property cache.
+        
+        Parameters
+        ----------
+        pid: str
+            The PID of the property to retrieve.
+        
+        Returns
+        -------
+        Dict[str, Any]
+            The property associated with the given PID.
+
+    `get_subclass(self, qid: str) ‑> knowledge.public.wikidata.WikidataClass`
+    :   Retrieves a subclass from the subclass cache.
+        
+        Parameters
+        ----------
+        qid: str
+            The QID of the subclass to retrieve.
+        
+        Returns
+        -------
+        WikidataClass
+            The subclass associated with the given QID.
+
+    `get_superclass(self, qid: str) ‑> knowledge.public.wikidata.WikidataClass`
+    :   Retrieves a superclass from the superclass cache.
+        
+        Parameters
+        ----------
+        qid: str
+            The QID of the superclass to retrieve.
+        
+        Returns
+        -------
+        WikidataClass
+            The superclass associated with the given QID.
+
+    `get_wikidata_object(self, qid: str) ‑> knowledge.public.wikidata.WikidataThing`
+    :   Retrieves a Wikidata object from the cache.
+        
+        Parameters
+        ----------
+        qid: str
+            The QID of the Wikidata object to retrieve.
+        
+        Returns
+        -------
+        WikidataThing
+            The Wikidata object associated with the given QID.
+
+    `load_cache(self, cache_path: pathlib.Path) ‑> None`
+    :   Loads the cache from a path.
+        
+        Parameters
+        ----------
+        cache_path: Path
+            The path to the file from which the cache will be loaded.
+
+    `number_of_cached_objects(self) ‑> int`
+    :   Returns the number of cached objects.
+        
+        Returns
+        -------
+        int
+            The number of objects in the cache.
+
+    `number_of_cached_properties(self) ‑> int`
+    :   Returns the number of cached properties.
+        
+        Returns
+        -------
+        int
+            The number of properties in the cache.
+
+    `number_of_cached_subclasses(self) ‑> int`
+    :   Returns the number of cached subclasses.
+        
+        Returns
+        -------
+        int
+            The number of subclasses in the cache.
+
+    `number_of_cached_superclasses(self) ‑> int`
+    :   Returns the number of cached superclasses.
+        
+        Returns
+        -------
+        int
+            The number of superclasses in the cache.
+
+    `property_in_cache(self, pid: str) ‑> bool`
+    :   Checks if a property is in the cache.
+        
+        Parameters
+        ----------
+        pid: str
+            The PID to check.
+        
+        Returns
+        -------
+        bool
+            True if the PID is in the cache, False otherwise.
+
+    `qid_in_cache(self, qid: str) ‑> bool`
+    :   Checks if a QID is in the cache.
+        
+        Parameters
+        ----------
+        qid: str
+            The QID to check.
+        
+        Returns
+        -------
+        bool
+            True if the QID is in the cache, False otherwise.
+
+    `save_cache(self, cache_path: pathlib.Path)`
+    :   Saves the cache to a file.
+        
+        Parameters
+        ----------
+        cache_path: Path
+            The path to the file where the cache will be saved.
+
+    `subclass_in_cache(self, qid: str) ‑> bool`
+    :   Checks if a subclass is in the cache.
+        
+        Parameters
+        ----------
+        qid: str
+            The QID to check.
+        
+        Returns
+        -------
+        bool
+            True if the QID is in the subclass cache, False otherwise.
+
+    `superclass_in_cache(self, qid: str) ‑> bool`
+    :   Checks if a superclass is in the cache.
+        
+        Parameters
+        ----------
+        qid: str
+            The QID to check.
+        
+        Returns
+        -------
+        bool
+            True if the QID is in the superclass cache, False otherwise.

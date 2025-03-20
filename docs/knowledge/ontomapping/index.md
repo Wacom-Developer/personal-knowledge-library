@@ -8,14 +8,12 @@ Sub-modules
 Functions
 ---------
 
-`build_configuration(mapping: Dict[str, Any], subclasses: Dict[str, List[str]]) ‑> knowledge.ontomapping.MappingConfiguration`
+`build_configuration(mapping: Dict[str, Any]) ‑> knowledge.ontomapping.MappingConfiguration`
 :   Builds the configuration from the mapping file.
     Parameters
     ----------
     mapping: Dict[str, Any]
         The mapping file
-    subclasses: Dict[str, List[str]]
-        The subclasses
     
     Returns
     -------
@@ -70,35 +68,6 @@ Functions
     rdf_str: str
         The ontology in RDF/XML format.
 
-`save_subclasses_cache(path: pathlib.Path)`
-:   Saves the taxonomy cache.
-    
-    Parameters
-    ----------
-    path: Path
-        The path to the cache file.
-
-`save_superclasses_cache(path: pathlib.Path)`
-:   Saves the taxonomy cache.
-    
-    Parameters
-    ----------
-    path: Path
-        The path to the cache file.
-
-`subclass_path_from(path: pathlib.Path)`
-:   Returns the path to the subclass cache file.
-    
-    Parameters
-    ----------
-    path: Path
-        The path to the configuration file.
-    
-    Returns
-    -------
-    subclass_path: Path
-        The path to the subclass cache file.
-
 `subclasses_of(iri: str) ‑> List[str]`
 :   Returns the subclasses of an ontology class.
     Parameters
@@ -110,27 +79,6 @@ Functions
     -------
     subclasses: List[str]
         Subclasses of the ontology class.
-
-`superclass_path_from(configuration_path: pathlib.Path) ‑> pathlib.Path`
-:   Returns the path to the superclass cache file.
-    
-    Parameters
-    ----------
-    configuration_path: Path
-        The path to the configuration file.
-    
-    Returns
-    -------
-    path: Path
-        The path to the superclass cache file.
-
-`update_superclass_cache(path: pathlib.Path)`
-:   Updates the taxonomy cache.
-    
-    Parameters
-    ----------
-    path: Path
-        The path to the cache file.
 
 Classes
 -------
@@ -174,15 +122,13 @@ Classes
 
     ### Methods
 
-    `add_class(self, class_configuration: knowledge.ontomapping.ClassConfiguration, subclasses: Dict[str, List[str]])`
+    `add_class(self, class_configuration: knowledge.ontomapping.ClassConfiguration)`
     :   Adds a class configuration.
         
         Parameters
         ----------
         class_configuration: ClassConfiguration
             The class configuration
-        subclasses: Dict[str, List[str]]
-            The subclasses
 
     `add_property(self, property_configuration: knowledge.ontomapping.PropertyConfiguration)`
     :   Adds a property configuration.

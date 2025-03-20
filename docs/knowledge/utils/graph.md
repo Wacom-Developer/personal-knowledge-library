@@ -101,10 +101,10 @@ Functions
     force_refresh_timeout: int [default:= 360]
         Force refresh timeout
     
-    Returns
+    Yields
     -------
-    AsyncIterator[ThingObject]
-        Asynchronous Iterator of things
+    ThingObject
+        Next thing object
 
 `count_things(wacom_client: knowledge.services.graph.WacomKnowledgeService, user_token: str, concept_type: knowledge.base.ontology.OntologyClassReference, locale: knowledge.base.language.LocaleCode | None = None, visibility: knowledge.services.graph.Visibility | None = None, only_own: bool | None = None) ‑> int`
 :   Counts the number of things.
@@ -205,10 +205,10 @@ Functions
     force_refresh_timeout: int [default:= 360]
         Force refresh timeout
     
-    Returns
+    Yields
     -------
-    Iterator[ThingObject]
-        Iterator of things
+    ThingObject
+        Next thing object
     
     Raises
     ------
