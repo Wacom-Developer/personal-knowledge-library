@@ -11,8 +11,10 @@ from knowledge.base.language import SUPPORTED_LOCALES, SUPPORTED_LANGUAGES, EN
 from knowledge.base.ontology import OntologyPropertyReference, OntologyContext
 from knowledge.ontomapping import register_ontology, load_configuration
 from knowledge.ontomapping.manager import wikidata_to_thing
+from knowledge.public.cache import WikidataCache
 from knowledge.public.relations import wikidata_relations_extractor, wikidata_relations_extractor_qids
-from knowledge.public.wikidata import WikidataThing, WikiDataAPIClient, WikidataSearchResult, WikidataClass
+from knowledge.public.wikidata import WikidataThing, WikidataSearchResult, WikidataClass
+from knowledge.public.client import WikiDataAPIClient
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, UserRole
@@ -42,6 +44,7 @@ def cache_class(request):
         """
 
         WIKIDATA_QIDS: List[str] = ["Q5582", "Q1028181", "Q19363211", ""]
+        WIKIDATA_PIDS: List[str] = ["P31", "P279", "P361", "P170", "P50", "P170", "P19", "P20"]
 
         def __init__(self):
             self.__wikidata_things: Dict[str, WikidataThing] = {}
@@ -107,18 +110,22 @@ class WikidataFlow(TestCase):
             load_configuration(Path(__file__).parent.parent / "pkl-cache" / "ontology_mapping.json")
 
     def test_1_wikidata(self):
+        """Test the retrieval of entities from Wikidata."""
         # Q762 is Leonardo da Vinci and Q12418 is Mona Lisa
+        print("Retrieving entities from Wikidata...")
         entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(["Q762", "Q12418"])
         self.assertEqual(len(entities), 2)
         self.cache.wikidata_things = dict([(e.qid, e) for e in entities])
 
     def test_2_relations(self):
+        """Test relations."""
         # Extract relations between entities
         relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(self.cache.wikidata_things)
         self.assertGreaterEqual(len(relations), 2)
         self.cache.relations = relations
 
     def test_3_wikidata_to_thing(self):
+        """Test the conversion of Wikidata entities to Thing objects. """
         for qid, wiki_thing in self.cache.wikidata_things.items():
             thing, warnings = wikidata_to_thing(
                 wiki_thing, self.cache.relations, SUPPORTED_LOCALES, self.cache.wikidata_things
@@ -142,6 +149,7 @@ class WikidataFlow(TestCase):
                 self.assertEqual(len(thing.object_properties), 0)
 
     def test_4_check_wikipedia(self):
+        """Test Wikipedia function."""
         for qid, wiki_thing in self.cache.wikidata_things.items():
             for source, item in wiki_thing.sitelinks.items():
                 if source == "wiki":
@@ -156,6 +164,9 @@ class WikidataFlow(TestCase):
                             self.assertIsNotNone(image_url)
 
     def test_5_wikidata_to_thing_conversion(self):
+        """
+        Test the conversion of Wikidata entities to Thing objects.
+        """
         entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(self.cache.WIKIDATA_QIDS)
         for e in entities:
             for l_locale in e.label_languages:
@@ -188,7 +199,6 @@ class WikidataFlow(TestCase):
             all_wikidata_objects=wikidata_things,
         )
         check_lang: List[str] = []
-
         for la in van_gogh.label:
             if str(la.language_code) not in check_lang:
                 check_lang.append(str(la.language_code))
@@ -222,3 +232,23 @@ class WikidataFlow(TestCase):
             self.assertIsInstance(cls.qid, str)
             self.assertIsInstance(cls.label, str)
             self.assertIsInstance(cls.__dict__(), dict)
+        subclasses: Dict[str, WikidataClass] = WikiDataAPIClient.subclasses("Q5")
+        self.assertGreaterEqual(len(subclasses), 1)
+        for cls in subclasses.values():
+            self.assertIsInstance(cls, WikidataClass)
+            self.assertIsInstance(cls.qid, str)
+            self.assertIsInstance(cls.label, str)
+            self.assertIsInstance(cls.__dict__(), dict)
+
+    def test_8_check_test(self):
+        """Test the cache functionality."""
+        cache: WikidataCache = WikidataCache()
+        cache.load_cache(Path(__file__).parent.parent / "pkl-cache")
+        self.assertGreater(cache.number_of_cached_objects(), 0)
+        self.assertGreater(cache.number_of_cached_properties(), 0)
+        for pid in self.cache.WIKIDATA_PIDS:
+            prop = cache.property_in_cache(pid)
+            print(prop)
+
+
+
