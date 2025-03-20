@@ -1,18 +1,11 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2023-present Wacom. All rights reserved.
 import hashlib
-import multiprocessing
 import urllib
-from abc import ABC
-from collections import deque
 from datetime import datetime
-from multiprocessing import Pool
-from typing import Optional, Union, Any, Dict, List, Tuple, Set
+from typing import Optional, Union, Any, Dict, List
 
 import requests
-from requests import Response
-from requests.adapters import HTTPAdapter
-from urllib3 import Retry
 
 from knowledge import logger
 from knowledge.base.entity import (
@@ -25,11 +18,10 @@ from knowledge.base.entity import (
     DISPLAY_TAG,
     DESCRIPTION_TAG,
 )
-from knowledge.base.language import LANGUAGE_LOCALE_MAPPING, EN_US, LocaleCode
-from knowledge.public import PROPERTY_MAPPING, INSTANCE_OF_PROPERTY, IMAGE_PROPERTY
+from knowledge.base.language import LANGUAGE_LOCALE_MAPPING, EN_US, LocaleCode, EN
+from knowledge.public import INSTANCE_OF_PROPERTY, IMAGE_PROPERTY
 from knowledge.public.helper import (
     __waiting_request__,
-    __waiting_multi_request__,
     QID_TAG,
     REVISION_TAG,
     PID_TAG,
@@ -46,34 +38,18 @@ from knowledge.public.helper import (
     LAST_REVID_TAG,
     wikidate,
     WikiDataAPIException,
-    WIKIDATA_SPARQL_URL,
     SOURCE_TAG,
     URLS_TAG,
     TITLES_TAG,
     image_url,
-    WIKIDATA_SEARCH_URL,
     SUPERCLASSES_TAG,
-    API_LIMIT,
+    SYNC_TIME_TAG,
+    SUBCLASSES_TAG,
 )
 
 # Constants
 QUALIFIERS_TAG: str = "QUALIFIERS"
 LITERALS_TAG: str = "LITERALS"
-
-
-def chunks(lst: List[str], chunk_size: int):
-    """
-    Yield successive n-sized chunks from lst.Yield successive n-sized chunks from lst.
-    Parameters
-    ----------
-    lst: List[str]
-        Full length.
-    chunk_size: int
-        Chunk size.
-
-    """
-    for i in range(0, len(lst), chunk_size):
-        yield lst[i : i + chunk_size]
 
 
 class WikidataProperty:
@@ -109,36 +85,10 @@ class WikidataProperty:
         label: str
             Label of the property.
         """
-        if self.__label:
-            return self.__label
-        if self.pid in PROPERTY_MAPPING:  # only English mappings
-            self.__label = PROPERTY_MAPPING[self.pid]
-        else:
-            prop_dict = __waiting_request__(self.pid)
-            if "labels" in prop_dict:
-                labels: Dict[str, Any] = prop_dict.get("labels")
-                if "en" in labels:
-                    en_label: Dict[str, Any] = labels.get("en")
-                    self.__label = en_label.get("value", self.__pid)
-                    PROPERTY_MAPPING[self.pid] = self.__label
-                else:
-                    self.__label = self.pid
-
-            else:
-                self.__label = self.__pid
-        return self.__label
-
-    @property
-    def label_cached(self) -> str:
-        """Label with cached value."""
-        if self.__label:
-            return self.__label
-        if self.pid in PROPERTY_MAPPING:  # only English mappings
-            self.__label = PROPERTY_MAPPING[self.pid]
         return self.__label
 
     def __dict__(self):
-        return {PID_TAG: self.pid, LABEL_TAG: self.label_cached}
+        return {PID_TAG: self.pid, LABEL_TAG: self.label}
 
     @classmethod
     def create_from_dict(cls, prop_dict: Dict[str, Any]) -> "WikidataProperty":
@@ -154,6 +104,27 @@ class WikidataProperty:
             Instance of WikidataProperty.
         """
         return WikidataProperty(prop_dict[PID_TAG], prop_dict.get(LABEL_TAG))
+
+    @staticmethod
+    def from_wikidata(entity_dict: Dict[str, Any]) -> "WikidataProperty":
+        """
+        Create a property from a dictionary.
+        Parameters
+        ----------
+        entity_dict: Dict[str, Any]
+            Property dictionary.
+
+        Returns
+        -------
+        instance: WikidataProperty
+            Instance of WikidataProperty.
+        """
+        pid: str = entity_dict[ID_TAG]
+        label: Optional[str] = None
+        if LABELS_TAG in entity_dict:
+            if EN in entity_dict[LABELS_TAG]:
+                label = entity_dict[LABELS_TAG][EN].get(LABEL_VALUE_TAG)
+        return WikidataProperty(pid, label)
 
     def __repr__(self):
         return f"<Property:={self.pid}]>"
@@ -324,7 +295,7 @@ class WikidataClass:
             wiki_cls.__superclasses.append(WikidataClass.create_from_dict(superclass))
         return wiki_cls
 
-    def __hierarchy__(self, visited: Optional[set] = None):
+    def __superclasses_hierarchy__(self, visited: Optional[set] = None):
         if visited is None:
             visited = set()
         if self.qid in visited:
@@ -332,16 +303,18 @@ class WikidataClass:
                 QID_TAG: self.qid,
                 LABEL_TAG: self.label,
                 SUPERCLASSES_TAG: [],
+                SUBCLASSES_TAG: [],
             }
         visited.add(self.qid)
         return {
             QID_TAG: self.qid,
             LABEL_TAG: self.label,
-            SUPERCLASSES_TAG: [superclass.__hierarchy__(visited) for superclass in self.superclasses],
+            SUPERCLASSES_TAG: [superclass.__superclasses_hierarchy__(visited) for superclass in self.superclasses],
+            SUBCLASSES_TAG: [subclass.__superclasses_hierarchy__(visited) for subclass in self.subclasses],
         }
 
     def __dict__(self):
-        return self.__hierarchy__()
+        return self.__superclasses_hierarchy__()
 
     def __repr__(self):
         return f"<WikidataClass:={self.qid}]>"
@@ -521,10 +494,12 @@ class WikidataThing:
         label: Optional[Dict[str, Label]] = None,
         aliases: Optional[Dict[str, List[Label]]] = None,
         description: Optional[Dict[str, Description]] = None,
+        sync_time: datetime = datetime.now(),
     ):
         self.__qid: str = qid
         self.__revision: str = revision
         self.__modified: datetime = modified
+        self.__sync_time: datetime = sync_time
         self.__label: Dict[str, Label] = label if label else {}
         self.__description: Dict[str, Description] = description if description else {}
         self.__aliases: Dict[str, List[Label]] = aliases if aliases else {}
@@ -546,6 +521,11 @@ class WikidataThing:
     def modified(self) -> datetime:
         """Modification date of entity."""
         return self.__modified
+
+    @property
+    def sync_time(self) -> datetime:
+        """Sync time of entity."""
+        return self.__sync_time
 
     @property
     def label(self) -> Dict[str, Label]:
@@ -730,6 +710,7 @@ class WikidataThing:
             QID_TAG: self.qid,
             REVISION_TAG: self.revision,
             MODIFIED_TAG: self.modified.isoformat(),
+            SYNC_TIME_TAG: self.sync_time.isoformat(),
             LABELS_TAG: {lang: la.__dict__() for lang, la in self.label.items()},
             DESCRIPTIONS_TAG: {lang: la.__dict__() for lang, la in self.description.items()},
             ALIASES_TAG: {lang: [a.__dict__() for a in al] for lang, al in self.aliases.items()},
@@ -764,6 +745,8 @@ class WikidataThing:
             aliases[language] = []
             for a in al:
                 aliases[language].append(Label.create_from_dict(a))
+
+        sync_time: datetime = parse_date(entity_dict[SYNC_TIME_TAG]) if SYNC_TIME_TAG in entity_dict else datetime.now()
         # Initiate the wikidata thing
         thing: WikidataThing = WikidataThing(
             qid=entity_dict[QID_TAG],
@@ -772,6 +755,7 @@ class WikidataThing:
             label=labels,
             aliases=aliases,
             description=descriptions,
+            sync_time=sync_time,
         )
         # Load the ontology types
         thing.ontology_types = entity_dict.get(ONTOLOGY_TYPES_TAG, [])
@@ -802,6 +786,7 @@ class WikidataThing:
         labels: Dict[str, Label] = {}
         aliases: Dict[str, List[Label]] = {}
         descriptions: Dict[str, Description] = {}
+        sync_time: datetime = datetime.now()
         if LABELS_TAG in entity_dict:
             # Extract the labels
             for label in entity_dict[LABELS_TAG].values():
@@ -846,6 +831,7 @@ class WikidataThing:
             label=labels,
             aliases=aliases,
             description=descriptions,
+            sync_time=sync_time,
         )
 
         # Iterate over the claims
@@ -988,6 +974,7 @@ class WikidataThing:
         self.__qid = state[QID_TAG]
         self.__revision = state.get(REVISION_TAG)
         self.__modified = parse_date(state[MODIFIED_TAG]) if MODIFIED_TAG in state else None
+        self.__sync_time = parse_date(state[SYNC_TIME_TAG]) if SYNC_TIME_TAG in state else datetime.now()
         self.__label = labels
         self.__aliases = aliases
         self.__description = descriptions
@@ -1001,324 +988,3 @@ class WikidataThing:
         self.__sitelinks = {}
         for wiki_source, site_link in state[SITELINKS_TAG].items():
             self.__sitelinks[wiki_source] = SiteLinks.create_from_dict(site_link)
-
-
-class WikiDataAPIClient(ABC):
-    """
-    WikiDataAPIClient
-    -----------------
-    Utility class for the WikiData.
-
-    """
-
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def sparql_query(query_string: str, wikidata_sparql_url: str = WIKIDATA_SPARQL_URL, max_retries: int = 3) -> dict:
-        """Send a SPARQL query and return the JSON formatted result.
-
-        Parameters
-        -----------
-        query_string: str
-          SPARQL query string
-        wikidata_sparql_url: str
-          Wikidata SPARQL endpoint to use
-        max_retries: int
-            Maximum number of retries
-        """
-        # Define the retry policy
-        retry_policy: Retry = Retry(
-            total=max_retries,  # maximum number of retries
-            backoff_factor=1,  # factor by which to multiply the delay between retries
-            status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
-            respect_retry_after_header=True,  # respect the Retry-After header
-        )
-
-        # Create a session and mount the retry adapter
-        with requests.Session() as session:
-            retry_adapter = HTTPAdapter(max_retries=retry_policy)
-            session.mount("https://", retry_adapter)
-
-            # Make a request using the session
-            response: Response = session.get(
-                wikidata_sparql_url, params={"query": query_string, "format": "json"}, timeout=10000
-            )
-            if response.ok:
-                return response.json()
-
-            raise WikiDataAPIException(
-                f"Failed to query entities. " f"Response code:={response.status_code}, Exception:= {response.content}."
-            )
-
-    @staticmethod
-    def superclasses(qid: str) -> Dict[str, WikidataClass]:
-        """
-        Returns the Wikidata class with all its superclasses for the given QID.
-
-        Parameters
-        ----------
-        qid: str
-            Wikidata QID (e.g., 'Q146' for house cat).
-
-        Returns
-        -------
-        classes: Dict[str, WikidataClass]
-            A dictionary of WikidataClass objects, where the keys are QIDs and the values are the corresponding
-        """
-        # Fetch superclasses
-        query = f"""
-        SELECT DISTINCT ?class ?classLabel ?superclass ?superclassLabel
-        WHERE
-        {{
-            wd:{qid} wdt:P279* ?class.
-            ?class wdt:P279 ?superclass.
-            SERVICE wikibase:label {{bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
-        }}
-        """
-        try:
-            reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
-            wikidata_classes: Dict[str, WikidataClass] = {}
-            cycle_detector: Set[Tuple[str, str]] = set()
-            adjacency_list: Dict[str, Set[str]] = {}
-
-            if "results" in reply:
-                for b in reply["results"]["bindings"]:
-                    superclass_qid = b["superclass"]["value"].rsplit("/", 1)[-1]
-                    class_qid = b["class"]["value"].rsplit("/", 1)[-1]
-                    superclass_label = b["superclassLabel"]["value"]
-                    class_label = b["classLabel"]["value"]
-
-                    wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
-                    wikidata_classes.setdefault(superclass_qid, WikidataClass(superclass_qid, superclass_label))
-
-                    adjacency_list.setdefault(class_qid, set()).add(superclass_qid)
-        except Exception as e:
-            logger.exception(e)
-            return {qid: WikidataClass(qid, f"Class {qid}")}
-        queue = deque([qid])
-        visited = set()
-
-        while queue:
-            current_qid = queue.popleft()
-            if current_qid in visited:
-                continue
-            visited.add(current_qid)
-
-            if current_qid in adjacency_list:
-                for superclass_qid in adjacency_list[current_qid]:
-                    if (current_qid, superclass_qid) not in cycle_detector:
-                        wikidata_classes[current_qid].superclasses.append(wikidata_classes[superclass_qid])
-                        queue.append(superclass_qid)
-                        cycle_detector.add((current_qid, superclass_qid))
-
-        return wikidata_classes
-
-    @staticmethod
-    def subclasses(qid: str) -> Dict[str, WikidataClass]:
-        """
-        Returns the Wikidata class with all its subclasses for the given QID.
-
-        Parameters
-        ----------
-        qid: str
-            Wikidata QID (e.g., 'Q146' for house cat).
-
-        Returns
-        -------
-        classes: Dict[str, WikidataClass]
-            A dictionary of WikidataClass objects, where the keys are QIDs and the values are the corresponding
-            classes with their subclasses populated.
-        """
-        # Fetch subclasses
-        query = f"""
-            SELECT DISTINCT ?class ?classLabel ?subclass ?subclassLabel
-            WHERE
-            {{
-                ?subclass wdt:P279 wd:{qid}.
-                ?subclass wdt:P279 ?class.
-                SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
-            }}
-            LIMIT 1000
-            """
-        try:
-            reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
-            wikidata_classes: Dict[str, WikidataClass] = {}
-            cycle_detector: Set[Tuple[str, str]] = set()
-            adjacency_list: Dict[str, Set[str]] = {}
-
-            if "results" in reply:
-                for b in reply["results"]["bindings"]:
-                    subclass_qid = b["subclass"]["value"].rsplit("/", 1)[-1]
-                    class_qid = b["class"]["value"].rsplit("/", 1)[-1]
-                    subclass_label = b["subclassLabel"]["value"]
-                    class_label = b["classLabel"]["value"]
-
-                    wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
-                    wikidata_classes.setdefault(subclass_qid, WikidataClass(subclass_qid, subclass_label))
-
-                    # subclass -> class relationship (reverse of superclass logic)
-                    adjacency_list.setdefault(class_qid, set()).add(subclass_qid)
-        except Exception as e:
-            logger.exception(e)
-            return {qid: WikidataClass(qid, f"Class {qid}")}
-
-        queue = deque([qid])
-        visited = set()
-
-        while queue:
-            current_qid = queue.popleft()
-            if current_qid in visited:
-                continue
-            visited.add(current_qid)
-
-            # Ensure the starting QID is in the dictionary
-            if current_qid not in wikidata_classes:
-                # If not present, we might need to fetch its label separately
-                wikidata_classes[current_qid] = WikidataClass(current_qid, f"Class {current_qid}")
-
-            if current_qid in adjacency_list:
-                for subclass_qid in adjacency_list[current_qid]:
-                    if (current_qid, subclass_qid) not in cycle_detector:
-                        wikidata_classes[current_qid].subclasses.append(wikidata_classes[subclass_qid])
-                        queue.append(subclass_qid)
-                        cycle_detector.add((current_qid, subclass_qid))
-
-        return wikidata_classes
-
-    @staticmethod
-    def search_term(
-        search_term: str, language: LanguageCode, url: str = WIKIDATA_SEARCH_URL
-    ) -> List[WikidataSearchResult]:
-        """
-        Search for a term in the WikiData.
-        Parameters
-        ----------
-        search_term: str
-            The term to search for.
-        language: str
-            The language to search in.
-        url: str
-            The URL of the WikiData search API.
-
-        Returns
-        -------
-        search_results_dict: List[WikidataSearchResult]
-            The search results.
-        """
-        search_results_dict: List[WikidataSearchResult] = []
-        # Define the retry policy
-        retry_policy: Retry = Retry(
-            total=3,  # maximum number of retries
-            backoff_factor=1,  # factor by which to multiply the delay between retries
-            status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
-            respect_retry_after_header=True,  # respect the Retry-After header
-        )
-
-        # Create a session and mount the retry adapter
-        with requests.Session() as session:
-            retry_adapter = HTTPAdapter(max_retries=retry_policy)
-            session.mount("https://", retry_adapter)
-            params: Dict[str, str] = {
-                "action": "wbsearchentities",
-                "format": "json",
-                "language": language,
-                "search": search_term,
-            }
-            # Make a request using the session
-            response: Response = session.get(url, params=params, timeout=200000)
-
-            # Check the response status code
-            if not response.ok:
-                raise WikiDataAPIException(
-                    f"Search request failed with status code : {response.status_code}. " f"URL:= {url}"
-                )
-            search_result_dict_full: Dict[str, Any] = response.json()
-            for search_result_dict in search_result_dict_full["search"]:
-                search_results_dict.append(WikidataSearchResult.from_dict(search_result_dict))
-            return search_results_dict
-
-    @staticmethod
-    def __wikidata_task__(qid: str) -> WikidataThing:
-        """Retrieve a single Wikidata thing.
-
-        Parameters
-        ----------
-        qid: str
-            QID of the entity.
-
-        Returns
-        -------
-        instance: WikidataThing
-            Single wikidata thing
-        """
-        try:
-            return WikidataThing.from_wikidata(__waiting_request__(qid))
-        except Exception as e:
-            logger.exception(e)
-            raise WikiDataAPIException(e) from e
-
-    @staticmethod
-    def __wikidata_multiple_task__(qids: List[str]) -> List[WikidataThing]:
-        """Retrieve multiple Wikidata things.
-
-        Parameters
-        ----------
-        qids: List[str]
-            QIDs of the entities.
-
-        Returns
-        -------
-        instances: List[WikidataThing]
-            List of wikidata things
-        """
-        try:
-            return [WikidataThing.from_wikidata(e) for e in __waiting_multi_request__(qids)]
-        except Exception as e:
-            logger.exception(e)
-            raise WikiDataAPIException(e) from e
-
-    @staticmethod
-    def retrieve_entity(qid: str) -> WikidataThing:
-        """
-        Retrieve a single Wikidata thing.
-
-        Parameters
-        ----------
-        qid: str
-            QID of the entity.
-
-        Returns
-        -------
-        instance: WikidataThing
-            Single wikidata thing
-        """
-        return WikiDataAPIClient.__wikidata_task__(qid)
-
-    @staticmethod
-    def retrieve_entities(qids: Union[List[str], Set[str]]) -> List[WikidataThing]:
-        """
-        Retrieve multiple Wikidata things.
-        Parameters
-        ----------
-        qids: List[str]
-            QIDs of the entities.
-
-        Returns
-        -------
-        instances: List[WikidataThing]
-            List of wikidata things.
-        """
-        pulled: List[WikidataThing] = []
-        if len(qids) == 0:
-            return []
-        jobs: List[List[str]] = list(chunks(list(qids), API_LIMIT))
-        num_processes: int = min(len(jobs), multiprocessing.cpu_count())
-        if num_processes > 1:
-            with Pool(processes=num_processes) as pool:
-                # Wikidata thing is not support in multiprocessing
-                for lst in pool.imap_unordered(__waiting_multi_request__, jobs):
-                    pulled.extend([WikidataThing.from_wikidata(e) for e in lst])
-        else:
-            pulled = WikiDataAPIClient.__wikidata_multiple_task__(jobs[0])
-        return pulled

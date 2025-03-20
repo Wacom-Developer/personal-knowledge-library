@@ -13,6 +13,7 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 from knowledge import logger
+from knowledge.public import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, DEFAULT_BACKOFF_FACTOR, STATUS_FORCE_LIST
 
 
 # --------------------------------------- Structures -------------------------------------------------------------------
@@ -49,10 +50,12 @@ QID_TAG: str = "qid"
 PID_TAG: str = "pid"
 LAST_REVID_TAG: str = "lastrevid"
 MODIFIED_TAG: str = "modified"
+SYNC_TIME_TAG: str = "sync"
 WIKIDATA_LANGUAGE_TAG: str = "language"
 LABEL_VALUE_TAG: str = "value"
 LABEL_TAG: str = "label"
 SUPERCLASSES_TAG: str = "superclasses"
+SUBCLASSES_TAG: str = "subclasses"
 CLAIMS_TAG: str = "claims"
 ONTOLOGY_TYPES_TAG: str = "ontology_types"
 REVISION_TAG: str = "revision"
@@ -262,7 +265,13 @@ def wikidate(param: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def __waiting_request__(entity_id: str, base_url: str = WIKIDATA_LDI_URL) -> Dict[str, Any]:
+def __waiting_request__(
+    entity_id: str,
+    base_url: str = WIKIDATA_LDI_URL,
+    timeout: int = DEFAULT_TIMEOUT,
+    max_retries: int = DEFAULT_MAX_RETRIES,
+    backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+) -> Dict[str, Any]:
     """
     Sena a request with retry policy.
 
@@ -272,18 +281,24 @@ def __waiting_request__(entity_id: str, base_url: str = WIKIDATA_LDI_URL) -> Dic
         Entity QID
     base_url: Base URL
         The base URL
+    timeout:  int
+        Timeout in seconds
+    max_retries: int
+        Maximum number of retries
+    backoff_factor: float
+        Backoff factor for retries.
+
     Returns
     -------
     result_dict: Dict[str, Any]
         Result dict
     """
     url: str = f"{base_url}/{entity_id}.json"
-
     # Define the retry policy
     retry_policy: Retry = Retry(
-        total=3,  # maximum number of retries
-        backoff_factor=1,  # factor by which to multiply the delay between retries
-        status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
+        total=max_retries,  # maximum number of retries
+        backoff_factor=backoff_factor,  # factor by which to multiply the delay between retries
+        status_forcelist=STATUS_FORCE_LIST,  # HTTP status codes to retry on
         respect_retry_after_header=True,  # respect the Retry-After header
     )
 
@@ -293,7 +308,7 @@ def __waiting_request__(entity_id: str, base_url: str = WIKIDATA_LDI_URL) -> Dic
         session.mount("https://", retry_adapter)
 
         # Make a request using the session
-        response: Response = session.get(url)
+        response: Response = session.get(url, timeout=timeout)
 
         # Check the response status code
         if not response.ok:
@@ -311,7 +326,13 @@ def __waiting_request__(entity_id: str, base_url: str = WIKIDATA_LDI_URL) -> Dic
         return entity_dict
 
 
-def __waiting_multi_request__(entity_ids: List[str], base_url: str = MULTIPLE_ENTITIES_API) -> List[Dict[str, Any]]:
+def __waiting_multi_request__(
+    entity_ids: List[str],
+    base_url: str = MULTIPLE_ENTITIES_API,
+    timeout: int = DEFAULT_TIMEOUT,
+    max_retries: int = DEFAULT_MAX_RETRIES,
+    backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+) -> List[Dict[str, Any]]:
     """
     Sena a request to retrieve multiple entities with retry policy.
 
@@ -321,6 +342,12 @@ def __waiting_multi_request__(entity_ids: List[str], base_url: str = MULTIPLE_EN
         Entity QIDs
     base_url: Base URL
         The base URL
+    timeout:  int
+        Timeout in seconds
+    max_retries: int
+        Maximum number of retries
+    backoff_factor: float
+        Backoff factor for retries.
     Returns
     -------
     result_dict: Dict[str, Any]
@@ -330,6 +357,7 @@ def __waiting_multi_request__(entity_ids: List[str], base_url: str = MULTIPLE_EN
     ValueError - Empty list or to many entities
     """
     checked_entity_ids: List[str] = [e for e in entity_ids if e.startswith("Q")]
+
     if not (0 < len(checked_entity_ids) <= API_LIMIT):
         raise ValueError(
             f"Number of entities must be within [1, {API_LIMIT}]. " f"Number of QIDs: {len(checked_entity_ids)}"
@@ -339,9 +367,9 @@ def __waiting_multi_request__(entity_ids: List[str], base_url: str = MULTIPLE_EN
 
     # Define the retry policy
     retry_policy: Retry = Retry(
-        total=3,  # maximum number of retries
-        backoff_factor=1,  # factor by which to multiply the delay between retries
-        status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
+        total=max_retries,  # maximum number of retries
+        backoff_factor=backoff_factor,  # factor by which to multiply the delay between retries
+        status_forcelist=STATUS_FORCE_LIST,  # HTTP status codes to retry on
         respect_retry_after_header=True,  # respect the Retry-After header
     )
 
@@ -351,7 +379,7 @@ def __waiting_multi_request__(entity_ids: List[str], base_url: str = MULTIPLE_EN
         session.mount("https://", retry_adapter)
 
         # Make a request using the session
-        response: Response = session.get(url)
+        response: Response = session.get(url, timeout=timeout)
 
         # Check the response status code
         if not response.ok:

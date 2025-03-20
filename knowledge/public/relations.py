@@ -7,7 +7,8 @@ from typing import Any, Dict, Set, Tuple, List, Callable, Optional
 from tqdm import tqdm
 
 from knowledge.public.helper import CLAIMS_TAG, PID_TAG, LABEL_TAG, QID_TAG
-from knowledge.public.wikidata import LITERALS_TAG, WikidataThing, WikiDataAPIClient
+from knowledge.public.wikidata import LITERALS_TAG, WikidataThing
+from knowledge.public.client import WikiDataAPIClient
 
 
 def __relations__(thing: Dict[str, Any], wikidata: Set[str]) -> Tuple[str, List[Dict[str, Any]]]:
