@@ -112,10 +112,10 @@ def things_session_iter(
     force_refresh_timeout: int [default:= 360]
         Force refresh timeout
 
-    Returns
+    Yields
     -------
-    Iterator[ThingObject]
-        Iterator of things
+    ThingObject
+        Next thing object
 
     Raises
     ------
@@ -391,10 +391,10 @@ async def async_things_session_iter(
     force_refresh_timeout: int [default:= 360]
         Force refresh timeout
 
-    Returns
+    Yields
     -------
-    AsyncIterator[ThingObject]
-        Asynchronous Iterator of things
+    ThingObject
+        Next thing object
     """
     next_page_id: Optional[str] = None
     if async_client.current_session is None:
