@@ -3,7 +3,7 @@
 import multiprocessing
 from collections import deque
 from multiprocessing import Pool
-from typing import Union, Any, Dict, List, Tuple, Set
+from typing import Union, Any, Dict, List, Tuple, Set, Optional, Callable
 
 import requests
 from requests import Response
@@ -321,18 +321,10 @@ class WikiDataAPIClient:
         """
         try:
             results: List[WikidataThing] = []
-            request_qids: List[str] = []
-            for qid in qids:
-                if wikidata_cache.qid_in_cache(qid):
-                    results.append(wikidata_cache.get_wikidata_object(qid))
-                else:
-                    request_qids.append(qid)
-            if len(request_qids) > 0:
-                for e in __waiting_multi_request__(request_qids):
+            if len(qids) > 0:
+                for e in __waiting_multi_request__(qids):
                     w_thing = WikidataThing.from_wikidata(e)
                     results.append(w_thing)
-                    # Add the thing to the cache
-                    wikidata_cache.cache_wikidata_object(w_thing)
             return results
         except Exception as e:
             logger.exception(e)
@@ -356,13 +348,16 @@ class WikiDataAPIClient:
         return WikiDataAPIClient.__wikidata_task__(qid)
 
     @staticmethod
-    def retrieve_entities(qids: Union[List[str], Set[str]]) -> List[WikidataThing]:
+    def retrieve_entities(qids: Union[List[str], Set[str]], progress: Optional[Callable[[int, int], None]] = None) \
+            -> List[WikidataThing]:
         """
         Retrieve multiple Wikidata things.
         Parameters
         ----------
         qids: List[str]
             QIDs of the entities.
+        progress: Optional[Callable[[int, int], None]]
+            Optional callback function to report progress.
 
         Returns
         -------
@@ -370,17 +365,40 @@ class WikiDataAPIClient:
             List of wikidata things.
         """
         pulled: List[WikidataThing] = []
+        task_size: int = len(qids)
         if len(qids) == 0:
             return []
-        jobs: List[List[str]] = list(chunks(list(qids), API_LIMIT))
+        missing_qids: List[str] = []
+        for qid in qids:
+            if not wikidata_cache.qid_in_cache(qid):
+                if qid and qid.startswith("Q") and len(qid) > 1:
+                    missing_qids.append(qid)
+            else:
+                pulled.append(wikidata_cache.get_wikidata_object(qid))
+        ctr: int = len(pulled)
+        if progress:
+            progress(len(pulled), task_size)
+        jobs: List[List[str]] = list(chunks(list(missing_qids), API_LIMIT))
         num_processes: int = min(len(jobs), multiprocessing.cpu_count())
         if num_processes > 1:
             with Pool(processes=num_processes) as pool:
                 # Wikidata thing is not support in multiprocessing
                 for lst in pool.imap_unordered(__waiting_multi_request__, jobs):
-                    pulled.extend([WikidataThing.from_wikidata(e) for e in lst])
+                    for w_dict in lst:
+                        w_thing = WikidataThing.from_wikidata(w_dict)
+                        wikidata_cache.cache_wikidata_object(w_thing)
+                        pulled.append(w_thing)
+                        ctr += 1
+                        if progress:
+                            progress(ctr, task_size)
         else:
-            pulled = WikiDataAPIClient.__wikidata_multiple_task__(jobs[0])
+            results = WikiDataAPIClient.__wikidata_multiple_task__(jobs[0])
+            for w_thing in results:
+                wikidata_cache.cache_wikidata_object(w_thing)
+                ctr += 1
+                if progress:
+                    progress(ctr, task_size)
+            pulled.extend(results)
         return pulled
 
     @staticmethod
