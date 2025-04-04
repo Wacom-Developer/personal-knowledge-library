@@ -1,3 +1,8 @@
+2025/04/04 - RELEASE 3.1.2
+==========================
+- Adding support for import format
+- Fixing issue with reference id not properly added to import format export
+
 2025/03/20 - RELEASE 3.1.1
 ==========================
 - Improved wikidata cache handling
