@@ -348,8 +348,9 @@ class WikiDataAPIClient:
         return WikiDataAPIClient.__wikidata_task__(qid)
 
     @staticmethod
-    def retrieve_entities(qids: Union[List[str], Set[str]], progress: Optional[Callable[[int, int], None]] = None) \
-            -> List[WikidataThing]:
+    def retrieve_entities(
+        qids: Union[List[str], Set[str]], progress: Optional[Callable[[int, int], None]] = None
+    ) -> List[WikidataThing]:
         """
         Retrieve multiple Wikidata things.
         Parameters

@@ -543,6 +543,7 @@ def build_configuration(mapping: Dict[str, Any]) -> MappingConfiguration:
         conf.add_property(property_config)
     return conf
 
+
 def register_ontology(rdf_str: str):
     """
     Registers the ontology.
@@ -552,6 +553,7 @@ def register_ontology(rdf_str: str):
         The ontology in RDF/XML format.
     """
     ontology_graph.parse(data=rdf_str, format="xml")
+
 
 def load_configuration(configuration: Path):
     """
