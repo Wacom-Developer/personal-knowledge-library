@@ -2179,7 +2179,9 @@ class ThingObject(abc.ABC):
         labels.extend([la.__dict__() for la in self.label])
         labels.extend([la.__dict__() for la in self.alias])
         dict_object: Dict[str, Any] = {
-            SOURCE_REFERENCE_ID_TAG: self.source_reference_id if self.source_reference_id is None else reference_id,
+            SOURCE_REFERENCE_ID_TAG: (
+                self.default_source_reference_id() if self.source_reference_id is not None else reference_id
+            ),
             SOURCE_SYSTEM_TAG: self.source_system,
             IMAGE_TAG: self.image,
             LABELS_TAG: labels,
