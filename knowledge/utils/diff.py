@@ -191,18 +191,17 @@ def diff_entities(
                         "file": dp.value,
                     }
                 )
-            else:
-                if dp.value not in [d.value for d in kg_thing.data_properties.get(prop)]:
-                    difference_data_properties.append(
-                        {
-                            "concept_type": file_thing.concept_type.name,
-                            "type": "Different data property values",
-                            "resource_id": kg_thing.default_source_reference_id(),
-                            "uri": kg_thing.uri,
-                            "kg": ", ".join([d.value for d in kg_thing.data_properties.get(prop)]),
-                            "file": dp.value,
-                        }
-                    )
+            elif dp.value not in [d.value for d in kg_thing.data_properties.get(prop)]:
+                difference_data_properties.append(
+                    {
+                        "concept_type": file_thing.concept_type.name,
+                        "type": "Different data property values",
+                        "resource_id": kg_thing.default_source_reference_id(),
+                        "uri": kg_thing.uri,
+                        "kg": ", ".join([d.value for d in kg_thing.data_properties.get(prop)]),
+                        "file": dp.value,
+                    }
+                )
     difference_object_properties: List[Dict[str, Any]] = []
     if kg_things:
         kg_thing.object_properties = client.relations(kg_thing.uri)
@@ -464,18 +463,17 @@ async def diff_entities_async(
                         "file": dp.value,
                     }
                 )
-            else:
-                if dp.value not in [d.value for d in kg_thing.data_properties.get(prop)]:
-                    difference_data_properties.append(
-                        {
-                            "concept_type": file_thing.concept_type.name,
-                            "type": "Different data property values",
-                            "resource_id": kg_thing.default_source_reference_id(),
-                            "uri": kg_thing.uri,
-                            "kg": ", ".join([d.value for d in kg_thing.data_properties.get(prop)]),
-                            "file": dp.value,
-                        }
-                    )
+            elif dp.value not in [d.value for d in kg_thing.data_properties.get(prop)]:
+                difference_data_properties.append(
+                    {
+                        "concept_type": file_thing.concept_type.name,
+                        "type": "Different data property values",
+                        "resource_id": kg_thing.default_source_reference_id(),
+                        "uri": kg_thing.uri,
+                        "kg": ", ".join([d.value for d in kg_thing.data_properties.get(prop)]),
+                        "file": dp.value,
+                    }
+                )
     difference_object_properties: List[Dict[str, Any]] = []
     if kg_things:
         kg_thing.object_properties = await client.relations(kg_thing.uri)
