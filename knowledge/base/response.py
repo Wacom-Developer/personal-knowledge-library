@@ -39,7 +39,13 @@ class JobStatus:
     finished_at: Optional[datetime]
         The timestamp when the job finished.
     """
-
+    PENDING: str = "Pending"
+    """The job is pending. It has not started yet, as another job is in progress."""
+    IN_PROGRESS: str = "InProgress"
+    """The job is in progress. It has started but not yet completed."""
+    COMPLETED: str = "Completed"
+    """The job is completed."""
+    
     def __init__(
         self,
         user_id: str,
