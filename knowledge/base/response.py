@@ -149,7 +149,19 @@ class JobStatus:
         return self._failures
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: Dict[str, Any]) -> "JobStatus":
+        """
+        Create a JobStatus instance from a dictionary.
+        Parameters
+        ----------
+        data: Dict[str, Any]
+            Response data from the API.
+
+        Returns
+        -------
+        instance: JobStatus
+            Instance of JobStatus.
+        """
         return cls(
             user_id=data.get("userId"),
             tenant_id=data.get("tenantId"),
@@ -265,6 +277,18 @@ class ErrorLogResponse:
 
     @classmethod
     def from_dict(cls, param: Dict[str, Any]) -> "ErrorLogResponse":
+        """
+        Create an ErrorLogResponse instance from a dictionary.
+        Parameters
+        ----------
+        param: Dict[str, Any]
+            Response data from the API.
+
+        Returns
+        -------
+        instance: ErrorLogResponse
+            Instance of ErrorLogResponse.
+        """
         error_log_entries = []
         for entry in param.get("errorLog", []):
             errors = [
@@ -311,4 +335,16 @@ class NewEntityUrisResponse:
 
     @classmethod
     def from_dict(cls, param: Dict[str, Any]) -> "NewEntityUrisResponse":
+        """
+        Create a NewEntityUrisResponse instance from a dictionary.
+        Parameters
+        ----------
+        param: Dict[str, Any]
+            Response data from the API.
+
+        Returns
+        -------
+        instance: NewEntityUrisResponse
+            Instance of NewEntityUrisResponse.
+        """
         return cls(new_entities_uris=param["uris"], next_page_id=param.get("nextPage"))
