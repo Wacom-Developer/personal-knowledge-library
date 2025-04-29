@@ -309,7 +309,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
             response = session.get(url, params=params, headers=headers)
             if response.ok:
                 return response.json().get("count", 0)
-        raise handle_error("Counting labels failed.", response, headers=headers, parameters={"locale": locale})
+            raise handle_error("Counting labels failed.", response, headers=headers, parameters={"locale": locale})
 
     def count_labels_filter(
         self,
@@ -360,9 +360,9 @@ class SemanticSearchClient(WacomServiceAPIClient):
             response = session.post(url, json={"locale": locale, "filter": filters}, headers=headers)
             if response.ok:
                 return response.json().get("count", 0)
-        raise handle_error(
-            "Counting labels failed.", response, headers=headers, parameters={"locale": locale, "filter": filters}
-        )
+            raise handle_error(
+                "Counting labels failed.", response, headers=headers, parameters={"locale": locale, "filter": filters}
+            )
 
     def document_search(
         self,
