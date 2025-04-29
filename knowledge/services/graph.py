@@ -36,6 +36,7 @@ from knowledge.base.ontology import (
     ObjectProperty,
     EN_US,
 )
+from knowledge.base.response import JobStatus, ErrorLogResponse, NewEntityUrisResponse
 from knowledge.services import (
     AUTHORIZATION_HEADER_FLAG,
     APPLICATION_JSON_HEADER,
@@ -81,6 +82,8 @@ from knowledge.services.helper import split_updates, entity_payload
 from knowledge.services.users import UserRole
 
 MIME_TYPE: Dict[str, str] = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
+
+IndexType = Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]
 
 
 # ------------------------------- Enum ---------------------------------------------------------------------------------
@@ -161,6 +164,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
     SEARCH_RELATION_ENDPOINT: str = "semantic-search/relation"
     ONTOLOGY_UPDATE_ENDPOINT: str = "ontology-update"
     IMPORT_ENTITIES_ENDPOINT: str = "import"
+    IMPORT_ERROR_LOG_ENDPOINT: str = "import/errorlog"
     REBUILD_VECTOR_SEARCH_INDEX: str = "vector-search/rebuild"
     REBUILD_NEL_INDEX: str = "nel/rebuild"
 
@@ -576,6 +580,70 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             )
             if not response.ok:
                 raise handle_error("Updating entity failed.", response)
+
+    def update_entity_indexes(
+        self,
+        entity_uri: str,
+        targets: List[IndexType],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+    ) -> Dict[IndexType, Any]:
+        """
+        Updates index targets of an entity. The index targets can be set to "NEL", "ElasticSearch", "VectorSearchWord",
+        or "VectorSearchDocument".
+        The index targets are set to "UPSERT" or "DELETE" depending on the current state of the entity.
+        If the entity has an index target and it is not set in the request, it will be set to "DELETE"
+        and if the entity does not have an index target and it is set in the request, it will be set to "UPSERT".
+
+        Parameters
+        ----------
+        entity_uri: str
+            URI of entity
+        targets: List[Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]]
+            List of indexing targets
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+
+        Returns
+        -------
+        update_status: Dict[str, Any]
+            Status per target (depending on the targets of entity and the ones set in the request), e.g., if the entity
+            has NEL and ElasticSearch indexes, and you only set ElasticSearch in the request, the response will
+            the response will only contain {"ElasticSearch": "UPSERT", "NEL: "DELETE"}.
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code
+        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{entity_uri}/indexes"
+        # Header info
+        headers: dict = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
+        }
+        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.patch(
+                url, json=targets, headers=headers, timeout=timeout, verify=self.verify_calls
+            )
+            if response.ok:
+                return response.json()
+            raise handle_error("Updating entity indexes failed.", response)
 
     def relations(
         self,
@@ -1685,10 +1753,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         # Compress the NDJSON string to a gzip byte array
         compressed_data: bytes = gzip.compress(ndjson_content.encode("utf-8"))
-        with open("import.gzip", "wb") as f:
-            f.write(compressed_data)
         files: List[Tuple[str, Tuple[str, bytes, str]]] = [
-            ("file", ("import.njson", compressed_data, "application/x-gzip"))
+            ("file", ("import.njson.gz", compressed_data, "application/x-gzip"))
         ]
         url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}"
         mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
@@ -1709,7 +1775,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         timeout: int = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_MAX_RETRIES,
         backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-    ) -> Dict[str, Any]:
+    ) -> JobStatus:
         """
         Retrieve the status of the job.
 
@@ -1729,7 +1795,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Returns
         -------
-        job_status: Dict[str, Any]
+        job_status: JobStatus
             Status of the job
         """
         if auth_key is None:
@@ -1742,7 +1808,105 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
             response: Response = session.get(url, headers=headers, timeout=timeout, verify=self.verify_calls)
             if response.ok:
-                return response.json()
+                return JobStatus.from_dict(response.json())
+            raise handle_error(f"Retrieving job status for {job_id} failed.", response)
+
+    def import_error_log(
+        self,
+        job_id: str,
+        auth_key: Optional[str] = None,
+        next_page_id: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+    ) -> ErrorLogResponse:
+        """
+        Retrieve the error log of the job.
+
+        Parameters
+        ----------
+        job_id: str
+            ID of the job
+        next_page_id: Optional[str] = None
+            ID of the next page within pagination.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+
+        Returns
+        -------
+        error: ErrorLogResponse
+            Error log of the job
+        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
+        url: str = f"{self.service_base_url}{self.IMPORT_ERROR_LOG_ENDPOINT}/{job_id}"
+        params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
+        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(
+                url, headers=headers, timeout=timeout, params=params, verify=self.verify_calls
+            )
+            if response.ok:
+                return ErrorLogResponse.from_dict(response.json())
+            raise handle_error(f"Retrieving job status for {job_id} failed.", response)
+
+    def import_new_uris(
+        self,
+        job_id: str,
+        auth_key: Optional[str] = None,
+        next_page_id: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+    ) -> NewEntityUrisResponse:
+        """
+        Retrieve the new entity uris from the job.
+
+        Parameters
+        ----------
+        job_id: str
+            ID of the job
+        next_page_id: Optional[str] = None
+            ID of the next page within pagination.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+
+        Returns
+        -------
+        response: NewEntityUrisResponse
+            New entity uris of the job.
+        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
+        url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}/{job_id}/new-entities"
+        params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
+        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(
+                url, headers=headers, timeout=timeout, params=params, verify=self.verify_calls
+            )
+            if response.ok:
+                return NewEntityUrisResponse.from_dict(response.json())
             raise handle_error(f"Retrieving job status for {job_id} failed.", response)
 
     # ------------------------------------ Admin endpoints -------------------------------------------------------------
