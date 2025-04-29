@@ -109,9 +109,14 @@ def load_import_format(file_path: Path) -> List[ThingObject]:
         raise FileNotFoundError(f"Path {file_path} is not a file.")
     cached_entities: List[ThingObject] = []
     if file_path.suffix == ".gz":
-        with gzip.open(file_path, "rb") as f_gz:
-            for line in f_gz.readlines():
-                line = line.decode("utf-8")
+        with gzip.open(file_path, "rt", encoding="utf-8") as f_gz:
+            for line_number, line in enumerate(f_gz):
+                stripped_line: str = line.strip()
+                if not stripped_line:
+                    continue  # Skip empty lines
+                if line_number == 0:
+                    # Skip the first line (header)
+                    continue
                 try:
                     cached_entities.append(__import_format_to_thing__(line))
                 except JSONDecodeError as e:
