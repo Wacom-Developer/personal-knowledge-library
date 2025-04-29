@@ -15,8 +15,12 @@ The access is used to access the knowledge graph, there are different types of a
     - Public access: the user can access all the entities.
     - Group access: the user can access the entities that are in the same group.
 """
-__all__ = ["access", "entity", "ontology"]
+__all__ = ["access", "entity", "language", "ontology", "response", "search", "tenant"]
 
 from knowledge.base import access
 from knowledge.base import entity
+from knowledge.base import language
 from knowledge.base import ontology
+from knowledge.base import response
+from knowledge.base import search
+from knowledge.base import tenant
