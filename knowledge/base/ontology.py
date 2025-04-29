@@ -1833,7 +1833,7 @@ class ThingObject(abc.ABC):
     @property
     def source_system(self) -> Optional[str]:
         """Default reference system for the entity."""
-        if SYSTEM_SOURCE_REFERENCE_ID in self.__data_properties:
+        if SYSTEM_SOURCE_SYSTEM in self.__data_properties:
             # The en_US is the default language for the source reference system
             for sr in self.data_properties[SYSTEM_SOURCE_SYSTEM]:
                 if sr.language_code == EN_US:
