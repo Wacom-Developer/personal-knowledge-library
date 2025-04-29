@@ -40,6 +40,8 @@ class UserRole(enum.Enum):
     """User only has control over his personal entities."""
     ADMIN = "TenantAdmin"
     """TenantAdmin has access to all entities independent of the access rights."""
+    CONTENT_MANAGER = "ContentManager"
+    """ContentManager is a special user for content accounts. The same visibility rules as for USER accounts apply."""
 
 
 USER_ROLE_MAPPING: Dict[str, UserRole] = {str(r.value): r for r in UserRole}
