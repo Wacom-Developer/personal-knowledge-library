@@ -581,7 +581,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             if not response.ok:
                 raise handle_error("Updating entity failed.", response)
 
-    def update_entity_indexes(
+    def add_entity_indexes(
         self,
         entity_uri: str,
         targets: List[IndexType],
@@ -644,6 +644,63 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             if response.ok:
                 return response.json()
             raise handle_error("Updating entity indexes failed.", response)
+
+    def remove_entity_indexes(
+        self,
+        entity_uri: str,
+        targets: List[IndexType],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+    ) -> Dict[IndexType, Any]:
+        """
+        Deletes the search index for a given entity.
+
+        Parameters
+        ----------
+        entity_uri: str
+            URI of entity
+        targets: List[Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]]
+            List of indexing targets
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+
+        Returns
+        -------
+
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code
+        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{entity_uri}/indexes"
+        # Header info
+        headers: dict = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
+        }
+        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.delete(
+                url, json=targets, headers=headers, timeout=timeout, verify=self.verify_calls
+            )
+            if response.ok:
+                return response.json()
+            raise handle_error("Deleting entity indexes failed.", response)
 
     def relations(
         self,
