@@ -10,7 +10,7 @@ import pytest
 from faker import Faker
 
 from knowledge.base.entity import Label
-from knowledge.base.language import JA_JP, EN_US, DE_DE, BG_BG, FR_FR, IT_IT, ES_ES
+from knowledge.base.language import SUPPORTED_LOCALES, LocaleCode
 from knowledge.base.ontology import (
     ThingObject,
     OntologyClassReference,
@@ -18,7 +18,7 @@ from knowledge.base.ontology import (
     DataProperty,
     ObjectProperty,
 )
-from knowledge.services.graph import WacomKnowledgeService, Visibility
+from knowledge.services.graph import WacomKnowledgeService, Visibility, IndexType
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
 from knowledge.utils.graph import count_things
@@ -35,7 +35,7 @@ def create_thing() -> ThingObject:
         Thing object with random data.
     """
     thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse("wacom:core#Person"))
-    for lang_inst in [JA_JP, EN_US, DE_DE, BG_BG, FR_FR, IT_IT, ES_ES]:
+    for lang_inst in SUPPORTED_LOCALES:
         fake: Faker = Faker(lang_inst)
         name: str = fake.name()
         thing.add_label(name, lang_inst)
@@ -57,6 +57,31 @@ def create_thing() -> ThingObject:
             )
     return thing
 
+
+def create_page_thing() -> ThingObject:
+    """
+    Create a page thing object with random data.
+    Returns
+    -------
+    instance: ThingObject
+        Thing object with random data.
+    """
+    thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse("wacom:core#Page"))
+    for lang_inst in SUPPORTED_LOCALES:
+        fake: Faker = Faker(lang_inst)
+        name: str = fake.name()
+        thing.add_label(name, lang_inst)
+        thing.add_description(fake.text(), lang_inst)
+        thing.add_data_property(
+            DataProperty(
+                content=fake.text(), property_ref=OntologyPropertyReference.parse("wacom:core#content"),
+                language_code=LocaleCode(lang_inst))
+        )
+    thing.use_full_text_index = False
+    thing.use_vector_index = False
+    thing.use_vector_index_document = False
+    thing.use_for_nel = False
+    return thing
 
 @pytest.fixture(scope="class")
 def cache_class(request):
@@ -191,7 +216,63 @@ class EntityFlow(TestCase):
         self.assertIsNotNone(relations)
         self.assertEqual(len(relations), 0)
 
-    def test_8_delete_entity(self):
+    def test_8_update_entity_indexes(self):
+        """Test index operations."""
+        index_thing: ThingObject = create_page_thing()
+        entity_uri: str = self.knowledge_client.create_entity(index_thing)
+        thing: ThingObject = self.knowledge_client.entity(entity_uri)
+        self.assertFalse(thing.use_full_text_index)
+        self.assertFalse(thing.use_vector_index)
+        self.assertFalse(thing.use_vector_index_document)
+        self.assertFalse(thing.use_for_nel)
+
+        # Update ElasticSearch index and Remove NEL
+        updates: Dict[IndexType, str] = self.knowledge_client.add_entity_indexes(entity_uri,
+                                                                                 targets=["ElasticSearch"])
+        self.assertEqual(updates["ElasticSearch"], "UPSERT")
+        updates = self.knowledge_client.add_entity_indexes(entity_uri, targets=["ElasticSearch"])
+        self.assertEqual(updates["ElasticSearch"], "Target already exists")
+        thing = self.knowledge_client.entity(entity_uri)
+        self.assertTrue(thing.use_full_text_index)
+        self.assertFalse(thing.use_vector_index)
+        self.assertFalse(thing.use_vector_index_document)
+        self.assertFalse(thing.use_for_nel)
+        # Update NEL index
+        updates = self.knowledge_client.add_entity_indexes(entity_uri, targets=["NEL"])
+        self.assertEqual(updates["NEL"], "UPSERT")
+        thing = self.knowledge_client.entity(entity_uri)
+        self.assertTrue(thing.use_full_text_index)
+        self.assertFalse(thing.use_vector_index)
+        self.assertFalse(thing.use_vector_index_document)
+        self.assertTrue(thing.use_for_nel)
+        # Update Vector index
+        updates = self.knowledge_client.add_entity_indexes(entity_uri, targets=["VectorSearchWord",
+                                                                                "VectorSearchDocument"])
+        self.assertEqual(updates["VectorSearchWord"], "UPSERT")
+        self.assertEqual(updates["VectorSearchDocument"], "UPSERT")
+        thing = self.knowledge_client.entity(entity_uri)
+        self.assertTrue(thing.use_full_text_index)
+        self.assertTrue(thing.use_vector_index)
+        self.assertTrue(thing.use_vector_index_document)
+        self.assertTrue(thing.use_for_nel)
+        # Remove all indexes
+        updates = self.knowledge_client.remove_entity_indexes(entity_uri,
+                                                              targets=["ElasticSearch", "NEL", "VectorSearchWord",
+                                                                       "VectorSearchDocument"])
+        self.assertEqual(updates["ElasticSearch"], "DELETE")
+        self.assertEqual(updates["NEL"], "DELETE")
+        self.assertEqual(updates["VectorSearchWord"], "DELETE")
+        self.assertEqual(updates["VectorSearchDocument"], "DELETE")
+        # Check if all indexes are removed
+        thing = self.knowledge_client.entity(entity_uri)
+        self.assertFalse(thing.use_full_text_index)
+        self.assertFalse(thing.use_vector_index)
+        self.assertFalse(thing.use_vector_index_document)
+        self.assertFalse(thing.use_for_nel)
+
+
+
+    def test_9_delete_entity(self):
         """Delete the entity."""
         self.knowledge_client.login(self.tenant_api_key, self.cache.external_id)
         before_entities = count_things(
