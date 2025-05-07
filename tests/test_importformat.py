@@ -11,7 +11,7 @@ from faker import Faker
 from knowledge.base.entity import Label, LABELS_TAG, INDEXING_NEL_TARGET
 from knowledge.base.language import EN_US, SUPPORTED_LOCALES
 from knowledge.base.ontology import OntologyClassReference, ThingObject, DataProperty, OntologyPropertyReference, \
-    SYSTEM_SOURCE_REFERENCE_ID, ObjectProperty
+    SYSTEM_SOURCE_REFERENCE_ID, ObjectProperty, SYSTEM_SOURCE_SYSTEM
 from knowledge.base.response import JobStatus, NewEntityUrisResponse
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.users import UserRole, UserManagementServiceAPI, User
@@ -74,6 +74,7 @@ def create_random_thing(reference_id: str, uri: str) -> ThingObject:
         thing.add_label(name, lang_inst)
         thing.add_description(fake.text(), lang_inst)
     thing.add_data_property(DataProperty(reference_id, SYSTEM_SOURCE_REFERENCE_ID, language_code=EN_US))
+    thing.add_data_property(DataProperty("test-case", SYSTEM_SOURCE_SYSTEM, language_code=EN_US))
     thing.add_relation(ObjectProperty(
         relation=LINKS, outgoing=[uri])
     )
@@ -161,22 +162,26 @@ class ImportFlow(TestCase):
             job_status: JobStatus = self.knowledge_client.job_status(job_id)
             if job_status.status == JobStatus.COMPLETED:
                 break
-            next_page_id = None
-            while True:
-                resp: NewEntityUrisResponse = self.knowledge_client.import_new_uris(job_id,
-                                                                                    next_page_id=next_page_id)
-                new_uris.extend(resp.new_entities_uris)
-                if resp.next_page_id is None:
-                    break
-                next_page_id = resp.next_page_id
-            break
+        next_page_id = None
+        while True:
+            resp: NewEntityUrisResponse = self.knowledge_client.import_new_uris(job_id,
+                                                                                next_page_id=next_page_id)
+            new_uris.extend(resp.new_entities_uris)
+            if resp.next_page_id is None:
+                break
+            next_page_id = resp.next_page_id
+
+        errors = self.knowledge_client.import_error_log(job_id)
+
+        if len(new_uris) == 0:
+            raise Exception(f"Import failed with errors: {errors}")
         for uri in new_uris:
             thing: ThingObject = self.knowledge_client.entity(uri)
             thing.object_properties = self.knowledge_client.relations(uri)
             self.assertIsNotNone(thing)
             self.assertEqual(thing.use_for_nel, True)
-            if LINKS in thing.object_properties:
-                self.assertEqual(thing.object_properties[LINKS].outgoing_relations[0], uri_thing)
+            self.assertTrue(LINKS in thing.object_properties)
+            self.assertEqual(thing.object_properties[LINKS].outgoing_relations[0], uri_thing)
 
     def teardown_class(self):
         """Delete the entity."""
