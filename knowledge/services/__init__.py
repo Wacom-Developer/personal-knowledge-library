@@ -3,7 +3,7 @@
 """
 This package contains the services for the knowledge graph functionality.
 """
-from typing import List
+from typing import List, Literal
 
 # ------------------------------------------------- Constants ----------------------------------------------------------
 USER_AGENT_HEADER_FLAG: str = "User-Agent"
@@ -52,6 +52,7 @@ PRUNE_PARAM: str = "prune"
 NEL_PARAM: str = "nelType"
 
 APPLICATION_JSON_HEADER: str = "application/json"
+IndexType = Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]
 
 DEFAULT_TIMEOUT: int = 60
 DEFAULT_TOKEN_REFRESH_TIME: int = 360
@@ -119,6 +120,7 @@ __all__ = [
     "STATUS_FORCE_LIST",
     "DEFAULT_BACKOFF_FACTOR",
     "DEFAULT_MAX_RETRIES",
+    "IndexType",
 ]
 
 from knowledge.services import base

@@ -70,6 +70,7 @@ from knowledge.services import (
     DEFAULT_BACKOFF_FACTOR,
     ENTITIES_TAG,
     NEL_PARAM,
+    IndexType,
 )
 from knowledge.services.base import (
     WacomServiceAPIClient,
@@ -82,8 +83,6 @@ from knowledge.services.helper import split_updates, entity_payload
 from knowledge.services.users import UserRole
 
 MIME_TYPE: Dict[str, str] = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
-
-IndexType = Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]
 
 
 # ------------------------------- Enum ---------------------------------------------------------------------------------
@@ -593,9 +592,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         Updates index targets of an entity. The index targets can be set to "NEL", "ElasticSearch", "VectorSearchWord",
         or "VectorSearchDocument".
-        The index targets are set to "UPSERT" or "DELETE" depending on the current state of the entity.
-        If the entity has an index target and it is not set in the request, it will be set to "DELETE"
-        and if the entity does not have an index target and it is set in the request, it will be set to "UPSERT".
+        If the target is already set for the entity, there will be no changes.
 
         Parameters
         ----------
@@ -616,9 +613,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         Returns
         -------
         update_status: Dict[str, Any]
-            Status per target (depending on the targets of entity and the ones set in the request), e.g., if the entity
-            has NEL and ElasticSearch indexes, and you only set ElasticSearch in the request, the response will
-            the response will only contain {"ElasticSearch": "UPSERT", "NEL: "DELETE"}.
+            Status per target (depending on the targets of entity and the ones set in the request). If the entity
+            already has the target set, the status will be "Target already exists" for that target,
+            otherwise it will be "UPSERT".
 
         Raises
         ------
@@ -675,7 +672,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Returns
         -------
-
+        update_status: Dict[str, Any]
+            Status per target (depending on the targets of entity and the ones set in the request), e.g.,
+            response will only contain {"NEL: "DELETE"}, if NEL is the only target in the request.
 
         Raises
         ------
