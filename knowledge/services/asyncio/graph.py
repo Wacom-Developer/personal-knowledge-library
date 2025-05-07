@@ -36,7 +36,7 @@ from knowledge.base.ontology import (
     ObjectProperty,
 )
 from knowledge.nel.base import KnowledgeGraphEntity, EntityType, KnowledgeSource, EntitySource
-from knowledge.services import AUTHORIZATION_HEADER_FLAG, IS_OWNER_PARAM
+from knowledge.services import AUTHORIZATION_HEADER_FLAG, IS_OWNER_PARAM, IndexType
 from knowledge.services import (
     SUBJECT_URI,
     RELATION_URI,
@@ -569,6 +569,121 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                         f"Update of entity failed. URI:={uri}.", response, payload=payload, headers=headers
                     )
         await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+
+    async def add_entity_indexes(
+        self,
+        entity_uri: str,
+        targets: List[IndexType],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> Dict[IndexType, Any]:
+        """
+        Updates index targets of an entity. The index targets can be set to "NEL", "ElasticSearch", "VectorSearchWord",
+        or "VectorSearchDocument".
+        If the target is already set for the entity, there will be no changes.
+
+        Parameters
+        ----------
+        entity_uri: str
+            URI of entity
+        targets: List[Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]]
+            List of indexing targets
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+
+        Returns
+        -------
+        update_status: Dict[str, Any]
+            Status per target (depending on the targets of entity and the ones set in the request). If the entity
+            already has the target set, the status will be "Target already exists" for that target,
+            otherwise it will be "UPSERT".
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{entity_uri}/indexes"
+        # Header info
+        headers: dict = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
+        }
+        async with AsyncServiceAPIClient.__async_session__() as session:
+            async with session.patch(
+                url, json=targets, headers=headers, timeout=timeout, verify_ssl=self.verify_calls
+            ) as response:
+                if not response.ok:
+                    raise await handle_error(
+                        f"Update of entity indexes failed. URI:={entity_uri}.",
+                        response,
+                        payload={"targets": targets},
+                        headers=headers,
+                    )
+                response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        return response_dict
+
+    async def remove_entity_indexes(
+        self,
+        entity_uri: str,
+        targets: List[IndexType],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> Dict[IndexType, Any]:
+        """
+        Deletes the search index for a given entity.
+
+        Parameters
+        ----------
+        entity_uri: str
+            URI of entity
+        targets: List[Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]]
+            List of indexing targets
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+
+        Returns
+        -------
+        update_status: Dict[str, Any]
+            Status per target (depending on the targets of entity and the ones set in the request), e.g.,
+            response will only contain {"NEL: "DELETE"}, if NEL is the only target in the request.
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{entity_uri}/indexes"
+        # Header info
+        headers: dict = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
+        }
+        async with AsyncServiceAPIClient.__async_session__() as session:
+            async with session.delete(
+                url, json=targets, headers=headers, timeout=timeout, verify_ssl=self.verify_calls
+            ) as response:
+                if not response.ok:
+                    raise await handle_error(
+                        f"Deletion of entity indexes failed. URI:={entity_uri}.",
+                        response,
+                        payload={"targets": targets},
+                        headers=headers,
+                    )
+                response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        return response_dict
 
     async def relations(
         self, uri: str, auth_key: Optional[str] = None
