@@ -224,11 +224,12 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             CONTENT_TYPE_HEADER_FLAG: "application/json",
         }
         payload: dict = {
-            "rights": rights,
             "vectorSearchDataProperties": vector_search_data_properties,
             "vectorSearchObjectProperties": vector_search_object_properties,
             "contentDataPropertyName": content_data_property_name,
         }
+        if len(rights) > 0:
+            payload["rights"] = rights
         mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
