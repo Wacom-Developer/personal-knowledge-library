@@ -1,3 +1,9 @@
+2025/05/07 - RELEASE 3.2.0
+==========================
+- Adding support for new API for indexing entities 
+- Minor fixes and improvements
+- Adding new role of ContentManager user
+
 2025/04/04 - RELEASE 3.1.2
 ==========================
 - Adding support for import format
