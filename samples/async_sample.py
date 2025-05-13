@@ -23,8 +23,9 @@ from knowledge.base.language import LanguageCode, EN, SUPPORTED_LOCALES, EN_US
 from knowledge.base.ontology import ThingObject
 from knowledge.ontomapping import load_configuration
 from knowledge.ontomapping.manager import wikidata_to_thing
+from knowledge.public.client import WikiDataAPIClient
 from knowledge.public.relations import wikidata_relations_extractor
-from knowledge.public.wikidata import WikidataSearchResult, WikiDataAPIClient, WikidataThing
+from knowledge.public.wikidata import WikidataSearchResult, WikidataThing
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
 from knowledge.services.asyncio.group import AsyncGroupManagementService
 from knowledge.services.asyncio.users import AsyncUserManagementService
