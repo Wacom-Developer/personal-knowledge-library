@@ -9,6 +9,7 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
+from knowledge.base.entity import FORCE_TAG
 from knowledge.base.ontology import (
     OntologyClassReference,
     OntologyPropertyReference,
@@ -1140,6 +1141,7 @@ class OntologyService(WacomServiceAPIClient):
     def commit(
         self,
         context: str,
+        force: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_MAX_RETRIES,
@@ -1152,6 +1154,8 @@ class OntologyService(WacomServiceAPIClient):
         ----------
         context: str
             Name of the context.
+        force: bool (default:= False)
+            Force commit of the ontology.
         auth_key: Optional[str] [default:= None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
@@ -1170,11 +1174,13 @@ class OntologyService(WacomServiceAPIClient):
         }
         context_url: str = urllib.parse.quote_plus(context)
         url: str = f"{self.service_base_url}context/{context_url}/commit"
+        params: Dict[str, bool] = {FORCE_TAG: force}
         mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.put(url, headers=headers, verify=self.verify_calls, timeout=timeout)
+            response: Response = session.put(url, params=params, headers=headers, verify=self.verify_calls,
+                                             timeout=timeout)
             if not response.ok:
                 raise handle_error("Commit of ontology failed.", response, headers=headers)
 
