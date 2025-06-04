@@ -1,3 +1,8 @@
+2025/06/04 - RELEASE 3.2.1
+==========================
+- Minor fixes
+- Adding force parameter for ontology commit
+
 2025/05/07 - RELEASE 3.2.0
 ==========================
 - Adding support for new API for indexing entities 

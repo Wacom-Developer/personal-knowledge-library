@@ -1,6 +1,6 @@
 [project]
 name = "personal_knowledge_library"
-version = "3.2.0"
+version = "3.2.1"
 description = "Library to access Wacom's Personal Knowledge graph."
 authors = [{ name = "Markus Weber", email = "markus.weber@wacom.com" }]
 license = "Apache-2.0"
