@@ -213,7 +213,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        url: str = f"{self.service_base_url}documents/count/filter"
+        url: str = f"{self.service_base_url}documents/count/filter/"
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
@@ -307,7 +307,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        url: str = f"{self.service_base_url}labels/count/filter"
+        url: str = f"{self.service_base_url}labels/count/filter/"
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
