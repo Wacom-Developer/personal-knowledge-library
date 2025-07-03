@@ -180,6 +180,55 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         thing: ThingObject = ThingObject.from_dict(e)
         return thing
 
+    async def entities(self, uris: List[str], auth_key: Optional[str] = None) -> List[ThingObject]:
+        """
+        Retrieve entities information from personal knowledge, using the  URI as identifier.
+
+        **Remark:** Object properties (relations) must be requested separately.
+
+        Parameters
+        ----------
+        uris: List[str]
+            List of URIs of the entities
+        auth_key: Optional[str]
+            Use a different auth key than the one from the client
+
+        Returns
+        -------
+        things: List[ThingObject]
+            Entities with is type URI, description, an image/icon, and tags (labels).
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code or the entity is not found in the knowledge graph
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/"
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
+        }
+        things: List[ThingObject] = []
+        async with AsyncServiceAPIClient.__async_session__() as session:
+            async with session.get(url, headers=headers, params={
+                "uris": uris
+            }, verify_ssl=self.verify_calls) as response:
+                if response.ok:
+                    entities: List[Dict[str, Any]] = await response.json()
+                    for e in entities:
+                        thing: ThingObject = ThingObject.from_dict(e)
+                        things.append(thing)
+                else:
+                    raise await handle_error(
+                        f"Retrieving of entities content failed. List of URIs: {uris}.", response,
+                        headers=headers
+                    )
+        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        # Create ThingObject
+        return things
+
     async def set_entity_image_local(self, entity_uri: str, path: Path, auth_key: Optional[str] = None) -> str:
         """Setting the image of the entity.
         The image is stored locally.
