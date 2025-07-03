@@ -1,3 +1,8 @@
+2025/07/03 - RELEASE 3.2.2
+==========================
+- Minor fixes
+- Adding support for entity getter with multiple uris
+
 2025/06/04 - RELEASE 3.2.1
 ==========================
 - Minor fixes
