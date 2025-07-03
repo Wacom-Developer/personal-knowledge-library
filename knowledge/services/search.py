@@ -263,6 +263,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         locale: LocaleCode,
         concept_type: Optional[str] = None,
         auth_key: Optional[str] = None,
+        timeout: float = DEFAULT_TIMEOUT,
         max_retries: int = 3,
         backoff_factor: float = 0.1,
     ) -> int:
@@ -275,6 +276,8 @@ class SemanticSearchClient(WacomServiceAPIClient):
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         concept_type: Optional[str] (Default:= None)
             Concept type.
+        timeout: int (Default:= DEFAULT_TIMEOUT)
+            Timeout for the request in seconds.
         max_retries: int
             Maximum number of retries
         backoff_factor: float
@@ -306,7 +309,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response = session.get(url, params=params, headers=headers)
+            response = session.get(url, params=params, headers=headers, timeout=timeout)
             if response.ok:
                 return response.json().get("count", 0)
             raise handle_error("Counting labels failed.", response, headers=headers, parameters={"locale": locale})
