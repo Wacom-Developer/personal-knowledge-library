@@ -18,7 +18,6 @@ from knowledge.base.entity import (
     DATA_PROPERTIES_TAG,
     TYPE_TAG,
     LABELS_TAG,
-    IS_MAIN_TAG,
     RELATIONS_TAG,
     LOCALE_TAG,
     EntityStatus,
@@ -226,17 +225,73 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             response: Response = session.get(url, headers=headers, timeout=timeout, verify=self.verify_calls)
             if response.ok:
                 e: Dict[str, Any] = response.json()
-                pref_label: List[Label] = []
-                aliases: List[Label] = []
-                # Extract labels and alias
-                for label in e[LABELS_TAG]:
-                    if label[IS_MAIN_TAG]:  # Labels
-                        pref_label.append(Label.create_from_dict(label))
-                    else:  # Alias
-                        aliases.append(Label.create_from_dict(label))
                 thing: ThingObject = ThingObject.from_dict(e)
                 return thing
             raise handle_error(f"Retrieving of entity content failed. URI:={uri}.", response)
+
+    def entities(self,
+        uris: List[str],
+        locale: Optional[LocaleCode] = None,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+    ) -> List[ThingObject]:
+        """
+        Retrieve entity information from personal knowledge, using the  URI as identifier.
+
+        **Remark:** Object properties (relations) must be requested separately.
+
+        Parameters
+        ----------
+        uris: List[str]
+            List of URIs of entities
+        locale: Optional[LocaleCode]
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
+        auth_key: Optional[str]
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries (default: 3)
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay) (default: 0.1)
+
+        Returns
+        -------
+        things: List[ThingObject]
+            Entities with is type URI, description, an image/icon, and tags (labels).
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code or the entity is not found in the knowledge graph
+        """
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/"
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
+        }
+        params: Dict[str, Any] = {URIS_TAG: uris}
+        if locale is not None:
+            params[LOCALE_TAG] = locale
+        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
+        with requests.Session() as session:
+            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
+            session.mount(mount_point, HTTPAdapter(max_retries=retries))
+            response: Response = session.get(url, params=params, headers=headers, timeout=timeout,
+                                             verify=self.verify_calls)
+            if response.ok:
+                things: List[ThingObject] = []
+                entities: List[Dict[str, Any]] = response.json()
+                for e in entities:
+                    thing: ThingObject = ThingObject.from_dict(e)
+                    things.append(thing)
+                return things
+            raise handle_error(f"Retrieving of entity content failed. URIs:={uris}.", response)
 
     def delete_entities(
         self,
@@ -2017,7 +2072,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
     def rebuild_nel_index(
         self,
-        nel_index: Literal["western", "japanese"],
+        nel_index: Literal["Western", "Japanese"],
         prune: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,

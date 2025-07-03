@@ -180,7 +180,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         thing: ThingObject = ThingObject.from_dict(e)
         return thing
 
-    async def entities(self, uris: List[str], auth_key: Optional[str] = None) -> List[ThingObject]:
+    async def entities(self, uris: List[str], locale: Optional[LocaleCode] = None, auth_key: Optional[str] = None) \
+            -> List[ThingObject]:
         """
         Retrieve entities information from personal knowledge, using the  URI as identifier.
 
@@ -190,6 +191,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         ----------
         uris: List[str]
             List of URIs of the entities
+        locale: LocaleCode
+            ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str]
             Use a different auth key than the one from the client
 
@@ -211,10 +214,13 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         things: List[ThingObject] = []
+        params: Dict[str, Any] = {
+            URIS_TAG: uris
+        }
+        if locale:
+            params[LOCALE_TAG] = locale
         async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.get(url, headers=headers, params={
-                "uris": uris
-            }, verify_ssl=self.verify_calls) as response:
+            async with session.get(url, headers=headers, params=params, verify_ssl=self.verify_calls) as response:
                 if response.ok:
                     entities: List[Dict[str, Any]] = await response.json()
                     for e in entities:
