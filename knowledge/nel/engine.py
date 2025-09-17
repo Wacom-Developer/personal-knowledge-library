@@ -116,6 +116,8 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
                         content_link="",
                         ontology_types=entity_types,
                         entity_type=EntityType.PERSONAL_ENTITY,
+                        tokens=e.get("tokens"),
+                        token_indexes=e.get("tokenIndexes"),
                     )
                     ne.relevant_type = OntologyClassReference.parse(e["type"])
                     named_entities.append(ne)
