@@ -575,6 +575,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                     if entity.image is not None and entity.image.startswith("file:"):
                         p = urlparse(entity.image)
                         self.set_entity_image_local(uri, Path(p.path), auth_key=auth_key)
+                    elif entity.image is not None and entity.image.startswith("/"):
+                        self.set_entity_image_local(uri, Path(entity.image), auth_key=auth_key)
                     elif entity.image is not None and entity.image != "":
                         self.set_entity_image_url(uri, entity.image, auth_key=auth_key)
                 except WacomServiceException as _:
@@ -1878,6 +1880,63 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             if response.ok:
                 return response.json()["jobId"]
             raise handle_error("Import endpoint returns an error.", response)
+
+    def import_entities_from_file(
+        self,
+        file_path: Path,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+    ) -> str:
+        """Import entities from a file to the graph.
+
+        Parameters
+        ----------
+        file_path: Path
+            Path to the file containing entities in NDJSON format.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+        max_retries: int
+            Maximum number of retries
+        backoff_factor: float
+            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+            second try without a delay)
+
+        Returns
+        -------
+        job_id: str
+            ID of the job
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code.
+        """
+        if not file_path.exists():
+            raise FileNotFoundError(f"The file {file_path} does not exist.")
+        if auth_key is None:
+            auth_key, _ = self.handle_token()
+        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
+        with file_path.open("rb") as file:
+            # Compress the NDJSON string to a gzip byte array
+            compressed_data: bytes = file.read()
+            files: List[Tuple[str, Tuple[str, bytes, str]]] = [
+                ("file", ("import.njson.gz", compressed_data, "application/x-gzip"))
+            ]
+            url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}"
+            mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
+            with requests.Session() as session:
+                retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
+                session.mount(mount_point, HTTPAdapter(max_retries=retries))
+                response: Response = session.post(
+                    url, headers=headers, files=files, timeout=timeout, verify=self.verify_calls
+                )
+                if response.ok:
+                    return response.json()["jobId"]
+                raise handle_error("Import endpoint returns an error.", response)
 
     def job_status(
         self,
