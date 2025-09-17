@@ -162,6 +162,10 @@ class KnowledgeGraphEntity(NamedEntity):
         List of ontology types (class names)
     entity_type: EntityType
         Type of the entity.
+    tokens: Optional[List[str]] (default:=None)
+        List of tokens used to identify the entity.
+    token_indexes: Optional[List[int]] (default:=None)
+        List of token indexes used to identify the entity.
     """
 
     def __init__(
@@ -175,6 +179,9 @@ class KnowledgeGraphEntity(NamedEntity):
         content_link: str,
         ontology_types: List[str],
         entity_type: EntityType = EntityType.PUBLIC_ENTITY,
+        tokens: Optional[List[str]] = None,
+        token_indexes: Optional[List[int]] = None,
+
     ):
         super().__init__(ref_text, start_idx, end_idx, entity_type)
         self.__source: EntitySource = source
@@ -185,6 +192,8 @@ class KnowledgeGraphEntity(NamedEntity):
         self.__thumbnail: Optional[str] = None
         self.__ontology_types: List[str] = ontology_types
         self.__relevant_type: OntologyClassReference = THING_CLASS
+        self.__tokens: Optional[List[str]] = tokens
+        self.__token_indexes: Optional[List[int]] = token_indexes
 
     @property
     def entity_source(self) -> EntitySource:
@@ -241,6 +250,16 @@ class KnowledgeGraphEntity(NamedEntity):
     @relevant_type.setter
     def relevant_type(self, value: OntologyClassReference):
         self.__relevant_type = value
+
+    @property
+    def tokens(self) -> Optional[List[str]]:
+        """List of tokens used to identify the entity."""
+        return self.__tokens
+
+    @property
+    def token_indexes(self) -> Optional[List[int]]:
+        """List of token indexes used to identify the entity."""
+        return self.__token_indexes
 
     def __repr__(self):
         return f"{self.ref_text} [{self.start_idx}-{self.end_idx}] -> {self.entity_source} [{self.entity_type}]"
