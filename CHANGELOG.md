@@ -1,3 +1,9 @@
+2025/09/17 - RELEASE 3.3.0
+==========================
+- Add tokens and tokens indexes to named entity linking results
+- Adding support for import format endpoint
+- Minor fixes
+
 2025/07/03 - RELEASE 3.2.2
 ==========================
 - Minor fixes
