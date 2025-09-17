@@ -10,7 +10,7 @@ from typing import List, Optional, Dict
 from faker import Faker
 
 from knowledge.base.entity import Label
-from knowledge.base.language import JA_JP, EN_US, DE_DE, BG_BG, FR_FR, IT_IT, ES_ES
+from knowledge.base.language import JA_JP, EN_US, DE_DE, BG_BG, FR_FR, IT_IT, ES_ES, SUPPORTED_LOCALES
 from knowledge.base.ontology import (
     ThingObject,
     OntologyClassReference,
@@ -18,8 +18,9 @@ from knowledge.base.ontology import (
     DataProperty,
     ObjectProperty,
     LAST_UPDATE_DATE,
-    SYSTEM_SOURCE_REFERENCE_ID,
+    SYSTEM_SOURCE_REFERENCE_ID, SYSTEM_SOURCE_SYSTEM,
 )
+from knowledge.base.response import JobStatus, NewEntityUrisResponse
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
 from knowledge.services.asyncio.group import AsyncGroupManagementService
 from knowledge.services.asyncio.users import AsyncUserManagementService
@@ -43,6 +44,7 @@ external_id_2: str = str(uuid.uuid4())
 LIMIT: int = 10000
 HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:creative#hasArtstyle")
 IS_RELATED: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:core#isRelated")
+LINKS: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:core#links")
 
 
 def create_thing(concept_type: OntologyClassReference) -> ThingObject:
@@ -75,6 +77,35 @@ def create_thing(concept_type: OntologyClassReference) -> ThingObject:
                 DataProperty(names[2], OntologyPropertyReference.parse("wacom:core#lastName"), language_code=lang_inst)
             )
     return thing
+
+def create_random_thing(reference_id: str, uri: str) -> ThingObject:
+    """
+    Create a random thing object with random data.
+    Parameters
+    ----------
+    reference_id: str
+        Reference id of the thing object.
+    uri: str
+        URI of the thing object.
+
+    Returns
+    -------
+    random_thing: ThingObject
+        Thing object with random data.
+    """
+    thing: ThingObject = ThingObject(concept_type=OntologyClassReference.parse("wacom:core#Topic"))
+    for lang_inst in SUPPORTED_LOCALES:
+        fake: Faker = Faker(lang_inst)
+        name: str = fake.name()
+        thing.add_label(name, lang_inst)
+        thing.add_description(fake.text(), lang_inst)
+    thing.add_data_property(DataProperty(reference_id, SYSTEM_SOURCE_REFERENCE_ID, language_code=EN_US))
+    thing.add_data_property(DataProperty("test-case", SYSTEM_SOURCE_SYSTEM, language_code=EN_US))
+    thing.add_relation(ObjectProperty(
+        relation=LINKS, outgoing=[uri])
+    )
+    return thing
+
 
 
 def create_faulty_thing() -> ThingObject:
@@ -113,7 +144,7 @@ async def test_01_handle_user():
             raise AssertionError("User already exists")
     # Create user
     _, token, refresh, expire = await user_management.create_user(
-        tenant_api_key, external_id=external_id, meta_data={"account-type": "qa-test"}, roles=[UserRole.USER]
+        tenant_api_key, external_id=external_id, meta_data={"account-type": "qa-test"}, roles=[UserRole.CONTENT_MANAGER]
     )
     assert token is not None
     assert refresh is not None
@@ -131,6 +162,7 @@ async def test_01_handle_user():
         tenant_api_key,
         internal_id=new_user.id,
         external_id=new_user.external_user_id,
+        roles=[UserRole.CONTENT_MANAGER],
         meta_data={"account-type": "qa-test", "updated": True},
     )
     users: List[User] = await user_management.listing_users(tenant_api_key, limit=LIMIT)
@@ -549,7 +581,43 @@ async def test_17_public_entity():
     await async_client.update_entity(pull_entity)
 
 
-async def test_18_delete_users():
+async def test_18_import_test():
+    """Test Import"""
+    global tenant_api_key, external_id
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    entity: ThingObject = ThingObject(
+        label=[Label(content="Test", language_code=EN_US, main=True)],
+        concept_type=THING_OBJECT,
+        use_for_nel=True
+    )
+    uri_thing: str = await async_client.create_entity(entity)
+    things: List[ThingObject] = [create_random_thing(f"ref-{i}", uri_thing) for i in range(10)]
+    job_id: str = await async_client.import_entities(things)
+    new_uris: List[str] = []
+    while True:
+        job_status: JobStatus = await async_client.job_status(job_id)
+        if job_status.status == JobStatus.COMPLETED:
+            break
+    next_page_id = None
+    while True:
+        resp: NewEntityUrisResponse = await async_client.import_new_uris(job_id, next_page_id=next_page_id)
+        new_uris.extend(resp.new_entities_uris)
+        if resp.next_page_id is None:
+            break
+        next_page_id = resp.next_page_id
+
+    errors = await async_client.import_error_log(job_id)
+    if len(new_uris) == 0:
+        raise Exception(f"Import failed with errors: {errors}")
+    for uri in new_uris:
+        thing: ThingObject = await async_client.entity(uri)
+        thing.object_properties = await async_client.relations(uri)
+        assert thing is not None
+        assert thing.use_for_nel
+        assert LINKS in thing.object_properties
+        assert thing.object_properties[LINKS].outgoing_relations[0].uri == uri_thing
+
+async def test_19_delete_users():
     """Clean up the test environment."""
     list_user_all: List[User] = await user_management.listing_users(tenant_api_key, limit=LIMIT)
     for u_i in list_user_all:

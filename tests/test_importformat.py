@@ -181,7 +181,7 @@ class ImportFlow(TestCase):
             self.assertIsNotNone(thing)
             self.assertEqual(thing.use_for_nel, True)
             self.assertTrue(LINKS in thing.object_properties)
-            self.assertEqual(thing.object_properties[LINKS].outgoing_relations[0], uri_thing)
+            self.assertEqual(thing.object_properties[LINKS].outgoing_relations[0].uri, uri_thing)
 
     def teardown_class(self):
         """Delete the entity."""
