@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024-present Wacom. All rights reserved.
 import asyncio
+import gzip
+import json
 import logging
 import os
 import urllib
@@ -35,6 +37,7 @@ from knowledge.base.ontology import (
     OntologyClassReference,
     ObjectProperty,
 )
+from knowledge.base.response import JobStatus, ErrorLogResponse, NewEntityUrisResponse
 from knowledge.nel.base import KnowledgeGraphEntity, EntityType, KnowledgeSource, EntitySource
 from knowledge.services import AUTHORIZATION_HEADER_FLAG, IS_OWNER_PARAM, IndexType
 from knowledge.services import (
@@ -114,6 +117,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
     SEARCH_DESCRIPTION_ENDPOINT: str = "semantic-search/description"
     SEARCH_RELATION_ENDPOINT: str = "semantic-search/relation"
     ONTOLOGY_UPDATE_ENDPOINT: str = "ontology-update"
+    IMPORT_ENTITIES_ENDPOINT: str = "import"
+    IMPORT_ERROR_LOG_ENDPOINT: str = "import/errorlog"
 
     def __init__(
         self,
@@ -587,6 +592,222 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                     raise await handle_error("Creation of entity failed.", response, payload=payload, headers=headers)
         await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return uri
+
+    async def import_entities(
+        self,
+        entities: List[ThingObject],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT
+    ) -> str:
+        """Import entities to the graph.
+
+        Parameters
+        ----------
+        entities: List[ThingObject]
+            List of entities to import.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+
+        Returns
+        -------
+        job_id: str
+            ID of the job
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code.
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
+        ndjson_lines: List[str] = []
+        for obj in entities:
+            data_dict = obj.__import_format_dict__()
+            ndjson_lines.append(json.dumps(data_dict))  # Convert each dict to a JSON string
+
+        ndjson_content = "\n".join(ndjson_lines)  # Join JSON strings with newline
+
+        # Compress the NDJSON string to a gzip byte array
+        compressed_data: bytes = gzip.compress(ndjson_content.encode("utf-8"))
+        url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}"
+        data: aiohttp.FormData = aiohttp.FormData()
+        data.add_field("file", compressed_data, filename="import.njson.gz", content_type="application/x-gzip")
+        async with AsyncServiceAPIClient.__async_session__() as session:
+            async with session.post(
+                url, headers=headers, data=data, timeout=timeout, verify_ssl=self.verify_calls
+            ) as response:
+                if response.ok:
+                    structure: Dict[str, Any] = await response.json(loads=orjson.loads)
+                    return structure["jobId"]
+                raise await handle_error("Import endpoint returns an error.", response)
+
+    async def import_entities_from_file(
+            self,
+            file_path: Path,
+            auth_key: Optional[str] = None,
+            timeout: int = DEFAULT_TIMEOUT
+    ) -> str:
+        """Import entities from a file to the graph.
+
+        Parameters
+        ----------
+        file_path: Path
+            Path to the file containing entities in NDJSON format.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+
+        Returns
+        -------
+        job_id: str
+            ID of the job
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code.
+        """
+        if not file_path.exists():
+            raise FileNotFoundError(f"The file {file_path} does not exist.")
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
+        with file_path.open("rb") as file:
+            # Compress the NDJSON string to a gzip byte array
+            compressed_data: bytes = file.read()
+            data: aiohttp.FormData = aiohttp.FormData()
+            data.add_field("file", compressed_data, filename="import.njson.gz",
+                           content_type="application/x-gzip")
+            url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}"
+            async with AsyncServiceAPIClient.__async_session__() as session:
+                async with session.post(
+                        url, headers=headers, data=data, timeout=timeout, verify_ssl=self.verify_calls
+                ) as response:
+                    if response.ok:
+                        structure: Dict[str, Any] = await response.json(loads=orjson.loads)
+                        return structure["jobId"]
+                    raise await handle_error("Import endpoint returns an error.", response)
+
+    async def job_status(
+            self,
+            job_id: str,
+            auth_key: Optional[str] = None,
+            timeout: int = DEFAULT_TIMEOUT
+    ) -> JobStatus:
+        """
+        Retrieve the status of the job.
+
+        Parameters
+        ----------
+        job_id: str
+            ID of the job
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+
+        Returns
+        -------
+        job_status: JobStatus
+            Status of the job
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
+        url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}/{job_id}"
+        async with AsyncServiceAPIClient.__async_session__() as session:
+            async with session.get(
+                    url, headers=headers, timeout=timeout, verify_ssl=self.verify_calls
+            ) as response:
+                if response.ok:
+                    structure: Dict[str, Any] = await response.json(loads=orjson.loads)
+                    return JobStatus.from_dict(structure)
+                raise await handle_error(f"Retrieving job status for {job_id} failed.", response, headers=headers)
+
+    async def import_error_log(
+            self,
+            job_id: str,
+            auth_key: Optional[str] = None,
+            next_page_id: Optional[str] = None,
+            timeout: int = DEFAULT_TIMEOUT
+    ) -> ErrorLogResponse:
+        """
+        Retrieve the error log of the job.
+
+        Parameters
+        ----------
+        job_id: str
+            ID of the job
+        next_page_id: Optional[str] = None
+            ID of the next page within pagination.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+
+        Returns
+        -------
+        error: ErrorLogResponse
+            Error log of the job
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
+        url: str = f"{self.service_base_url}{self.IMPORT_ERROR_LOG_ENDPOINT}/{job_id}"
+        params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
+        async with AsyncServiceAPIClient.__async_session__() as session:
+            async with session.get(
+                    url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
+            ) as response:
+                if response.ok:
+                    structure: Dict[str, Any] = await response.json(loads=orjson.loads)
+                    return ErrorLogResponse.from_dict(structure)
+                raise await handle_error(f"Retrieving job status for {job_id} failed.", response)
+
+    async def import_new_uris(
+            self,
+            job_id: str,
+            auth_key: Optional[str] = None,
+            next_page_id: Optional[str] = None,
+            timeout: int = DEFAULT_TIMEOUT
+    ) -> NewEntityUrisResponse:
+        """
+        Retrieve the new entity uris from the job.
+
+        Parameters
+        ----------
+        job_id: str
+            ID of the job
+        next_page_id: Optional[str] = None
+            ID of the next page within pagination.
+        auth_key: Optional[str] = None
+            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+
+        Returns
+        -------
+        response: NewEntityUrisResponse
+            New entity uris of the job.
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
+        url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}/{job_id}/new-entities"
+        params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
+        async with AsyncServiceAPIClient.__async_session__() as session:
+            async with session.get(
+                    url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
+            ) as response:
+                if response.ok:
+                    structure: Dict[str, Any] = await response.json(loads=orjson.loads)
+                    return NewEntityUrisResponse.from_dict(structure)
+                raise await handle_error(f"Retrieving job status for {job_id} failed.", response)
+
 
     async def update_entity(self, entity: ThingObject, auth_key: Optional[str] = None):
         """
@@ -1576,6 +1797,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                             content_link="",
                             ontology_types=entity_types,
                             entity_type=EntityType.PERSONAL_ENTITY,
+                            tokens=e.get("token"),
+                            token_indexes=e.get("tokenIndexes"),
                         )
                         ne.relevant_type = OntologyClassReference.parse(e["type"])
                         named_entities.append(ne)
