@@ -1494,7 +1494,7 @@ class Ontology:
         return f"<Ontology> : classes:= {self.classes}"
 
 
-class ThingObject(abc.ABC):
+class ThingObject(object):
     """
     ThingObject
     -----------
