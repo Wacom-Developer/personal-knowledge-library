@@ -21,6 +21,7 @@ from knowledge.base.ontology import (
     SYSTEM_SOURCE_REFERENCE_ID, SYSTEM_SOURCE_SYSTEM,
 )
 from knowledge.base.response import JobStatus, NewEntityUrisResponse
+from knowledge.nel.base import KnowledgeGraphEntity
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
 from knowledge.services.asyncio.group import AsyncGroupManagementService
 from knowledge.services.asyncio.users import AsyncUserManagementService
@@ -78,6 +79,7 @@ def create_thing(concept_type: OntologyClassReference) -> ThingObject:
             )
     return thing
 
+
 def create_random_thing(reference_id: str, uri: str) -> ThingObject:
     """
     Create a random thing object with random data.
@@ -107,7 +109,6 @@ def create_random_thing(reference_id: str, uri: str) -> ThingObject:
     return thing
 
 
-
 def create_faulty_thing() -> ThingObject:
     """
     Create a faulty thing object with random data.
@@ -132,8 +133,8 @@ group_management: AsyncGroupManagementService = AsyncGroupManagementService(
 user_management: AsyncUserManagementService = AsyncUserManagementService(
     application_name="Async client test", service_url=instance, service_endpoint="graph/v1"
 )
-# ----------------------------------------------------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------------------------------------------------
 
 async def test_01_handle_user():
     """Create user."""
@@ -208,7 +209,7 @@ async def test_03_get_entity():
     assert count == 1
     # Test async iterator
     async for thing, user_token, refresh_token in async_things_iter(
-        async_client, user_token, refresh_token, THING_OBJECT, only_own=True
+            async_client, user_token, refresh_token, THING_OBJECT, only_own=True
     ):
         full_entity: ThingObject = await async_client.entity(thing.uri)
         # This user only created one entity
@@ -224,7 +225,7 @@ async def test_04_update_entity():
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
     async for thing, user_token, refresh_token in async_things_iter(
-        async_client, user_token, refresh_token, THING_OBJECT, only_own=True
+            async_client, user_token, refresh_token, THING_OBJECT, only_own=True
     ):
         full_entity: ThingObject = await async_client.entity(thing.uri)
         # Entities must not be empty
@@ -246,7 +247,7 @@ async def test_05_literal_entity():
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
     async for thing, user_token, refresh_token in async_things_iter(
-        async_client, user_token, refresh_token, THING_OBJECT, only_own=True
+            async_client, user_token, refresh_token, THING_OBJECT, only_own=True
     ):
         full_entity: ThingObject = await async_client.entity(thing.uri)
         # Entities must not be empty
@@ -268,7 +269,7 @@ async def test_06_labels_entity():
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
     async for thing, user_token, refresh_token in async_things_iter(
-        async_client, user_token, refresh_token, THING_OBJECT, only_own=True
+            async_client, user_token, refresh_token, THING_OBJECT, only_own=True
     ):
         full_entity: ThingObject = await async_client.entity(thing.uri)
         # Entities must not be empty
@@ -290,7 +291,7 @@ async def test_07_relations_entity():
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
     async for thing, user_token, refresh_token in async_things_iter(
-        async_client, user_token, refresh_token, THING_OBJECT, only_own=True
+            async_client, user_token, refresh_token, THING_OBJECT, only_own=True
     ):
         full_entity: ThingObject = await async_client.entity(thing.uri)
         # Entities must not be empty
@@ -400,17 +401,17 @@ async def test_13_named_entity_linking():
     """Test the search for literals."""
     global tenant_api_key, external_id
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
-    leo: Optional[ThingObject] = None
-    search_results, _ = await async_client.search_labels(LEONARDO_DA_VINCI, EN_US, limit=1)
-    for entity in search_results:
-        leo = entity
-        break
-    assert leo is not None
-    for label_lang in leo.label:
-        res_entities = await async_client.link_personal_entities(
-            text=label_lang.content, language_code=label_lang.language_code
-        )
-        assert len(res_entities) >= 1
+    entities, _, _ = await async_client.listing(
+        THING_OBJECT, page_id=None, limit=100, locale=EN_US
+    )
+    fake: Faker = Faker(EN_US)
+    for ent in entities:
+        if ent.use_for_nel and ent.label_lang(EN_US) is not None:
+            text: str = f"{fake.text()} Do not forget about {ent.label_lang(EN_US).content}."
+            linked_entities: List[KnowledgeGraphEntity] = await async_client.link_personal_entities(
+                text, language_code=EN_US
+            )
+            assert len(linked_entities) >= 1
 
 
 async def test_14_activations():
@@ -497,7 +498,7 @@ async def test_16_group_flows():
     groups: List[Group] = await group_management.listing_groups()
     thing_uri: Optional[str] = None
     async for entity, user_token, refresh_token in async_things_iter(
-        async_client, concept_type=THING_OBJECT, user_token=user_token, refresh_token=refresh_token, only_own=True
+            async_client, concept_type=THING_OBJECT, user_token=user_token, refresh_token=refresh_token, only_own=True
     ):
         thing_uri = entity.uri
         break
@@ -552,7 +553,7 @@ async def test_17_public_entity():
         tenant_api_key=tenant_api_key, external_id=external_id
     )
     async for entity, user_token, refresh_token in async_things_iter(
-        async_client, concept_type=THING_OBJECT, user_token=user_token, refresh_token=refresh_token, only_own=True
+            async_client, concept_type=THING_OBJECT, user_token=user_token, refresh_token=refresh_token, only_own=True
     ):
         thing = entity
         break
@@ -616,6 +617,7 @@ async def test_18_import_test():
         assert thing.use_for_nel
         assert LINKS in thing.object_properties
         assert thing.object_properties[LINKS].outgoing_relations[0].uri == uri_thing
+
 
 async def test_19_delete_users():
     """Clean up the test environment."""
