@@ -1,3 +1,7 @@
+2025/09/18 - RELEASE 3.3.1
+==========================
+- Fix issue with async client for named entity linking.
+
 2025/09/17 - RELEASE 3.3.0
 ==========================
 - Add tokens and tokens indexes to named entity linking results
