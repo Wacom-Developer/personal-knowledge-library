@@ -1797,7 +1797,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                             content_link="",
                             ontology_types=entity_types,
                             entity_type=EntityType.PERSONAL_ENTITY,
-                            tokens=e.get("token"),
+                            tokens=e.get("tokens"),
                             token_indexes=e.get("tokenIndexes"),
                         )
                         ne.relevant_type = OntologyClassReference.parse(e["type"])
