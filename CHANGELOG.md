@@ -1,3 +1,7 @@
+2025/09/18 - RELEASE 3.3.2
+==========================
+- Adding filter_mode to semantic search
+
 2025/09/18 - RELEASE 3.3.1
 ==========================
 - Fix issue with async client for named entity linking.
