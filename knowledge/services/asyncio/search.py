@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024 Wacom. All rights reserved.
 import asyncio
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Literal
 
 import orjson
 
@@ -333,6 +333,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         locale: str,
         filters: Optional[Dict[str, Any]] = None,
         max_results: int = 10,
+        filter_mode: Optional[Literal["AND", "OR"]] = None,
         auth_key: Optional[str] = None,
     ) -> DocumentSearchResponse:
         """
@@ -348,6 +349,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             Filters for the search
         max_results: int
             Maximum number of results
+        filter_mode: Optional[Literal["AND", "OR"]] = None
+            Filter mode for the search. If None is provided, the default is "AND".
         auth_key: Optional[str] (Default:= None)
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
@@ -375,6 +378,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             "locale": locale,
             "max_results": max_results,
         }
+        if filter_mode:
+            params["filter_mode"] = filter_mode
         async with self.__async_session__() as session:
             async with session.post(url, headers=headers, json=params) as response:
                 if response.ok:
@@ -390,6 +395,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         locale: str,
         filters: Optional[Dict[str, Any]] = None,
         max_results: int = 10,
+        filter_mode: Optional[Literal["AND", "OR"]] = None,
         auth_key: Optional[str] = None,
     ) -> LabelMatchingResponse:
         """
@@ -405,6 +411,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             Filters for the search
         max_results: int
             Maximum number of results
+        filter_mode: Optional[Literal["AND", "OR"]] = None
+            Filter mode for the search. If None is provided, the default is "AND".
         auth_key: Optional[str] (Default:= None)
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
 
@@ -427,6 +435,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             "locale": locale,
             "max_results": max_results,
         }
+        if filter_mode:
+            params["filter_mode"] = filter_mode
         async with self.__async_session__() as session:
             async with session.post(url, headers=headers, json=params) as response:
                 if response.ok:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024-present Wacom. All rights reserved.
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Literal
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -373,6 +373,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         locale: LocaleCode,
         filters: Optional[Dict[str, Any]] = None,
         max_results: int = 10,
+        filter_mode: Optional[Literal["AND", "OR"]] = None,
         max_retries: int = 3,
         backoff_factor: float = 0.1,
         auth_key: Optional[str] = None,
@@ -390,6 +391,8 @@ class SemanticSearchClient(WacomServiceAPIClient):
             Filters for the search
         max_results: int
             Maximum number of results
+        filter_mode: Optional[Literal["AND", "OR"]] = None
+            Filter mode for the search. If None is provided, the default is "AND".
         max_retries: int
             Maximum number of retries
         backoff_factor: float
@@ -421,6 +424,8 @@ class SemanticSearchClient(WacomServiceAPIClient):
             "locale": locale,
             "max_results": max_results,
         }
+        if filter_mode:
+            params["filter_mode"] = filter_mode
         mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
@@ -436,6 +441,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
         query: str,
         locale: LocaleCode,
         filters: Optional[Dict[str, Any]] = None,
+        filter_mode: Optional[Literal["AND", "OR"]] = None,
         max_results: int = 10,
         max_retries: int = 3,
         backoff_factor: float = 0.1,
@@ -454,6 +460,8 @@ class SemanticSearchClient(WacomServiceAPIClient):
             Filters for the search
         max_results: int
             Maximum number of results
+        filter_mode: Optional[Literal["AND", "OR"]] = None
+            Filter mode for the search. If None is provided, the default is "AND".
         max_retries: int
             Maximum number of retries
         backoff_factor: float
@@ -480,6 +488,8 @@ class SemanticSearchClient(WacomServiceAPIClient):
             "locale": locale,
             "max_results": max_results,
         }
+        if filter_mode:
+            params["filter_mode"] = filter_mode
         mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
