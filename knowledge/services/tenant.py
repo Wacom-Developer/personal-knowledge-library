@@ -68,9 +68,6 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         name: str,
         create_and_apply_onto: bool = True,
         rights: Optional[List[str]] = None,
-        vector_search_data_properties: Optional[List[str]] = None,
-        vector_search_object_properties: Optional[List[str]] = None,
-        content_data_property_name: str = "",
         timeout: int = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_MAX_RETRIES,
         backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
@@ -86,12 +83,6 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             Creates and applies the ontology.
         rights: List[str]
             List of rights for the tenant. They are encoded in the user token, e.g., "ink-to-text"
-        vector_search_data_properties: List[str]
-            List of data properties that are automatically added to meta-data of the vector search index documents.
-        vector_search_object_properties: List[str]
-            List of object properties that are automatically added to meta-data of the vector search index documents.
-        content_data_property_name: str
-            The data property that is used to indexing its content to the document index.
         timeout: int
             Timeout for the request (default: 60 seconds)
         max_retries: int
@@ -121,13 +112,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f"Bearer {self.__tenant_management_token}",
             CONTENT_TYPE_HEADER_FLAG: "application/json",
         }
-        payload: dict = {
-            "name": name,
-            "rights": rights if rights else [],
-            "vectorSearchDataProperties": vector_search_data_properties if vector_search_object_properties else [],
-            "vectorSearchObjectProperties": vector_search_object_properties if vector_search_object_properties else [],
-            "contentDataPropertyName": content_data_property_name,
-        }
+        payload: dict = {"name": name, "rights": rights if rights else []}
         params: dict = {"createAndApplyOnto": create_and_apply_onto}
         mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
         with requests.Session() as session:
@@ -227,9 +212,8 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             "vectorSearchDataProperties": vector_search_data_properties,
             "vectorSearchObjectProperties": vector_search_object_properties,
             "contentDataPropertyName": content_data_property_name,
+            "rights": rights,
         }
-        if len(rights) > 0:
-            payload["rights"] = rights
         mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
