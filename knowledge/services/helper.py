@@ -92,13 +92,6 @@ def entity_payload(entity: ThingObject) -> Dict[str, Any]:
 
         if len(desc.content) > 0 and not desc.content == " ":
             descriptions.append({DESCRIPTION_TAG: desc.content, LOCALE_TAG: desc.language_code})
-    if len(descriptions) == 0:
-        #  Adding an empty description
-        for label in entity.label:
-            if len(label.content) > 0 and not label.content == " ":
-                descriptions.append(
-                    {DESCRIPTION_TAG: f"Description of {label.content}", LOCALE_TAG: label.language_code}
-                )
 
     # Labels are tagged as main label
     for label in entity.label:
