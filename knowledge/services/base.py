@@ -164,8 +164,8 @@ def handle_error(
     ----------
     message: str
         Error message
-    response: aiohttp.ClientResponse
-        Response
+    response: Response
+        Response from the service
     parameters: Optional[Dict[str, Any]] (Default:= None)
         Parameters
     payload: Optional[Dict[str, Any]] (Default:= None)
@@ -300,8 +300,9 @@ class WacomServiceAPIClient(RESTAPIClient):
             raise WacomServiceException(f"Unknown session id:= {self.__current_session_id}. Please login first.")
         return session
 
-    def request_user_token(self, tenant_api_key: str, external_id: str, timeout: int = DEFAULT_TIMEOUT) \
-            -> Tuple[str, str, datetime]:
+    def request_user_token(
+        self, tenant_api_key: str, external_id: str, timeout: int = DEFAULT_TIMEOUT
+    ) -> Tuple[str, str, datetime]:
         """
         Login as user by using the tenant key and its external user id.
 
@@ -336,8 +337,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         }
         payload: dict = {EXTERNAL_USER_ID: external_id}
         response: Response = requests.post(
-            url, headers=headers, json=payload, timeout=timeout, verify=self.verify_calls,
-            allow_redirects=True
+            url, headers=headers, json=payload, timeout=timeout, verify=self.verify_calls, allow_redirects=True
         )
         if response.ok:
             try:
