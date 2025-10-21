@@ -229,7 +229,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 return thing
             raise handle_error(f"Retrieving of entity content failed. URI:={uri}.", response)
 
-    def entities(self,
+    def entities(
+        self,
         uris: List[str],
         locale: Optional[LocaleCode] = None,
         auth_key: Optional[str] = None,
@@ -282,8 +283,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(url, params=params, headers=headers, timeout=timeout,
-                                             verify=self.verify_calls)
+            response: Response = session.get(
+                url, params=params, headers=headers, timeout=timeout, verify=self.verify_calls
+            )
             if response.ok:
                 things: List[ThingObject] = []
                 entities: List[Dict[str, Any]] = response.json()
@@ -1743,7 +1745,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                     _, file_extension = os.path.splitext(file_name.lower())
                     if file_extension not in MIME_TYPE:
                         raise handle_error(
-                            "Creation of entity image failed. Mime-type cannot be identified or is not " "supported.",
+                            "Creation of entity image failed. " "Mime-type cannot be identified or is not supported.",
                             response,
                         )
                     mime_type = MIME_TYPE[file_extension]
@@ -1929,7 +1931,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}"
             mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
             with requests.Session() as session:
-                retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
+                retries: Retry = Retry(
+                    total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST
+                )
                 session.mount(mount_point, HTTPAdapter(max_retries=retries))
                 response: Response = session.post(
                     url, headers=headers, files=files, timeout=timeout, verify=self.verify_calls

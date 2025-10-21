@@ -1179,8 +1179,9 @@ class OntologyService(WacomServiceAPIClient):
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
             session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.put(url, params=params, headers=headers, verify=self.verify_calls,
-                                             timeout=timeout)
+            response: Response = session.put(
+                url, params=params, headers=headers, verify=self.verify_calls, timeout=timeout
+            )
             if not response.ok:
                 raise handle_error("Commit of ontology failed.", response, headers=headers)
 

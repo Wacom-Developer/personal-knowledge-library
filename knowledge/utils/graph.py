@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024-present Wacom. All rights reserved.
+import asyncio
 from typing import Optional, Iterator, Tuple, AsyncIterator
+
+import loguru
 
 from knowledge.base.language import LocaleCode
 from knowledge.base.ontology import OntologyClassReference, ThingObject
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
 from knowledge.services.graph import WacomKnowledgeService, Visibility
+
+logger = loguru.logger
 
 
 def count_things(
@@ -401,17 +406,21 @@ async def async_things_session_iter(
         raise ValueError("No session configured for client")
 
     while True:
-        things, _, next_page_id = await async_client.listing(
-            concept_type,
-            visibility=visibility,
-            is_owner=only_own,
-            locale=locale,
-            limit=fetch_size,
-            page_id=next_page_id,
-        )
-        if len(things) == 0:
-            return
-        for obj in things:
-            await async_client.handle_token(force_refresh_timeout=force_refresh_timeout)
-            if obj.owner or not only_own:
-                yield obj
+        try:
+            things, _, next_page_id = await async_client.listing(
+                concept_type,
+                visibility=visibility,
+                is_owner=only_own,
+                locale=locale,
+                limit=fetch_size,
+                page_id=next_page_id,
+            )
+            if len(things) == 0:
+                return
+            for obj in things:
+                await async_client.handle_token(force_refresh_timeout=force_refresh_timeout)
+                if obj.owner or not only_own:
+                    yield obj
+        except TimeoutError as e:
+            logger.error(f"Timeout error while fetching things: {e}")
+            await asyncio.sleep(2)  # Wait before retrying

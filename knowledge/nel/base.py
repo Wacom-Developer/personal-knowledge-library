@@ -181,7 +181,6 @@ class KnowledgeGraphEntity(NamedEntity):
         entity_type: EntityType = EntityType.PUBLIC_ENTITY,
         tokens: Optional[List[str]] = None,
         token_indexes: Optional[List[int]] = None,
-
     ):
         super().__init__(ref_text, start_idx, end_idx, entity_type)
         self.__source: EntitySource = source

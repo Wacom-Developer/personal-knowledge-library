@@ -331,9 +331,7 @@ class NewEntityUrisResponse:
     """
 
     def __init__(self, new_entities_uris: List[Dict[str, str]], next_page_id: Optional[str]):
-        self._new_entities_uris: Dict[str, str] = {
-            entry["ref_id"]: entry["uri"] for entry in new_entities_uris
-        }
+        self._new_entities_uris: Dict[str, str] = {entry["ref_id"]: entry["uri"] for entry in new_entities_uris}
         self._next_page_id: Optional[str] = next_page_id
 
     @property
