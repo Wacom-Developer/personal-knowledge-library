@@ -176,7 +176,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Tuple[User, str, str, datetime]:
         """
-        Creates user for a tenant.
+        Creates a user for a tenant.
 
         Parameters
         ----------
@@ -430,7 +430,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}"
         headers: Dict[str, str] = {USER_AGENT_TAG: self.user_agent, TENANT_API_KEY_FLAG: tenant_key}
-        params: Dict[str, str] = {OFFSET_TAG: offset, LIMIT_TAG: limit}
+        params: Dict[str, int] = {OFFSET_TAG: offset, LIMIT_TAG: limit}
         mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
