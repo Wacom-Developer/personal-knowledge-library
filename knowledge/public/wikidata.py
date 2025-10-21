@@ -877,7 +877,7 @@ class WikidataThing:
                             val = {"tabular": data_value["value"]}
                         elif data_type == "entity-schema":
                             val = {"id": data_value["value"]["id"]}
-                        elif data_type in ["wikibase-form", "musical-notation"]:
+                        elif data_type in {"wikibase-form", "musical-notation"}:
                             continue
                         else:
                             raise WikiDataAPIException(f"Data type: {data_type} not supported.")
