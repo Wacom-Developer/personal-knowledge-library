@@ -435,12 +435,23 @@ class LabelMatchingResponse:
 
 class VectorDBDocument:
     """
-    VectorDBDocument
-    ================
-    SegmentedContent model for the vector database.
+    Represents a document stored in a vector database.
 
-    Properties
+    This class is used for handling documents with associated metadata within a vector
+    database. It provides properties to access the document's ID, content, URI, and
+    metadata, making it suitable for systems that manage search or retrieval of
+    semantic data in vectorized form.
+
+    Attributes
     ----------
+    id : str
+        A unique identifier for the document.
+    content : str
+        The textual content of the document.
+    uri : str
+        A URI associated with the document.
+    metadata : Dict[str, Any]
+        Additional metadata associated with the document.
     """
 
     def __init__(self, data: Dict[str, Any]):
