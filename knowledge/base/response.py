@@ -324,19 +324,21 @@ class NewEntityUrisResponse:
 
     Parameters
     ----------
-    new_entities_uris: List[str]
-        The list of URIs of new entities.
+    new_entities_uris: Dict[str, str]
+        The mapping of entity IDs to URIs (ref_id -> uri).
     next_page_id: Optional[str]
         Next page ID for pagination.
     """
 
-    def __init__(self, new_entities_uris: List[str], next_page_id: Optional[str]):
-        self._new_entities_uris: List[str] = new_entities_uris
+    def __init__(self, new_entities_uris: List[Dict[str, str]], next_page_id: Optional[str]):
+        self._new_entities_uris: Dict[str, str] = {
+            entry["ref_id"]: entry["uri"] for entry in new_entities_uris
+        }
         self._next_page_id: Optional[str] = next_page_id
 
     @property
-    def new_entities_uris(self) -> List[str]:
-        """The list the uris of new entities."""
+    def new_entities_uris(self) -> Dict[str, str]:
+        """The mapping of entity IDs to URIs."""
         return self._new_entities_uris
 
     @property
