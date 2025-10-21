@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright © 2024 Wacom. All rights reserved.
+# Copyright © 2024-present Wacom. All rights reserved.
 import asyncio
 from typing import Dict, Any, Optional, List, Literal
 
@@ -35,7 +35,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         super().__init__("Async Semantic Search ", service_url, service_endpoint)
 
     async def retrieve_document_chunks(
-        self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None
+        self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
     ) -> List[VectorDBDocument]:
         """
         Retrieve document chunks from vector database. The service is automatically chunking the document into
@@ -49,6 +49,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             URI of the document
         auth_key: Optional[str] (Default:= None)
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Default timeout for the request (default: 60 seconds)
 
         Returns
         -------
@@ -71,7 +73,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         }
         async with self.__async_session__() as session:
             async with session.get(
-                url, params={"locale": locale, "uri": uri}, headers=headers, timeout=DEFAULT_TIMEOUT
+                url, params={"locale": locale, "uri": uri}, headers=headers, timeout=timeout
             ) as response:
                 if response.ok:
                     docs: List[VectorDBDocument] = [
@@ -88,7 +90,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         return docs
 
     async def retrieve_labels(
-        self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None
+        self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
     ) -> List[VectorDBDocument]:
         """
         Retrieve labels from vector database.
@@ -101,6 +103,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             URI of the document
         auth_key: Optional[str] (Default:= None)
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Default timeout for the request (default: 60 seconds)
 
         Returns
         -------
@@ -123,7 +127,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         }
         async with self.__async_session__() as session:
             async with session.get(
-                url, params={"locale": locale, "uri": uri}, headers=headers, timeout=DEFAULT_TIMEOUT
+                url, params={"locale": locale, "uri": uri}, headers=headers, timeout=timeout
             ) as response:
                 if response.ok:
                     docs: List[VectorDBDocument] = [
@@ -140,7 +144,11 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         return docs
 
     async def count_documents(
-        self, locale: LocaleCode, concept_type: Optional[str] = None, auth_key: Optional[str] = None
+        self,
+        locale: LocaleCode,
+        concept_type: Optional[str] = None,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> int:
         """
         Count all documents for a tenant.
@@ -153,6 +161,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             Concept type.
         auth_key: Optional[str] (Default:= None)
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Default timeout for the request (default: 60 seconds)
 
         Returns
         -------
@@ -176,7 +186,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         if concept_type:
             params["concept_type"] = concept_type
         async with self.__async_session__() as session:
-            async with session.get(url, params=params, headers=headers) as response:
+            async with session.get(url, params=params, headers=headers, timeout=timeout) as response:
                 if response.ok:
                     count: int = (await response.json(loads=orjson.loads)).get("count", 0)
                 else:
@@ -187,7 +197,11 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         return count
 
     async def count_documents_filter(
-        self, locale: LocaleCode, filters: Dict[str, Any], auth_key: Optional[str] = None
+        self,
+        locale: LocaleCode,
+        filters: Dict[str, Any],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> int:
         """
         Count all documents for a tenant using a filter.
@@ -200,6 +214,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             Filters for the search
         auth_key: Optional[str] (Default:= None)
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Default timeout for the request (default: 60 seconds).
 
         Returns
         -------
@@ -220,7 +236,9 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         async with self.__async_session__() as session:
-            async with session.post(url, json={"locale": locale, "filter": filters}, headers=headers) as response:
+            async with session.post(
+                url, json={"locale": locale, "filter": filters}, timeout=timeout, headers=headers
+            ) as response:
                 if response.ok:
                     count: int = (await response.json(loads=orjson.loads)).get("count", 0)
                 else:
@@ -234,7 +252,11 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         return count
 
     async def count_labels(
-        self, locale: str, concept_type: Optional[str] = None, auth_key: Optional[str] = None
+        self,
+        locale: str,
+        concept_type: Optional[str] = None,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> int:
         """
         Count all labels entries for a tenant.
@@ -247,6 +269,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             Concept type.
         auth_key: Optional[str] (Default:= None)
             If auth key is provided, it will be used for the request.
+        timeout: int
+            Default timeout for the request (default: 60 seconds)
 
         Returns
         -------
@@ -270,7 +294,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         if concept_type:
             params["concept_type"] = concept_type
         async with self.__async_session__() as session:
-            async with session.get(url, params=params, headers=headers) as response:
+            async with session.get(url, params=params, headers=headers, timeout=timeout) as response:
                 if response.ok:
                     count: int = (await response.json(loads=orjson.loads)).get("count", 0)
                 else:
@@ -281,7 +305,11 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         return count
 
     async def count_labels_filter(
-        self, locale: LocaleCode, filters: Dict[str, Any], auth_key: Optional[str] = None
+        self,
+        locale: LocaleCode,
+        filters: Dict[str, Any],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> int:
         """
         Count all labels for a tenant using a filter.
@@ -294,6 +322,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             Filters for the search
         auth_key: Optional[str] (Default:= None)
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Default timeout for the request (default: 60 seconds).
 
         Returns
         -------
@@ -314,7 +344,9 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         async with self.__async_session__() as session:
-            async with session.post(url, json={"locale": locale, "filter": filters}, headers=headers) as response:
+            async with session.post(
+                url, json={"locale": locale, "filter": filters}, timeout=timeout, headers=headers
+            ) as response:
                 if response.ok:
                     count: int = (await response.json(loads=orjson.loads)).get("count", 0)
                 else:
@@ -335,6 +367,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         max_results: int = 10,
         filter_mode: Optional[Literal["AND", "OR"]] = None,
         auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> DocumentSearchResponse:
         """
         Async Semantic search.
@@ -353,7 +386,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             Filter mode for the search. If None is provided, the default is "AND".
         auth_key: Optional[str] (Default:= None)
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-
+        timeout: int
+            Default timeout for the request (default: 60 seconds)
         Returns
         -------
         response: DocumentSearchResponse
@@ -381,7 +415,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         if filter_mode:
             params["filter_mode"] = filter_mode
         async with self.__async_session__() as session:
-            async with session.post(url, headers=headers, json=params) as response:
+            async with session.post(url, headers=headers, json=params, timeout=timeout) as response:
                 if response.ok:
                     response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
                 else:
@@ -397,6 +431,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         max_results: int = 10,
         filter_mode: Optional[Literal["AND", "OR"]] = None,
         auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> LabelMatchingResponse:
         """
         Async search for semantically similar labels.
@@ -415,7 +450,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             Filter mode for the search. If None is provided, the default is "AND".
         auth_key: Optional[str] (Default:= None)
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-
+        timeout: int
+            Default timeout for the request (default: 60 seconds).
         Returns
         -------
         response: LabelMatchingResponse
@@ -438,7 +474,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         if filter_mode:
             params["filter_mode"] = filter_mode
         async with self.__async_session__() as session:
-            async with session.post(url, headers=headers, json=params) as response:
+            async with session.post(url, headers=headers, json=params, timeout=timeout) as response:
                 if response.ok:
                     response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
                 else:

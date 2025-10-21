@@ -286,7 +286,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         session: aiohttp.ClientSession
             Asynchronous session
         """
-        timeout: ClientTimeout = ClientTimeout(total=60)
+        timeout: ClientTimeout = ClientTimeout(total=DEFAULT_TIMEOUT)
         ssl_context: ssl.SSLContext = ssl.create_default_context(cafile=certifi.where())
         connector: aiohttp.TCPConnector = aiohttp.TCPConnector(ssl=ssl_context, resolver=cached_resolver)
         return aiohttp.ClientSession(
