@@ -256,15 +256,21 @@ class GroupFlow(TestCase):
             self.cache.group_id, self.cache.internal_id_2, force=True, auth_key=self.cache.token
         )
         group_info_after: GroupInfo = self.group_management.group(self.cache.group_id, auth_key=self.cache.token)
-        users_ids_after: List[str]= [u.id for u in group_info_after.group_users]
+        users_ids_after: List[str] = [u.id for u in group_info_after.group_users]
         self.assertNotIn(self.cache.internal_id_2, users_ids_after)
         try:
             self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token_2)
             self.fail("User 2 should not have access to the entity.")
         except WacomServiceException:
             pass
-        for e, _, _ in things_iter(self.knowledge_client, self.cache.token_2, self.cache.refresh_2, THING_OBJECT,
-                             visibility=Visibility.SHARED, only_own=False):
+        for e, _, _ in things_iter(
+            self.knowledge_client,
+            self.cache.token_2,
+            self.cache.refresh_2,
+            THING_OBJECT,
+            visibility=Visibility.SHARED,
+            only_own=False,
+        ):
             for gid in e.group_ids:
                 self.assertNotEqual(gid, self.cache.group_id)
         after_removal_shared_count_u2: int = count_things(

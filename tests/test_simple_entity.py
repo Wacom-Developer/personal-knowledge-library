@@ -74,14 +74,17 @@ def create_page_thing() -> ThingObject:
         thing.add_description(fake.text(), lang_inst)
         thing.add_data_property(
             DataProperty(
-                content=fake.text(), property_ref=OntologyPropertyReference.parse("wacom:core#content"),
-                language_code=LocaleCode(lang_inst))
+                content=fake.text(),
+                property_ref=OntologyPropertyReference.parse("wacom:core#content"),
+                language_code=LocaleCode(lang_inst),
+            )
         )
     thing.use_full_text_index = False
     thing.use_vector_index = False
     thing.use_vector_index_document = False
     thing.use_for_nel = False
     return thing
+
 
 @pytest.fixture(scope="class")
 def cache_class(request):
@@ -227,8 +230,7 @@ class EntityFlow(TestCase):
         self.assertFalse(thing.use_for_nel)
 
         # Update ElasticSearch index and Remove NEL
-        updates: Dict[IndexType, str] = self.knowledge_client.add_entity_indexes(entity_uri,
-                                                                                 targets=["ElasticSearch"])
+        updates: Dict[IndexType, str] = self.knowledge_client.add_entity_indexes(entity_uri, targets=["ElasticSearch"])
         self.assertEqual(updates["ElasticSearch"], "UPSERT")
         updates = self.knowledge_client.add_entity_indexes(entity_uri, targets=["ElasticSearch"])
         self.assertEqual(updates["ElasticSearch"], "Target already exists")
@@ -246,8 +248,9 @@ class EntityFlow(TestCase):
         self.assertFalse(thing.use_vector_index_document)
         self.assertTrue(thing.use_for_nel)
         # Update Vector index
-        updates = self.knowledge_client.add_entity_indexes(entity_uri, targets=["VectorSearchWord",
-                                                                                "VectorSearchDocument"])
+        updates = self.knowledge_client.add_entity_indexes(
+            entity_uri, targets=["VectorSearchWord", "VectorSearchDocument"]
+        )
         self.assertEqual(updates["VectorSearchWord"], "UPSERT")
         self.assertEqual(updates["VectorSearchDocument"], "UPSERT")
         thing = self.knowledge_client.entity(entity_uri)
@@ -256,9 +259,9 @@ class EntityFlow(TestCase):
         self.assertTrue(thing.use_vector_index_document)
         self.assertTrue(thing.use_for_nel)
         # Remove all indexes
-        updates = self.knowledge_client.remove_entity_indexes(entity_uri,
-                                                              targets=["ElasticSearch", "NEL", "VectorSearchWord",
-                                                                       "VectorSearchDocument"])
+        updates = self.knowledge_client.remove_entity_indexes(
+            entity_uri, targets=["ElasticSearch", "NEL", "VectorSearchWord", "VectorSearchDocument"]
+        )
         self.assertEqual(updates["ElasticSearch"], "DELETE")
         self.assertEqual(updates["NEL"], "DELETE")
         self.assertEqual(updates["VectorSearchWord"], "DELETE")
@@ -269,8 +272,6 @@ class EntityFlow(TestCase):
         self.assertFalse(thing.use_vector_index)
         self.assertFalse(thing.use_vector_index_document)
         self.assertFalse(thing.use_for_nel)
-
-
 
     def test_9_delete_entity(self):
         """Delete the entity."""

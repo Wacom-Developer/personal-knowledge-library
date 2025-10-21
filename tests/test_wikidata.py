@@ -125,7 +125,7 @@ class WikidataFlow(TestCase):
         self.cache.relations = relations
 
     def test_3_wikidata_to_thing(self):
-        """Test the conversion of Wikidata entities to Thing objects. """
+        """Test the conversion of Wikidata entities to Thing objects."""
         for qid, wiki_thing in self.cache.wikidata_things.items():
             thing, warnings = wikidata_to_thing(
                 wiki_thing, self.cache.relations, SUPPORTED_LOCALES, self.cache.wikidata_things
@@ -249,6 +249,3 @@ class WikidataFlow(TestCase):
         for pid in self.cache.WIKIDATA_PIDS:
             prop = cache.property_in_cache(pid)
             print(prop)
-
-
-

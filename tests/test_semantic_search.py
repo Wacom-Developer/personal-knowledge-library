@@ -16,11 +16,7 @@ from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.search import SemanticSearchClient
 from knowledge.services.session import PermanentSession
 
-fakers_configured: Dict[str, Faker] = {
-    EN_US: Faker('en_US'),
-    DE_DE: Faker('de_DE'),
-    JA_JP: Faker('ja_JP')
-}
+fakers_configured: Dict[str, Faker] = {EN_US: Faker("en_US"), DE_DE: Faker("de_DE"), JA_JP: Faker("ja_JP")}
 
 logger: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -30,6 +26,7 @@ class VectorSearchTest(TestCase):
     """
     VectorSearchTest
     """
+
     semantic_search_client: SemanticSearchClient = SemanticSearchClient(os.environ.get("INSTANCE"))
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(service_url=os.environ.get("INSTANCE"))
     iterations: int = 20
@@ -70,8 +67,7 @@ class VectorSearchTest(TestCase):
                 labels: List[VectorDBDocument] = self.semantic_search_client.retrieve_labels(JA_JP, result.entity_uri)
                 self.assertGreaterEqual(len(labels), 1)
         logger.debug(f"Average fuzzy matching time: {sum(timings) / len(timings)}")
-        self.assertLessEqual(sum(timings) / len(timings), 0.5,
-                             "Average fuzzy matching time should be less than 0.5 s")
+        self.assertLessEqual(sum(timings) / len(timings), 0.5, "Average fuzzy matching time should be less than 0.5 s")
 
     def test_2_search_label_en(self):
         """
@@ -89,8 +85,7 @@ class VectorSearchTest(TestCase):
             for result in results.results:
                 labels: List[VectorDBDocument] = self.semantic_search_client.retrieve_labels(EN_US, result.entity_uri)
                 self.assertGreaterEqual(len(labels), 1)
-        self.assertLessEqual(sum(timings) / len(timings), 0.5,
-                             "Average fuzzy matching time should be less than 0.5 s")
+        self.assertLessEqual(sum(timings) / len(timings), 0.5, "Average fuzzy matching time should be less than 0.5 s")
 
     def test_3_search_label_de(self):
         """
@@ -108,8 +103,7 @@ class VectorSearchTest(TestCase):
             for result in results.results:
                 labels: List[VectorDBDocument] = self.semantic_search_client.retrieve_labels(DE_DE, result.entity_uri)
                 self.assertGreaterEqual(len(labels), 1)
-        self.assertLessEqual(sum(timings) / len(timings), 0.5,
-                             "Average fuzzy matching time should be less than 0.5 s")
+        self.assertLessEqual(sum(timings) / len(timings), 0.5, "Average fuzzy matching time should be less than 0.5 s")
 
     def test_5_search_document_en(self):
         """
@@ -128,8 +122,7 @@ class VectorSearchTest(TestCase):
                 uri: str = result.content_uri
                 documents: List[VectorDBDocument] = self.semantic_search_client.retrieve_documents_chunks(DE_DE, uri)
                 self.assertGreaterEqual(len(documents), 1)
-        self.assertLessEqual(sum(timings) / len(timings), 1,
-                             "Average document search time should be less than 1 s")
+        self.assertLessEqual(sum(timings) / len(timings), 1, "Average document search time should be less than 1 s")
 
     def test_6_search_document_de(self):
         """
@@ -148,8 +141,7 @@ class VectorSearchTest(TestCase):
                 uri: str = result.content_uri
                 documents: List[VectorDBDocument] = self.semantic_search_client.retrieve_documents_chunks(EN_US, uri)
                 self.assertGreaterEqual(len(documents), 1)
-        self.assertLessEqual(sum(timings) / len(timings), 1,
-                             "Average document search time should be less than 1 s")
+        self.assertLessEqual(sum(timings) / len(timings), 1, "Average document search time should be less than 1 s")
 
     def test_7_search_document_ja(self):
         """
@@ -168,5 +160,4 @@ class VectorSearchTest(TestCase):
                 uri: str = result.content_uri
                 documents: List[VectorDBDocument] = self.semantic_search_client.retrieve_documents_chunks(JA_JP, uri)
                 self.assertGreaterEqual(len(documents), 1)
-        self.assertLessEqual(sum(timings) / len(timings), 1,
-                         "Average document search time should be less than 1 s")
+        self.assertLessEqual(sum(timings) / len(timings), 1, "Average document search time should be less than 1 s")

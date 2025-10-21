@@ -10,14 +10,22 @@ from faker import Faker
 
 from knowledge.base.entity import Label, LABELS_TAG, INDEXING_NEL_TARGET
 from knowledge.base.language import EN_US, SUPPORTED_LOCALES
-from knowledge.base.ontology import OntologyClassReference, ThingObject, DataProperty, OntologyPropertyReference, \
-    SYSTEM_SOURCE_REFERENCE_ID, ObjectProperty, SYSTEM_SOURCE_SYSTEM
+from knowledge.base.ontology import (
+    OntologyClassReference,
+    ThingObject,
+    DataProperty,
+    OntologyPropertyReference,
+    SYSTEM_SOURCE_REFERENCE_ID,
+    ObjectProperty,
+    SYSTEM_SOURCE_SYSTEM,
+)
 from knowledge.base.response import JobStatus, NewEntityUrisResponse
 from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.users import UserRole, UserManagementServiceAPI, User
 
 THING_OBJECT: OntologyClassReference = OntologyClassReference("wacom", "core", "Thing")
 LINKS: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:core#links")
+
 
 @pytest.fixture(scope="class")
 def cache_class(request):
@@ -75,9 +83,7 @@ def create_random_thing(reference_id: str, uri: str) -> ThingObject:
         thing.add_description(fake.text(), lang_inst)
     thing.add_data_property(DataProperty(reference_id, SYSTEM_SOURCE_REFERENCE_ID, language_code=EN_US))
     thing.add_data_property(DataProperty("test-case", SYSTEM_SOURCE_SYSTEM, language_code=EN_US))
-    thing.add_relation(ObjectProperty(
-        relation=LINKS, outgoing=[uri])
-    )
+    thing.add_relation(ObjectProperty(relation=LINKS, outgoing=[uri]))
     return thing
 
 
@@ -110,7 +116,6 @@ class ImportFlow(TestCase):
             roles=[UserRole.CONTENT_MANAGER],
         )
         self.cache.token = token
-
 
     def test_2_import_use_nel(self):
         """
@@ -149,9 +154,7 @@ class ImportFlow(TestCase):
         Test Import
         """
         entity: ThingObject = ThingObject(
-            label=[Label(content="Test", language_code=EN_US, main=True)],
-            concept_type=THING_OBJECT,
-            use_for_nel=True
+            label=[Label(content="Test", language_code=EN_US, main=True)], concept_type=THING_OBJECT, use_for_nel=True
         )
         self.knowledge_client.login(self.tenant_api_key, self.cache.external_id)
         uri_thing: str = self.knowledge_client.create_entity(entity)
@@ -164,8 +167,7 @@ class ImportFlow(TestCase):
                 break
         next_page_id = None
         while True:
-            resp: NewEntityUrisResponse = self.knowledge_client.import_new_uris(job_id,
-                                                                                next_page_id=next_page_id)
+            resp: NewEntityUrisResponse = self.knowledge_client.import_new_uris(job_id, next_page_id=next_page_id)
             new_uris.extend(resp.new_entities_uris)
             if resp.next_page_id is None:
                 break
