@@ -997,12 +997,12 @@ class OntologyProperty(OntologyObject):
         return self.__reference
 
     @property
-    def subproperty_of(self) -> OntologyPropertyReference:
+    def subproperty_of(self) -> Optional[OntologyPropertyReference]:
         """Reference to the super property"""
         return self.__subproperty_of
 
     @property
-    def inverse_property_of(self) -> OntologyPropertyReference:
+    def inverse_property_of(self) -> Optional[OntologyPropertyReference]:
         """Reference to the inverse property"""
         return self.__inverse_property_of
 
@@ -2199,7 +2199,7 @@ class ThingObject(object):
             dict_object[TARGETS_TAG].append(INDEXING_VECTOR_SEARCH_TARGET)
         if self.use_vector_index_document:
             dict_object[TARGETS_TAG].append(INDEXING_VECTOR_SEARCH_DOCUMENT_TARGET)
-        if not self.use_full_text_index:
+        if self.use_full_text_index:
             dict_object[TARGETS_TAG].append(INDEXING_FULLTEXT_TARGET)
         if external_user_id:
             dict_object[EXTERNAL_USER_ID_TAG] = external_user_id
@@ -2260,7 +2260,7 @@ class ThingObject(object):
         use_nel: bool = entity.get(USE_NEL_TAG, False)
         use_vector_index: bool = entity.get(USE_VECTOR_INDEX_TAG, False)
         use_vector_index_document: bool = entity.get(USE_VECTOR_DOCUMENT_INDEX_TAG, False)
-        use_full_text_index: bool = entity.get(USE_FULLTEXT_TAG, True)
+        use_full_text_index: bool = entity.get(USE_FULLTEXT_TAG, False)
         # Vector index target
         if INDEXING_VECTOR_SEARCH_TARGET in entity.get(TARGETS_TAG, []):
             use_vector_index = True
