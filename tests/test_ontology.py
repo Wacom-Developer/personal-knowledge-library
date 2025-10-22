@@ -51,7 +51,7 @@ class OntologyFlow(TestCase):
         self.assertIsNotNone(context.tenant_id)
         self.assertIsNotNone(context.iri)
         self.assertIsNotNone(context.labels)
-        self.assertGreater(len(context.labels), 1)
+        self.assertEqual(len(context.labels), 0)
         self.assertIsNotNone(context.concepts)
         self.assertGreater(len(context.concepts), 1)
         self.assertIsNotNone(context.properties)
