@@ -12,7 +12,7 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from knowledge import logger
+from knowledge import logger, __version__
 from knowledge.public import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, DEFAULT_BACKOFF_FACTOR, STATUS_FORCE_LIST
 
 
@@ -94,6 +94,14 @@ GREGORIAN_CALENDAR_URL: str = "http://www.wikidata.org/entity/Q1985786"
 # URL - Wikidata service
 WIKIDATA_SPARQL_URL: str = "https://query.wikidata.org/sparql"
 WIKIDATA_SEARCH_URL: str = "https://www.wikidata.org/w/api.php"
+
+
+def user_agent() -> str:
+    """User agent."""
+    return (
+        f"Personal Knowledge Library(Public Knowledge Crawler)/{__version__}"
+        f"(+https://github.com/Wacom-Developer/personal-knowledge-library)"
+    )
 
 
 # --------------------------------------- Helper functions -------------------------------------------------------------
@@ -301,6 +309,7 @@ def __waiting_request__(
         status_forcelist=STATUS_FORCE_LIST,  # HTTP status codes to retry on
         respect_retry_after_header=True,  # respect the Retry-After header
     )
+    header: Dict[str, str] = {"User-Agent": user_agent()}
 
     # Create a session and mount the retry adapter
     with requests.Session() as session:
@@ -308,7 +317,7 @@ def __waiting_request__(
         session.mount("https://", retry_adapter)
 
         # Make a request using the session
-        response: Response = session.get(url, timeout=timeout)
+        response: Response = session.get(url, headers=header, timeout=timeout)
 
         # Check the response status code
         if not response.ok:
@@ -364,7 +373,7 @@ def __waiting_multi_request__(
         )
     query: str = "|".join(checked_entity_ids)
     url: str = f"{base_url}{query}&format=json"
-
+    header: Dict[str, str] = {"User-Agent": user_agent()}
     # Define the retry policy
     retry_policy: Retry = Retry(
         total=max_retries,  # maximum number of retries
@@ -379,7 +388,7 @@ def __waiting_multi_request__(
         session.mount("https://", retry_adapter)
 
         # Make a request using the session
-        response: Response = session.get(url, timeout=timeout)
+        response: Response = session.get(url, headers=header, timeout=timeout)
 
         # Check the response status code
         if not response.ok:
