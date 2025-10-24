@@ -1916,6 +1916,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ------
         WacomServiceException
             If the graph service returns an error code.
+        FileNotFoundError
+            If the file does not exist.
         """
         if not file_path.exists():
             raise FileNotFoundError(f"The file {file_path} does not exist.")
