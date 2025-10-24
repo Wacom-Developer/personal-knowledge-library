@@ -123,22 +123,41 @@ def create_faulty_thing() -> ThingObject:
 
 # ----------------------------------------------------------------------------------------------------------------------
 instance: str = os.environ.get("INSTANCE")
+content_user_id: str = os.environ.get("EXTERNAL_USER_ID")
+
 async_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(
-    application_name="Async client test", service_url=instance, service_endpoint="graph/v1"
+    application_name="Async client test", service_url=instance,
 )
 group_management: AsyncGroupManagementService = AsyncGroupManagementService(
-    application_name="Async client test", service_url=instance, service_endpoint="graph/v1"
+    application_name="Async client test", service_url=instance,
 )
 user_management: AsyncUserManagementService = AsyncUserManagementService(
-    application_name="Async client test", service_url=instance, service_endpoint="graph/v1"
+    application_name="Async client test", service_url=instance,
 )
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 async def test_01_handle_user():
-    """Create user."""
-    global tenant_api_key, external_id
+    """
+    Handles operations related to user management such as creating, validating
+    existence, and updating user information and metadata within a tenant scope.
+
+    The function first verifies if a user characterized by the external identifier exists
+    in the system. If the user does not exist, it creates the user with specified attributes,
+    validates their creation, and subsequently updates their metadata. This operation focuses
+    on correctly managing user lifecycle using asynchronous operations and ensures
+    consistency within the user repository.
+
+    Raises
+    ------
+    AssertionError
+        If the user already exists with the given external identifier.
+    AssertionError
+        If the user creation operation is unsuccessful.
+    AssertionError
+        If the user metadata update is not reflected as expected.
+    """
     users: List[User] = await user_management.listing_users(tenant_api_key, limit=LIMIT)
     for user in users:
         if user.external_user_id == external_id:
@@ -173,8 +192,22 @@ async def test_01_handle_user():
 
 
 async def test_02_push_entity():
-    """Push entity."""
-    global tenant_api_key, external_id, dummy_image
+    """
+    Tests the ability to create, modify, and validate entities in the Wacom Knowledge service via
+    asynchronous API calls. The function performs entity creation, retrieval, image updates,
+    and ensures proper handling of erroneous inputs.
+
+    Assertions:
+        - Ensure the created entity URI is not None.
+        - Verify that the newly created entity has the specified concept type.
+        - Confirm that the initial image of the entity is None.
+        - Validate the entity's updated image is set correctly with both local and URL methods.
+        - Properly handle exceptions for faulty entities with expected HTTP status code and URL.
+
+    Raises:
+        AssertionError: If any of the conditions for assertions are not met.
+        WacomServiceException: If an error occurs during the creation of a faulty entity.
+    """
     thing: ThingObject = create_thing(OntologyClassReference.parse("wacom:core#Person"))
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     await async_client.handle_token(force_refresh=True)
@@ -200,7 +233,22 @@ async def test_02_push_entity():
 
 
 async def test_03_get_entity():
-    global tenant_api_key, external_id
+    """
+    Get entity.
+
+    This function handles the process of acquiring and verifying a single entity for a
+    specified user within a private visibility context. It includes the management of
+    user token authentication, token handling, entity counting, and testing of an
+    asynchronous iterator for accessing entities. The function ensures that the
+    retrieved entity matches a specified ontology class reference and validates
+    the non-emptiness of the resultant entity.
+
+    Raises
+    ------
+    AssertionError
+        If the entity count is not equal to 1 for the specified user or if the retrieved
+        entity does not match the ontology class reference.
+    """
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     """Get entity."""
@@ -219,7 +267,21 @@ async def test_03_get_entity():
 
 
 async def test_04_update_entity():
-    """Update entity."""
+    """
+    Async function that tests updating an entity using an asynchronous client.
+
+    This function verifies the process of logging in, handling tokens, and updating
+    entities with new data properties. It uses an async iterator to traverse through
+    entities and performs assertions to ensure the integrity of the operations. The
+    function specifically checks the addition of data properties and validates it by
+    re-pulling the updated entity.
+
+    Raises
+    ------
+    AssertionError
+        If the entity is `None` during the pull, or if the updated property value
+        does not match the expected timestamp.
+    """
     global tenant_api_key, external_id
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
@@ -241,8 +303,26 @@ async def test_04_update_entity():
 
 
 async def test_05_literal_entity():
-    """Pull literals from the entity."""
-    global tenant_api_key, external_id
+    """
+    Test the retrieval and handling of literal entities using an asynchronous client.
+
+    This function tests the ability of the `async_client` to:
+    1. Log in with an external user ID and tenant API key.
+    2. Retrieve and manage user and refresh tokens.
+    3. Iterate over asynchronous data (`async_things_iter`) and ensure that the
+       retrieved entities are fully populated.
+    4. Ensure that each entity has associated literals that are non-empty.
+    5. Validate that requesting literals for non-existent entities raises the expected exception.
+
+    Raises
+    ------
+    AssertionError
+        If the condition `await async_client.literals(uuid.uuid4().hex, auth_key=user_token)`
+        does not raise an exception.
+    WacomServiceException
+        If an invalid literal request or entity results in the expected error handling,
+        specifically when the status code is 404.
+    """
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
@@ -263,8 +343,24 @@ async def test_05_literal_entity():
 
 
 async def test_06_labels_entity():
-    """Pull labels from the entity."""
-    global tenant_api_key, external_id
+    """
+    Tests the functionality of labels retrieval and entity validation in an asynchronous
+    workflow. This includes testing async iteration over entities, fetching full entity
+    details, and retrieving associated labels for entities.
+
+    The test verifies that entities are not empty and ensures that labels are successfully
+    retrieved. It also checks error handling by attempting to retrieve labels for a
+    non-existent entity and asserting the expected exception behavior.
+
+    Raises
+    ------
+    AssertionError
+        If the expected exception is not raised when accessing labels for an invalid entity.
+        This ensures proper error handling behavior.
+    WacomServiceException
+        When attempting to fetch labels for a non-existent entity URI, with a status code
+        of 404, indicating the entity was not found.
+    """
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
@@ -285,8 +381,15 @@ async def test_06_labels_entity():
 
 
 async def test_07_relations_entity():
-    """Pull relations from the entity."""
-    global tenant_api_key, external_id
+    """
+    Test asynchronous relations functionality in an entity.
+
+    This function tests the ability to fetch and handle relations for an entity
+    using asynchronous methods. It verifies the process of logging in, handling
+    tokens, fetching entities, pulling relations, and creating new relations
+    between entities. The test includes checks to ensure that entities and
+    relations meet the expected criteria.
+    """
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     user_token, refresh_token = await async_client.handle_token()
     # Test async iterator
@@ -312,8 +415,25 @@ async def test_07_relations_entity():
 
 
 async def test_08_delete_entity():
-    """Delete the entity."""
-    global tenant_api_key, external_id
+    """
+    Tests the deletion of an entity using an asynchronous client.
+
+    This function performs the following:
+    1. Logs into the asynchronous client using provided credentials.
+    2. Iterates over the entities of a specific type using an asynchronous
+       session iterator. It filters the entities to retrieve only those that
+       are associated with the logged-in user.
+    3. Retrieves the full entity details asynchronously for each entity.
+    4. Deletes the entities forcefully from the system.
+
+    This is intended to verify the ability of the client to locate and remove
+    entities asynchronously.
+
+    Raises
+    ------
+    No explicit exceptions are raised in the docstring since any exceptions
+    related to login, iteration, or deletion are implementation-specific.
+    """
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     # Test async iterator
     async for thing in async_things_session_iter(async_client, THING_OBJECT, only_own=True):
@@ -322,9 +442,31 @@ async def test_08_delete_entity():
 
 
 async def test_09_search_labels():
-    """Search for labels."""
-    global tenant_api_key, external_id
-    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    """
+    Tests the functionality of searching labels through an asynchronous client.
+
+    This test checks the behavior of the `search_labels` endpoint by performing
+    searches with varying parameters, including general and exact matches. It verifies
+    that the correct number of results are returned and tests the login-to-search
+    workflow. Multiple test cases are executed to ensure the search functionality works
+    as expected under different conditions.
+
+    Raises
+    ------
+    AssertionError
+        If the length of the returned entities list does not meet the expected
+        conditions.
+
+    Notes
+    -----
+    - The test requires an active tenant API key and a valid external user ID to
+      authenticate and perform searches. These values must be provided at runtime.
+    - The `search_labels` operation limits results according to the specified
+      `limit` parameter and supports options such as exact matching and
+      language-specific filters.
+
+    """
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
     res_entities, next_search_page = await async_client.search_labels(
         search_term=LEONARDO_DA_VINCI, language_code=EN_US, limit=10
     )
@@ -336,9 +478,27 @@ async def test_09_search_labels():
 
 
 async def test_10_search_description():
-    """Test the search for descriptions."""
-    global tenant_api_key, external_id
-    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    """
+    Tests search functionality for a description query using the `search_description` method of the
+    `async_client`. Logs in with the provided API key and user ID before performing the search query.
+
+    The test validates that at least one entity is returned when searching descriptions
+    related to "Michelangelo's Sistine Chapel" in the English language, with a specified limit.
+
+    Raises
+    ------
+    AssertionError
+        If the search does not return at least one entity.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
     res_entities, next_search_page = await async_client.search_description(
         "Michelangelo's Sistine Chapel", EN_US, limit=10
     )
@@ -347,9 +507,27 @@ async def test_10_search_description():
 
 
 async def test_11_search_relations():
-    """Test the search for relations."""
-    global tenant_api_key, external_id
-    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    """
+    Tests the search relations functionality of the async client.
+
+    This function performs a series of operations to validate the behavior and correctness
+    of the `search_labels`, `relations`, and `search_relation` methods. It ensures that the
+    methods return expected results, handle exceptions appropriately, and comply with the
+    specified constraints. Various scenarios, including valid and invalid inputs, are tested
+    to ensure robustness and correctness.
+
+    Raises
+    ------
+    AssertionError
+        Raised when any assertion in the test fails, including unexpected absence
+        of results or deviation from expected behavior.
+
+    WacomServiceException
+        Raised when the `search_relation` method is called with invalid input
+        parameters violating constraints such as allowing only one valid parameter
+        or requiring at least one parameter.
+    """
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
     art_style: Optional[ThingObject] = None
     results, _ = await async_client.search_labels("portrait", EN_US, limit=1)
     for entity in results:
@@ -359,7 +537,6 @@ async def test_11_search_relations():
     res_entities, next_search_page = await async_client.search_relation(
         relation=HAS_ART_STYLE, object_uri=art_style.uri, language_code=EN_US
     )
-
     assert len(res_entities) >= 1
     for entity in res_entities:
         results, _ = await async_client.search_relation(
@@ -388,9 +565,23 @@ async def test_11_search_relations():
 
 
 async def test_12_search_literals():
-    """Test the search for literals."""
-    global tenant_api_key, external_id
-    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    """
+    Executes an asynchronous test to search for literals using specified
+    parameters and validates the result.
+
+    This function first logs in the `async_client` using the given tenant API
+    key and external user ID. Subsequently, it performs a search for literals
+    using the specified search term, regular expression pattern, literal, and
+    language code. The function then asserts whether the number of resulting
+    entities matches the expected condition.
+
+    Raises
+    ------
+    AssertionError
+        If the number of entities in the result does not meet the assertion
+        condition.
+    """
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
     res_entities, next_search_page = await async_client.search_literal(
         search_term=LEONARDO_QID, pattern=SearchPattern.REGEX, literal=SYSTEM_SOURCE_REFERENCE_ID, language_code=EN_US
     )
@@ -398,9 +589,17 @@ async def test_12_search_literals():
 
 
 async def test_13_named_entity_linking():
-    """Test the search for literals."""
-    global tenant_api_key, external_id
-    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    """
+    Tests the named entity linking functionality of the async client.
+
+    This asynchronous function tests the ability of the async client to link personal
+    entities to a given text using the named entity linking (NEL) feature. It logs in
+    to the client, retrieves a list of entities, generates fake textual content, and
+    links any discovered personal entities within the text. Assertions are made to
+    ensure valid entity linking results.
+
+    """
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
     entities, _, _ = await async_client.listing(THING_OBJECT, page_id=None, limit=100, locale=EN_US)
     fake: Faker = Faker(EN_US)
     for ent in entities:
@@ -413,9 +612,23 @@ async def test_13_named_entity_linking():
 
 
 async def test_14_activations():
-    """Test activations."""
-    global tenant_api_key, external_id
-    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
+    """
+    Test function to validate the activation and search API functionalities. This function performs
+    login into the asynchronous test client, searches for a specific entity, retrieves its URI,
+    and validates the activation structure and relations associated with that entity.
+
+    Raises
+    ------
+    No explicit exceptions are raised but may propagate exceptions from underlying API functionalities.
+
+    Notes
+    -----
+    - Logs in to the async client using specified tenant and user identifiers.
+    - Performs search for a predefined entity and retrieves its unique URI.
+    - Fetches interconnected entities and their relations to validate activation data.
+    - Verifies non-empty results for the specified entity relationship queries.
+    """
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
     leo_uri: Optional[str] = None
     search_results, _ = await async_client.search_labels(LEONARDO_DA_VINCI, EN_US, limit=1)
     for entity in search_results:
@@ -428,9 +641,19 @@ async def test_14_activations():
 
 
 async def test_15_create_group_users():
-    """Create users."""
-    global tenant_api_key, external_id, external_id_2
+    """
+    Tests the creation of group users through the user management service.
 
+    This function validates the process of creating a user associated with a
+    specific group by invoking the `create_user` method from the user management
+    module. It ensures that the returned token, refresh token, and expiration
+    timestamp are not null, confirming the successful user creation.
+
+    Raises
+    ------
+    AssertionError
+        If the returned token, refresh token, or expiration timestamp is null.
+    """
     info, token, refresh, expire = await user_management.create_user(
         tenant_api_key, external_id=external_id_2, meta_data={"account-type": "qa-test"}, roles=[UserRole.USER]
     )
@@ -440,9 +663,27 @@ async def test_15_create_group_users():
 
 
 async def test_16_group_flows():
-    """Create group."""
+    """
+    Tests group creation, user addition, entity sharing, access management, and group re-joining by
+    multiple users in the system. The test mimics the lifecycle of a group and its interactions
+    with external entities and users.
+
+    Summary:
+    This function is an asynchronous automated test case that validates various functionalities of
+    the group management and entity sharing processes in the system. The scenarios tested include
+    group creation, user additions to the group, joining the group using a join key, sharing entities
+    within the group, revocation of group membership, validation of entity access permissions,
+    and re-joining groups. By simulating these interactions, this test ensures the system performs
+    as expected under normal usage scenarios.
+
+    Raises
+    ------
+    AssertionError
+        If any assertion for the test flow fails.
+    WacomServiceException
+        When a user tries to access unauthorized entities or perform unauthorized operations.
+    """
     # Now, user 1 creates a group
-    global tenant_api_key, external_id, external_id_2
     await group_management.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     # User 1 creates a group
     new_group: Group = await group_management.create_group("qa-test-group")
@@ -544,8 +785,26 @@ async def test_16_group_flows():
 
 
 async def test_17_public_entity():
-    """Public entity."""
-    global tenant_api_key, external_id, external_id_2
+    """
+    Test the behavior of a public entity within an asynchronous environment. The test
+    validates read/write permissions and access handling for two different users under
+    the same tenant servicing a specific entity.
+
+    The function ensures:
+    - Proper authentication and token issuance for users.
+    - Validation of read and write access control for entities.
+    - Testing restricted access based on permissions of another user in the system.
+    - Verifying updates and modifications for entities based on roles and access.
+
+    Raises
+    ------
+    AssertionError
+        If unexpected access is granted or restricted based on specified permissions.
+    WacomServiceException
+        If there are permission violations such as restricted write access due to
+        forbidden roles, indicated by a 403 status code.
+
+    """
     thing: Optional[ThingObject] = None
     user_token, refresh_token, _ = await async_client.request_user_token(
         tenant_api_key=tenant_api_key, external_id=external_id
@@ -581,8 +840,20 @@ async def test_17_public_entity():
 
 
 async def test_18_import_test():
-    """Test Import"""
-    global tenant_api_key, external_id
+    """
+    Tests the process of creating, importing, and validating entities using an asynchronous client.
+
+    The function simulates the process of creating an entity, importing multiple randomized entities linked to
+    the initially created entity, monitoring the progress of the import job, retrieving the newly created entity URIs,
+    validating the created entities by fetching their details and their object properties, and verifying the
+    accuracy of the relations established between the entities. If the import fails, an exception is raised with
+    the associated error log.
+
+    Raises
+    ------
+    Exception
+        If no new entity URIs are found, indicating the import has failed.
+    """
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     entity: ThingObject = ThingObject(
         label=[Label(content="Test", language_code=EN_US, main=True)], concept_type=THING_OBJECT, use_for_nel=True
@@ -598,7 +869,7 @@ async def test_18_import_test():
     next_page_id = None
     while True:
         resp: NewEntityUrisResponse = await async_client.import_new_uris(job_id, next_page_id=next_page_id)
-        new_uris.extend(resp.new_entities_uris)
+        new_uris.extend(resp.new_entities_uris.values())
         if resp.next_page_id is None:
             break
         next_page_id = resp.next_page_id
@@ -616,7 +887,16 @@ async def test_18_import_test():
 
 
 async def test_19_delete_users():
-    """Clean up the test environment."""
+    """
+    Deletes users with a specific account type from the database.
+
+    This asynchronous function retrieves a list of all users using the
+    `user_management.listing_users` method for a given tenant API key. It
+    then iterates through the users, identifies those whose metadata
+    contains the key "account-type" with a value of "qa-test", and
+    removes them using the `user_management.delete_user` method. The
+    deletion is performed forcefully for such accounts.
+    """
     list_user_all: List[User] = await user_management.listing_users(tenant_api_key, limit=LIMIT)
     for u_i in list_user_all:
         if "account-type" in u_i.meta_data and u_i.meta_data.get("account-type") == "qa-test":
