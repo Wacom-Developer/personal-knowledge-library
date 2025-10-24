@@ -1,3 +1,10 @@
+2025/10/24 - RELEASE 3.4.0
+==========================
+- Adding timeout parameter to async client
+- Support new version of GZIP new uri endpoint
+- Update parameters for create tenant parameters
+- Minor fixes
+
 2025/09/18 - RELEASE 3.3.2
 ==========================
 - Adding filter_mode to semantic search
