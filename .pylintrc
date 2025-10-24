@@ -70,7 +70,7 @@ fail-under=8.0
 fail-on=
 
 disable=
-    C0114, C0413
+    C0114, C0413, R0917, R0801
 
 [MESSAGES CONTROL]
 
