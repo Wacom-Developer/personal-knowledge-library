@@ -2395,9 +2395,10 @@ class ThingObject:
                     )
                     thing.add_data_property(DataProperty(value, data_property_type, language_code))
         if OBJECT_PROPERTIES_TAG in entity:
-            for object_property in entity[OBJECT_PROPERTIES_TAG].values():
-                _, obj = ObjectProperty.create_from_dict(object_property)
-                thing.add_relation(obj)
+            if isinstance(entity[OBJECT_PROPERTIES_TAG], list):
+                for relation_item in entity[OBJECT_PROPERTIES_TAG]:
+                    _, obj = ObjectProperty.create_from_dict(relation_item)
+                    thing.add_relation(obj)
         thing.alias = alias
         # Finally, retrieve rights
         if TENANT_RIGHTS_TAG in entity and entity[TENANT_RIGHTS_TAG]:

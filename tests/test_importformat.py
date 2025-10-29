@@ -2,7 +2,7 @@
 # Copyright © 2024 Wacom. All rights reserved.
 import os
 import uuid
-from typing import Optional, List
+from typing import Optional, List, Dict
 from unittest import TestCase
 
 import pytest
@@ -160,7 +160,7 @@ class ImportFlow(TestCase):
         uri_thing: str = self.knowledge_client.create_entity(entity)
         things: List[ThingObject] = [create_random_thing(f"ref-{i}", uri_thing) for i in range(10)]
         job_id: str = self.knowledge_client.import_entities(things)
-        new_uris: List[str] = []
+        new_uris: Dict[str, str] = {}
         while True:
             job_status: JobStatus = self.knowledge_client.job_status(job_id)
             if job_status.status == JobStatus.COMPLETED:
@@ -168,7 +168,7 @@ class ImportFlow(TestCase):
         next_page_id = None
         while True:
             resp: NewEntityUrisResponse = self.knowledge_client.import_new_uris(job_id, next_page_id=next_page_id)
-            new_uris.extend(resp.new_entities_uris)
+            new_uris.update(resp.new_entities_uris)
             if resp.next_page_id is None:
                 break
             next_page_id = resp.next_page_id
@@ -177,7 +177,7 @@ class ImportFlow(TestCase):
 
         if len(new_uris) == 0:
             raise Exception(f"Import failed with errors: {errors}")
-        for uri in new_uris:
+        for uri in new_uris.values():
             thing: ThingObject = self.knowledge_client.entity(uri)
             thing.object_properties = self.knowledge_client.relations(uri)
             self.assertIsNotNone(thing)
