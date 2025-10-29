@@ -94,6 +94,7 @@ def things_session_iter(
     visibility: Optional[Visibility] = None,
     locale: Optional[LocaleCode] = None,
     only_own: bool = False,
+    include_relations: Optional[bool] = None,
     fetch_size: int = 100,
     force_refresh_timeout: int = 360,
 ) -> Iterator[ThingObject]:
@@ -112,6 +113,8 @@ def things_session_iter(
         Only entities with this labels having a given locale
     only_own: bool [default:= False]
         Only own things
+    include_relations: Optional[bool] = [default:= None]
+        Include relations in the response.
     fetch_size: int [default:= 100]
         Fetch size.
     force_refresh_timeout: int [default:= 360]
@@ -139,6 +142,7 @@ def things_session_iter(
             is_owner=only_own,
             limit=fetch_size,
             page_id=next_page_id,
+            include_relations=include_relations,
         )
         if len(things) == 0:
             return
@@ -156,6 +160,7 @@ def things_iter(
     visibility: Optional[Visibility] = None,
     locale: Optional[LocaleCode] = None,
     only_own: bool = False,
+    include_relations: Optional[bool] = None,
     fetch_size: int = 100,
     force_refresh_timeout: int = 360,
     tenant_api_key: Optional[str] = None,
@@ -180,6 +185,8 @@ def things_iter(
         Only entities with this labels having a given locale
     only_own: bool [default:= False]
         Only own things
+    include_relations: Optional[bool] = [default:= None]
+        Include relations in the response.
     fetch_size: int [default:= 100]
         Fetch size.
     force_refresh_timeout: int [default:= 360]
@@ -213,6 +220,7 @@ def things_iter(
             is_owner=only_own,
             limit=fetch_size,
             page_id=next_page_id,
+            include_relations=include_relations,
         )
         if len(things) == 0:
             return
@@ -241,11 +249,11 @@ async def async_count_things(
         The user token
     concept_type: OntologyClassReference
         The concept type
-    locale: Optional[LocaleCode]
+    locale: Optional[LocaleCode] = [default:= None]
         The locale
-    visibility: Optional[Visibility]
+    visibility: Optional[Visibility] = [default:= None]
         The visibility
-    only_own: Optional[bool]
+    only_own: Optional[bool] = [default:= None]
         Only own things
 
     Returns
@@ -281,11 +289,11 @@ async def async_count_things_session(
         The Wacom Knowledge Service
     concept_type: OntologyClassReference
         The concept type
-    locale: Optional[LocaleCode]
+    locale: Optional[LocaleCode] = [default:= None]
         The locale
-    visibility: Optional[Visibility]
+    visibility: Optional[Visibility] = [default:= None]
         The visibility
-    only_own: Optional[bool]
+    only_own: Optional[bool] = [default:= None]
         Only own things
 
     Returns
@@ -307,6 +315,7 @@ async def async_things_iter(
     visibility: Optional[Visibility] = None,
     locale: Optional[LocaleCode] = None,
     only_own: Optional[bool] = None,
+    include_relations: Optional[bool] = None,
     fetch_size: int = 100,
     force_refresh_timeout: int = 360,
     tenant_api_key: Optional[str] = None,
@@ -331,6 +340,8 @@ async def async_things_iter(
         Only entities with this labels having a given locale
     only_own: Optional[bool] = [default:= None]
         Only own things
+    include_relations: Optional[bool] = [default:= None]
+        Include relations in the response.
     fetch_size: int [default:= 100]
         Fetch size.
     force_refresh_timeout: int [default:= 360]
@@ -359,6 +370,7 @@ async def async_things_iter(
             is_owner=only_own,
             limit=fetch_size,
             page_id=next_page_id,
+            include_relations=include_relations,
         )
         if len(things) == 0:
             return
@@ -373,6 +385,7 @@ async def async_things_session_iter(
     visibility: Optional[Visibility] = None,
     locale: Optional[LocaleCode] = None,
     only_own: Optional[bool] = None,
+    include_relations: Optional[bool] = None,
     fetch_size: int = 100,
     force_refresh_timeout: int = 360,
 ) -> AsyncIterator[ThingObject]:
@@ -388,9 +401,11 @@ async def async_things_session_iter(
     visibility: Optional[Visibility] [default:= None]
         The visibility
     locale: Optional[LocaleCode] [default:= None]
-        Only entities with this labels having a given locale
+        Only entities with this label having a given locale
     only_own: Optional[bool] = [default:= None]
         Only own things
+    include_relations: Optional[bool] = [default:= None]
+        Include relations
     fetch_size: int [default:= 100]
         Fetch size.
     force_refresh_timeout: int [default:= 360]
@@ -414,6 +429,7 @@ async def async_things_session_iter(
                 locale=locale,
                 limit=fetch_size,
                 page_id=next_page_id,
+                include_relations=include_relations,
             )
             if len(things) == 0:
                 return

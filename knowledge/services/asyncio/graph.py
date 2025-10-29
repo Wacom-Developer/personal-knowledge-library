@@ -27,7 +27,7 @@ from knowledge.base.entity import (
     FORCE_TAG,
     VISIBILITY_TAG,
     RELATION_TAG,
-    TEXT_TAG,
+    TEXT_TAG, INCLUDE_RELATIONS_TAG,
 )
 from knowledge.base.language import LocaleCode, EN_US
 from knowledge.base.ontology import (
@@ -1300,6 +1300,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         locale: Optional[LocaleCode] = None,
         visibility: Optional[Visibility] = None,
         is_owner: Optional[bool] = None,
+        include_relations: Optional[bool] = None,
         estimate_count: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
@@ -1311,7 +1312,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         ----------
         filter_type: OntologyClassReference
             Filtering with entity
-        page_id: Optional[str]
+        page_id: Optional[str] = [default:=None]
             Page id. Start from this page id
         limit: int
             Limit of the returned entities.
@@ -1321,9 +1322,11 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             Filter the entities based on its visibilities
         is_owner: Optional[bool] [default:=None]
             Filter the entities based on its owner
-        estimate_count: bool [default:=False]
+        include_relations: Optional[bool] [default:=None]
+            Include relations in the response.
+        estimate_count: bool = [default:=False]
             Request an estimate of the entities in a tenant.
-        auth_key: Optional[str]
+        auth_key: Optional[str] = [default:= None]
             Auth key from user if not set, the client auth key will be used
         timeout: int
             Timeout for the request (default: 60 seconds)
@@ -1362,6 +1365,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             parameters[LOCALE_TAG] = locale
         if visibility:
             parameters[VISIBILITY_TAG] = str(visibility.value)
+        if include_relations:
+            parameters[INCLUDE_RELATIONS_TAG] = str(include_relations)
         # If filtering is configured
         if page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = page_id

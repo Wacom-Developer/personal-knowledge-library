@@ -24,7 +24,7 @@ from knowledge.base.entity import (
     Label,
     URIS_TAG,
     FORCE_TAG,
-    URI_TAG,
+    URI_TAG, INCLUDE_RELATIONS_TAG,
 )
 from knowledge.base.language import LocaleCode
 from knowledge.base.ontology import (
@@ -1155,6 +1155,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         visibility: Optional[Visibility] = None,
         is_owner: Optional[bool] = None,
         estimate_count: bool = False,
+        include_relations: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_MAX_RETRIES,
@@ -1171,15 +1172,17 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Page id. Start from this page id
         limit: int
             Limit of the returned entities.
-        locale: Optional[LanguageCode] [default:=None]
+        locale: Optional[LanguageCode] = [default:=None]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         visibility: Optional[Visibility] [default:=None]
             Filter the entities based on its visibilities
-        is_owner: Optional[bool] [default:=None]
+        is_owner: Optional[bool] = [default:=None]
             Filter the entities based on its owner
-        estimate_count: bool [default:=False]
+        estimate_count: bool = [default:=False]
             Request an estimate of the entities in a tenant.
-        auth_key: Optional[str] = None
+        include_relations: bool = [default:=False]
+            Include relations in the response.
+        auth_key: Optional[str] = [default:=None]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
@@ -1212,16 +1215,18 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         # Parameter with filtering and limit
-        parameters: Dict[str, str] = {TYPE_TAG: filter_type.iri, LIMIT_PARAMETER: limit, ESTIMATE_COUNT: estimate_count}
+        parameters: Dict[str, Any] = {TYPE_TAG: filter_type.iri, LIMIT_PARAMETER: limit, ESTIMATE_COUNT: estimate_count}
         if locale:
             parameters[LOCALE_TAG] = locale
         if visibility:
             parameters[VISIBILITY_TAG] = str(visibility.value)
-        if is_owner is not None:
+        if is_owner:
             parameters[IS_OWNER_PARAM] = str(is_owner)
         # If filtering is configured
-        if page_id is not None:
+        if page_id:
             parameters[NEXT_PAGE_ID_TAG] = page_id
+        if include_relations:
+            parameters[INCLUDE_RELATIONS_TAG] = str(include_relations)
         mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
         with requests.Session() as session:
             retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
