@@ -2190,9 +2190,14 @@ class ThingObject:
             DATA_PROPERTIES_TAG: [],
             OBJECT_PROPERTIES_TAG: [],
             TENANT_RIGHTS_TAG: self.tenant_access_right.to_list(),
-            GROUP_IDS: group_ids if group_ids else [],
             TARGETS_TAG: [],
         }
+        # if group ids are set in the object, use these
+        if len(self.group_ids) > 0:
+            dict_object[GROUP_IDS] = self.group_ids
+        # if group ids are passed as parameter, override the ones in the object
+        if group_ids is not None:
+            dict_object[GROUP_IDS] = group_ids
         if self.use_for_nel:
             dict_object[TARGETS_TAG].append(INDEXING_NEL_TARGET)
         if self.use_vector_index:
