@@ -4,6 +4,7 @@ import gzip
 import json
 import logging
 import re
+import uuid
 from json import JSONDecodeError
 from pathlib import Path
 from typing import List, Dict, Any
@@ -132,7 +133,7 @@ def load_import_format(file_path: Path) -> List[ThingObject]:
     return cached_entities
 
 
-def save_import_format(file_path: Path, entities: List[ThingObject]) -> None:
+def save_import_format(file_path: Path, entities: List[ThingObject], save_groups: bool = True, generate_missing_ref_ids: bool = True) -> None:
     """
     Save the import format file.
     Parameters
@@ -141,17 +142,32 @@ def save_import_format(file_path: Path, entities: List[ThingObject]) -> None:
         The path to the file.
     entities: List[ThingObject]
         The list of entities.
+    save_groups: bool
+        Whether to save groups or not.
+    generate_missing_ref_ids: bool
+        Whether to generate missing reference IDs or not.
     """
     # Create the directory if it does not exist
     file_path.parent.mkdir(parents=True, exist_ok=True)
     if file_path.suffix == ".gz":
         with gzip.open(file_path, "wt", encoding="utf-8") as fp_thing:
             for entity in entities:
-                fp_thing.write(f"{json.dumps(entity.__import_format_dict__(), ensure_ascii=False)}\n")
+                if generate_missing_ref_ids and entity.default_source_reference_id() is None:
+                    entity.reference_id = str(uuid.uuid4())
+                if save_groups:
+                    fp_thing.write(f"{json.dumps(entity.__import_format_dict__(), ensure_ascii=False)}\n")
+                else:
+                    fp_thing.write(f"{json.dumps(entity.__import_format_dict__(group_ids=[]), ensure_ascii=False)}\n")
     elif file_path.suffix == ".ndjson":
         with file_path.open("w", encoding="utf-8") as fp_thing:
             for entity in entities:
-                fp_thing.write(f"{json.dumps(entity.__import_format_dict__(), ensure_ascii=False)}\n")
+                if generate_missing_ref_ids and entity.default_source_reference_id() is None:
+                    entity.reference_id = str(uuid.uuid4())
+                if save_groups:
+                    fp_thing.write(f"{json.dumps(entity.__import_format_dict__(), ensure_ascii=False)}\n")
+                else:
+                    fp_thing.write(f"{json.dumps(entity.__import_format_dict__(group_ids=[]), ensure_ascii=False)}\n")
+
 
 
 def append_import_format(file_path: Path, entity: ThingObject) -> None:
