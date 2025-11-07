@@ -1,3 +1,10 @@
+2025/11//07 - RELEASE 3.5.0
+==========================
+- Adding support for new include relations feature of listing entities
+- Save import format export now supports export of group ids 
+- Minor fixes and improvements
+
+
 2025/10/24 - RELEASE 3.4.0
 ==========================
 - Adding timeout parameter to async client
