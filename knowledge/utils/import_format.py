@@ -133,7 +133,9 @@ def load_import_format(file_path: Path) -> List[ThingObject]:
     return cached_entities
 
 
-def save_import_format(file_path: Path, entities: List[ThingObject], save_groups: bool = True, generate_missing_ref_ids: bool = True) -> None:
+def save_import_format(
+    file_path: Path, entities: List[ThingObject], save_groups: bool = True, generate_missing_ref_ids: bool = True
+) -> None:
     """
     Save the import format file.
     Parameters
@@ -167,7 +169,6 @@ def save_import_format(file_path: Path, entities: List[ThingObject], save_groups
                     fp_thing.write(f"{json.dumps(entity.__import_format_dict__(), ensure_ascii=False)}\n")
                 else:
                     fp_thing.write(f"{json.dumps(entity.__import_format_dict__(group_ids=[]), ensure_ascii=False)}\n")
-
 
 
 def append_import_format(file_path: Path, entity: ThingObject) -> None:

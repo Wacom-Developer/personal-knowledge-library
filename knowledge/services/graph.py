@@ -24,7 +24,8 @@ from knowledge.base.entity import (
     Label,
     URIS_TAG,
     FORCE_TAG,
-    URI_TAG, INCLUDE_RELATIONS_TAG,
+    URI_TAG,
+    INCLUDE_RELATIONS_TAG,
 )
 from knowledge.base.language import LocaleCode
 from knowledge.base.ontology import (

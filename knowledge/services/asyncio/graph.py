@@ -27,7 +27,8 @@ from knowledge.base.entity import (
     FORCE_TAG,
     VISIBILITY_TAG,
     RELATION_TAG,
-    TEXT_TAG, INCLUDE_RELATIONS_TAG,
+    TEXT_TAG,
+    INCLUDE_RELATIONS_TAG,
 )
 from knowledge.base.language import LocaleCode, EN_US
 from knowledge.base.ontology import (
