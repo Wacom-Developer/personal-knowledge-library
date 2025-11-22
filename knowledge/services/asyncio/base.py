@@ -147,6 +147,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
         Authentication service endpoint
     verify_calls: bool (Default:= True)
         Flag if  API calls should be verified.
+    graceful_shutdown: bool Deprecated (Default:= False)
+        Flag to use graceful shutdown.
 
     """
 
@@ -173,7 +175,94 @@ class AsyncServiceAPIClient(RESTAPIClient):
         self.__token_manager: TokenManager = TokenManager()
         self.__current_session_id: Optional[str] = None
         self.__graceful_shutdown: bool = graceful_shutdown
+        self.__session: Optional[aiohttp.ClientSession] = None
+        self.__token_refresh_lock: asyncio.Lock = asyncio.Lock()
+        self.__session_lock: asyncio.Lock = asyncio.Lock()
         super().__init__(service_url, verify_calls)
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """
+        Handles the asynchronous exit of a context manager.
+
+        This method is invoked when exiting the runtime context, particularly for
+        closing out active sessions to release resources properly.
+
+        Parameters
+        ----------
+        exc_type : type or None
+            The exception type, if an exception occurred, otherwise None.
+        exc_val : BaseException or None
+            The exception instance, if an exception occurred, otherwise None.
+        exc_tb : TracebackType or None
+            The traceback object, if an exception occurred, otherwise None.
+
+        Returns
+        -------
+        None
+        """
+        try:
+            await asyncio.wait_for(self.close(), timeout=5.0)
+        except (asyncio.TimeoutError, RuntimeError) as e:
+            # Log but don't raise - event loop might be closing
+            if "Event loop is closed" not in str(e):
+                logger.warning(f"Cleanup warning: {e}")
+        return False
+
+    async def __aenter__(self):
+        """
+        Handles the operations required when an asynchronous context manager is entered.
+
+        Returns
+        -------
+        self : object
+            The current instance of the class that is being used as an asynchronous
+            context manager.
+        """
+        return self
+
+    async def session(self) -> aiohttp.ClientSession:
+        """
+        Creates and manages an asynchronous HTTP session.
+
+        The `session` method ensures that an `aiohttp.ClientSession` is properly created
+        and reused for making HTTP requests. It checks whether there's an existing session
+        that is closed or uninitialized and re-initializes it if required. Thread safety
+        is achieved using an asynchronous lock.
+
+        Returns
+        -------
+        aiohttp.ClientSession
+            An instance of aiohttp.ClientSession, either previously created or newly
+            instantiated and ready for use in asynchronous operations.
+        """
+        async with self.__session_lock:
+            needs_new_session = False
+
+            if self.__session is None or self.__session.closed:
+                needs_new_session = True
+            else:
+                # Check if the event loop is still valid
+                try:
+                    loop = asyncio.get_running_loop()
+                    if self.__session._loop != loop or self.__session._loop.is_closed():
+                        needs_new_session = True
+                        # Close old session if it exists
+                        if not self.__session.closed:
+                            try:
+                                await self.__session.close()
+                            except RuntimeError:
+                                pass  # Event loop already closed
+                except RuntimeError:
+                    needs_new_session = True
+
+            if needs_new_session:
+                self.__session = self.__async_session__()
+        return self.__session
+
+    async def close(self):
+        """Cleanup resources."""
+        if self.__session and not self.__session.closed:
+            await self.__session.close()
 
     @property
     def application_name(self) -> str:
@@ -261,18 +350,19 @@ class AsyncServiceAPIClient(RESTAPIClient):
         if self.current_session.refreshable and (
             self.current_session.expires_in < force_refresh_timeout or force_refresh
         ):
-            try:
-                auth_key, refresh_token, _ = await self.refresh_token(self.current_session.refresh_token)
-            except WacomServiceException as e:
-                if isinstance(self.current_session, PermanentSession):
-                    permanent_session: PermanentSession = self.current_session
-                    auth_key, refresh_token, _ = await self.request_user_token(
-                        permanent_session.tenant_api_key, permanent_session.external_user_id
-                    )
-                else:
-                    logger.error(f"Error refreshing token: {e}")
-                    raise e
-            self.current_session.update_session(auth_key, refresh_token)
+            async with self.__token_refresh_lock:
+                try:
+                    auth_key, refresh_token, _ = await self.refresh_token(self.current_session.refresh_token)
+                except WacomServiceException as e:
+                    if isinstance(self.current_session, PermanentSession):
+                        permanent_session: PermanentSession = self.current_session
+                        auth_key, refresh_token, _ = await self.request_user_token(
+                            permanent_session.tenant_api_key, permanent_session.external_user_id
+                        )
+                    else:
+                        logger.error(f"Error refreshing token: {e}")
+                        raise e
+                self.current_session.update_session(auth_key, refresh_token)
             return auth_key, refresh_token
         return self.current_session.auth_token, self.current_session.refresh_token
 
@@ -293,7 +383,9 @@ class AsyncServiceAPIClient(RESTAPIClient):
             json_serialize=lambda x: orjson.dumps(x).decode(), timeout=timeout, connector=connector
         )
 
-    async def request_user_token(self, tenant_api_key: str, external_id: str) -> Tuple[str, str, datetime]:
+    async def request_user_token(
+        self, tenant_api_key: str, external_id: str, timeout: int = DEFAULT_TIMEOUT
+    ) -> Tuple[str, str, datetime]:
         """
         Login as user by using the tenant key and its external user id.
 
@@ -303,6 +395,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
             Tenant api key
         external_id: str
             External id.
+        timeout: int = DEFAULT_TIMEOUT
+            Timeout for the request in seconds.
 
         Returns
         -------
@@ -324,21 +418,22 @@ class AsyncServiceAPIClient(RESTAPIClient):
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
         }
         payload: dict = {EXTERNAL_USER_ID: external_id}
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.post(self.auth_endpoint, data=json.dumps(payload), headers=headers) as response:
-                if response.ok:
-                    response_token: Dict[str, str] = await response.json(loads=orjson.loads)
-                    try:
-                        date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
-                    except (TypeError, ValueError) as _:
-                        date_object: datetime = datetime.now()
-                        logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
-                else:
-                    raise await handle_error("Login failed.", response, payload=payload, headers=headers)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()  # Await the session
+        async with session.post(
+            self.auth_endpoint, data=json.dumps(payload), timeout=timeout, headers=headers
+        ) as response:
+            if response.ok:
+                response_token: Dict[str, str] = await response.json(loads=orjson.loads)
+                try:
+                    date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
+                except (TypeError, ValueError) as _:
+                    date_object: datetime = datetime.now()
+                    logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
+            else:
+                raise await handle_error("Login failed.", response, payload=payload, headers=headers)
         return response_token["accessToken"], response_token["refreshToken"], date_object
 
-    async def refresh_token(self, refresh_token: str) -> Tuple[str, str, datetime]:
+    async def refresh_token(self, refresh_token: str, timeout: int = DEFAULT_TIMEOUT) -> Tuple[str, str, datetime]:
         """
         Refreshing a token.
 
@@ -346,6 +441,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
         ----------
         refresh_token: str
             Refresh token
+        timeout: int = DEFAULT_TIMEOUT
+            Timeout for the request in seconds.
 
         Returns
         -------
@@ -359,7 +456,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         Raises
         ------
         WacomServiceException
-            Exception if service returns HTTP error code.
+            Exception if the service returns HTTP error code.
         """
         url: str = f"{self.service_base_url}{AsyncServiceAPIClient.USER_REFRESH_ENDPOINT}/"
         headers: Dict[str, str] = {
@@ -367,25 +464,24 @@ class AsyncServiceAPIClient(RESTAPIClient):
             CONTENT_TYPE_HEADER_FLAG: "application/json",
         }
         payload: Dict[str, str] = {REFRESH_TOKEN_TAG: refresh_token}
-        async with self.__async_session__() as session:
-            async with session.post(
-                url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls
-            ) as response:
-                if response.ok:
-                    response_token: Dict[str, str] = await response.json()
-                    timestamp_str_truncated: str = ""
-                    try:
-                        if sys.version_info <= (3, 10):
-                            timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG][:19] + "+00:00"
-                        else:
-                            timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
-                        date_object: datetime = datetime.fromisoformat(timestamp_str_truncated)
-                    except (TypeError, ValueError) as _:
-                        date_object: datetime = datetime.now()
-                        logger.warning(f"Parsing of expiration date failed. {timestamp_str_truncated}")
-                else:
-                    raise await handle_error("Refresh of token failed.", response, payload=payload, headers=headers)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()  # Await the session
+        async with session.post(
+            url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls
+        ) as response:
+            if response.ok:
+                response_token: Dict[str, str] = await response.json()
+                timestamp_str_truncated: str = ""
+                try:
+                    if sys.version_info <= (3, 10):
+                        timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG][:19] + "+00:00"
+                    else:
+                        timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
+                    date_object: datetime = datetime.fromisoformat(timestamp_str_truncated)
+                except (TypeError, ValueError) as _:
+                    date_object: datetime = datetime.now()
+                    logger.warning(f"Parsing of expiration date failed. {timestamp_str_truncated}")
+            else:
+                raise await handle_error("Refresh of token failed.", response, payload=payload, headers=headers)
         return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
 
     async def login(self, tenant_api_key: str, external_user_id: str) -> PermanentSession:
@@ -413,9 +509,17 @@ class AsyncServiceAPIClient(RESTAPIClient):
         return session
 
     async def logout(self):
-        """Logout user."""
+        """
+        Logs out the user from the current session.
+
+        This method handles the removal of the current session from the token manager
+        and triggers any necessary cleanup operations. If all sessions are terminated,
+        it invokes additional resource-closing routines.
+        """
         if self.__current_session_id:
             self.__token_manager.remove_session(self.__current_session_id)
+            if len(self.__token_manager.sessions) == 0:
+                await self.close()
         self.__current_session_id = None
 
     async def register_token(
@@ -454,5 +558,5 @@ class AsyncServiceAPIClient(RESTAPIClient):
     @property
     def auth_endpoint(self) -> str:
         """Authentication endpoint."""
-        # This is in graph service REST API
+        # This is in the graph service REST API
         return f"{self.service_url}/{self.__auth_service_endpoint}/{self.USER_LOGIN_ENDPOINT}"
