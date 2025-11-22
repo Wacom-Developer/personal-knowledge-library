@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional, List, Literal
 import orjson
 
 from knowledge.base.language import LocaleCode
+from knowledge.base.queue import QueueNames, QueueCount, QueueMonitor
 from knowledge.base.search import DocumentSearchResponse, LabelMatchingResponse, VectorDBDocument
 from knowledge.services import (
     DEFAULT_TIMEOUT,
@@ -27,12 +28,15 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
     ----------
     service_url: str
         Service URL for the client.
+    application_name: str (Default:= 'Async Semantic Search ')
+        Name of the application.
     service_endpoint: str (Default:= 'vector/v1')
         Service endpoint for the client.
     """
 
-    def __init__(self, service_url: str, service_endpoint: str = "vector/api/v1"):
-        super().__init__("Async Semantic Search ", service_url, service_endpoint)
+    def __init__(self, service_url: str, application_name: str = "Async Semantic Search ",
+                 service_endpoint: str = "vector/api/v1"):
+        super().__init__(application_name, service_url, service_endpoint)
 
     async def retrieve_document_chunks(
         self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
@@ -93,7 +97,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
     ) -> List[VectorDBDocument]:
         """
-        Retrieve labels from vector database.
+        Retrieve labels from a vector database.
 
         Parameters
         ----------
@@ -414,13 +418,12 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         }
         if filter_mode:
             params["filter_mode"] = filter_mode
-        async with self.__async_session__() as session:
-            async with session.post(url, headers=headers, json=params, timeout=timeout) as response:
-                if response.ok:
-                    response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
-                else:
-                    raise await handle_error("Semantic Search failed.", response, headers=headers, parameters=params)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()
+        async with session.post(url, headers=headers, json=params, timeout=timeout) as response:
+            if response.ok:
+                response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
+            else:
+                raise await handle_error("Semantic Search failed.", response, headers=headers, parameters=params)
         return DocumentSearchResponse.from_dict(response_dict)
 
     async def labels_search(
@@ -473,13 +476,129 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         }
         if filter_mode:
             params["filter_mode"] = filter_mode
-        async with self.__async_session__() as session:
-            async with session.post(url, headers=headers, json=params, timeout=timeout) as response:
-                if response.ok:
-                    response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
-                else:
-                    raise await handle_error(
-                        "Label fuzzy matching failed.", response, headers=headers, parameters=params
-                    )
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()
+        async with session.post(url, headers=headers, json=params, timeout=timeout) as response:
+            if response.ok:
+                response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
+            else:
+                raise await handle_error(
+                    "Label fuzzy matching failed.", response, headers=headers, parameters=params
+                )
         return LabelMatchingResponse.from_dict(response_dict)
+
+    async def list_queues(self, auth_key: Optional[str] = None) -> QueueNames:
+        """
+        List all available queues in the semantic search service.
+
+        Parameters
+        ----------
+        auth_key: Optional[str] (Default:= None)
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+
+        Returns
+        -------
+        queues: QueueNames
+            List of queue names.
+
+        Raises
+        ------
+        WacomServiceException
+            If the request fails.
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        url: str = f"{self.service_base_url}queues/names/"
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
+        }
+        session = await self.session()
+        async with session.get(url, headers=headers) as response:
+            if response.ok:
+                queues: Dict[str, List[str]] = await response.json(loads=orjson.loads)
+                return QueueNames.parse_json(queues)
+            else:
+                raise await handle_error("Failed to list queues.", response, headers=headers)
+
+    async def queue_is_empty(self, queue_name: str, auth_key: Optional[str] = None) -> bool:
+        """
+        Checks if a given queue is empty.
+
+        This asynchronous method checks whether the specified queue exists and if it is
+        empty by interacting with a remote service. It uses an authorization key for
+        authentication, and if not provided, retrieves it using a helper method.
+
+        Parameters
+        ----------
+        queue_name : str
+            The name of the queue to check.
+        auth_key : Optional[str], optional
+            Authorization key used for authenticating with the service. Defaults
+            to None, in which case the method will fetch an appropriate token.
+
+        Returns
+        -------
+        bool
+            True if the specified queue is empty, False otherwise.
+        """
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        url: str = f"{self.service_base_url}queues/empty/"
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
+        }
+        params: Dict[str, str] = {
+            "queue_name": queue_name
+        }
+        session = await self.session()
+        async with session.get(url, headers=headers, params=params) as response:
+            if response.ok:
+                is_empty: bool = await response.json(loads=orjson.loads)
+                return is_empty
+            else:
+                raise await handle_error("Failed to check if the queue is empty.", response, headers=headers)
+
+    async def queue_size(self, queue_name: str, auth_key: Optional[str] = None) -> QueueCount:
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        url: str = f"{self.service_base_url}queues/count/"
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
+        }
+        params: Dict[str, str] = {
+            "queue_name": queue_name
+        }
+        session = await self.session()
+        async with session.get(url, headers=headers, params=params) as response:
+            if response.ok:
+                response_structure: Dict[str, Any] =  await response.json(loads=orjson.loads)
+                return QueueCount.parse_json(response_structure)
+            else:
+                raise await handle_error("Failed to get the queue size.", response, headers=headers)
+
+    async def queue_monitor_information(self, queue_name: str, auth_key: Optional[str] = None) -> QueueMonitor:
+        if auth_key is None:
+            auth_key, _ = await self.handle_token()
+        url: str = f"{self.service_base_url}queues/"
+        headers: Dict[str, str] = {
+            USER_AGENT_HEADER_FLAG: self.user_agent,
+            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
+            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
+        }
+        params: Dict[str, str] = {
+            "queue_name": queue_name
+        }
+        session = await self.session()
+        async with session.get(url, headers=headers, params=params) as response:
+            if response.ok:
+                response_structure: Dict[str, Any] =  await response.json(loads=orjson.loads)
+                return QueueMonitor.parse_json(response_structure)
+            else:
+                raise await handle_error("Failed to get the queue monitor information.", response,
+                                         headers=headers)
+

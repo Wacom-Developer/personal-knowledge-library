@@ -5,6 +5,7 @@ import urllib.parse
 from typing import List, Any, Optional, Dict
 
 import orjson
+from requests import session
 
 from knowledge.base.access import GroupAccessRight
 from knowledge.base.ontology import NAME_TAG
@@ -101,14 +102,13 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             USER_AGENT_HEADER_FLAG: self.user_agent,
         }
         payload: Dict[str, str] = {NAME_TAG: name, GROUP_USER_RIGHTS_TAG: rights.to_list()}
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.post(
-                url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls
-            ) as response:
-                if not response.ok:
-                    raise await handle_error("Creation of group failed.", response, payload=payload, headers=headers)
-                group: Dict[str, Any] = await response.json(loads=orjson.loads)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()
+        async with session.post(
+            url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls
+        ) as response:
+            if not response.ok:
+                raise await handle_error("Creation of group failed.", response, payload=payload, headers=headers)
+            group: Dict[str, Any] = await response.json(loads=orjson.loads)
         return Group.parse(group)
 
     async def update_group(
@@ -150,13 +150,12 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             USER_AGENT_HEADER_FLAG: self.user_agent,
         }
         payload: Dict[str, str] = {NAME_TAG: name, GROUP_USER_RIGHTS_TAG: rights.to_list()}
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.patch(
+        session = await self.session()
+        async with session.patch(
                 url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls
             ) as response:
                 if not response.ok:
                     raise await handle_error("Update of group failed.", response, payload=payload, headers=headers)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
 
     async def delete_group(
         self, group_id: str, force: bool = False, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
@@ -188,13 +187,12 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             USER_AGENT_HEADER_FLAG: self.user_agent,
         }
         params: Dict[str, str] = {FORCE_TAG: str(force).lower()}
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.delete(
-                url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-            ) as response:
-                if not response.ok:
-                    raise await handle_error("Deletion of group failed.", response, headers=headers)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()
+        async with session.delete(
+            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
+        ) as response:
+            if not response.ok:
+                raise await handle_error("Deletion of group failed.", response, headers=headers)
 
     async def listing_groups(
         self,
@@ -241,15 +239,14 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
             USER_AGENT_HEADER_FLAG: self.user_agent,
         }
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.get(
-                url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-            ) as response:
-                if response.ok:
-                    groups: List[Dict[str, Any]] = await response.json(loads=orjson.loads)
-                else:
-                    raise await handle_error("Listing of group failed.", response, headers=headers)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()
+        async with session.get(
+            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
+        ) as response:
+            if response.ok:
+                groups: List[Dict[str, Any]] = await response.json(loads=orjson.loads)
+            else:
+                raise await handle_error("Listing of group failed.", response, headers=headers)
         return [Group.parse(g) for g in groups]
 
     async def group(self, group_id: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT) -> GroupInfo:
@@ -319,13 +316,12 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         params: Dict[str, str] = {
             JOIN_KEY_PARAM: join_key,
         }
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.post(
-                url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-            ) as response:
-                if not response.ok:
-                    raise await handle_error("Joining of group failed.", response, headers=headers, parameters=params)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()
+        async with session.post(
+            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
+        ) as response:
+            if not response.ok:
+                raise await handle_error("Joining of group failed.", response, headers=headers, parameters=params)
 
     async def leave_group(self, group_id: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT):
         """User leaving a group with his auth token.
@@ -388,15 +384,15 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         params: Dict[str, str] = {
             USER_TO_ADD_PARAM: user_id,
         }
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.post(
-                url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-            ) as response:
-                if not response.ok:
-                    raise await handle_error(
-                        "Adding of user to group failed.", response, headers=headers, parameters=params
-                    )
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()
+        async with session.post(
+            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
+        ) as response:
+            if not response.ok:
+                raise await handle_error(
+                    "Adding of user to group failed.", response, headers=headers, parameters=params
+                )
+
 
     async def remove_user_from_group(
         self,
@@ -433,15 +429,14 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             USER_AGENT_HEADER_FLAG: self.user_agent,
         }
         params: Dict[str, str] = {USER_TO_REMOVE_PARAM: user_id, FORCE_PARAM: str(force)}
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.post(
-                url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-            ) as response:
-                if not response.ok:
-                    raise await handle_error(
-                        "Removing of user from group failed.", response, headers=headers, parameters=params
-                    )
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()
+        async with session.post(
+            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
+        ) as response:
+            if not response.ok:
+                raise await handle_error(
+                    "Removing of user from group failed.", response, headers=headers, parameters=params
+                )
 
     async def add_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None):
         """Adding an entity to group.
@@ -467,11 +462,10 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
             USER_AGENT_HEADER_FLAG: self.user_agent,
         }
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.post(url, headers=headers, verify_ssl=self.verify_calls) as response:
-                if not response.ok:
-                    raise await handle_error("Adding of entity to group failed.", response, headers=headers)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()
+        async with session.post(url, headers=headers, verify_ssl=self.verify_calls) as response:
+            if not response.ok:
+                raise await handle_error("Adding of entity to group failed.", response, headers=headers)
 
     async def remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None):
         """Remove an entity from group.
@@ -498,8 +492,7 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
             USER_AGENT_HEADER_FLAG: self.user_agent,
         }
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.post(url, headers=headers, verify_ssl=self.verify_calls) as response:
-                if not response.ok:
-                    raise await handle_error("Removing of entity from group failed.", response, headers=headers)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        session = await self.session()
+        async with session.post(url, headers=headers, verify_ssl=self.verify_calls) as response:
+            if not response.ok:
+                raise await handle_error("Removing of entity from group failed.", response, headers=headers)

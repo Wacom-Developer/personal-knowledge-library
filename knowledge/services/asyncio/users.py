@@ -108,8 +108,8 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             META_DATA_TAG: meta_data if meta_data is not None else {},
             ROLES_TAG: [r.value for r in roles] if roles is not None else [UserRole.USER.value],
         }
-        async with self.__async_session__() as session:
-            async with session.post(
+        session = await self.session()
+        async with session.post(
                 url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls
             ) as response:
                 if response.ok:
@@ -122,7 +122,6 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
 
                 else:
                     raise await handle_error("Failed to create the user.", response, headers=headers, payload=payload)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return (
             User.parse(results["user"]),
             results["token"]["accessToken"],
@@ -172,13 +171,13 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             ROLES_TAG: [r.value for r in roles] if roles is not None else [UserRole.USER.value],
         }
         params: Dict[str, str] = {USER_ID_TAG: internal_id, EXTERNAL_USER_ID_TAG: external_id}
-        async with self.__async_session__() as session:
-            async with session.patch(
+        session = await self.session()
+        async with session.patch(
                 url, headers=headers, json=payload, params=params, timeout=timeout, verify_ssl=self.verify_calls
             ) as response:
                 if not response.ok:
-                    raise await handle_error("Failed to update the user.", response, headers=headers, payload=payload)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+                    raise await handle_error("Failed to update the user.", response, headers=headers,
+                                             payload=payload)
 
     async def delete_user(
         self, tenant_key: str, external_id: str, internal_id: str, force: bool = False, timeout: int = DEFAULT_TIMEOUT
@@ -206,13 +205,12 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{AsyncUserManagementService.USER_ENDPOINT}"
         headers: Dict[str, str] = {USER_AGENT_TAG: self.user_agent, TENANT_API_KEY_FLAG: tenant_key}
         params: Dict[str, str] = {USER_ID_TAG: internal_id, EXTERNAL_USER_ID_TAG: external_id, FORCE_TAG: str(force)}
-        async with self.__async_session__() as session:
-            async with session.delete(
+        session = await self.session()
+        async with session.delete(
                 url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
             ) as response:
                 if not response.ok:
                     raise await handle_error("Failed to delete the user.", response, headers=headers)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
 
     async def user_internal_id(self, tenant_key: str, external_id: str, timeout: int = DEFAULT_TIMEOUT) -> str:
         """User internal id.
@@ -238,15 +236,14 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{AsyncUserManagementService.USER_DETAILS_ENDPOINT}"
         headers: dict = {USER_AGENT_TAG: self.user_agent, TENANT_API_KEY_FLAG: tenant_key}
         parameters: Dict[str, str] = {EXTERNAL_USER_ID_TAG: external_id}
-        async with self.__async_session__() as session:
-            async with session.get(
+        session = await self.session()
+        async with session.get(
                 url, headers=headers, params=parameters, timeout=timeout, verify_ssl=self.verify_calls
             ) as response:
                 if response.ok:
                     response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
                 else:
                     raise await handle_error("Failed to get the user.", response, headers=headers)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return response_dict[INTERNAL_USER_ID_TAG]
 
     async def listing_users(
@@ -274,8 +271,8 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{AsyncUserManagementService.USER_ENDPOINT}"
         headers: Dict[str, str] = {USER_AGENT_TAG: self.user_agent, TENANT_API_KEY_FLAG: tenant_key}
         params: Dict[str, int] = {OFFSET_TAG: offset, LIMIT_TAG: limit}
-        async with self.__async_session__() as session:
-            async with session.get(
+        session = await self.session()
+        async with session.get(
                 url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
             ) as response:
                 if response.ok:
@@ -285,5 +282,4 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
                         results.append(User.parse(u))
                 else:
                     await handle_error("Listing of users failed.", response, headers=headers, parameters=params)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
         return results
