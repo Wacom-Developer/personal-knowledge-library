@@ -28,7 +28,29 @@ class Session(ABC):
     """
     Session
     -------
-    Abstract session class.
+
+    Represents an abstract session for managing authentication tokens and tracking session state.
+
+    This class provides an interface for managing sessions, including properties for authentication and
+    refresh tokens, session expiration status, and time until expiration. It enforces implementation of
+    essential methods for handling sessions in derived classes.
+
+    Attributes
+    ----------
+    id : str
+        Unique session id, which will be the same for the same external user id, tenant, and instance of the service.
+    auth_token : str
+        Authentication key used to identify an external user within private knowledge.
+    tenant_id : str
+        Tenant id.
+    refresh_token : Optional[str]
+        Refresh token used to refresh the session.
+    refreshable : bool
+        Indicator of whether the session is refreshable.
+    expired : bool
+        Indicator of whether the session is expired.
+    expires_in : float
+        Seconds remaining until the token expires.
     """
 
     @property
@@ -41,7 +63,7 @@ class Session(ABC):
     @property
     @abstractmethod
     def auth_token(self) -> str:
-        """Authentication key. The authentication key is used to identify an external user withing private knowledge."""
+        """Authentication key. The authentication key is used to identify an external user within private knowledge."""
         raise NotImplementedError
 
     @property
@@ -91,9 +113,36 @@ class Session(ABC):
 class TimedSession(Session):
     """
     TimedSession
-    ----------------
-    The timed session is only valid until the token expires. There is no refresh token, thus the session cannot be
-    refreshed.
+    ------------
+    Manages a time-limited authentication session with a service.
+
+    This class represents a session authenticated via a JWT token with an expiration timestamp.
+    It provides utilities to decode and extract information such as roles, tenant id, service URL,
+    and external user ID. Additionally, it generates and validates session IDs and keeps track of
+    expiration and refreshability.
+
+    Attributes
+    ----------
+    tenant_id : str
+        ID of the tenant associated with the session.
+    roles : str
+        Roles assigned to the session.
+    service_url : str
+        URL of the service the session is authenticated with.
+    external_user_id : str
+        External user identifier for the session.
+    expiration : datetime
+        Timestamp indicating when the session token expires.
+    auth_token : str
+        JWT token used for authenticating the session.
+    id : str
+        Unique identifier for the session derived from the service URL, tenant ID, and external user ID.
+    expires_in : float
+        Number of seconds until the session token expires.
+    expired : bool
+        Indicates whether the session has expired.
+    refreshable : bool
+        Indicates whether the session token can be refreshed.
     """
 
     def __init__(self, auth_token: str):
@@ -234,13 +283,26 @@ class RefreshableSession(TimedSession):
     """
     RefreshableSession
     ------------------
-    The session class holds the information about the session.
-    As there is refresh token, the session can be refreshed.
+
+    Class that extends TimedSession to provide functionality for refreshable session management.
+
+    Detailed description of the class, its purpose, and usage. Allows handling of authentication
+    and refresh tokens while ensuring thread-safe updates to the session. This class provides
+    property-based access and management for the refresh token state and validation of session
+    tokens, ensuring compatibility with user, tenant, and instance details.
+
+    Attributes
+    ----------
+    auth_token : str
+        The authentication token required for session authentication.
+    refresh_token : str
+        The refresh token used to renew the session.
     """
 
     def __init__(self, auth_token: str, refresh_token: str):
         super().__init__(auth_token)
         self.__refresh_token: str = refresh_token
+        self.__lock: threading.Lock = threading.Lock()
 
     @property
     def refresh_token(self) -> str:
@@ -261,28 +323,29 @@ class RefreshableSession(TimedSession):
         refresh_token: str
             The refreshed refresh token.
         """
-        structures = jwt.decode(auth_token, options={"verify_signature": False})
-        if (
-            "tenant" not in structures
-            or "roles" not in structures
-            or "exp" not in structures
-            or "iss" not in structures
-            or "ext-sub" not in structures
-        ):
-            raise ValueError("Invalid authentication token.")
-        if (
-            self.tenant_id != structures["tenant"]
-            or self.external_user_id != structures["ext-sub"]
-            or self.service_url != structures["iss"]
-        ):
-            raise ValueError("The token is from a different user, tenant, or instance.")
-        self._auth_token_details_(auth_token)
-        self.auth_token = auth_token
-        self.refresh_token = refresh_token
+        with self.__lock:
+            structures = jwt.decode(auth_token, options={"verify_signature": False})
+            if (
+                "tenant" not in structures
+                or "roles" not in structures
+                or "exp" not in structures
+                or "iss" not in structures
+                or "ext-sub" not in structures
+            ):
+                raise ValueError("Invalid authentication token.")
+            if (
+                self.tenant_id != structures["tenant"]
+                or self.external_user_id != structures["ext-sub"]
+                or self.service_url != structures["iss"]
+            ):
+                raise ValueError("The token is from a different user, tenant, or instance.")
+            self._auth_token_details_(auth_token)
+            self.auth_token = auth_token
+            self.refresh_token = refresh_token
 
     @property
     def refreshable(self) -> bool:
-        """Is the session refreshable."""
+        """Is the session refreshable?"""
         return self.refresh_token is not None
 
     def __str__(self):
@@ -291,10 +354,23 @@ class RefreshableSession(TimedSession):
 
 class PermanentSession(RefreshableSession):
     """
-    RefreshableSession
-    ------------------
-    The session class holds the information about the session.
+    PermanentSession
+    ----------------
 
+    A session that retains a tenant API key and an external user ID for
+    permanent identification and authorization.
+
+    This class extends the RefreshableSession by encapsulating additional
+    information such as a unique tenant API key and an external user ID, which
+    are immutable properties. It is used to establish and maintain a session
+    that requires these parameters alongside authentication and refresh tokens.
+
+    Attributes
+    ----------
+    tenant_api_key : str
+        The API key associated with the tenant for this session.
+    external_user_id : str
+        The external user identifier for the session.
     """
 
     def __init__(self, tenant_api_key: str, external_user_id: str, auth_token: str, refresh_token: str):
@@ -323,22 +399,23 @@ class TokenManager:
     """
     TokenManager
     ------------
-    The token manager is a singleton that holds all the sessions for the users.
+
+    Manages sessions for authentication and authorization.
+
+    The `TokenManager` class provides functionality to handle different types of
+    sessions including permanent, refreshable, and timed sessions. It ensures thread-safe
+    operations for adding, retrieving, removing, and maintaining sessions. It also
+    includes utilities for cleaning up expired sessions.
+
+    Attributes
+    ----------
+    sessions : Dict[str, Union[TimedSession, RefreshableSession, PermanentSession]]
+        A dictionary mapping session ids to their corresponding session objects.
     """
 
-    __instance: "TokenManager" = None
-    __lock: threading.Lock = threading.Lock()  # Asynchronous lock for thread safety
-
-    def __new__(cls):
-        """Create a new singleton instance of the token manager."""
-        with cls.__lock:
-            if cls.__instance is None:
-                cls.__instance = super(TokenManager, cls).__new__(cls)
-                cls.__instance.__initialize__()
-        return cls.__instance
-
-    def __initialize__(self):
+    def __init__(self):
         self.sessions: Dict[str, Union[TimedSession, RefreshableSession, PermanentSession]] = {}
+        self.__lock: threading.Lock = threading.Lock()
 
     def add_session(
         self,
@@ -381,18 +458,15 @@ class TokenManager:
                 session = TimedSession(auth_token=auth_token)
                 # If there is no refresh token, then the session is timed
             if session.id in self.sessions:
-                if type(session) is not type(self.sessions[session.id]):
+                existing_type = type(self.sessions[session.id])
+                new_type = type(session)
+                if existing_type != new_type:
                     logger.warning(
                         f"Session {session.id} already exists. "
-                        f"Overwriting with new type of session {type(session)}, "
-                        f"before {type(self.sessions[session.id])}."
+                        f"Overwriting with new type of session {new_type.__name__}, "
+                        f"before {existing_type.__name__}."
                     )
-                if not isinstance(self.sessions[session.id], type(session)):
-                    logger.warning(
-                        f"The session {session.id} is of a different type. "
-                        f"Cached version is a {type(self.sessions[session.id])} "
-                        f"and the new session is a {type(session)}."
-                    )
+
             self.sessions[session.id] = session
             return session
 
@@ -442,3 +516,24 @@ class TokenManager:
         """
         with self.__lock:
             return session_id in self.sessions
+
+    def cleanup_expired_sessions(self) -> int:
+        """
+        Removes expired sessions from the session store.
+
+        Returns
+        -------
+        int
+            The number of expired sessions removed.
+        """
+        with self.__lock:
+            expired_ids = [sid for sid, session in self.sessions.items() if session.expired and not session.refreshable]
+            for sid in expired_ids:
+                del self.sessions[sid]
+            return len(expired_ids)
+
+    @property
+    def session_count(self) -> int:
+        """Number of active sessions."""
+        with self.__lock:
+            return len(self.sessions)
