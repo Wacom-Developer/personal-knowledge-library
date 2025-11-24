@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024-present Wacom. All rights reserved.
-import asyncio
 import urllib.parse
 from typing import List, Any, Optional, Dict
 
 import orjson
-from requests import session
 
 from knowledge.base.access import GroupAccessRight
 from knowledge.base.ontology import NAME_TAG
@@ -15,12 +13,9 @@ from knowledge.services import (
     USER_TO_ADD_PARAM,
     USER_TO_REMOVE_PARAM,
     FORCE_PARAM,
-    APPLICATION_JSON_HEADER,
-    USER_AGENT_HEADER_FLAG,
     DEFAULT_TIMEOUT,
 )
 from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error
-from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG, CONTENT_TYPE_HEADER_FLAG
 from knowledge.services.group import Group, GroupManagementService, GroupInfo
 
 # -------------------------------------- Constant flags ----------------------------------------------------------------
@@ -93,22 +88,20 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
         payload: Dict[str, str] = {NAME_TAG: name, GROUP_USER_RIGHTS_TAG: rights.to_list()}
-        session = await self.session()
-        async with session.post(
-            url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error("Creation of group failed.", response, payload=payload, headers=headers)
-            group: Dict[str, Any] = await response.json(loads=orjson.loads)
+        async_session = await self.asyncio_session()
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        response = await async_session.post(
+            url,
+            json=payload,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            headers=headers,
+        )
+        if not response.ok:
+            raise await handle_error("Creation of group failed.", response, payload=payload)
+        group: Dict[str, Any] = await response.json(loads=orjson.loads)
         return Group.parse(group)
 
     async def update_group(
@@ -141,21 +134,19 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
         payload: Dict[str, str] = {NAME_TAG: name, GROUP_USER_RIGHTS_TAG: rights.to_list()}
-        session = await self.session()
-        async with session.patch(
-                url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls
-            ) as response:
-                if not response.ok:
-                    raise await handle_error("Update of group failed.", response, payload=payload, headers=headers)
+        async_session = await self.asyncio_session()
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        response = await async_session.patch(
+            url,
+            json=payload,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            headers=headers,
+        )
+        if not response.ok:
+            raise await handle_error("Update of group failed.", response, payload=payload)
 
     async def delete_group(
         self, group_id: str, force: bool = False, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
@@ -170,7 +161,7 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
          force: bool (Default = False)
             If True, the group will be deleted even if it is not empty.
          auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
          timeout: int
             Default timeout for the request (in seconds). Default: 60 seconds.
 
@@ -179,20 +170,19 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
         params: Dict[str, str] = {FORCE_TAG: str(force).lower()}
-        session = await self.session()
-        async with session.delete(
-            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error("Deletion of group failed.", response, headers=headers)
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        async_session = await self.asyncio_session()
+        response = await async_session.delete(
+            url,
+            params=params,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            headers=headers,
+        )
+        if not response.ok:
+            raise await handle_error("Deletion of group failed.", response)
 
     async def listing_groups(
         self,
@@ -229,24 +219,23 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}"
-        params: Dict[str, int] = {LIMIT_TAG: str(limit), OFFSET_TAG: str(offset)}
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        params: Dict[str, str] = {LIMIT_TAG: str(limit), OFFSET_TAG: str(offset)}
         if admin:
             url += "/admin"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
-        session = await self.session()
-        async with session.get(
-            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if response.ok:
-                groups: List[Dict[str, Any]] = await response.json(loads=orjson.loads)
-            else:
-                raise await handle_error("Listing of group failed.", response, headers=headers)
+        async_session = await self.asyncio_session()
+        response = await async_session.get(
+            url,
+            params=params,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            headers=headers,
+        )
+        if response.ok:
+            groups: List[Dict[str, Any]] = await response.json(loads=orjson.loads)
+        else:
+            raise await handle_error("Listing of group failed.", response)
         return [Group.parse(g) for g in groups]
 
     async def group(self, group_id: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT) -> GroupInfo:
@@ -271,19 +260,19 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.get(url, headers=headers, timeout=timeout, verify_ssl=self.verify_calls) as response:
-                if response.ok:
-                    group: Dict[str, Any] = await response.json(loads=orjson.loads)
-                else:
-                    raise await handle_error("Getting of group information failed.", response, headers=headers)
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        async_session = await self.asyncio_session()
+        response = await async_session.get(
+            url,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            headers=headers,
+        )
+        if response.ok:
+            group: Dict[str, Any] = await response.json(loads=orjson.loads)
+        else:
+            raise await handle_error("Getting of group information failed.", response)
         return GroupInfo.parse(group)
 
     async def join_group(
@@ -306,22 +295,21 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/join"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
         params: Dict[str, str] = {
             JOIN_KEY_PARAM: join_key,
         }
-        session = await self.session()
-        async with session.post(
-            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error("Joining of group failed.", response, headers=headers, parameters=params)
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        async_session = await self.asyncio_session()
+        response = await async_session.post(
+            url,
+            params=params,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            headers=headers,
+        )
+        if not response.ok:
+            raise await handle_error("Joining of group failed.", response, parameters=params)
 
     async def leave_group(self, group_id: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT):
         """User leaving a group with his auth token.
@@ -340,18 +328,12 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/leave"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
-        async with AsyncServiceAPIClient.__async_session__() as session:
-            async with session.post(url, headers=headers, timeout=timeout, verify_ssl=self.verify_calls) as response:
-                if not response.ok:
-                    raise await handle_error("Leaving of group failed.", response, headers=headers)
-        await asyncio.sleep(0.25 if self.use_graceful_shutdown else 0.0)
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        async_session = await self.asyncio_session()
+        response = await async_session.post(url, headers=headers, timeout=timeout, verify_ssl=self.verify_calls)
+        if not response.ok:
+            raise await handle_error("Leaving of group failed.", response, headers=headers)
 
     async def add_user_to_group(
         self, group_id: str, user_id: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
@@ -374,25 +356,17 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/user/add"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
         params: Dict[str, str] = {
             USER_TO_ADD_PARAM: user_id,
         }
-        session = await self.session()
-        async with session.post(
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        async_session = await self.asyncio_session()
+        response = await async_session.post(
             url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error(
-                    "Adding of user to group failed.", response, headers=headers, parameters=params
-                )
-
+        )
+        if not response.ok:
+            raise await handle_error("Adding of user to group failed.", response, headers=headers, parameters=params)
 
     async def remove_user_from_group(
         self,
@@ -402,7 +376,7 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ):
-        """Remove a user from group.
+        """Remove a user from a group.
 
         Parameters
         ----------
@@ -421,24 +395,25 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/user/remove"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         params: Dict[str, str] = {USER_TO_REMOVE_PARAM: user_id, FORCE_PARAM: str(force)}
-        session = await self.session()
-        async with session.post(
+        async_session = await self.asyncio_session()
+        response = await async_session.post(
             url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error(
-                    "Removing of user from group failed.", response, headers=headers, parameters=params
-                )
+        )
+        if not response.ok:
+            raise await handle_error(
+                "Removing of user from group failed.", response, headers=headers, parameters=params
+            )
 
-    async def add_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None):
+    async def add_entity_to_group(
+        self,
+        group_id: str,
+        entity_uri: str,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ):
         """Adding an entity to group.
 
         Parameters
@@ -449,6 +424,8 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             Entities URI
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (in seconds). Default: 60 seconds.
         Raises
         ------
         WacomServiceException
@@ -458,16 +435,19 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/entity/{uri}/add"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
-        session = await self.session()
-        async with session.post(url, headers=headers, verify_ssl=self.verify_calls) as response:
-            if not response.ok:
-                raise await handle_error("Adding of entity to group failed.", response, headers=headers)
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        async_session = await self.asyncio_session()
+        response = await async_session.post(url, headers=headers, verify_ssl=self.verify_calls, timeout=timeout)
+        if not response.ok:
+            raise await handle_error("Adding of entity to group failed.", response, headers=headers)
 
-    async def remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: Optional[str] = None):
+    async def remove_entity_to_group(
+        self,
+        group_id: str,
+        entity_uri: str,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ):
         """Remove an entity from group.
 
         Parameters
@@ -478,21 +458,18 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             URI of entity
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (in seconds). Default: 60 seconds.
 
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/entity/{uri}/remove"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
-        session = await self.session()
-        async with session.post(url, headers=headers, verify_ssl=self.verify_calls) as response:
-            if not response.ok:
-                raise await handle_error("Removing of entity from group failed.", response, headers=headers)
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        async_session = await self.asyncio_session()
+        response = await async_session.post(url, headers=headers, verify_ssl=self.verify_calls, timeout=timeout)
+        if not response.ok:
+            raise await handle_error("Removing of entity from group failed.", response, headers=headers)

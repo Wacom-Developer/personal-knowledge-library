@@ -126,18 +126,18 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         application_name: str,
         service_url: str = WacomServiceAPIClient.SERVICE_URL,
         service_endpoint: str = "graph/v1",
-        graceful_shutdown: bool = False,
+        timeout: int = DEFAULT_TIMEOUT,
     ):
         super().__init__(
             application_name=application_name,
             service_url=service_url,
             service_endpoint=service_endpoint,
-            graceful_shutdown=graceful_shutdown,
+            timeout=timeout,
         )
 
     async def entity(self, uri: str, auth_key: Optional[str] = None) -> ThingObject:
         """
-        Retrieve entity information from personal knowledge, using the  URI as identifier.
+        Retrieve entity information from personal knowledge, using the URI as identifier.
 
         **Remark:** Object properties (relations) must be requested separately.
 
@@ -158,27 +158,22 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code or the entity is not found in the knowledge graph
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        session = await self.session()
-        async with session.get(url, headers=headers, verify_ssl=self.verify_calls) as response:
-            if response.ok:
-                e: Dict[str, Any] = await response.json()
-                pref_label: List[Label] = []
-                aliases: List[Label] = []
-                # Extract labels and alias
-                for label in e[LABELS_TAG]:
-                    if label[IS_MAIN_TAG]:  # Labels
-                        pref_label.append(Label.create_from_dict(label))
-                    else:  # Alias
-                        aliases.append(Label.create_from_dict(label))
-            else:
-                raise await handle_error(f"Retrieving of entity content failed. URI:={uri}.", response, headers=headers)
+        session = await self.asyncio_session()
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        response = await session.get(url, headers=headers, verify_ssl=self.verify_calls)
+        if response.ok:
+            e: Dict[str, Any] = await response.json()
+            pref_label: List[Label] = []
+            aliases: List[Label] = []
+            # Extract labels and alias
+            for label in e[LABELS_TAG]:
+                if label[IS_MAIN_TAG]:  # Labels
+                    pref_label.append(Label.create_from_dict(label))
+                else:  # Alias
+                    aliases.append(Label.create_from_dict(label))
+        else:
+            raise await handle_error(f"Retrieving of entity content failed. URI:={uri}.", response, headers=headers)
         # Create ThingObject
         thing: ThingObject = ThingObject.from_dict(e)
         return thing
@@ -216,33 +211,27 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code or the entity is not found in the knowledge graph
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         things: List[ThingObject] = []
-        session = await self.session()
-
+        session = await self.asyncio_session()
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         for chunk in range(0, len(uris), AsyncWacomKnowledgeService.MAX_NUMBER_URIS):
             subset = uris[chunk : chunk + AsyncWacomKnowledgeService.MAX_NUMBER_URIS]
             params: Dict[str, Any] = {URIS_TAG: subset}
             if locale:
                 params[LOCALE_TAG] = locale
-            async with session.get(
+            response = await session.get(
                 url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-            ) as response:
-                if response.ok:
-                    entities: List[Dict[str, Any]] = await response.json()
-                    for e in entities:
-                        thing: ThingObject = ThingObject.from_dict(e)
-                        things.append(thing)
-                else:
-                    raise await handle_error(
-                        f"Retrieving of entities content failed. List of URIs: {uris}.", response, headers=headers
-                    )
+            )
+            if response.ok:
+                entities: List[Dict[str, Any]] = await response.json()
+                for e in entities:
+                    thing: ThingObject = ThingObject.from_dict(e)
+                    things.append(thing)
+            else:
+                raise await handle_error(
+                    f"Retrieving of entities content failed. List of URIs: {uris}.", response, headers=headers
+                )
         # Create ThingObject
         return things
 
@@ -269,8 +258,6 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
            If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         with path.open("rb") as fp:
             image_bytes: bytes = fp.read()
             file_name: str = str(path.absolute())
@@ -298,7 +285,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         image_url: str
             URL of the image.
         file_name: str [default:=None]
-            Name of  the file. If None the name is extracted from URL.
+            Name of the file. If None, the name is extracted from URL.
         mime_type: str [default:=None]
             Mime type.
         auth_key: Optional[str] [default:=None]
@@ -314,24 +301,21 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
-        session = await self.session()
+        session = await self.asyncio_session()
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        response = await session.get(image_url, headers=headers, verify_ssl=self.verify_calls)
+        if response.ok:
+            image_bytes: bytes = await response.content.read()
+            file_name: str = image_url if file_name is None else file_name
+            if mime_type is None:
+                _, file_extension = os.path.splitext(file_name.lower())
+                if file_extension not in MIME_TYPE:
+                    raise WacomServiceException(
+                        "Creation of entity image failed. Mime-type cannot be identified or is not supported."
+                    )
+                mime_type = MIME_TYPE[file_extension]
 
-        headers: Dict[str, str] = {USER_AGENT_HEADER_FLAG: self.user_agent}
-        async with session.get(image_url, headers=headers, verify_ssl=self.verify_calls) as response:
-            if response.ok:
-                image_bytes: bytes = await response.content.read()
-                file_name: str = image_url if file_name is None else file_name
-                if mime_type is None:
-                    _, file_extension = os.path.splitext(file_name.lower())
-                    if file_extension not in MIME_TYPE:
-                        raise WacomServiceException(
-                            "Creation of entity image failed. Mime-type cannot be identified or is not supported."
-                        )
-                    mime_type = MIME_TYPE[file_extension]
-
-                return await self.set_entity_image(entity_uri, image_bytes, file_name, mime_type, auth_key=auth_key)
+            return await self.set_entity_image(entity_uri, image_bytes, file_name, mime_type, auth_key=auth_key)
         raise await handle_error(f"Creation of entity image failed. URI:={entity_uri}.", response, headers=headers)
 
     async def set_entity_image(
@@ -350,9 +334,9 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         entity_uri: str
             URI of the entity.
         image_byte: bytes
-            Binary encoded image.
+            Binary-encoded image.
         file_name: str [default:=None]
-            Name of  the file. If None the name is extracted from URL.
+            Name of the file. If None, the name is extracted from URL.
         mime_type: str [default:=None]
             Mime type.
         auth_key: Optional[str] [default:=None]
@@ -367,22 +351,21 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
-        headers: dict = {AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         data: aiohttp.FormData = aiohttp.FormData()
         data.add_field("file", image_byte, filename=file_name, content_type=mime_type)
         url: str = f"{self.service_base_url}{self.ENTITY_IMAGE_ENDPOINT}{urllib.parse.quote(entity_uri)}"
-        session = await self.session()
-        async with session.patch(
+        session = await self.asyncio_session()
+        headers: Dict[str, str] = await self._prepare_headers(ignore_content_type=True, overwrite_auth_token=auth_key)
+        response = await session.patch(
             url, headers=headers, data=data, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls
-        ) as response:
-            if response.ok:
-                image_id: str = (await response.json(loads=orjson.loads))["imageId"]
-            else:
-                raise await handle_error(
-                    f"Creation of entity image failed. URI:={entity_uri}.", response, headers=headers
-                )
+        )
+        if response.ok:
+            image_id: str = (await response.json(loads=orjson.loads))["imageId"]
+        else:
+            raise await handle_error(
+                f"Creation of entity image failed. URI:={entity_uri}.",
+                response,
+            )
         return image_id
 
     async def delete_entities(self, uris: List[str], force: bool = False, auth_key: Optional[str] = None):
@@ -392,7 +375,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         Parameters
         ----------
         uris: List[str]
-            List of URI of entities. **Remark:** More than 100 entities are not possible in one request
+            List of entity URIs. **Remark:** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
         auth_key: Optional[str]
@@ -407,18 +390,13 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         """
         if len(uris) > 100:
             raise ValueError("Please delete less than 100 entities.")
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         params: Dict[str, Any] = {URIS_TAG: uris, FORCE_TAG: str(force)}
-        session = await self.session()
-        async with session.delete(url, headers=headers, params=params, verify_ssl=self.verify_calls) as response:
-            if not response.ok:
-                raise await handle_error("Deletion of entities failed.", response, parameters=params, headers=headers)
+        session = await self.asyncio_session()
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        response = await session.delete(url, headers=headers, params=params, verify_ssl=self.verify_calls)
+        if not response.ok:
+            raise await handle_error("Deletion of entities failed.", response, parameters=params, headers=headers)
 
     async def delete_entity(self, uri: str, force: bool = False, auth_key: Optional[str] = None):
         """
@@ -438,19 +416,14 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        session = await self.session()
-        async with session.delete(
-            url, headers=headers, params={FORCE_TAG: str(force)}, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error(f"Deletion of entity failed. URI:={uri}.", response, headers=headers)
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        session = await self.asyncio_session()
+        response = await session.delete(
+            url, params={FORCE_TAG: str(force)}, verify_ssl=self.verify_calls, headers=headers
+        )
+        if not response.ok:
+            raise await handle_error(f"Deletion of entity failed. URI:={uri}.", response)
 
     async def exists(self, uri: str) -> bool:
         """
@@ -464,7 +437,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         Returns
         -------
         flag: bool
-            Flag if entity does exist
+            Flag if the entity does exist
         """
         try:
             obj: ThingObject = await self.entity(uri)
@@ -474,6 +447,19 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
 
     @staticmethod
     async def __entity__(entity: ThingObject):
+        """
+        A static asynchronous method to process a given `ThingObject` entity and return its payload.
+
+        Parameters
+        ----------
+        entity : ThingObject
+            The input object of type `ThingObject` that needs to be processed.
+
+        Returns
+        -------
+        Any
+            The payload resulting from processing the input `ThingObject`.
+        """
         return entity_payload(entity)
 
     async def create_entity_bulk(
@@ -484,7 +470,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         auth_key: Optional[str] = None,
     ) -> List[ThingObject]:
         """
-        Creates entity in graph.
+        Creates entity in the graph.
 
         Parameters
         ----------
@@ -507,35 +493,27 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_BULK_ENDPOINT}"
-        # Header info
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         payload: List[Dict[str, Any]] = [await AsyncWacomKnowledgeService.__entity__(e) for e in entities]
-        session = await self.session()
+        session = await self.asyncio_session()
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         for bulk_idx in range(0, len(entities), batch_size):
             bulk = payload[bulk_idx : bulk_idx + batch_size]
-
-            async with session.post(url, json=bulk, headers=headers, verify_ssl=self.verify_calls) as response:
-                if response.ok:
-                    response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
-                    for idx, uri in enumerate(response_dict[URIS_TAG]):
-                        entities[bulk_idx + idx].uri = uri
-                        if (
-                            entities[bulk_idx + idx].image is not None
-                            and entities[bulk_idx + idx].image != ""
-                            and not ignore_images
-                        ):
-                            try:
-                                await self.set_entity_image_url(uri, entities[bulk_idx + idx].image, auth_key=auth_key)
-                            except WacomServiceException as we:
-                                logging.error(f"Failed to upload image for entity {uri}. " f"{format_exception(we)}")
-                        entities[bulk_idx + idx].uri = response_dict[URIS_TAG][idx]
+            response = await session.post(url, json=bulk, verify_ssl=self.verify_calls, headers=headers)
+            if response.ok:
+                response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
+                for idx, uri in enumerate(response_dict[URIS_TAG]):
+                    entities[bulk_idx + idx].uri = uri
+                    if (
+                        entities[bulk_idx + idx].image is not None
+                        and entities[bulk_idx + idx].image != ""
+                        and not ignore_images
+                    ):
+                        try:
+                            await self.set_entity_image_url(uri, entities[bulk_idx + idx].image, auth_key=auth_key)
+                        except WacomServiceException as we:
+                            logging.error(f"Failed to upload image for entity {uri}. " f"{format_exception(we)}")
+                    entities[bulk_idx + idx].uri = response_dict[URIS_TAG][idx]
         return entities
 
     async def create_entity(
@@ -564,29 +542,22 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             If the graph service returns an error code
         """
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}"
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
-        # Header info
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         payload: Dict[str, Any] = await AsyncWacomKnowledgeService.__entity__(entity)
-        session = await self.session()
-        async with session.post(url, json=payload, headers=headers, verify_ssl=self.verify_calls) as response:
-            if response.ok and not ignore_image:
-                uri: str = (await response.json(loads=orjson.loads))[URI_TAG]
+        session = await self.asyncio_session()
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
+        response = await session.post(url, json=payload, verify_ssl=self.verify_calls, headers=headers)
+        if response.ok:
+            uri: str = (await response.json(loads=orjson.loads))[URI_TAG]
+            if not ignore_image:
                 # Set image
                 if entity.image is not None and entity.image.startswith("file:"):
                     p = urlparse(entity.image)
                     await self.set_entity_image_local(uri, Path(p.path), auth_key=auth_key)
                 elif entity.image is not None and entity.image != "":
                     await self.set_entity_image_url(uri, entity.image, auth_key=auth_key)
-            if not response.ok:
-                # Handle error
-                raise await handle_error("Creation of entity failed.", response, payload=payload, headers=headers)
-        return uri
+            return uri
+        # Handle error
+        raise await handle_error("Creation of entity failed.", response, payload=payload)
 
     async def import_entities(
         self, entities: List[ThingObject], auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
@@ -612,29 +583,24 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         ndjson_lines: List[str] = []
         for obj in entities:
             data_dict = obj.__import_format_dict__()
             ndjson_lines.append(json.dumps(data_dict))  # Convert each dict to a JSON string
 
         ndjson_content = "\n".join(ndjson_lines)  # Join JSON strings with newline
-
         # Compress the NDJSON string to a gzip byte array
         compressed_data: bytes = gzip.compress(ndjson_content.encode("utf-8"))
         url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}"
         data: aiohttp.FormData = aiohttp.FormData()
         data.add_field("file", compressed_data, filename="import.njson.gz", content_type="application/x-gzip")
-        session = await self.session()
-        async with session.post(
-            url, headers=headers, data=data, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if response.ok:
-                structure: Dict[str, Any] = await response.json(loads=orjson.loads)
-                return structure["jobId"]
-            raise await handle_error("Import endpoint returns an error.", response)
+        session = await self.asyncio_session()
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key, ignore_content_type=True)
+        response = await session.post(url, data=data, timeout=timeout, verify_ssl=self.verify_calls, headers=headers)
+        if response.ok:
+            structure: Dict[str, Any] = await response.json(loads=orjson.loads)
+            return structure["jobId"]
+        raise await handle_error("Import endpoint returns an error.", response)
 
     async def import_entities_from_file(
         self, file_path: Path, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
@@ -646,7 +612,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         file_path: Path
             Path to the file containing entities in NDJSON format.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -664,23 +630,21 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         """
         if not file_path.exists():
             raise FileNotFoundError(f"The file {file_path} does not exist.")
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
+        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         with file_path.open("rb") as file:
             # Compress the NDJSON string to a gzip byte array
             compressed_data: bytes = file.read()
             data: aiohttp.FormData = aiohttp.FormData()
             data.add_field("file", compressed_data, filename="import.njson.gz", content_type="application/x-gzip")
             url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}"
-            session = await self.session()
-            async with session.post(
-                url, headers=headers, data=data, timeout=timeout, verify_ssl=self.verify_calls
-            ) as response:
-                if response.ok:
-                    structure: Dict[str, Any] = await response.json(loads=orjson.loads)
-                    return structure["jobId"]
-                raise await handle_error("Import endpoint returns an error.", response)
+            session = await self.asyncio_session()
+            response = await session.post(
+                url, data=data, timeout=timeout, verify_ssl=self.verify_calls, headers=headers
+            )
+            if response.ok:
+                structure: Dict[str, Any] = await response.json(loads=orjson.loads)
+                return structure["jobId"]
+            raise await handle_error("Import endpoint returns an error.", response)
 
     async def job_status(
         self, job_id: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
@@ -704,14 +668,14 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         """
         if auth_key is None:
             auth_key, _ = await self.handle_token()
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}/{job_id}"
-        session = await self.session()
-        async with session.get(url, headers=headers, timeout=timeout, verify_ssl=self.verify_calls) as response:
-            if response.ok:
-                structure: Dict[str, Any] = await response.json(loads=orjson.loads)
-                return JobStatus.from_dict(structure)
-            raise await handle_error(f"Retrieving job status for {job_id} failed.", response, headers=headers)
+        session = await self.asyncio_session()
+        headers: dict = await self._prepare_headers(overwrite_auth_token=auth_key)
+        response = await session.get(url, headers=headers, timeout=timeout, verify_ssl=self.verify_calls)
+        if response.ok:
+            structure: Dict[str, Any] = await response.json(loads=orjson.loads)
+            return JobStatus.from_dict(structure)
+        raise await handle_error(f"Retrieving job status for {job_id} failed.", response, headers=headers)
 
     async def import_error_log(
         self,
@@ -739,19 +703,15 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         error: ErrorLogResponse
             Error log of the job
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         url: str = f"{self.service_base_url}{self.IMPORT_ERROR_LOG_ENDPOINT}/{job_id}"
         params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
-        session = await self.session()
-        async with session.get(
-            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if response.ok:
-                structure: Dict[str, Any] = await response.json(loads=orjson.loads)
-                return ErrorLogResponse.from_dict(structure)
-            raise await handle_error(f"Retrieving job status for {job_id} failed.", response)
+        session = await self.asyncio_session()
+        headers: dict = await self._prepare_headers(overwrite_auth_token=auth_key)
+        response = await session.get(url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls)
+        if response.ok:
+            structure: Dict[str, Any] = await response.json(loads=orjson.loads)
+            return ErrorLogResponse.from_dict(structure)
+        raise await handle_error(f"Retrieving job status for {job_id} failed.", response)
 
     async def import_new_uris(
         self,
@@ -779,19 +739,15 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         response: NewEntityUrisResponse
             New entity uris of the job.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}/{job_id}/new-entities"
         params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
-        session = await self.session()
-        async with session.get(
-            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if response.ok:
-                structure: Dict[str, Any] = await response.json(loads=orjson.loads)
-                return NewEntityUrisResponse.from_dict(structure)
-            raise await handle_error(f"Retrieving job status for {job_id} failed.", response)
+        session = await self.asyncio_session()
+        headers: dict = await self._prepare_headers(overwrite_auth_token=auth_key)
+        response = await session.get(url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls)
+        if response.ok:
+            structure: Dict[str, Any] = await response.json(loads=orjson.loads)
+            return NewEntityUrisResponse.from_dict(structure)
+        raise await handle_error(f"Retrieving job status for {job_id} failed.", response, headers=headers)
 
     async def update_entity(self, entity: ThingObject, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT):
         """
@@ -822,7 +778,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
         payload: Dict[str, Any] = await AsyncWacomKnowledgeService.__entity__(entity)
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.patch(
             url,
             json=payload,
@@ -879,7 +835,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.patch(
             url, json=targets, headers=headers, timeout=timeout, verify_ssl=self.verify_calls
         ) as response:
@@ -934,7 +890,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.delete(
             url, json=targets, headers=headers, timeout=timeout, verify_ssl=self.verify_calls
         ) as response:
@@ -985,7 +941,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.get(url, headers=headers, verify_ssl=self.verify_calls, timeout=timeout) as response:
             if response.ok:
                 rel: list = (await response.json(loads=orjson.loads)).get(RELATIONS_TAG)
@@ -1021,7 +977,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/labels"
         headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.get(
             url,
             headers=headers,
@@ -1067,7 +1023,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.get(
             url,
             headers=headers,
@@ -1109,7 +1065,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation"
         headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         params: dict = {RELATION_TAG: relation.iri, TARGET: target}
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.post(url, params=params, headers=headers, verify_ssl=self.verify_calls) as response:
             if not response.ok:
                 raise await handle_error(
@@ -1149,7 +1105,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relations"
         headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
-        session = await self.session()
+        session = await self.asyncio_session()
         for update_bulk in split_updates(relations):
             async with session.post(
                 url, json=update_bulk, headers=headers, verify_ssl=self.verify_calls, timeout=timeout
@@ -1199,7 +1155,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             USER_AGENT_HEADER_FLAG: self.user_agent,
             AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
         }
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.delete(
             url, params=params, headers=headers, timeout=timeout, verify_ssl=self.verify_calls
         ) as response:
@@ -1246,7 +1202,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         }
         params: dict = {URIS_TAG: uris, ACTIVATION_TAG: depth}
 
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.get(
             url, headers=headers, params=params, verify_ssl=self.verify_calls, timeout=timeout
         ) as response:
@@ -1343,7 +1299,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         # If filtering is configured
         if page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = page_id
-        session = await self.session()
+        session = await self.asyncio_session()
 
         # Send request
         async with session.get(
@@ -1390,7 +1346,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         )
         # Header with auth token
         headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.patch(
             url, headers=headers, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls
         ) as response:
@@ -1451,7 +1407,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         if next_page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = next_page_id
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.SEARCH_TYPES_ENDPOINT}"
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.get(
             url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls
         ) as response:
@@ -1516,7 +1472,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         if next_page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = next_page_id
 
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.get(
             url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls
         ) as response:
@@ -1584,7 +1540,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         if next_page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = next_page_id
         headers: Dict[str, str] = {AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.get(
             url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls
         ) as response:
@@ -1653,7 +1609,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         if next_page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = next_page_id
         headers: dict = {AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.get(url, headers=headers, params=parameters, verify_ssl=self.verify_calls) as response:
             if not response.ok:
                 raise await handle_error(
@@ -1708,7 +1664,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         if next_page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = next_page_id
         headers: dict = {AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
-        session = await self.session()
+        session = await self.asyncio_session()
         async with session.get(url, headers=headers, params=parameters, verify_ssl=self.verify_calls) as response:
             if not response.ok:
                 raise await handle_error(
@@ -1765,7 +1721,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         payload: Dict[str, str] = {LOCALE_TAG: language_code, TEXT_TAG: text}
 
         # Create a session and mount the retry adapter
-        session = await self.session()
+        session = await self.asyncio_session()
 
         async with session.post(url, headers=headers, json=payload, verify_ssl=self.verify_calls) as response:
             if response.ok:
