@@ -87,7 +87,8 @@ class SessionManagerTest(TestCase):
         token_manager_1: TokenManager = TokenManager()
         token_manager_2: TokenManager = TokenManager()
         # Ensure that the token manager is a singleton
-        self.assertEqual(id(token_manager_1), id(token_manager_2), "The token manager is not a singleton.")
+        self.assertNotEqual(id(token_manager_1), id(token_manager_2),
+                            "The token manager is not a singleton, anymore.")
         user_token, refresh_token, _ = knowledge_service.request_user_token(
             self.tenant_api_key, self.cache.external_id_1
         )
