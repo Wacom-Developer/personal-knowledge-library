@@ -35,9 +35,7 @@ THING_OBJECT: OntologyClassReference = OntologyClassReference("wacom", "core", "
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-p", "--input", help="Path to import file", required=True, type=Path
-    )
+    parser.add_argument("-p", "--input", help="Path to import file", required=True, type=Path)
     parser.add_argument(
         "-u", "--user", help="External Id of the shadow user within the Wacom Personal Knowledge.", required=True
     )
@@ -68,12 +66,12 @@ if __name__ == "__main__":
         pbar.update(job_status.processed_entities - pbar.n)
         pbar.set_postfix(
             {
-                'status': job_status.status,
-                'processed_entities': job_status.processed_entities,
-                'processed_relations': job_status.processed_relations,
-                'processed_images': job_status.processed_images,
-                'failures': job_status.failures,
-                'started_at': job_status.started_at
+                "status": job_status.status,
+                "processed_entities": job_status.processed_entities,
+                "processed_relations": job_status.processed_relations,
+                "processed_images": job_status.processed_images,
+                "failures": job_status.failures,
+                "started_at": job_status.started_at,
             }
         )
         if job_status.status == JobStatus.COMPLETED:
@@ -93,8 +91,9 @@ if __name__ == "__main__":
                 next_page_id = error_log.next_page_id
             next_page_id = None
             while True:
-                new_uris_response: NewEntityUrisResponse = knowledge_service.import_new_uris(job_id,
-                                                                                             next_page_id=next_page_id)
+                new_uris_response: NewEntityUrisResponse = knowledge_service.import_new_uris(
+                    job_id, next_page_id=next_page_id
+                )
                 new_uris.extend(new_uris_response.new_entities_uris)
                 if new_uris_response.next_page_id is None:
                     break
@@ -108,17 +107,16 @@ if __name__ == "__main__":
     logger.info(f"Total after: {total_after}")
     logger.info(f"Total imported: {total_after - total_before}")
     logger.info(f"Job {job_id} completed in {t2 - t1:.2f} seconds.")
-    knowledge_graph_entities: Dict[str, ThingObject] = {thing.default_source_reference_id(): thing
-                                                        for thing in things_session_iter(knowledge_service,
-                                                                                         THING_OBJECT)}
+    knowledge_graph_entities: Dict[str, ThingObject] = {
+        thing.default_source_reference_id(): thing for thing in things_session_iter(knowledge_service, THING_OBJECT)
+    }
     for imported_thing in knowledge_graph_entities.values():
         if imported_thing.default_source_reference_id() in thing_map:
             imported_thing.object_properties = knowledge_service.relations(imported_thing.uri)
             file_thing: ThingObject = thing_map[imported_thing.default_source_reference_id()]
-            diffs, diff_data_properties, diff_object_properties = diff_entities(knowledge_service,
-                                                                                file_thing=file_thing,
-                                                                                kg_thing=imported_thing,
-                                                                                kg_things=knowledge_graph_entities)
+            diffs, diff_data_properties, diff_object_properties = diff_entities(
+                knowledge_service, file_thing=file_thing, kg_thing=imported_thing, kg_things=knowledge_graph_entities
+            )
             del thing_map[imported_thing.default_source_reference_id()]
             if len(diffs) > 0:
                 logger.warning(f"Diff for {imported_thing.default_source_reference_id()}: has {len(diffs)} differences")
@@ -128,6 +126,6 @@ if __name__ == "__main__":
         try:
             knowledge_service.create_entity(thing)
         except WacomServiceException as e:
-            with open(f"{e_idx}.json", "w") as f:
-                f.write(json.dumps(WacomKnowledgeService.__entity__(thing), indent=4))
+            with Path(f"{e_idx}.json").open(mode="w", encoding="utf-8") as f:
+                f.write(json.dumps(thing.__import_format_dict__(), indent=4))
             logger.error(f"Error importing {thing.default_source_reference_id()}: {e}")
