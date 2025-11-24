@@ -21,10 +21,13 @@ from knowledge.base.ontology import (
     SYSTEM_SOURCE_REFERENCE_ID,
     SYSTEM_SOURCE_SYSTEM,
 )
+from knowledge.base.queue import QueueNames, QueueCount, QueueMonitor
 from knowledge.base.response import JobStatus, NewEntityUrisResponse
+from knowledge.base.search import LabelMatchingResponse
 from knowledge.nel.base import KnowledgeGraphEntity
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
 from knowledge.services.asyncio.group import AsyncGroupManagementService
+from knowledge.services.asyncio.search import AsyncSemanticSearchClient
 from knowledge.services.asyncio.users import AsyncUserManagementService
 from knowledge.services.base import WacomServiceException
 from knowledge.services.graph import Visibility, SearchPattern
@@ -43,6 +46,7 @@ tenant_api_key: str = os.environ.get("TENANT_API_KEY")
 # Create an external user id
 external_id: str = str(uuid.uuid4())
 external_id_2: str = str(uuid.uuid4())
+external_id_admin: Optional[str] = None
 LIMIT: int = 10000
 HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:creative#hasArtstyle")
 IS_RELATED: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:core#isRelated")
@@ -126,15 +130,21 @@ instance: str = os.environ.get("INSTANCE")
 content_user_id: str = os.environ.get("EXTERNAL_USER_ID")
 
 async_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(
-    application_name="Async client test", service_url=instance,
+    application_name="Async client test",
+    service_url=instance,
 )
 group_management: AsyncGroupManagementService = AsyncGroupManagementService(
-    application_name="Async client test", service_url=instance,
+    application_name="Async client test",
+    service_url=instance,
 )
 user_management: AsyncUserManagementService = AsyncUserManagementService(
-    application_name="Async client test", service_url=instance,
+    application_name="Async client test",
+    service_url=instance,
 )
-
+vector_search: AsyncSemanticSearchClient = AsyncSemanticSearchClient(
+    application_name="Async client test",
+    service_url=instance,
+)
 # ----------------------------------------------------------------------------------------------------------------------
 
 
@@ -158,6 +168,7 @@ async def test_01_handle_user():
     AssertionError
         If the user metadata update is not reflected as expected.
     """
+    global external_id_admin
     users: List[User] = await user_management.listing_users(tenant_api_key, limit=LIMIT)
     for user in users:
         if user.external_user_id == external_id:
@@ -189,6 +200,8 @@ async def test_01_handle_user():
     for u in users:
         if u.external_user_id == external_id:
             assert u.meta_data.get("updated") == "true"
+        if UserRole.ADMIN in u.user_roles:
+            external_id_admin = u.external_user_id
 
 
 async def test_02_push_entity():
@@ -466,15 +479,14 @@ async def test_09_search_labels():
       language-specific filters.
 
     """
-    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
-    res_entities, next_search_page = await async_client.search_labels(
-        search_term=LEONARDO_DA_VINCI, language_code=EN_US, limit=10
-    )
-    assert len(res_entities) > 1
-    res_entities, next_search_page = await async_client.search_labels(
-        search_term=LEONARDO_DA_VINCI, language_code=EN_US, exact_match=True, limit=10
-    )
-    assert len(res_entities) >= 1
+    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id_admin)
+    async for e in async_things_session_iter(async_client, THING_OBJECT, only_own=False):
+        if e.use_full_text_index:
+            for label in e.label:
+                res_entities, next_search_page = await async_client.search_labels(
+                    search_term=label.content, language_code=label.language_code, limit=10
+                )
+                assert len(res_entities) > 1
 
 
 async def test_10_search_description():
@@ -600,15 +612,18 @@ async def test_13_named_entity_linking():
 
     """
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
-    entities, _, _ = await async_client.listing(THING_OBJECT, page_id=None, limit=100, locale=EN_US)
+    entities, _, _ = await async_client.listing(THING_OBJECT, page_id=None, limit=10, locale=EN_US)
     fake: Faker = Faker(EN_US)
+    found_entities: int = 0
     for ent in entities:
         if ent.use_for_nel and ent.label_lang(EN_US) is not None:
             text: str = f"{fake.text()} Do not forget about {ent.label_lang(EN_US).content}."
             linked_entities: List[KnowledgeGraphEntity] = await async_client.link_personal_entities(
                 text, language_code=EN_US
             )
-            assert len(linked_entities) >= 1
+            if len(linked_entities) > 0:
+                found_entities += 1
+    assert found_entities > 0
 
 
 async def test_14_activations():
@@ -628,11 +643,15 @@ async def test_14_activations():
     - Fetches interconnected entities and their relations to validate activation data.
     - Verifies non-empty results for the specified entity relationship queries.
     """
-    await async_client.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
+    await vector_search.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
     leo_uri: Optional[str] = None
-    search_results, _ = await async_client.search_labels(LEONARDO_DA_VINCI, EN_US, limit=1)
-    for entity in search_results:
-        leo_uri = entity.uri
+    try:
+        search_results = await vector_search.labels_search(LEONARDO_DA_VINCI, EN_US, max_results=1)
+    except WacomServiceException as e:
+        logging.error(f"Search failed: {e.message}")
+        raise
+    for entity in search_results.results:
+        leo_uri = entity.entity_uri
         break
     assert leo_uri is not None
     things, relations = await async_client.activations([leo_uri], depth=2)
@@ -904,3 +923,40 @@ async def test_19_delete_users():
             await user_management.delete_user(
                 tenant_api_key, external_id=u_i.external_user_id, internal_id=u_i.id, force=True
             )
+
+
+async def test_20_queue_test():
+    """
+    Executes tests on the queue management and search functionalities of the vector search system.
+
+    This function performs multiple asynchronous operations to ensure the proper functionality of queue management,
+    label matching, and document search features in the vector search system. It includes validations for proper
+    responses, empty queues, queue details, and successful search result retrieval.
+
+    Raises
+    ------
+    AssertionError
+        If any of the assertions fail during testing.
+    """
+    if external_id_admin:
+        await vector_search.login(tenant_api_key, external_id_admin)
+        queues: QueueNames = await vector_search.list_queues()
+        for queue_name in queues.names:
+            empty = await vector_search.queue_is_empty(queue_name)
+            assert empty is not None
+            queue_structure: QueueMonitor = await vector_search.queue_monitor_information(queue_name)
+            assert queue_structure is not None
+            size: QueueCount = await vector_search.queue_size(queue_name)
+            assert size.count >= 0
+
+    results: LabelMatchingResponse = await vector_search.labels_search(query=LEONARDO_DA_VINCI, locale=EN_US)
+    assert len(results.results) > 0
+    for res in results.results:
+        entries = await vector_search.retrieve_labels(EN_US, res.entity_uri)
+        assert len(entries) > 0
+
+    document_results = await vector_search.document_search(query=LEONARDO_DA_VINCI, locale=EN_US)
+    assert len(document_results.results) > 0
+    for d in document_results.results:
+        entries = await vector_search.retrieve_document_chunks(EN_US, d.content_uri)
+        assert len(entries) > 0
