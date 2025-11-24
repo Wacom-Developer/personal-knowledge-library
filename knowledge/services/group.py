@@ -3,10 +3,7 @@
 import urllib.parse
 from typing import List, Any, Optional, Dict
 
-import requests
 from requests import Response
-from requests.adapters import HTTPAdapter
-from urllib3 import Retry
 
 from knowledge.base.access import GroupAccessRight
 from knowledge.base.ontology import NAME_TAG
@@ -17,22 +14,16 @@ from knowledge.services import (
     USER_TO_ADD_PARAM,
     USER_TO_REMOVE_PARAM,
     FORCE_PARAM,
-    DEFAULT_MAX_RETRIES,
-    DEFAULT_BACKOFF_FACTOR,
-    USER_AGENT_HEADER_FLAG,
 )
 from knowledge.services.base import WacomServiceAPIClient, handle_error
-from knowledge.services.graph import AUTHORIZATION_HEADER_FLAG
-
 # -------------------------------------- Constant flags ----------------------------------------------------------------
 from knowledge.services.users import User, FORCE_TAG, LIMIT_TAG, OFFSET_TAG
 
 
 class Group:
     """
-    Group
-    -----
-    In Personal Knowledge backend users can be logically grouped.
+    Entities and users can be assigned to groups.
+    If the entity is assigned to a group the users have access to the entity with the rights defined in the group.
 
     Parameters
     ----------
@@ -47,7 +38,7 @@ class Group:
     join_key: str
         Key which is required to join the group
     rights: GroupAccessRight
-        Access right for group
+        Access right for group.
 
     Attributes
     ----------
@@ -133,34 +124,32 @@ class Group:
 
 class GroupInfo(Group):
     """
-    Group Information
-    -----------------
-    Provides additional information on the group.
-    Users within the group are listed.
+    Extended group information including the list of users in the group.
 
     Parameters
     ----------
-    tenant_id: str
-        Tenant id
-    group_id: str
-        Group id
-    owner: str
-        User id who has created the group.
-    name: str
-        Name of the group.
-    join_key: str
-        Key which is required to join the group
-    rights: GroupAccessRight
-        Access right for group
-    group_users: List[User]
-        List of users within the group.
+    tenant_id : str
+        Identifier of the tenant the group belongs to.
+    group_id : str
+        Unique identifier of the group.
+    owner : str
+        Owner id of the group.
+    name : str
+        Display name of the group.
+    join_key : str
+        Key required to join the group.
+    rights : GroupAccessRight
+        Access rights associated with the group.
+    group_users : List[User]
+        Users that belong to the group.
 
     Attributes
     ----------
-    group_users: List[User]
+    group_users : List[User]
         List of all users that are part of the group.
-
     """
+
+    _group_users: List[User]
 
     def __init__(
         self,
@@ -172,13 +161,13 @@ class GroupInfo(Group):
         rights: GroupAccessRight,
         group_users: List[User],
     ):
-        self.__users: List[User] = group_users
+        self._group_users: List[User] = group_users
         super().__init__(tenant_id, group_id, owner, name, join_key, rights)
 
     @property
     def group_users(self) -> List:
         """List of all users that are part of the group."""
-        return self.__users
+        return self._group_users
 
     @classmethod
     def parse(cls, param: Dict[str, Any]) -> "GroupInfo":
@@ -228,8 +217,13 @@ class GroupManagementService(WacomServiceAPIClient):
     GROUP_ENDPOINT: str = "group"
     """"Endpoint for all group related functionality."""
 
-    def __init__(self, service_url: str = WacomServiceAPIClient.SERVICE_URL, service_endpoint: str = "graph/v1"):
-        super().__init__("GroupManagementService", service_url=service_url, service_endpoint=service_endpoint)
+    def __init__(
+        self,
+        service_url: str = WacomServiceAPIClient.SERVICE_URL,
+        application_name: str = "Group Management Service",
+        service_endpoint: str = "graph/v1",
+    ):
+        super().__init__(application_name, service_url=service_url, service_endpoint=service_endpoint)
 
     # ------------------------------------------ Groups handling ------------------------------------------------------
 
@@ -239,8 +233,6 @@ class GroupManagementService(WacomServiceAPIClient):
         rights: GroupAccessRight = GroupAccessRight(read=True),
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> Group:
         """
         Creates a group.
@@ -252,14 +244,9 @@ class GroupManagementService(WacomServiceAPIClient):
         rights: GroupAccessRight
             Access rights
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
         Returns
         -------
         group: Group
@@ -270,26 +257,18 @@ class GroupManagementService(WacomServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
         payload: Dict[str, str] = {NAME_TAG: name, GROUP_USER_RIGHTS_TAG: rights.to_list()}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(
-                url, headers=headers, json=payload, verify=self.verify_calls, timeout=timeout
-            )
-            if response.ok:
-                return Group.parse(response.json())
-            raise handle_error("Creating of group failed.", response, payload=payload, headers=headers)
+        response: Response = self.request_session.post(
+            url,
+            json=payload,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            return Group.parse(response.json())
+        raise handle_error("Creating of group failed.", response, payload=payload)
 
     def update_group(
         self,
@@ -298,8 +277,6 @@ class GroupManagementService(WacomServiceAPIClient):
         rights: GroupAccessRight = GroupAccessRight,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """
         Updates a group.
@@ -313,39 +290,26 @@ class GroupManagementService(WacomServiceAPIClient):
         rights: GroupAccessRight
             Access rights
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
         payload: Dict[str, str] = {NAME_TAG: name, GROUP_USER_RIGHTS_TAG: rights.to_list()}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.patch(
-                url, headers=headers, json=payload, verify=self.verify_calls, timeout=timeout
-            )
-            if not response.ok:
-                raise handle_error("Update of group failed.", response, payload=payload, headers=headers)
+        response: Response = self.request_session.patch(
+            url,
+            json=payload,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Update of group failed.", response, payload=payload)
 
     def delete_group(
         self,
@@ -353,8 +317,6 @@ class GroupManagementService(WacomServiceAPIClient):
         force: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """
         Delete a group.
@@ -366,39 +328,26 @@ class GroupManagementService(WacomServiceAPIClient):
         force: bool (Default = False)
             If True, the group will be deleted even if it is not empty.
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Raises
         ------
         WacomServiceException
         If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
         params: Dict[str, str] = {FORCE_TAG: str(force).lower()}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.delete(
-                url, headers=headers, params=params, verify=self.verify_calls, timeout=timeout
-            )
-            if not response.ok:
-                raise handle_error("Deletion of group failed.", response, parameters=params, headers=headers)
+        response: Response = self.request_session.delete(
+            url,
+            params=params,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Deletion of group failed.", response, parameters=params)
 
     def listing_groups(
         self,
@@ -407,8 +356,6 @@ class GroupManagementService(WacomServiceAPIClient):
         offset: int = 0,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> List[Group]:
         """
         Listing all groups configured for this instance.
@@ -416,59 +363,44 @@ class GroupManagementService(WacomServiceAPIClient):
         Parameters
         ----------
         admin: bool (default:= False)
-            Uses admin privilege to show all groups of the tenant.
+            Uses admin privilege to show all groups of the tenants.
             Requires user to have the role: TenantAdmin
         limit: int (default:= 20)
             Maximum number of groups to return.
         offset: int (default:= 0)
             Offset of the first group to return.
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
         Returns
         -------
         user:  List[Groups]
             List of groups.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}"
         params: Dict[str, int] = {}
         if admin:
             url += "/admin"
             params[LIMIT_TAG] = limit
             params[OFFSET_TAG] = offset
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, params=params, verify=self.verify_calls, timeout=timeout
-            )
-            if response.ok:
-                groups: List[Dict[str, Any]] = response.json()
-                return [Group.parse(g) for g in groups]
-            raise handle_error("Listing of groups failed.", response, parameters=params, headers=headers)
+        response: Response = self.request_session.get(
+            url,
+            params=params,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            groups: List[Dict[str, Any]] = response.json()
+            return [Group.parse(g) for g in groups]
+        raise handle_error("Listing of groups failed.", response, parameters=params)
 
     def group(
         self,
         group_id: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> GroupInfo:
         """Get a group.
 
@@ -477,14 +409,9 @@ class GroupManagementService(WacomServiceAPIClient):
         group_id: str
             Group ID
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
         Returns
         -------
         group: GroupInfo
@@ -495,25 +422,17 @@ class GroupManagementService(WacomServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-
-            response: Response = session.get(url, headers=headers, verify=self.verify_calls, timeout=timeout)
-            if response.ok:
-                group: Dict[str, Any] = response.json()
-                return GroupInfo.parse(group)
-            raise handle_error("Getting of group information failed.", response, headers=headers)
+        response: Response = self.request_session.get(
+            url,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            group: Dict[str, Any] = response.json()
+            return GroupInfo.parse(group)
+        raise handle_error("Getting of group information failed.", response)
 
     def join_group(
         self,
@@ -521,8 +440,6 @@ class GroupManagementService(WacomServiceAPIClient):
         join_key: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """User joining a group with his auth token.
 
@@ -533,48 +450,33 @@ class GroupManagementService(WacomServiceAPIClient):
         join_key: str
             Key which is used to join the group.
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/join"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
         params: Dict[str, str] = {
             JOIN_KEY_PARAM: join_key,
         }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(
-                url, headers=headers, params=params, verify=self.verify_calls, timeout=timeout
-            )
-            if not response.ok:
-                raise handle_error("Joining of group failed.", response, parameters=params, headers=headers)
+        response: Response = self.request_session.post(
+            url,
+            params=params,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Joining of group failed.", response, parameters=params)
 
     def leave_group(
         self,
         group_id: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """User leaving a group with his auth token.
 
@@ -583,35 +485,23 @@ class GroupManagementService(WacomServiceAPIClient):
         group_id: str
             Group ID
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/leave"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(url, headers=headers, verify=self.verify_calls, timeout=timeout)
-            if not response.ok:
-                raise handle_error("Leaving of group failed.", response, headers=headers)
+        response: Response = self.request_session.post(
+            url,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Leaving of group failed.", response)
 
     def add_user_to_group(
         self,
@@ -619,10 +509,8 @@ class GroupManagementService(WacomServiceAPIClient):
         user_id: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
-        """Adding a user to group.
+        """Adding a user to a group.
 
         Parameters
         ----------
@@ -631,40 +519,27 @@ class GroupManagementService(WacomServiceAPIClient):
         user_id: str
             User who is added to the group
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/user/add"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
         params: Dict[str, str] = {
             USER_TO_ADD_PARAM: user_id,
         }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = requests.post(
-                url, headers=headers, params=params, verify=self.verify_calls, timeout=timeout
-            )
-            if not response.ok:
-                raise handle_error("Adding of user to group failed.", response, parameters=params, headers=headers)
+        response: Response = self.request_session.post(
+            url,
+            params=params,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Adding of user to group failed.", response, parameters=params)
 
     def remove_user_from_group(
         self,
@@ -673,10 +548,8 @@ class GroupManagementService(WacomServiceAPIClient):
         force: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
-        """Remove a user from group.
+        """Remove a user from a group.
 
         Parameters
         ----------
@@ -687,38 +560,26 @@ class GroupManagementService(WacomServiceAPIClient):
         force: bool
             If true remove user and entities owned by the user if any
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
+
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/user/remove"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
         params: Dict[str, str] = {USER_TO_REMOVE_PARAM: user_id, FORCE_PARAM: force}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(
-                url, headers=headers, params=params, verify=self.verify_calls, timeout=timeout
-            )
-            if not response.ok:
-                raise handle_error("Removing of user from group failed.", response, parameters=params, headers=headers)
+        response: Response = self.request_session.post(
+            url,
+            params=params,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Removing of user from group failed.", response, parameters=params)
 
     def add_entity_to_group(
         self,
@@ -726,10 +587,8 @@ class GroupManagementService(WacomServiceAPIClient):
         entity_uri: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
-        """Adding an entity to group.
+        """Adding an entity to a group.
 
         Parameters
         ----------
@@ -738,36 +597,25 @@ class GroupManagementService(WacomServiceAPIClient):
         entity_uri: str
             Entity URI
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/entity/{uri}/add"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(url, headers=headers, verify=self.verify_calls, timeout=timeout)
-            if not response.ok:
-                raise handle_error("Adding of entity to group failed.", response, headers=headers)
+
+        response: Response = self.request_session.post(
+            url,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Adding of entity to group failed.", response)
 
     def remove_entity_to_group(
         self,
@@ -775,8 +623,6 @@ class GroupManagementService(WacomServiceAPIClient):
         entity_uri: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """Remove an entity from group.
 
@@ -787,33 +633,22 @@ class GroupManagementService(WacomServiceAPIClient):
         entity_uri: str
             URI of entity
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
         Raises
         ------
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/entity/{uri}/remove"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(url, headers=headers, verify=self.verify_calls, timeout=timeout)
-            if not response.ok:
-                raise handle_error("Removing of entity from group failed.", response, headers=headers)
+
+        response: Response = self.request_session.post(
+            url,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Removing of entity from group failed.", response)

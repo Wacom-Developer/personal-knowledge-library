@@ -9,10 +9,7 @@ from pathlib import Path
 from typing import Any, Optional, List, Dict, Tuple, Literal
 from urllib.parse import urlparse
 
-import requests
 from requests import Response
-from requests.adapters import HTTPAdapter
-from urllib3 import Retry
 
 from knowledge.base.entity import (
     DATA_PROPERTIES_TAG,
@@ -38,8 +35,6 @@ from knowledge.base.ontology import (
 )
 from knowledge.base.response import JobStatus, ErrorLogResponse, NewEntityUrisResponse
 from knowledge.services import (
-    AUTHORIZATION_HEADER_FLAG,
-    APPLICATION_JSON_HEADER,
     RELATION_TAG,
     TARGET,
     ACTIVATION_TAG,
@@ -65,7 +60,6 @@ from knowledge.services import (
     DEFAULT_TIMEOUT,
     IS_OWNER_PARAM,
     PRUNE_PARAM,
-    STATUS_FORCE_LIST,
     DEFAULT_MAX_RETRIES,
     DEFAULT_BACKOFF_FACTOR,
     ENTITIES_TAG,
@@ -75,8 +69,6 @@ from knowledge.services import (
 from knowledge.services.base import (
     WacomServiceAPIClient,
     WacomServiceException,
-    USER_AGENT_HEADER_FLAG,
-    CONTENT_TYPE_HEADER_FLAG,
     handle_error,
 )
 from knowledge.services.helper import split_updates, entity_payload
@@ -172,16 +164,26 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         application_name: str = "Knowledge Client",
         service_url: str = WacomServiceAPIClient.SERVICE_URL,
         service_endpoint: str = "graph/v1",
+        auth_service_endpoint: str = "graph/v1",
+        verify_calls: bool = True,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
-        super().__init__(application_name, service_url, service_endpoint)
+        super().__init__(
+            application_name,
+            service_url,
+            service_endpoint,
+            auth_service_endpoint,
+            verify_calls,
+            max_retries,
+            backoff_factor,
+        )
 
     def entity(
         self,
         uri: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> ThingObject:
         """
         Retrieve entity information from personal knowledge, using the  URI as identifier.
@@ -193,14 +195,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         uri: str
             URI of entity
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries (default: 3)
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay) (default: 0.1)
 
         Returns
         -------
@@ -212,23 +209,18 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code or the entity is not found in the knowledge graph
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(url, headers=headers, timeout=timeout, verify=self.verify_calls)
-            if response.ok:
-                e: Dict[str, Any] = response.json()
-                thing: ThingObject = ThingObject.from_dict(e)
-                return thing
-            raise handle_error(f"Retrieving of entity content failed. URI:={uri}.", response)
+        response: Response = self.request_session.get(
+            url,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            e: Dict[str, Any] = response.json()
+            thing: ThingObject = ThingObject.from_dict(e)
+            return thing
+        raise handle_error(f"Retrieving of entity content failed. URI:={uri}.", response)
 
     def entities(
         self,
@@ -236,8 +228,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         locale: Optional[LocaleCode] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> List[ThingObject]:
         """
         Retrieve entity information from personal knowledge, using the  URI as identifier.
@@ -254,11 +244,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries (default: 3)
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay) (default: 0.1)
 
         Returns
         -------
@@ -270,31 +255,26 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code or the entity is not found in the knowledge graph
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         params: Dict[str, Any] = {URIS_TAG: uris}
         if locale is not None:
             params[LOCALE_TAG] = locale
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, params=params, headers=headers, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                things: List[ThingObject] = []
-                entities: List[Dict[str, Any]] = response.json()
-                for e in entities:
-                    thing: ThingObject = ThingObject.from_dict(e)
-                    things.append(thing)
-                return things
-            raise handle_error(f"Retrieving of entity content failed. URIs:={uris}.", response)
+
+        response: Response = self.request_session.get(
+            url,
+            params=params,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            things: List[ThingObject] = []
+            entities: List[Dict[str, Any]] = response.json()
+            for e in entities:
+                thing: ThingObject = ThingObject.from_dict(e)
+                things.append(thing)
+            return things
+        raise handle_error(f"Retrieving of entity content failed. URIs:={uris}.", response)
 
     def delete_entities(
         self,
@@ -302,8 +282,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         force: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """
         Delete a list of entities.
@@ -311,18 +289,13 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         Parameters
         ----------
         uris: List[str]
-            List of URI of entities. **Remark:** More than 100 entities are not possible in one request
+            List of entity URIS. **Remark:** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
         auth_key: Optional[str] [default:= None]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Raises
         ------
@@ -333,23 +306,19 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         if len(uris) > 100:
             raise ValueError("Please delete less than 100 entities.")
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
+        if len(uris) == 0:
+            raise ValueError("Please provide at least one URI.")
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         params: Dict[str, Any] = {URIS_TAG: uris, FORCE_TAG: force}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.delete(
-                url, headers=headers, params=params, timeout=timeout, verify=self.verify_calls
-            )
-            if not response.ok:
-                raise handle_error("Deletion of entities failed.", response)
+        response: Response = self.request_session.delete(
+            url,
+            params=params,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Deletion of entities failed.", response)
 
     def delete_entity(
         self,
@@ -357,8 +326,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         force: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """
         Deletes an entity.
@@ -373,41 +340,24 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.delete(
-                url, headers=headers, params={FORCE_TAG: force}, timeout=timeout, verify=self.verify_calls
-            )
-            if not response.ok:
-                raise handle_error(f"Deletion of entity (URI:={uri}) failed.", response)
+        response: Response = self.request_session.delete(
+            url, params={FORCE_TAG: force}, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise handle_error(f"Deletion of entity (URI:={uri}) failed.", response)
 
     def exists(
         self,
         uri: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> bool:
         """
         Check if entity exists in knowledge graph.
@@ -420,27 +370,40 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Auth key from user
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries (default: 3)
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay) (default: 0.1)
 
         Returns
         -------
         flag: bool
-            Flag if entity does exist
+            Flag if the entity does exist
         """
         try:
             obj: ThingObject = self.entity(
-                uri, auth_key=auth_key, timeout=timeout, max_retries=max_retries, backoff_factor=backoff_factor
+                uri,
+                auth_key=auth_key,
+                timeout=timeout,
             )
             return obj is not None
         except WacomServiceException:
             return False
 
     @staticmethod
-    def __entity__(entity: ThingObject):
+    def _entity_(entity: ThingObject):
+        """
+        Constructs and returns the payload of a given entity. This method is used to
+        process the `ThingObject` and format or extract specific information to create
+        a structured entity payload.
+
+        Parameters
+        ----------
+        entity : ThingObject
+            The entity object that contains the necessary attributes and information
+            required to construct the payload.
+
+        Returns
+        -------
+        dict
+            The processed entity payload in dictionary format.
+        """
         return entity_payload(entity)
 
     def create_entity_bulk(
@@ -450,8 +413,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ignore_images: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> List[ThingObject]:
         """
         Creates entity in graph.
@@ -468,11 +429,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds).
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
@@ -486,34 +442,25 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_BULK_ENDPOINT}"
         # Header info
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            payload: List[Dict[str, Any]] = [WacomKnowledgeService.__entity__(e) for e in entities]
-            for bulk_idx in range(0, len(entities), batch_size):
-                bulk = payload[bulk_idx : bulk_idx + batch_size]
-                response: Response = session.post(
-                    url, json=bulk, headers=headers, timeout=timeout, verify=self.verify_calls
-                )
-                if response.ok:
-                    response_dict: Dict[str, Any] = response.json()
+        payload: List[Dict[str, Any]] = [WacomKnowledgeService._entity_(e) for e in entities]
+        for bulk_idx in range(0, len(entities), batch_size):
+            bulk = payload[bulk_idx : bulk_idx + batch_size]
+            response: Response = self.request_session.post(
+                url, json=bulk, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            )
+            if response.ok:
+                response_dict: Dict[str, Any] = response.json()
 
-                    for idx, uri in enumerate(response_dict[URIS_TAG]):
-                        if (
-                            entities[bulk_idx + idx].image is not None
-                            and entities[bulk_idx + idx].image != ""
-                            and not ignore_images
-                        ):
-                            self.set_entity_image_url(uri, entities[bulk_idx + idx].image, auth_key=auth_key)
-                        entities[bulk_idx + idx].uri = response_dict[URIS_TAG][idx]
-                else:
-                    raise handle_error("Pushing entity failed.", response)
+                for idx, uri in enumerate(response_dict[URIS_TAG]):
+                    if (
+                        entities[bulk_idx + idx].image is not None
+                        and entities[bulk_idx + idx].image != ""
+                        and not ignore_images
+                    ):
+                        self.set_entity_image_url(uri, entities[bulk_idx + idx].image, auth_key=auth_key)
+                    entities[bulk_idx + idx].uri = response_dict[URIS_TAG][idx]
+            else:
+                raise handle_error("Pushing entity failed.", response)
         return entities
 
     def create_entity(
@@ -521,8 +468,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         entity: ThingObject,
         ignore_image: bool = False,
         auth_key: Optional[str] = None,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> str:
         """
@@ -536,11 +481,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Ignore image.
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        max_retries: int [default:= 3]
-            Maximum number of retries
-        backoff_factor: float [default:= 0.1]
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
         timeout: int [default:= 5]
             Timeout for the request
         Returns
@@ -553,49 +493,35 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}"
-        # Header info
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        payload: Dict[str, Any] = WacomKnowledgeService.__entity__(entity)
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(
-                url, json=payload, headers=headers, verify=self.verify_calls, timeout=timeout
-            )
+        payload: Dict[str, Any] = WacomKnowledgeService._entity_(entity)
+        response: Response = self.request_session.post(
+            url, json=payload, verify=self.verify_calls, timeout=timeout, overwrite_auth_token=auth_key
+        )
 
-            if response.ok and not ignore_image:
-                uri: str = response.json()[URI_TAG]
-                # Set image
-                try:
-                    if entity.image is not None and entity.image.startswith("file:"):
-                        p = urlparse(entity.image)
-                        self.set_entity_image_local(uri, Path(p.path), auth_key=auth_key)
-                    elif entity.image is not None and entity.image.startswith("/"):
-                        self.set_entity_image_local(uri, Path(entity.image), auth_key=auth_key)
-                    elif entity.image is not None and entity.image != "":
-                        self.set_entity_image_url(uri, entity.image, auth_key=auth_key)
-                except WacomServiceException as _:
-                    pass
-            if response.ok:
-                uri: str = response.json()[URI_TAG]
-                return uri
-            raise handle_error("Pushing entity failed.", response)
+        if response.ok and not ignore_image:
+            uri: str = response.json()[URI_TAG]
+            # Set image
+            try:
+                if entity.image is not None and entity.image.startswith("file:"):
+                    p = urlparse(entity.image)
+                    self.set_entity_image_local(uri, Path(p.path), auth_key=auth_key)
+                elif entity.image is not None and entity.image.startswith("/"):
+                    self.set_entity_image_local(uri, Path(entity.image), auth_key=auth_key)
+                elif entity.image is not None and entity.image != "":
+                    self.set_entity_image_url(uri, entity.image, auth_key=auth_key)
+            except WacomServiceException as _:
+                pass
+        if response.ok:
+            uri: str = response.json()[URI_TAG]
+            return uri
+        raise handle_error("Pushing entity failed.", response)
 
     def update_entity(
         self,
         entity: ThingObject,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """
         Updates entity in graph.
@@ -608,37 +534,20 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         uri: str = entity.uri
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}"
-        # Header info
-        headers: dict = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        payload: Dict[str, Any] = WacomKnowledgeService.__entity__(entity)
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.patch(
-                url, json=payload, headers=headers, timeout=timeout, verify=self.verify_calls
-            )
-            if not response.ok:
-                raise handle_error("Updating entity failed.", response)
+        payload: Dict[str, Any] = WacomKnowledgeService._entity_(entity)
+        response: Response = self.request_session.patch(
+            url, json=payload, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise handle_error("Updating entity failed.", response)
 
     def add_entity_indexes(
         self,
@@ -646,8 +555,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         targets: List[IndexType],
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> Dict[IndexType, Any]:
         """
         Updates index targets of an entity. The index targets can be set to "NEL", "ElasticSearch", "VectorSearchWord",
@@ -664,17 +571,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
         update_status: Dict[str, Any]
             Status per target (depending on the targets of entity and the ones set in the request). If the entity
-            already has the target set, the status will be "Target already exists" for that target,
+            already has the target set, the status will be "Target already exists" for that target;
             otherwise it will be "UPSERT".
 
         Raises
@@ -682,25 +584,14 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{entity_uri}/indexes"
-        # Header info
-        headers: dict = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.patch(
-                url, json=targets, headers=headers, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                return response.json()
-            raise handle_error("Updating entity indexes failed.", response)
+
+        response: Response = self.request_session.patch(
+            url, json=targets, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            return response.json()
+        raise handle_error("Updating entity indexes failed.", response)
 
     def remove_entity_indexes(
         self,
@@ -708,8 +599,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         targets: List[IndexType],
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> Dict[IndexType, Any]:
         """
         Deletes the search index for a given entity.
@@ -724,11 +613,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
@@ -741,33 +625,19 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{entity_uri}/indexes"
-        # Header info
-        headers: dict = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.delete(
-                url, json=targets, headers=headers, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                return response.json()
-            raise handle_error("Deleting entity indexes failed.", response)
+        response: Response = self.request_session.delete(
+            url, json=targets, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            return response.json()
+        raise handle_error("Deleting entity indexes failed.", response)
 
     def relations(
         self,
         uri: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> Dict[OntologyPropertyReference, ObjectProperty]:
         """
         Retrieve the relations (object properties) of an entity.
@@ -777,14 +647,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         uri: str
             Entity URI of the source
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries (default: 3)
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay) (default: 0.1)
         Returns
         -------
         relations: Dict[OntologyPropertyReference, ObjectProperty]
@@ -795,21 +660,14 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{urllib.parse.quote(uri)}/relations"
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(url, headers=headers, timeout=timeout, verify=self.verify_calls)
-            if response.ok:
-                rel: list = response.json().get(RELATIONS_TAG)
-                return ObjectProperty.create_from_list(rel)
-            raise handle_error("Retrieving relations failed.", response)
+        response: Response = self.request_session.get(
+            url, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            rel: list = response.json().get(RELATIONS_TAG)
+            return ObjectProperty.create_from_list(rel)
+        raise handle_error("Retrieving relations failed.", response)
 
     def labels(
         self,
@@ -817,8 +675,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         locale: LocaleCode = EN_US,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> List[Label]:
         """
         Extract list labels of entity.
@@ -830,14 +686,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         locale: LocaleCode  [default:= EN_US]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries (default: 3)
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay) (default: 0.1)
 
         Returns
         -------
@@ -849,24 +700,16 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/labels"
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount("https://", HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, params={LOCALE_TAG: locale}, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                response_dict: dict = response.json()
-                if LABELS_TAG in response_dict:
-                    return [Label.create_from_dict(label) for label in response_dict[LABELS_TAG]]
-                return []
-            raise handle_error("Retrieving labels failed.", response)
+        response: Response = self.request_session.get(
+            url, params={LOCALE_TAG: locale}, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            response_dict: dict = response.json()
+            if LABELS_TAG in response_dict:
+                return [Label.create_from_dict(label) for label in response_dict[LABELS_TAG]]
+            return []
+        raise handle_error("Retrieving labels failed.", response)
 
     def literals(
         self,
@@ -874,8 +717,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         locale: LocaleCode = EN_US,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> List[DataProperty]:
         """
         Collect all literals of entity.
@@ -890,38 +731,25 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries (default: 3)
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay) (default: 0.1).
 
         Returns
         -------
         labels: List[DataProperty]
-            List of data properties of an entity.
+            List of entity data properties.
 
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/literals"
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
-            )
-            session.mount("https://", HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, params={LOCALE_TAG: locale}, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                literals: list = response.json().get(DATA_PROPERTIES_TAG)
-                return DataProperty.create_from_list(literals)
-            raise handle_error(f"Failed to pull literals for {uri}.", response)
+        response: Response = self.request_session.get(
+            url, params={LOCALE_TAG: locale}, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            literals: list = response.json().get(DATA_PROPERTIES_TAG)
+            return DataProperty.create_from_list(literals)
+        raise handle_error(f"Failed to pull literals for {uri}.", response)
 
     def create_relation(
         self,
@@ -930,8 +758,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         target: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """
         Creates a relation for an entity to a source entity.
@@ -945,34 +771,22 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         target: str
             Entity URI of the target
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries (default: 3)
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay) (default: 0.1)
 
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation"
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         params: dict = {RELATION_TAG: relation.iri, TARGET: target}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(
-                url, params=params, headers=headers, timeout=timeout, verify=self.verify_calls
-            )
-            if not response.ok:
-                raise handle_error("Creation of relation failed.", response)
+        response: Response = self.request_session.post(
+            url, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise handle_error("Creation of relation failed.", response)
 
     def create_relations_bulk(
         self,
@@ -980,8 +794,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         relations: Dict[OntologyPropertyReference, List[str]],
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """
         Creates all the relations for an entity to a source entity.
@@ -993,36 +805,22 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         relations: Dict[OntologyPropertyReference, List[str]]
             ObjectProperty property and targets mapping.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries (default: 3)
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay) (default: 0.1)
 
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relations"
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(
-                total=max_retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504]
+        for updates in split_updates(relations):
+            response: Response = self.request_session.post(
+                url, timeout=timeout, json=updates, verify=self.verify_calls, overwrite_auth_token=auth_key
             )
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            for updates in split_updates(relations):
-                response: Response = session.post(
-                    url, timeout=timeout, json=updates, headers=headers, verify=self.verify_calls
-                )
-                if not response.ok:
-                    raise handle_error("Creation of relation failed.", response, payload=updates)
+            if not response.ok:
+                raise handle_error("Creation of relation failed.", response, payload=updates)
 
     def remove_relation(
         self,
@@ -1031,8 +829,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         target: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """
         Removes a relation.
@@ -1049,11 +845,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries (default: 3)
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay) (default: 0.1)
 
         Raises
         ------
@@ -1064,20 +855,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation"
         params: Dict[str, str] = {RELATION_TAG: relation.iri, TARGET: target}
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            # Get response
-            response: Response = session.delete(
-                url, params=params, headers=headers, timeout=timeout, verify=self.verify_calls
-            )
-            if not response.ok:
-                raise handle_error("Removal of relation failed.", response)
+        # Get response
+        response: Response = self.request_session.delete(url, params=params, timeout=timeout, verify=self.verify_calls)
+        if not response.ok:
+            raise handle_error("Removal of relation failed.", response)
 
     def activations(
         self,
@@ -1085,8 +866,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         depth: int,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> Tuple[Dict[str, ThingObject], List[Tuple[str, OntologyPropertyReference, str]]]:
         """
         Spreading activation, retrieving the entities related to an entity.
@@ -1101,11 +880,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries (default: 3)
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay) (default: 0.1)
 
         Returns
         -------
@@ -1119,32 +893,21 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code, and activation failed.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ACTIVATIONS_ENDPOINT}"
-
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         params: dict = {URIS_TAG: uris, ACTIVATION_TAG: depth}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, params=params, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                entities: Dict[str, Any] = response.json()
-                things: Dict[str, ThingObject] = {e[URI_TAG]: ThingObject.from_dict(e) for e in entities[ENTITIES_TAG]}
-                relations: List[Tuple[str, OntologyPropertyReference, str]] = []
-                for r in entities[RELATIONS_TAG]:
-                    relation: OntologyPropertyReference = OntologyPropertyReference.parse(r[PREDICATE])
-                    relations.append((r[SUBJECT], relation, r[OBJECT]))
-                    if r[SUBJECT] in things:
-                        things[r[SUBJECT]].add_relation(ObjectProperty(relation, outgoing=[r[OBJECT]]))
-                return things, relations
+        response: Response = self.request_session.get(
+            url, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            entities: Dict[str, Any] = response.json()
+            things: Dict[str, ThingObject] = {e[URI_TAG]: ThingObject.from_dict(e) for e in entities[ENTITIES_TAG]}
+            relations: List[Tuple[str, OntologyPropertyReference, str]] = []
+            for r in entities[RELATIONS_TAG]:
+                relation: OntologyPropertyReference = OntologyPropertyReference.parse(r[PREDICATE])
+                relations.append((r[SUBJECT], relation, r[OBJECT]))
+                if r[SUBJECT] in things:
+                    things[r[SUBJECT]].add_relation(ObjectProperty(relation, outgoing=[r[OBJECT]]))
+            return things, relations
         raise handle_error(f"Activation failed. uris:= {uris} activation:={depth}).", response)
 
     def listing(
@@ -1159,8 +922,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         include_relations: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> Tuple[List[ThingObject], int, str]:
         """
         List all entities visible to users.
@@ -1169,7 +930,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ----------
         filter_type: OntologyClassReference
             Filtering with entity
-        page_id: Optional[str]
+        page_id: Optional[str] = [default:=None]
             Page id. Start from this page id
         limit: int
             Limit of the returned entities.
@@ -1184,14 +945,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         include_relations: bool = [default:=False]
             Include relations in the response.
         auth_key: Optional[str] = [default:=None]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
@@ -1207,14 +963,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.LISTING_ENDPOINT}"
-        # Header with auth token
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         # Parameter with filtering and limit
         parameters: Dict[str, Any] = {TYPE_TAG: filter_type.iri, LIMIT_PARAMETER: limit, ESTIMATE_COUNT: estimate_count}
         if locale:
@@ -1228,26 +977,23 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             parameters[NEXT_PAGE_ID_TAG] = page_id
         if include_relations:
             parameters[INCLUDE_RELATIONS_TAG] = str(include_relations)
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            # Send request
-            response: Response = session.get(
-                url, params=parameters, headers=headers, timeout=timeout, verify=self.verify_calls
-            )
-            # If response is successful
-            if response.ok:
-                entities_resp: dict = response.json()
-                next_page_id: str = entities_resp[NEXT_PAGE_ID_TAG]
-                estimated_total_number: int = entities_resp.get(TOTAL_COUNT, 0)
-                entities: List[ThingObject] = []
-                if LISTING in entities_resp:
-                    for e in entities_resp[LISTING]:
-                        thing: ThingObject = ThingObject.from_dict(e)
-                        thing.status_flag = EntityStatus.SYNCED
-                        entities.append(thing)
-                return entities, estimated_total_number, next_page_id
+
+        # Send request
+        response: Response = self.request_session.get(
+            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        # If response is successful
+        if response.ok:
+            entities_resp: dict = response.json()
+            next_page_id: str = entities_resp[NEXT_PAGE_ID_TAG]
+            estimated_total_number: int = entities_resp.get(TOTAL_COUNT, 0)
+            entities: List[ThingObject] = []
+            if LISTING in entities_resp:
+                for e in entities_resp[LISTING]:
+                    thing: ThingObject = ThingObject.from_dict(e)
+                    thing.status_flag = EntityStatus.SYNCED
+                    entities.append(thing)
+            return entities, estimated_total_number, next_page_id
         raise handle_error(f"Failed to list the entities (since:= {page_id}, limit:={limit}).", response)
 
     def search_all(
@@ -1259,10 +1005,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         next_page_id: str = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> Tuple[List[ThingObject], str]:
-        """Search term in labels, literals and description.
+        """Search term in labels, literals, and description.
 
         Parameters
         ----------
@@ -1280,11 +1024,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             ID of the next page within pagination.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
@@ -1298,12 +1037,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
+        url: str = f"{self.service_base_url}{WacomKnowledgeService.SEARCH_TYPES_ENDPOINT}"
         parameters: Dict[str, Any] = {
             SEARCH_TERM: search_term,
             LANGUAGE_PARAMETER: language_code,
@@ -1311,17 +1045,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             LIMIT: limit,
             NEXT_PAGE_ID_TAG: next_page_id,
         }
-        url: str = f"{self.service_base_url}{WacomKnowledgeService.SEARCH_TYPES_ENDPOINT}"
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, params=parameters, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                return WacomKnowledgeService.__search_results__(response.json())
-            raise handle_error(f"Search on labels {search_term} failed. ", response)
+        response: Response = self.request_session.get(
+            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            return WacomKnowledgeService._search_results_(response.json())
+        raise handle_error(f"Search on labels {search_term} failed. ", response)
 
     def search_labels(
         self,
@@ -1331,8 +1060,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         next_page_id: str = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> Tuple[List[ThingObject], str]:
         """Search for matches in labels.
 
@@ -1350,11 +1077,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
@@ -1368,29 +1090,19 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.SEARCH_LABELS_ENDPOINT}"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         parameters: Dict[str, Any] = {
             SEARCH_TERM: search_term,
             LOCALE_TAG: language_code,
             LIMIT: limit,
             NEXT_PAGE_ID_TAG: next_page_id,
         }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, params=parameters, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                return WacomKnowledgeService.__search_results__(response.json())
-            raise handle_error(f"Search on labels {search_term} failed. ", response)
+        response: Response = self.request_session.get(
+            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            return WacomKnowledgeService._search_results_(response.json())
+        raise handle_error(f"Search on labels {search_term} failed. ", response)
 
     def search_literal(
         self,
@@ -1402,8 +1114,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         next_page_id: str = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> Tuple[List[ThingObject], str]:
         """
          Search for matches in literals.
@@ -1423,14 +1133,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
          next_page_id: str (default:=None)
              ID of the next page within pagination.
          auth_key: Optional[str] = None
-             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+             If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
          timeout: int
              Timeout for the request (default: 60 seconds)
-         max_retries: int
-             Maximum number of retries
-         backoff_factor: float
-             A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-             second try without a delay)
+
 
          Returns
          -------
@@ -1444,8 +1150,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.SEARCH_LITERALS_ENDPOINT}"
         parameters: Dict[str, Any] = {
             VALUE: search_term,
@@ -1455,20 +1159,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             SEARCH_PATTERN_PARAMETER: pattern.value,
             NEXT_PAGE_ID_TAG: next_page_id,
         }
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, params=parameters, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                return WacomKnowledgeService.__search_results__(response.json())
-            raise handle_error(f"Search on literals {search_term} failed. ", response)
+        response: Response = self.request_session.get(
+            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            return WacomKnowledgeService._search_results_(response.json())
+        raise handle_error(f"Search on literals {search_term} failed. ", response)
 
     def search_relation(
         self,
@@ -1480,8 +1176,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         next_page_id: str = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> Tuple[List[ThingObject], str]:
         """
          Search for matches in literals.
@@ -1504,11 +1198,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
              If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
          timeout: int
              Timeout for the request (default: 60 seconds)
-         max_retries: int
-             Maximum number of retries
-         backoff_factor: float
-             A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-             second try without a delay)
 
          Returns
          -------
@@ -1522,8 +1211,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.SEARCH_RELATION_ENDPOINT}"
         parameters: Dict[str, Any] = {
             SUBJECT_URI: subject_uri,
@@ -1533,23 +1220,15 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             LIMIT: limit,
             NEXT_PAGE_ID_TAG: next_page_id,
         }
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, params=parameters, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                return WacomKnowledgeService.__search_results__(response.json())
-            raise handle_error(
-                f"Search on: subject:={subject_uri}, relation {relation.iri}, " f"object:= {object_uri} failed. ",
-                response,
-            )
+        response: Response = self.request_session.get(
+            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            return WacomKnowledgeService._search_results_(response.json())
+        raise handle_error(
+            f"Search on: subject:={subject_uri}, relation {relation.iri}, " f"object:= {object_uri} failed. ",
+            response,
+        )
 
     def search_description(
         self,
@@ -1559,8 +1238,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         next_page_id: str = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> Tuple[List[ThingObject], str]:
         """Search for matches in description.
 
@@ -1578,11 +1255,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
@@ -1596,8 +1268,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f"{self.service_base_url}{WacomKnowledgeService.SEARCH_DESCRIPTION_ENDPOINT}"
         parameters: Dict[str, Any] = {
             SEARCH_TERM: search_term,
@@ -1605,20 +1275,15 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             LIMIT: limit,
             NEXT_PAGE_ID_TAG: next_page_id,
         }
-        headers: dict = {AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}", USER_AGENT_HEADER_FLAG: self.user_agent}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, params=parameters, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                return WacomKnowledgeService.__search_results__(response.json())
-            raise handle_error(f"Search on labels {search_term}@{language_code} failed. ", response)
+        response: Response = self.request_session.get(
+            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            return WacomKnowledgeService._search_results_(response.json())
+        raise handle_error(f"Search on labels {search_term}@{language_code} failed. ", response)
 
     @staticmethod
-    def __search_results__(response: Dict[str, Any]) -> Tuple[List[ThingObject], str]:
+    def _search_results_(response: Dict[str, Any]) -> Tuple[List[ThingObject], str]:
         """
         Convert response to list of ThingObjects and next page id.
 
@@ -1645,8 +1310,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         path: Path,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> str:
         """Setting the image of the entity.
         The image is stored locally.
@@ -1661,11 +1324,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
@@ -1689,8 +1347,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 mime_type,
                 auth_key=auth_key,
                 timeout=timeout,
-                max_retries=max_retries,
-                backoff_factor=backoff_factor,
             )
 
     def set_entity_image_url(
@@ -1701,8 +1357,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         mime_type: Optional[str] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> str:
         """Setting the image of the entity.
         The image for the URL is downloaded and then pushed to the backend.
@@ -1716,18 +1370,13 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         image_url: str
             URL of the image.
         file_name: str (default:=None)
-            Name of  the file. If None the name is extracted from URL.
+            Name of the file. If None, the name is extracted from URL.
         mime_type: str (default:=None)
             Mime type.
-        auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+        auth_key: Optional[str] (default:=None)
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
         Returns
         -------
         image_id: str
@@ -1738,35 +1387,28 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        mount_point: str = "https://" if image_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            headers: Dict[str, str] = {USER_AGENT_HEADER_FLAG: self.user_agent}
-            response: Response = session.get(image_url, headers=headers, timeout=timeout, verify=self.verify_calls)
-            if response.ok:
-                image_bytes: bytes = response.content
-                file_name: str = image_url if file_name is None else file_name
-                if mime_type is None:
-                    _, file_extension = os.path.splitext(file_name.lower())
-                    if file_extension not in MIME_TYPE:
-                        raise handle_error(
-                            "Creation of entity image failed. " "Mime-type cannot be identified or is not supported.",
-                            response,
-                        )
-                    mime_type = MIME_TYPE[file_extension]
+        response: Response = self.request_session.get(image_url, timeout=timeout, verify=self.verify_calls)
+        if response.ok:
+            image_bytes: bytes = response.content
+            file_name: str = image_url if file_name is None else file_name
+            if mime_type is None:
+                _, file_extension = os.path.splitext(file_name.lower())
+                if file_extension not in MIME_TYPE:
+                    raise handle_error(
+                        "Creation of entity image failed. Mime-type cannot be identified or is not supported.",
+                        response,
+                    )
+                mime_type = MIME_TYPE[file_extension]
 
-                return self.set_entity_image(
-                    entity_uri,
-                    image_bytes,
-                    file_name,
-                    mime_type,
-                    auth_key=auth_key,
-                    timeout=timeout,
-                    max_retries=max_retries,
-                    backoff_factor=backoff_factor,
-                )
-            raise handle_error("Creation of entity image failed.", response)
+            return self.set_entity_image(
+                entity_uri,
+                image_bytes,
+                file_name,
+                mime_type,
+                auth_key=auth_key,
+                timeout=timeout,
+            )
+        raise handle_error("Creation of entity image failed.", response)
 
     def set_entity_image(
         self,
@@ -1776,8 +1418,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         mime_type: str = "image/jpeg",
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> str:
         """Setting the image of the entity.
         The image for the URL is downloaded and then pushed to the backend.
@@ -1787,20 +1427,15 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         entity_uri: str
            URI of the entity.
         image_byte: bytes
-           Binary encoded image.
+           Binary-encoded image.
         file_name: str (default:=None)
-           Name of  the file. If None the name is extracted from URL.
+           Name of the file. If None, the name is extracted from URL.
         mime_type: str (default:=None)
            Mime type.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
@@ -1812,29 +1447,25 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
            If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
-        headers: dict = {AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}", USER_AGENT_HEADER_FLAG: self.user_agent}
         files: List[Tuple[str, Tuple[str, bytes, str]]] = [("file", (file_name, image_byte, mime_type))]
         url: str = f"{self.service_base_url}{self.ENTITY_IMAGE_ENDPOINT}{urllib.parse.quote(entity_uri)}"
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.patch(
-                url, headers=headers, files=files, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                return response.json()["imageId"]
-            raise handle_error("Creation of entity image failed.", response)
+        response: Response = self.request_session.patch(
+            url,
+            files=files,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
+            ignore_content_type=True,
+        )
+        if response.ok:
+            return response.json()["imageId"]
+        raise handle_error("Creation of entity image failed.", response)
 
     def import_entities(
         self,
         entities: List[ThingObject],
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> str:
         """Import entities to the graph.
 
@@ -1846,11 +1477,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
@@ -1862,40 +1488,35 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         ndjson_lines: List[str] = []
         for obj in entities:
             data_dict = obj.__import_format_dict__()
             ndjson_lines.append(json.dumps(data_dict))  # Convert each dict to a JSON string
 
         ndjson_content = "\n".join(ndjson_lines)  # Join JSON strings with newline
-
         # Compress the NDJSON string to a gzip byte array
         compressed_data: bytes = gzip.compress(ndjson_content.encode("utf-8"))
         files: List[Tuple[str, Tuple[str, bytes, str]]] = [
             ("file", ("import.njson.gz", compressed_data, "application/x-gzip"))
         ]
         url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}"
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(
-                url, headers=headers, files=files, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                return response.json()["jobId"]
-            raise handle_error("Import endpoint returns an error.", response)
+        response: Response = self.request_session.post(
+            url,
+            files=files,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
+            ignore_content_type=True,
+        )
+        if response.ok:
+            return response.json()["jobId"]
+        raise handle_error("Import endpoint returns an error.", response)
 
     def import_entities_from_file(
         self,
         file_path: Path,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> str:
         """Import entities from a file to the graph.
 
@@ -1907,11 +1528,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
@@ -1927,9 +1543,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         if not file_path.exists():
             raise FileNotFoundError(f"The file {file_path} does not exist.")
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         with file_path.open("rb") as file:
             # Compress the NDJSON string to a gzip byte array
             compressed_data: bytes = file.read()
@@ -1937,26 +1550,23 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 ("file", ("import.njson.gz", compressed_data, "application/x-gzip"))
             ]
             url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}"
-            mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-            with requests.Session() as session:
-                retries: Retry = Retry(
-                    total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST
-                )
-                session.mount(mount_point, HTTPAdapter(max_retries=retries))
-                response: Response = session.post(
-                    url, headers=headers, files=files, timeout=timeout, verify=self.verify_calls
-                )
-                if response.ok:
-                    return response.json()["jobId"]
-                raise handle_error("Import endpoint returns an error.", response)
+            response: Response = self.request_session.post(
+                url,
+                files=files,
+                timeout=timeout,
+                verify=self.verify_calls,
+                overwrite_auth_token=auth_key,
+                ignore_content_type=True,
+            )
+            if response.ok:
+                return response.json()["jobId"]
+            raise handle_error("Import endpoint returns an error.", response)
 
     def job_status(
         self,
         job_id: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> JobStatus:
         """
         Retrieve the status of the job.
@@ -1969,29 +1579,19 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
         job_status: JobStatus
             Status of the job
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}/{job_id}"
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(url, headers=headers, timeout=timeout, verify=self.verify_calls)
-            if response.ok:
-                return JobStatus.from_dict(response.json())
-            raise handle_error(f"Retrieving job status for {job_id} failed.", response)
+        response: Response = self.request_session.get(
+            url, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            return JobStatus.from_dict(response.json())
+        raise handle_error(f"Retrieving job status for {job_id} failed.", response)
 
     def import_error_log(
         self,
@@ -1999,8 +1599,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         auth_key: Optional[str] = None,
         next_page_id: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> ErrorLogResponse:
         """
         Retrieve the error log of the job.
@@ -2015,32 +1613,20 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
         error: ErrorLogResponse
             Error log of the job
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         url: str = f"{self.service_base_url}{self.IMPORT_ERROR_LOG_ENDPOINT}/{job_id}"
         params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, timeout=timeout, params=params, verify=self.verify_calls
-            )
-            if response.ok:
-                return ErrorLogResponse.from_dict(response.json())
-            raise handle_error(f"Retrieving job status for {job_id} failed.", response)
+        response: Response = self.request_session.get(
+            url, timeout=timeout, params=params, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            return ErrorLogResponse.from_dict(response.json())
+        raise handle_error(f"Retrieving job status for {job_id} failed.", response)
 
     def import_new_uris(
         self,
@@ -2048,8 +1634,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         auth_key: Optional[str] = None,
         next_page_id: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ) -> NewEntityUrisResponse:
         """
         Retrieve the new entity uris from the job.
@@ -2064,32 +1648,21 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
 
         Returns
         -------
         response: NewEntityUrisResponse
             New entity uris of the job.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}/{job_id}/new-entities"
         params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, timeout=timeout, params=params, verify=self.verify_calls
-            )
-            if response.ok:
-                return NewEntityUrisResponse.from_dict(response.json())
-            raise handle_error(f"Retrieving job status for {job_id} failed.", response)
+
+        response: Response = self.request_session.get(
+            url, timeout=timeout, params=params, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            return NewEntityUrisResponse.from_dict(response.json())
+        raise handle_error(f"Retrieving job status for {job_id} failed.", response)
 
     # ------------------------------------ Admin endpoints -------------------------------------------------------------
 
@@ -2098,8 +1671,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         prune: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """
         Rebuild the vector search index.
@@ -2115,31 +1686,17 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries (default: 3)
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
-            second try without a delay)
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.REBUILD_VECTOR_SEARCH_INDEX}"
-        params: Dict[str, str] = {PRUNE_PARAM: prune}
+        params: Dict[str, bool] = {PRUNE_PARAM: prune}
         if UserRole.ADMIN.value not in self.current_session.roles:
             raise WacomServiceException('Only users with role "Admin" can rebuild the vector search index.')
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(
-                url, params=params, headers=headers, timeout=timeout, verify=self.verify_calls
-            )
-            if not response.ok:
-                raise handle_error("Rebuilding vector search index failed.", response)
+
+        response: Response = self.request_session.post(
+            url, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise handle_error("Rebuilding vector search index failed.", response)
 
     def rebuild_nel_index(
         self,
@@ -2147,8 +1704,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         prune: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """
         Rebuild the named entity linking index.
@@ -2166,10 +1721,6 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after.
 
         Raises
         ------
@@ -2178,32 +1729,19 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.REBUILD_NEL_INDEX}"
         params: Dict[str, str] = {PRUNE_PARAM: prune, NEL_PARAM: nel_index}
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         if UserRole.ADMIN.value not in self.current_session.roles:
             raise WacomServiceException('Only users with role "Admin" can rebuild the vector search index.')
-        auth_key, _ = self.handle_token()
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(
-                url, params=params, headers=headers, timeout=timeout, verify=self.verify_calls
-            )
-            if not response.ok:
-                raise handle_error("Rebuilding vector search index failed.", response)
+        response: Response = self.request_session.post(
+            url, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise handle_error("Rebuilding vector search index failed.", response)
 
     def ontology_update(
         self,
         fix: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         """
         Update the ontology.
@@ -2214,30 +1752,20 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         Parameters
         ----------
         fix: bool [default:=False]
-            Fix the ontology if tenant is in inconsistent state.
+            Fix the ontology if the tenant is in an inconsistent state.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
-        max_retries: int
-            Maximum number of retries
-        backoff_factor: float
-            A backoff factor to apply between attempts after the second try.
 
         Raises
         ------
         WacomServiceException
             If the graph service returns an error code and commit failed.
         """
-        if auth_key is None:
-            auth_key, _ = self.handle_token()
         url: str = f'{self.service_base_url}{WacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}{"/fix" if fix else ""}'
-        # Header with auth token
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.patch(url, headers=headers, timeout=timeout, verify=self.verify_calls)
-            if not response.ok:
-                raise handle_error("Ontology update fails.", response)
+        response: Response = self.request_session.patch(
+            url, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise handle_error("Ontology update fails.", response)

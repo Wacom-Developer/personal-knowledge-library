@@ -250,8 +250,6 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         external_id: str,
         meta_data: Dict[str, str] = None,
         roles: List[UserRole] = None,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
         timeout: int = DEFAULT_TIMEOUT,
     ):
         """Updates user for a tenant.
@@ -268,10 +266,6 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             Meta-data dictionary.
         roles: List[UserRole]
             List of roles.
-        max_retries: int - [optional]
-            Maximum number of retries. [DEFAULT:= 3]
-        backoff_factor: float - [optional]
-            Backoff factor for retries. [DEFAULT:= 0.1]
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]
 
@@ -281,25 +275,16 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}"
-        headers: Dict[str, str] = {
-            USER_AGENT_TAG: self.user_agent,
-            TENANT_API_KEY_FLAG: tenant_key,
-            CONTENT_TYPE_FLAG: "application/json",
-        }
-        payload: Dict[str, str] = {
+        payload: Dict[str, Any] = {
             META_DATA_TAG: meta_data if meta_data is not None else {},
             ROLES_TAG: [r.value for r in roles] if roles is not None else [UserRole.USER.value],
         }
         params: Dict[str, str] = {USER_ID_TAG: internal_id, EXTERNAL_USER_ID_TAG: external_id}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.patch(
-                url, headers=headers, json=payload, params=params, timeout=timeout, verify=self.verify_calls
-            )
-            if not response.ok:
-                raise handle_error("Updating of user failed.", response)
+        response: Response = self.request_session.patch(
+            url, json=payload, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=tenant_key
+        )
+        if not response.ok:
+            raise handle_error("Updating of user failed.", response)
 
     def delete_user(
         self,
