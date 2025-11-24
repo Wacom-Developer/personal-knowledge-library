@@ -1,9 +1,14 @@
+2025/11/24 - RELEASE 4.0.0
+==========================
+- Major refactoring of the session management and reusing of the same requests and asyncio session for multiple requests
+- Adding queue API support for async client
+- Minor fixes
+
 2025/11//07 - RELEASE 3.5.0
 ==========================
 - Adding support for new include relations feature of listing entities
 - Save import format export now supports export of group ids 
 - Minor fixes and improvements
-
 
 2025/10/24 - RELEASE 3.4.0
 ==========================
