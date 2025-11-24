@@ -1,13 +1,13 @@
 [project]
 name = "personal_knowledge_library"
-version = "3.5.0"
+version = "4.0.0"
 description = "Library to access Wacom's Personal Knowledge graph."
 authors = [{ name = "Markus Weber", email = "markus.weber@wacom.com" }]
 license = "Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/Wacom-Developer/personal-knowledge-library"
 keywords = ["semantic-knowledge", "knowledge-graph"]
-requires-python = ">=3.9,<4.0"
+requires-python = ">=3.10,<4.0"
 
 dependencies = [
     "aiohttp[speedups]",
