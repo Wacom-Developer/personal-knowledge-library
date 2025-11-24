@@ -3,6 +3,7 @@
 import logging
 import os
 import uuid
+from pathlib import Path
 from typing import List, Optional, Dict
 from unittest import TestCase
 
@@ -182,6 +183,10 @@ class EntityFlow(TestCase):
         self.knowledge_client.login(self.tenant_api_key, self.cache.external_id)
         uri_thing: str = self.knowledge_client.create_entity(thing)
         self.cache.thing_uri = uri_thing
+        image_id = self.knowledge_client.set_entity_image_local(
+            uri_thing, Path(__file__).parent / ".." / "assets" / "dummy.png"
+        )
+        assert image_id is not None
 
     def test_3_get_entity(self):
         """Get entity."""
@@ -189,6 +194,7 @@ class EntityFlow(TestCase):
         full_entity: ThingObject = self.knowledge_client.entity(self.cache.thing_uri)
         # Entities must not be empty
         self.assertIsNotNone(full_entity)
+        self.assertIsNotNone(full_entity.image)
 
     def test_4_update_entity(self):
         """Update entity."""
