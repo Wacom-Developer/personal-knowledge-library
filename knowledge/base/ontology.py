@@ -1498,9 +1498,9 @@ class ThingObject:
     """
     ThingObject
     -----------
-    Generic entity within knowledge graph.
+    Generic entity within the knowledge graph.
 
-    Each entity is derived from this object, thus all entity shares:
+    Each entity is derived from this object, thus all entities share:
     - **uri**: A unique resource identity to identify the entity and reference it in relations
     - **label**: Human understandable label
     - **icon**: Visual representation of the entity

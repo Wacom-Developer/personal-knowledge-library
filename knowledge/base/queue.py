@@ -36,7 +36,7 @@ class QueueCount:
         return self._count
 
     @classmethod
-    def parse_json(cls, data: Dict[str, Any]) -> 'QueueCount':
+    def parse_json(cls, data: Dict[str, Any]) -> "QueueCount":
         """Parse a JSON string and return a QueueCount instance.
 
         Parameters
@@ -49,10 +49,7 @@ class QueueCount:
         result: QueueCount
             An instance of QueueCount.
         """
-        return cls(
-            queue_name=data['queue_name'],
-            count=data['count']
-        )
+        return cls(queue_name=data["queue_name"], count=data["count"])
 
 
 class QueueNames:
@@ -77,7 +74,7 @@ class QueueNames:
         return self._names
 
     @classmethod
-    def parse_json(cls, data: Dict[str, Any]) -> 'QueueNames':
+    def parse_json(cls, data: Dict[str, Any]) -> "QueueNames":
         """Parse a JSON string and return a QueueNames instance.
 
         Parameters
@@ -85,7 +82,7 @@ class QueueNames:
         data: Dict[str, Any]
             Dictionary containing the queue names.
         """
-        return cls(names=data['names'])
+        return cls(names=data["names"])
 
 
 class MessageRate:
@@ -112,10 +109,10 @@ class MessageRate:
         return self._rate
 
     @classmethod
-    def parse_json(cls, json_str: str) -> 'MessageRate':
+    def parse_json(cls, json_str: str) -> "MessageRate":
         """Parse a JSON string and return a MessageRate instance."""
         data = json.loads(json_str)
-        return cls(rate=data['rate'])
+        return cls(rate=data["rate"])
 
 
 class MessageStats:
@@ -142,13 +139,15 @@ class MessageStats:
         Detailed rate information related to message acknowledgments.
     """
 
-    def __init__(self,
-                 publish: Optional[int] = None,
-                 publish_details: Optional[MessageRate] = None,
-                 deliver: Optional[int] = None,
-                 deliver_details: Optional[MessageRate] = None,
-                 ack: Optional[int] = None,
-                 ack_details: Optional[MessageRate] = None):
+    def __init__(
+        self,
+        publish: Optional[int] = None,
+        publish_details: Optional[MessageRate] = None,
+        deliver: Optional[int] = None,
+        deliver_details: Optional[MessageRate] = None,
+        ack: Optional[int] = None,
+        ack_details: Optional[MessageRate] = None,
+    ):
         self._publish = publish
         self._publish_details = publish_details
         self._deliver = deliver
@@ -187,16 +186,16 @@ class MessageStats:
         return self._ack_details
 
     @classmethod
-    def parse_json(cls, json_str: str) -> 'MessageStats':
+    def parse_json(cls, json_str: str) -> "MessageStats":
         """Parse a JSON string and return a MessageStats instance."""
         data = json.loads(json_str)
         return cls(
-            publish=data.get('publish'),
-            publish_details=MessageRate(**data['publish_details']) if data.get('publish_details') else None,
-            deliver=data.get('deliver'),
-            deliver_details=MessageRate(**data['deliver_details']) if data.get('deliver_details') else None,
-            ack=data.get('ack'),
-            ack_details=MessageRate(**data['ack_details']) if data.get('ack_details') else None
+            publish=data.get("publish"),
+            publish_details=MessageRate(**data["publish_details"]) if data.get("publish_details") else None,
+            deliver=data.get("deliver"),
+            deliver_details=MessageRate(**data["deliver_details"]) if data.get("deliver_details") else None,
+            ack=data.get("ack"),
+            ack_details=MessageRate(**data["ack_details"]) if data.get("ack_details") else None,
         )
 
 
@@ -232,16 +231,18 @@ class QueueMonitor:
         Detailed statistics about messages in the queue, if available.
     """
 
-    def __init__(self,
-                 name: str,
-                 vhost: str,
-                 state: str,
-                 messages: int,
-                 messages_ready: int,
-                 messages_unacknowledged: int,
-                 consumers: int,
-                 memory: int,
-                 message_stats: Optional[MessageStats] = None):
+    def __init__(
+        self,
+        name: str,
+        vhost: str,
+        state: str,
+        messages: int,
+        messages_ready: int,
+        messages_unacknowledged: int,
+        consumers: int,
+        memory: int,
+        message_stats: Optional[MessageStats] = None,
+    ):
         self._name = name
         self._vhost = vhost
         self._state = state
@@ -298,7 +299,7 @@ class QueueMonitor:
         return self._message_stats
 
     @classmethod
-    def parse_json(cls, data: Dict[str, Any]) -> 'QueueMonitor':
+    def parse_json(cls, data: Dict[str, Any]) -> "QueueMonitor":
         """Parse a JSON string and return a QueueMonitor instance.
 
         Parameters
@@ -311,14 +312,15 @@ class QueueMonitor:
         Instance of QueueMonitor.
         """
         return cls(
-            name=data['name'],
-            vhost=data['vhost'],
-            state=data['state'],
-            messages=data['messages'],
-            messages_ready=data['messages_ready'],
-            messages_unacknowledged=data['messages_unacknowledged'],
-            consumers=data['consumers'],
-            memory=data['memory'],
-            message_stats=MessageStats.parse_json(json.dumps(data['message_stats'])) if data.get(
-                'message_stats') else None
+            name=data["name"],
+            vhost=data["vhost"],
+            state=data["state"],
+            messages=data["messages"],
+            messages_ready=data["messages_ready"],
+            messages_unacknowledged=data["messages_unacknowledged"],
+            consumers=data["consumers"],
+            memory=data["memory"],
+            message_stats=(
+                MessageStats.parse_json(json.dumps(data["message_stats"])) if data.get("message_stats") else None
+            ),
         )
