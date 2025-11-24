@@ -180,9 +180,7 @@ async def main(external_user_id: str, tenant_api_key: str, instance: str):
         application_name="Async sample", service_url=instance
     )
     await async_client_user_2.register_token(auth_key=user_token_2, refresh_token=refresh_token_2)
-    """
-    Now, let's create some entities.
-    """
+    # Now, let's create some entities.
     print("Creation of entities")
     print("-" * 100)
     things_objects: Dict[str, ThingObject] = import_entity_from_wikidata("Leonardo da Vinci", EN)
