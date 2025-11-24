@@ -71,11 +71,11 @@ def count_things_session(
         The Wacom Knowledge Service
     concept_type: OntologyClassReference
         The concept type
-    locale: Optional[LocaleCode]
+    locale: Optional[LocaleCode] = [default:= None]
         The locale
-    visibility: Optional[Visibility]
+    visibility: Optional[Visibility] = [default:= None]
         The visibility
-    only_own: Optional[bool]
+    only_own: Optional[bool] = [default:= None]
         Only own things
     Returns
     -------
@@ -322,39 +322,39 @@ async def async_things_iter(
     external_user_id: Optional[str] = None,
 ) -> AsyncIterator[Tuple[ThingObject, str, str]]:
     """
-    Asynchronous iterator over all things of a given type.
+    Generates an asynchronous iterator that retrieves and yields objects along with user and refresh tokens.
 
     Parameters
     ----------
-    async_client: AsyncWacomKnowledgeService
-        The Wacom Knowledge Service
-    user_token: str
-        The user token
-    refresh_token: str
-        The refresh token
-    concept_type: OntologyClassReference
-        The class type
-    visibility: Optional[Visibility] [default:= None]
-        The visibility
-    locale: Optional[LocaleCode] [default:= None]
-        Only entities with this labels having a given locale
-    only_own: Optional[bool] = [default:= None]
-        Only own things
-    include_relations: Optional[bool] = [default:= None]
-        Include relations in the response.
-    fetch_size: int [default:= 100]
-        Fetch size.
-    force_refresh_timeout: int [default:= 360]
-        Force refresh timeout
-    tenant_api_key: Optional[str] [default:= None]
-        The tenant API key
-    external_user_id: Optional[str] [default:= None]
-        The external user ID
+    async_client : AsyncWacomKnowledgeService
+        The asynchronous client used to communicate with the Wacom knowledge service.
+    user_token : str
+        The current user's authentication token.
+    refresh_token : str
+        The token used to refresh the user’s session when expired.
+    concept_type : OntologyClassReference
+        The type of concept to filter the retrieved objects by.
+    visibility : Optional[Visibility], optional
+        The visibility level used to filter the retrieved objects.
+    locale : Optional[LocaleCode], optional
+        The locale used to localize object retrieval.
+    only_own : Optional[bool], optional
+        If True, restricts retrieval to objects owned by the current user.
+    include_relations : Optional[bool], optional
+        If True, includes relations in the retrieved objects.
+    fetch_size : int, optional
+        The number of objects to fetch per page. Default is 100.
+    force_refresh_timeout : int, optional
+        Forces a timeout duration for token refresh handling. Default is 360 seconds.
+    tenant_api_key : Optional[str], optional
+        The tenant-specific API key for the user’s organization.
+    external_user_id : Optional[str], optional
+        The external identifier for the user in the tenant's system.
 
     Returns
     -------
-    AsyncIterator[ThingObject]
-        Asynchronous Iterator of things
+    AsyncIterator[Tuple[ThingObject, str, str]]
+        An asynchronous iterator yielding retrieved objects, the updated user token, and the refresh token.
     """
     next_page_id: Optional[str] = None
     if tenant_api_key is not None and external_user_id is not None:
