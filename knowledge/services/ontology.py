@@ -75,15 +75,17 @@ class OntologyService(WacomServiceAPIClient):
 
     def __init__(
         self,
+        service_url: str,
         application_name: str = "Ontology Service",
-        service_url: str = WacomServiceAPIClient.SERVICE_URL,
+        base_auth_url: Optional[str] = None,
         service_endpoint: str = "ontology/v1",
         max_retries: int = DEFAULT_MAX_RETRIES,
         backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         super().__init__(
-            application_name=application_name,
             service_url=service_url,
+            application_name=application_name,
+            base_auth_url=base_auth_url,
             service_endpoint=service_endpoint,
             max_retries=max_retries,
             backoff_factor=backoff_factor,
