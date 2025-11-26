@@ -4,9 +4,8 @@ import asyncio
 import json
 import socket
 import ssl
-import sys
 from datetime import datetime
-from typing import Any, Tuple, Dict, Optional, Union
+from typing import Any, Tuple, Dict, Optional, Union, Literal
 
 import aiohttp
 import certifi
@@ -32,6 +31,7 @@ from knowledge.services.session import TokenManager, PermanentSession, Refreshab
 
 # A cache for storing DNS resolutions
 dns_cache: TTLCache = TTLCache(maxsize=100, ttl=300)  # Adjust size and ttl as needed
+HTTPMethodFunction = Literal["GET", "POST", "PUT", "DELETE", "PATCH"]
 
 
 async def cached_getaddrinfo(host: str, *args, **kwargs) -> Any:
@@ -54,9 +54,13 @@ async def cached_getaddrinfo(host: str, *args, **kwargs) -> Any:
     """
     if host in dns_cache:
         return dns_cache[host]
-    addr_info = await asyncio.get_running_loop().getaddrinfo(host, port=None, *args, **kwargs)
-    dns_cache[host] = addr_info
-    return addr_info
+    try:
+        addr_info = await asyncio.get_running_loop().getaddrinfo(host, port=None, *args, **kwargs)
+        dns_cache[host] = addr_info
+        return addr_info
+    except (OSError, socket.gaierror) as e:
+        logger.warning(f"DNS resolution failed for {host}: {e}")
+        raise
 
 
 class CachedResolver(aiohttp.resolver.AbstractResolver):
@@ -70,6 +74,32 @@ class CachedResolver(aiohttp.resolver.AbstractResolver):
         pass
 
     async def resolve(self, host: str, port: int = 0, family: int = socket.AF_INET):
+        """
+        Resolves a hostname to a list of address information. This is an asynchronous
+        method that fetches the address details for the given hostname. The result
+        includes protocol, host address, port, and family information. The family
+        parameter defaults to IPv4.
+
+        Parameters
+        ----------
+        host : str
+            The hostname or IP address to be resolved.
+        port : int, optional
+            The port number to include in the resolved information. Defaults to 0.
+        family : int, optional
+            The address family to use for the resolution. Defaults to socket.AF_INET.
+
+        Returns
+        -------
+        list of dict
+            A list of dictionaries containing resolved address information, including
+            - `hostname`: The original host input.
+            - `host`: The resolved host address.
+            - `port`: The port number.
+            - `family`: The address family used for resolution.
+            - `proto`: Protocol number, set to 0.
+            - `flags`: Address information flags, set to socket.AI_NUMERICHOST.
+        """
         infos = await cached_getaddrinfo(host)
         return [
             {
@@ -84,8 +114,341 @@ class CachedResolver(aiohttp.resolver.AbstractResolver):
         ]
 
 
-cached_resolver: CachedResolver = CachedResolver()
-""" Cached resolver for aiohttp."""
+class AsyncSession:
+    """
+    Represents an asynchronous session manager for making HTTP requests.
+
+    The `AsyncSession` class is designed to handle and manage asynchronous HTTP
+    requests using the `aiohttp` library. It manages session creation,
+    handles headers, manages authentication, and supports multiple HTTP methods
+    (GET, POST, PUT, DELETE, PATCH). It is intended to simplify structured
+    HTTP requests in an asynchronous context.
+
+    Parameters
+    ----------
+    client: AsyncServiceAPIClient
+        The client instance.
+    timeout: int
+        The default timeout duration in seconds for requests.
+
+    """
+
+    def __init__(
+        self,
+        client: "AsyncServiceAPIClient",
+        timeout: int = DEFAULT_TIMEOUT,
+    ):
+        self._client = client
+        self._session: Optional[aiohttp.ClientSession] = None
+        self._session_lock: asyncio.Lock = asyncio.Lock()
+        self._timeout: int = timeout
+
+    @staticmethod
+    def _async_session(timeout: int) -> aiohttp.ClientSession:
+        """
+        Returns an asynchronous session.
+
+        Returns
+        -------
+        session: aiohttp.ClientSession
+            Asynchronous session
+        """
+        client_timeout: ClientTimeout = ClientTimeout(total=timeout)
+        ssl_context: ssl.SSLContext = ssl.create_default_context(cafile=certifi.where())
+        connector: aiohttp.TCPConnector = aiohttp.TCPConnector(ssl=ssl_context, resolver=CachedResolver())
+        return aiohttp.ClientSession(
+            json_serialize=lambda x: orjson.dumps(x).decode(), timeout=client_timeout, connector=connector
+        )
+
+    async def _create_session(self) -> aiohttp.ClientSession:
+        """
+        Creates and manages an asynchronous HTTP session for the client instance. This
+        method ensures that the session is safely created, retrieved, or recreated if
+        necessary, maintaining a proper state to avoid session-related conflicts or
+        errors during asynchronous HTTP operations.
+
+        Returns
+        -------
+        aiohttp.ClientSession
+            An instance of aiohttp.ClientSession ready for asynchronous HTTP requests.
+
+        Raises
+        ------
+        RuntimeError
+            Raised if there is an attempt to close an HTTP session while the event loop
+            is already closed. This error is safely handled inside the method.
+        """
+        async with self._session_lock:
+            loop = asyncio.get_running_loop()
+
+            # Case 1: no session yet
+            if self._session is None:
+                self._session = AsyncSession._async_session(self._timeout)
+                self._session._loop = loop
+                return self._session
+
+            # Case 2: session invalid or closed
+            if self._session.closed or self._session._loop is not loop or loop.is_closed():
+                try:
+                    if not self._session.closed:
+                        await self._session.close()
+                except RuntimeError:
+                    pass  # loop already dead, nothing to do
+
+                self._session = self._async_session(self._timeout)
+                self._session._loop = loop
+                return self._session
+
+            # Case 3: session is healthy
+            return self._session
+
+    async def _prepare_headers(
+        self,
+        headers: Optional[Dict[str, str]] = None,
+        overwrite_auth_token: Optional[str] = None,
+        ignore_content_type: bool = False,
+        ignore_auth: Optional[bool] = None,
+    ) -> Dict[str, str]:
+        """
+        Prepares and returns a dictionary of headers for an HTTP request, validating and
+        adding required headers based on the provided options.
+
+        Parameters
+        ----------
+        headers : Optional[Dict[str, str]]
+            A dictionary containing initial headers to be included in the request. If not
+            provided, an empty dictionary will be used.
+        overwrite_auth_token : Optional[str]
+            A token to overwrite the default authorization token for the request. If not
+            provided, the client will use the default authentication mechanism.
+        ignore_content_type : bool
+            A flag to indicate whether the `Content-Type` header should be ignored. Defaults
+            to False, which ensures the `Content-Type` is set to the application's default.
+        ignore_auth : Optional[bool]
+            A flag to indicate whether authentication headers should be omitted from the
+            prepared headers. Defaults to None, implying authentication will be added.
+
+        Returns
+        -------
+        Dict[str, str]
+            A dictionary containing the finalized headers for the HTTP request.
+        """
+        request_headers: Dict[str, Any] = headers.copy() if headers else {}
+        if USER_AGENT_HEADER_FLAG not in request_headers:
+            request_headers[USER_AGENT_HEADER_FLAG] = self._client.user_agent
+        if not ignore_content_type:
+            if CONTENT_TYPE_HEADER_FLAG not in request_headers:
+                request_headers[CONTENT_TYPE_HEADER_FLAG] = APPLICATION_JSON_HEADER
+        if not ignore_auth:
+            if overwrite_auth_token is None:
+                auth_token, _ = await self._client.handle_token()
+                request_headers[AUTHORIZATION_HEADER_FLAG] = f"Bearer {auth_token}"
+            else:
+                request_headers[AUTHORIZATION_HEADER_FLAG] = f"Bearer {overwrite_auth_token}"
+        return request_headers
+
+    async def request(
+        self,
+        method: HTTPMethodFunction,
+        url: str,
+        headers: Optional[Dict[str, str]] = None,
+        **kwargs,
+    ) -> aiohttp.ClientResponse:
+        """
+        Executes an HTTP request using the specified method, URL, headers, and additional options.
+
+        Parameters
+        ----------
+        method : HTTPMethodFunction
+            The HTTP method to execute (e.g., "GET", "POST", "PUT", "DELETE", or "PATCH").
+        url : str
+            The URL to which the request should be sent.
+        headers : Optional[Dict[str, str]]
+            Headers to include in the request. Defaults to None.
+        kwargs : dict
+            Additional arguments to pass to the request method of aiohttp.ClientSession.
+
+        Returns
+        -------
+        aiohttp.ClientResponse
+            The response object resulting from the HTTP request.
+
+        Raises
+        ------
+        ValueError
+            If the specified HTTP method is unsupported.
+        """
+        request_timeout: int = kwargs.pop("timeout", self._timeout)
+        request_headers = await self._prepare_headers(
+            headers,
+            overwrite_auth_token=kwargs.pop("overwrite_auth_token", None),
+            ignore_auth=kwargs.pop("ignore_auth", False),
+            ignore_content_type=kwargs.pop("ignore_content_type", False),
+        )
+        session: aiohttp.ClientSession = await self._create_session()
+        # Use provided timeout or fall back to session default
+        if method == "GET":
+            return await session.get(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
+        elif method == "POST":
+            return await session.post(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
+        elif method == "PUT":
+            return await session.put(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
+        elif method == "DELETE":
+            return await session.delete(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
+        elif method == "PATCH":
+            return await session.patch(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
+        raise ValueError(f"Unsupported method: {method}")
+
+    async def get(self, url: str, **kwargs) -> aiohttp.ClientResponse:
+        """
+        Asynchronously sends an HTTP GET request to the specified URL.
+
+        This method allows sending GET requests with optional additional parameters
+        passed through `kwargs`. It leverages the `request` method to handle the
+        operation and returns the corresponding response.
+
+        Parameters
+        ----------
+        url : str
+            The target URL for the HTTP GET request.
+        **kwargs
+            Additional keyword arguments to configure the GET request. These may
+            include headers, query parameters, or other request-specific options.
+
+        Returns
+        -------
+        aiohttp.ClientResponse
+            The response object resulting from the GET request, containing status,
+            headers, and body data.
+        """
+        return await self.request("GET", url, **kwargs)
+
+    async def post(self, url: str, **kwargs) -> aiohttp.ClientResponse:
+        """
+        Sends an asynchronous HTTP POST request to the specified URL with the given parameters.
+
+        This method uses the underlying `request` method to perform the HTTP POST
+        operation. Any additional keyword arguments provided will be forwarded
+        to the `request` method for customization of the request. Returns the
+        response object resulting from the POST operation.
+
+        Parameters
+        ----------
+        url : str
+            The URL to which the POST request will be sent.
+        **kwargs
+            Arbitrary keyword arguments that will be passed to the `request`
+            method, allowing customization of the request (e.g., headers,
+            json data, params).
+
+        Returns
+        -------
+        aiohttp.ClientResponse
+            Represents the response object from the POST request.
+
+        """
+        return await self.request("POST", url, **kwargs)
+
+    async def put(self, url: str, **kwargs) -> aiohttp.ClientResponse:
+        """
+        Asynchronously performs an HTTP PUT request.
+
+        The method sends an HTTP PUT request to the specified URL with the given
+        arguments. Typically used to update or create data at the target URL.
+
+        Parameters
+        ----------
+        url : str
+            The URL to which the PUT request is sent.
+        **kwargs : dict
+            Additional request parameters passed to the underlying request method.
+
+        Returns
+        -------
+        aiohttp.ClientResponse
+            The response object returned after the PUT request is completed.
+        """
+        return await self.request("PUT", url, **kwargs)
+
+    async def delete(self, url: str, **kwargs) -> aiohttp.ClientResponse:
+        """
+        Asynchronously performs an HTTP DELETE request.
+
+        This method sends a DELETE request to the specified URL with additional
+        optional parameters provided as keyword arguments. It utilizes the
+        `request` method internally for executing the DELETE operation.
+
+        Parameters
+        ----------
+        url : str
+            The URL to which the DELETE request should be sent.
+        **kwargs
+            Optional parameters to include in the DELETE request, such as
+            headers, data, or additional request configurations.
+
+        Returns
+        -------
+        aiohttp.ClientResponse
+            The response object resulting from the DELETE request. This
+            provides access to the response data, status, and headers.
+        """
+        return await self.request("DELETE", url, **kwargs)
+
+    async def patch(self, url: str, **kwargs) -> aiohttp.ClientResponse:
+        """
+        Asynchronously sends a HTTP PATCH request to the specified URL.
+
+        This method is a coroutine that simplifies sending PATCH requests
+        using the underlying `request` method. It allows adding additional
+        parameters such as headers, data, or query parameters to the request,
+        passed via `**kwargs`. The response is returned as an instance of
+        `aiohttp.ClientResponse`.
+
+        Parameters
+        ----------
+        url : str
+            The target URL for the HTTP PATCH request.
+        **kwargs
+            Additional request parameters like headers, data, or query parameters.
+
+        Returns
+        -------
+        aiohttp.ClientResponse
+            The response object resulting from the PATCH request, which provides
+            methods for accessing the content, status, and headers of the HTTP
+            response.
+        """
+        return await self.request("PATCH", url, **kwargs)
+
+    async def close(self):
+        """
+        Closes the existing session asynchronously.
+
+        This method ensures that the session is properly closed and reset to `None`.
+        It acquires a session lock to guarantee thread-safe operations.
+
+        Notes
+        -----
+        It is essential to invoke this method to release system resources
+        associated with the session.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the session closure operation.
+        """
+        async with self._session_lock:
+            if self._session:
+                await self._session.close()
+                self._session = None
+        # Clear DNS cache to prevent memory leaks
+        dns_cache.clear()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await asyncio.wait_for(self.close(), timeout=self._timeout)
 
 
 async def handle_error(
@@ -142,41 +505,38 @@ class AsyncServiceAPIClient(RESTAPIClient):
     ----------
     service_url: str
         URL of the service
+    base_auth_url: Optional[str] (Default:= None)
+        Authentication URL for local development
     service_endpoint: str
-        Base endpoint
-    auth_service_endpoint: str (Default:= 'graph/v1')
-        Authentication service endpoint
+        Base endpoint for the service
     verify_calls: bool (Default:= True)
         Flag if API calls should be verified.
-
+    timeout: int (Default:= DEFAULT_TIMEOUT)
+        Timeout for the request in seconds.
     """
 
     USER_ENDPOINT: str = "user"
-    USER_LOGIN_ENDPOINT: str = f"{USER_ENDPOINT}/login"
+    USER_LOGIN_ENDPOINT: str = f"graph/v1/{USER_ENDPOINT}/login"
     USER_REFRESH_ENDPOINT: str = f"{USER_ENDPOINT}/refresh"
-    SERVICE_URL: str = "https://private-knowledge.wacom.com"
-    """Production service URL"""
-    STAGING_SERVICE_URL: str = "https://stage-private-knowledge.wacom.com"
-    """Staging service URL"""
 
     def __init__(
         self,
+        service_url: str,
         application_name: str = "Async Knowledge Client",
-        service_url: str = SERVICE_URL,
+        base_auth_url: Optional[str] = None,
         service_endpoint: str = "graph/v1",
-        auth_service_endpoint: str = "graph/v1",
         verify_calls: bool = True,
         timeout: int = DEFAULT_TIMEOUT,
     ):
-        self.__service_endpoint: str = service_endpoint
-        self.__auth_service_endpoint: str = auth_service_endpoint
-        self.__application_name: str = application_name
-        self.__token_manager: TokenManager = TokenManager()
-        self.__current_session_id: Optional[str] = None
-        self.__session: Optional[aiohttp.ClientSession] = None
-        self.__token_refresh_lock: asyncio.Lock = asyncio.Lock()
-        self.__session_lock: asyncio.Lock = asyncio.Lock()
-        self.__timeout: int = timeout
+        self._service_endpoint: str = service_endpoint
+        self._auth_url: str = base_auth_url if base_auth_url is not None else service_url
+        self._application_name: str = application_name
+        self._token_manager: TokenManager = TokenManager()
+        self._current_session_id: Optional[str] = None
+        self._session: Optional[AsyncSession] = None
+        self._token_refresh_lock: asyncio.Lock = asyncio.Lock()
+        self._session_lock: asyncio.Lock = asyncio.Lock()
+        self._timeout: int = timeout
         super().__init__(service_url, verify_calls)
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -219,45 +579,6 @@ class AsyncServiceAPIClient(RESTAPIClient):
         """
         return self
 
-    async def asyncio_session(self) -> aiohttp.ClientSession:
-        """
-        Creates and manages an asynchronous HTTP session.
-
-        The `session` method ensures that an `aiohttp.ClientSession` is properly created
-        and reused for making HTTP requests. It checks whether there's an existing session
-        that is closed or uninitialized and re-initializes it if required. Thread safety
-        is achieved using an asynchronous lock.
-
-        Returns
-        -------
-        aiohttp.ClientSession
-            An instance of aiohttp.ClientSession, either previously created or newly
-            instantiated and ready for use in asynchronous operations.
-        """
-        async with self.__session_lock:
-            loop = asyncio.get_running_loop()
-
-            # Case 1: no session yet
-            if self.__session is None:
-                self.__session = self._async_session(self.__timeout)
-                self.__session._loop = loop
-                return self.__session
-
-            # Case 2: session invalid or closed
-            if self.__session.closed or self.__session._loop is not loop or loop.is_closed():
-                try:
-                    if not self.__session.closed:
-                        await self.__session.close()
-                except RuntimeError:
-                    pass  # loop already dead, nothing to do
-
-                self.__session = self._async_session(self.__timeout)
-                self.__session._loop = loop
-                return self.__session
-
-            # Case 3: session is healthy
-            return self.__session
-
     async def close(self):
         """
         Closes the asynchronous session if it is open.
@@ -267,53 +588,14 @@ class AsyncServiceAPIClient(RESTAPIClient):
         If the session is already closed, the method will not perform any additional
         operations.
         """
-        async with self.__session_lock:
-            if self.__session and not self.__session.closed:
-                await self.__session.close()
-
-    async def _prepare_headers(
-        self,
-        headers: Optional[Dict[str, Any]] = None,
-        overwrite_auth_token: Optional[str] = None,
-        ignore_content_type: bool = False,
-        ignore_auth: Optional[bool] = None,
-    ) -> Dict[str, str]:
-        """Prepare headers with authentication token.
-
-        Parameters
-        ----------
-        headers: Optional[Dict[str, str]] (Default:= None)
-            Request headers.
-        overwrite_auth_token: Optional[str] (Default:= None)
-            Overwrite the authentication token.
-        ignore_content_type: bool (Default:= False)
-            Ignore content type headers.
-        ignore_auth: Optional[bool] (Default:= None)
-            Ignore the authentication token.
-
-        Returns
-        -------
-        headers: Dict[str, str]
-            Complete request headers
-        """
-        request_headers: Dict[str, Any] = headers.copy() if headers else {}
-        if USER_AGENT_HEADER_FLAG not in request_headers:
-            request_headers[USER_AGENT_HEADER_FLAG] = self.user_agent
-        if not ignore_content_type:
-            if CONTENT_TYPE_HEADER_FLAG not in request_headers:
-                request_headers[CONTENT_TYPE_HEADER_FLAG] = APPLICATION_JSON_HEADER
-        if not ignore_auth:
-            if overwrite_auth_token is None:
-                auth_token, _ = await self.handle_token()
-                request_headers[AUTHORIZATION_HEADER_FLAG] = f"Bearer {auth_token}"
-            else:
-                request_headers[AUTHORIZATION_HEADER_FLAG] = f"Bearer {overwrite_auth_token}"
-        return request_headers
+        async with self._session_lock:
+            if self._session:
+                await self._session.close()
 
     @property
     def application_name(self) -> str:
         """Application name."""
-        return self.__application_name
+        return self._application_name
 
     @property
     def user_agent(self) -> str:
@@ -337,13 +619,13 @@ class AsyncServiceAPIClient(RESTAPIClient):
         WacomServiceException
             Exception if no session is available.
         """
-        if self.__current_session_id is None:
+        if self._current_session_id is None:
             raise WacomServiceException("No session set. Please login first.")
-        session: Union[RefreshableSession, TimedSession, PermanentSession, None] = self.__token_manager.get_session(
-            self.__current_session_id
+        session: Union[RefreshableSession, TimedSession, PermanentSession, None] = self._token_manager.get_session(
+            self._current_session_id
         )
         if session is None:
-            raise WacomServiceException(f"Unknown session id:= {self.__current_session_id}. Please login first.")
+            raise WacomServiceException(f"Unknown session id:= {self._current_session_id}. Please login first.")
         return session
 
     async def use_session(self, session_id: str):
@@ -353,8 +635,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
         session_id: str
             Session id
         """
-        if self.__token_manager.has_session(session_id):
-            self.__current_session_id = session_id
+        if self._token_manager.has_session(session_id):
+            self._current_session_id = session_id
         else:
             raise WacomServiceException(f"Unknown session id:= {session_id}.")
 
@@ -366,8 +648,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
         ----------
         force_refresh: bool
             Force refresh token
-        force_refresh_timeout: int
-            Force refresh timeout
+        force_refresh_timeout: float
+            Force refresh timeout in seconds
         Returns
         -------
         user_token: str
@@ -375,23 +657,23 @@ class AsyncServiceAPIClient(RESTAPIClient):
         refresh_token: str
             The refresh token
         """
-        # The session is not set
         if self.current_session is None:
             raise WacomServiceException("Authentication key is not set. Please login first.")
 
-        # The token expired and is not refreshable
-        if not self.current_session.refreshable and self.current_session.expired:
-            raise WacomServiceException("Authentication key is expired and cannot be refreshed. Please login again.")
+        async with self._token_refresh_lock:
+            # Re-check session state after acquiring lock
+            if not self.current_session.refreshable and self.current_session.expired:
+                raise WacomServiceException(
+                    "Authentication key is expired and cannot be refreshed. Please login again."
+                )
 
-        # The token is not refreshable and the force refresh flag is set
-        if not self.current_session.refreshable and force_refresh:
-            raise WacomServiceException("Authentication key is not refreshable. Please login again.")
+            if not self.current_session.refreshable and force_refresh:
+                raise WacomServiceException("Authentication key is not refreshable. Please login again.")
 
-        # Refresh token if needed
-        if self.current_session.refreshable and (
-            self.current_session.expires_in < force_refresh_timeout or force_refresh
-        ):
-            async with self.__token_refresh_lock:
+            # Refresh token if needed
+            if self.current_session.refreshable and (
+                self.current_session.expires_in < force_refresh_timeout or force_refresh
+            ):
                 try:
                     auth_key, refresh_token, _ = await self.refresh_token(self.current_session.refresh_token)
                 except WacomServiceException as e:
@@ -404,25 +686,22 @@ class AsyncServiceAPIClient(RESTAPIClient):
                         logger.error(f"Error refreshing token: {e}")
                         raise e
                 self.current_session.update_session(auth_key, refresh_token)
-            return auth_key, refresh_token
-        return self.current_session.auth_token, self.current_session.refresh_token
 
-    @staticmethod
-    def _async_session(timeout: int) -> aiohttp.ClientSession:
+            return self.current_session.auth_token, self.current_session.refresh_token
+
+    async def asyncio_session(self) -> AsyncSession:
         """
         Returns an asynchronous session.
 
         Returns
         -------
-        session: aiohttp.ClientSession
+        session: AsyncSession
             Asynchronous session
         """
-        timeout: ClientTimeout = ClientTimeout(total=timeout)
-        ssl_context: ssl.SSLContext = ssl.create_default_context(cafile=certifi.where())
-        connector: aiohttp.TCPConnector = aiohttp.TCPConnector(ssl=ssl_context, resolver=cached_resolver)
-        return aiohttp.ClientSession(
-            json_serialize=lambda x: orjson.dumps(x).decode(), timeout=timeout, connector=connector
-        )
+        async with self._session_lock:
+            if self._session is None:
+                self._session = AsyncSession(self, self._timeout)
+        return self._session
 
     async def request_user_token(
         self, tenant_api_key: str, external_id: str, timeout: int = DEFAULT_TIMEOUT
@@ -460,18 +739,20 @@ class AsyncServiceAPIClient(RESTAPIClient):
         }
         payload: dict = {EXTERNAL_USER_ID: external_id}
         session = await self.asyncio_session()  # Await the session
-        async with session.post(
-            self.auth_endpoint, data=json.dumps(payload), timeout=timeout, headers=headers
-        ) as response:
-            if response.ok:
-                response_token: Dict[str, str] = await response.json(loads=orjson.loads)
-                try:
-                    date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
-                except (TypeError, ValueError) as _:
-                    date_object: datetime = datetime.now()
-                    logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
-            else:
-                raise await handle_error("Login failed.", response, payload=payload, headers=headers)
+
+        response = await session.post(
+            self.auth_endpoint, data=json.dumps(payload), timeout=timeout, headers=headers, ignore_auth=True
+        )
+
+        if response.ok:
+            response_token: Dict[str, str] = await response.json(loads=orjson.loads)
+            try:
+                date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
+            except (TypeError, ValueError) as _:
+                date_object: datetime = datetime.now()
+                logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
+        else:
+            raise await handle_error("Login failed.", response, payload=payload, headers=headers)
         return response_token["accessToken"], response_token["refreshToken"], date_object
 
     async def refresh_token(self, refresh_token: str, timeout: int = DEFAULT_TIMEOUT) -> Tuple[str, str, datetime]:
@@ -506,24 +787,20 @@ class AsyncServiceAPIClient(RESTAPIClient):
         }
         payload: Dict[str, str] = {REFRESH_TOKEN_TAG: refresh_token}
         session = await self.asyncio_session()  # Await the session
-        async with session.post(
-            url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if response.ok:
-                response_token: Dict[str, str] = await response.json()
-                timestamp_str_truncated: str = ""
-                try:
-                    if sys.version_info <= (3, 10):
-                        timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG][:19] + "+00:00"
-                    else:
-                        timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
-                    date_object: datetime = datetime.fromisoformat(timestamp_str_truncated)
-                except (TypeError, ValueError) as _:
-                    date_object: datetime = datetime.now()
-                    logger.warning(f"Parsing of expiration date failed. {timestamp_str_truncated}")
-            else:
-                raise await handle_error("Refresh of token failed.", response, payload=payload, headers=headers)
-        return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
+        response = await session.post(
+            url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls, ignore_auth=True
+        )
+        if response.ok:
+            response_token: Dict[str, str] = await response.json()
+            timestamp_str_truncated: str = ""
+            try:
+                timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
+                date_object: datetime = datetime.fromisoformat(timestamp_str_truncated)
+            except (TypeError, ValueError) as _:
+                date_object: datetime = datetime.now()
+                logger.warning(f"Parsing of expiration date failed. {timestamp_str_truncated}")
+            return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
+        raise await handle_error("Refresh of token failed.", response, payload=payload, headers=headers)
 
     async def login(self, tenant_api_key: str, external_user_id: str) -> PermanentSession:
         """Login as a user by using the tenant id and its external user id.
@@ -540,13 +817,13 @@ class AsyncServiceAPIClient(RESTAPIClient):
             calls.
         """
         auth_key, refresh_token, _ = await self.request_user_token(tenant_api_key, external_user_id)
-        session: PermanentSession = self.__token_manager.add_session(
+        session: PermanentSession = self._token_manager.add_session(
             auth_token=auth_key,
             refresh_token=refresh_token,
             tenant_api_key=tenant_api_key,
             external_user_id=external_user_id,
         )
-        self.__current_session_id = session.id
+        self._current_session_id = session.id
         return session
 
     async def logout(self):
@@ -557,11 +834,11 @@ class AsyncServiceAPIClient(RESTAPIClient):
         and triggers any necessary cleanup operations. If all sessions are terminated,
         it invokes additional resource-closing routines.
         """
-        if self.__current_session_id:
-            self.__token_manager.remove_session(self.__current_session_id)
-            if len(self.__token_manager.sessions) == 0:
+        if self._current_session_id:
+            self._token_manager.remove_session(self._current_session_id)
+            if len(self._token_manager.sessions) == 0:
                 await self.close()
-        self.__current_session_id = None
+        self._current_session_id = None
 
     async def register_token(
         self, auth_key: str, refresh_token: Optional[str] = None
@@ -580,8 +857,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
             Session. The session is stored in the token manager, and the client is using the session id for further
             calls.
         """
-        session = self.__token_manager.add_session(auth_token=auth_key, refresh_token=refresh_token)
-        self.__current_session_id = session.id
+        session = self._token_manager.add_session(auth_token=auth_key, refresh_token=refresh_token)
+        self._current_session_id = session.id
         if isinstance(session, (RefreshableSession, TimedSession)):
             return session
         raise WacomServiceException(f"Wrong session type:= {type(session)}.")
@@ -589,7 +866,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
     @property
     def service_endpoint(self):
         """Service endpoint."""
-        return "" if len(self.__service_endpoint) == 0 else f"{self.__service_endpoint}/"
+        return "" if len(self._service_endpoint) == 0 else f"{self._service_endpoint}/"
 
     @property
     def service_base_url(self):
@@ -597,7 +874,12 @@ class AsyncServiceAPIClient(RESTAPIClient):
         return f"{self.service_url}/{self.service_endpoint}"
 
     @property
+    def base_auth_url(self):
+        """Base authentication URL."""
+        return self._auth_url
+
+    @property
     def auth_endpoint(self) -> str:
         """Authentication endpoint."""
         # This is in the graph service REST API
-        return f"{self.service_url}/{self.__auth_service_endpoint}/{self.USER_LOGIN_ENDPOINT}"
+        return f"{self.base_auth_url}/{self.USER_LOGIN_ENDPOINT}"
