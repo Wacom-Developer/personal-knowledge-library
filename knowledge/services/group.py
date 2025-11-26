@@ -16,6 +16,7 @@ from knowledge.services import (
     FORCE_PARAM,
 )
 from knowledge.services.base import WacomServiceAPIClient, handle_error
+
 # -------------------------------------- Constant flags ----------------------------------------------------------------
 from knowledge.services.users import User, FORCE_TAG, LIMIT_TAG, OFFSET_TAG
 
@@ -219,11 +220,11 @@ class GroupManagementService(WacomServiceAPIClient):
 
     def __init__(
         self,
-        service_url: str = WacomServiceAPIClient.SERVICE_URL,
+        service_url: str,
         application_name: str = "Group Management Service",
         service_endpoint: str = "graph/v1",
     ):
-        super().__init__(application_name, service_url=service_url, service_endpoint=service_endpoint)
+        super().__init__(service_url=service_url, application_name=application_name, service_endpoint=service_endpoint)
 
     # ------------------------------------------ Groups handling ------------------------------------------------------
 
