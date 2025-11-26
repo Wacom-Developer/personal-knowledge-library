@@ -289,13 +289,13 @@ class AsyncSession:
         # Use provided timeout or fall back to session default
         if method == "GET":
             return await session.get(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
-        elif method == "POST":
+        if method == "POST":
             return await session.post(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
-        elif method == "PUT":
+        if method == "PUT":
             return await session.put(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
-        elif method == "DELETE":
+        if method == "DELETE":
             return await session.delete(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
-        elif method == "PATCH":
+        if method == "PATCH":
             return await session.patch(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
         raise ValueError(f"Unsupported method: {method}")
 
