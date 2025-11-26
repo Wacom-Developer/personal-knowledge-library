@@ -5,7 +5,7 @@ from typing import List, Dict, Optional
 from requests import Response
 
 from knowledge.base.tenant import TenantConfiguration
-from knowledge.services import DEFAULT_TIMEOUT
+from knowledge.services import DEFAULT_TIMEOUT, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
 from knowledge.services.base import (
     WacomServiceAPIClient,
     handle_error,
@@ -14,37 +14,64 @@ from knowledge.services.base import (
 
 class TenantManagementServiceAPI(WacomServiceAPIClient):
     """
-    Tenant Management Service API
-    -----------------------------
+    Handles tenant management services by interacting with a Wacom API client.
 
-    Functionality:
-        - List all tenants
-        - Create tenants
-
-    This is service is used to manage tenants. Only admins can use this service, as it requires the secret key for
-    tenant administration.
+    This class provides functionalities to create, list, update, and delete tenants.
+    It extends the `WacomServiceAPIClient` base class, leveraging its shared capabilities
+    to interact with the API endpoints.
 
     Parameters
     ----------
     tenant_token: str
-        Tenant Management token
+        Tenant Management token.
     service_url: str
-        URL of the service
-    service_endpoint: str
-        Base endpoint
+        Base URL of the Wacom service.
+    application_name: str = "Tenant Manager Client"
+        Name of the application using the client.
+    base_auth_url: Optional[str] = None
+        Base URL of the authentication service.
+    service_endpoint: str = "tenant"
+        Service endpoint for tenant management.
+    verify_calls: bool = True
+        Verify API calls.
+    max_retries: int = DEFAULT_MAX_RETRIES
+        Maximum number of retries for failed requests.
+    backoff_factor: float = DEFAULT_BACKOFF_FACTOR
+        Backoff factor between retries.
+
+
+    Attributes
+    ----------
+    TENANT_ENDPOINT : str
+        API endpoint for tenant-related functionalities.
+    USER_DETAILS_ENDPOINT : str
+        API endpoint for retrieving user details.
     """
 
     TENANT_ENDPOINT: str = "tenant"
     USER_DETAILS_ENDPOINT: str = f"{WacomServiceAPIClient.USER_ENDPOINT}/users"
 
     def __init__(
-        self,
-        tenant_token: str,
-        service_url: str = WacomServiceAPIClient.SERVICE_URL,
-        service_endpoint: str = "graph/v1",
+            self,
+            tenant_token: str,
+            service_url: str,
+            application_name: str = "Tenant Manager Client",
+            base_auth_url: Optional[str] = None,
+            service_endpoint: str = "graph/v1",
+            verify_calls: bool = True,
+            max_retries: int = DEFAULT_MAX_RETRIES,
+            backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
+        super().__init__(
+            service_url=service_url,
+            application_name=application_name,
+            base_auth_url=base_auth_url,
+            service_endpoint=service_endpoint,
+            verify_calls=verify_calls,
+            max_retries=max_retries,
+            backoff_factor=backoff_factor,
+        )
         self.__tenant_management_token: str = tenant_token
-        super().__init__("TenantManagementServiceAPI", service_url=service_url, service_endpoint=service_endpoint)
 
     @property
     def tenant_management_token(self) -> str:
