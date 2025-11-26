@@ -161,22 +161,22 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
     def __init__(
         self,
+        service_url: str,
         application_name: str = "Knowledge Client",
-        service_url: str = WacomServiceAPIClient.SERVICE_URL,
+        base_auth_url: Optional[str] = None,
         service_endpoint: str = "graph/v1",
-        auth_service_endpoint: str = "graph/v1",
         verify_calls: bool = True,
         max_retries: int = DEFAULT_MAX_RETRIES,
         backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         super().__init__(
-            application_name,
             service_url,
+            application_name,
+            base_auth_url,
             service_endpoint,
-            auth_service_endpoint,
             verify_calls,
-            max_retries,
-            backoff_factor,
+            max_retries=max_retries,
+            backoff_factor=backoff_factor,
         )
 
     def entity(
@@ -186,16 +186,16 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         timeout: int = DEFAULT_TIMEOUT,
     ) -> ThingObject:
         """
-        Retrieve entity information from personal knowledge, using the  URI as identifier.
+        Retrieve entity information from personal knowledge, using the URI as identifier.
 
-        **Remark:** Object properties (relations) must be requested separately.
+        **Remark: ** Object properties (relations) must be requested separately.
 
         Parameters
         ----------
         uri: str
             URI of entity
         auth_key: Optional[str]
-            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -230,18 +230,18 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         timeout: int = DEFAULT_TIMEOUT,
     ) -> List[ThingObject]:
         """
-        Retrieve entity information from personal knowledge, using the  URI as identifier.
+        Retrieve entity information from personal knowledge, using the URI as identifier.
 
-        **Remark:** Object properties (relations) must be requested separately.
+        **Remark: ** Object properties (relations) must be requested separately.
 
         Parameters
         ----------
         uris: List[str]
-            List of URIs of entities
+            List of entities URIs.
         locale: Optional[LocaleCode]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -289,11 +289,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         Parameters
         ----------
         uris: List[str]
-            List of entity URIS. **Remark:** More than 100 entities are not possible in one request
+            List of entity URIS. **Remark: ** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
         auth_key: Optional[str] [default:= None]
-            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -337,7 +337,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         force: bool
             Force deletion process
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -415,7 +415,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         timeout: int = DEFAULT_TIMEOUT,
     ) -> List[ThingObject]:
         """
-        Creates entity in graph.
+        Creates entity in the graph.
 
         Parameters
         ----------
@@ -426,7 +426,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ignore_images: bool
             Ignore images
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds).
 
@@ -471,7 +471,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         timeout: int = DEFAULT_TIMEOUT,
     ) -> str:
         """
-        Creates entity in graph.
+        Creates entity in the graph.
 
         Parameters
         ----------
@@ -480,7 +480,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ignore_image: bool [default:= False]
             Ignore image.
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int [default:= 5]
             Timeout for the request
         Returns
@@ -524,14 +524,14 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         timeout: int = DEFAULT_TIMEOUT,
     ):
         """
-        Updates entity in graph.
+        Updates entity in the graph.
 
         Parameters
         ----------
         entity: ThingObject
             entity object
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -568,14 +568,14 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         targets: List[Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]]
             List of indexing targets
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
         Returns
         -------
         update_status: Dict[str, Any]
-            Status per target (depending on the targets of entity and the ones set in the request). If the entity
+            Status per target (depending on the targets of the entity and the ones set in the request). If the entity
             already has the target set, the status will be "Target already exists" for that target;
             otherwise it will be "UPSERT".
 
@@ -610,7 +610,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         targets: List[Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]]
             List of indexing targets
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -647,7 +647,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         uri: str
             Entity URI of the source
         auth_key: Optional[str]
-            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         Returns
@@ -686,7 +686,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         locale: LocaleCode  [default:= EN_US]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored, and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -728,7 +728,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         locale: LocaleCode  [default:= EN_US]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -771,7 +771,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         target: str
             Entity URI of the target
         auth_key: Optional[str] = None
-            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -842,7 +842,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         target: str
             Entity uri of the target
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -877,14 +877,14 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         depth: int
             Depth of activations
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
         Returns
         -------
         entity_map: Dict[str, ThingObject]
-            Map with entity and its URI as key.
+            Map with entity and its URI as a key.
         relations: List[Tuple[str, OntologyPropertyReference, str]]
             List of relations with subject predicate, (Property), and subject
 
@@ -945,7 +945,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         include_relations: bool = [default:=False]
             Include relations in the response.
         auth_key: Optional[str] = [default:=None]
-            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -982,7 +982,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         response: Response = self.request_session.get(
             url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
         )
-        # If response is successful
+        # If the response is successful
         if response.ok:
             entities_resp: dict = response.json()
             next_page_id: str = entities_resp[NEXT_PAGE_ID_TAG]
@@ -1074,7 +1074,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         next_page_id: str (default:=None)
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -1125,7 +1125,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
          literal: OntologyPropertyReference
              Literal used for the search
          pattern: SearchPattern (default:= SearchPattern.REGEX)
-             Search pattern. The chosen search pattern must fit the type of the entity.
+             The search pattern. The chosen search pattern must fit the type of the entity.
          language_code: LocaleCode (default:= EN_US)
              ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
          limit: int (default:= 30)
@@ -1195,7 +1195,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
          next_page_id: str (default:=None)
              ID of the next page within pagination.
          auth_key: Optional[str] = None
-             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+             If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
          timeout: int
              Timeout for the request (default: 60 seconds)
 
@@ -1239,7 +1239,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Tuple[List[ThingObject], str]:
-        """Search for matches in description.
+        """Search for matches in the description.
 
         Parameters
         ----------
@@ -1252,7 +1252,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         next_page_id: str (default:=None)
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -1285,7 +1285,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
     @staticmethod
     def _search_results_(response: Dict[str, Any]) -> Tuple[List[ThingObject], str]:
         """
-        Convert response to list of ThingObjects and next page id.
+        Convert response to a list of ThingObjects and next page id.
 
         Parameters
         ----------
@@ -1321,7 +1321,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         path: Path
            The path of image.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -1474,7 +1474,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         entities: List[ThingObject]
             List of entities to import.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -1493,7 +1493,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             data_dict = obj.__import_format_dict__()
             ndjson_lines.append(json.dumps(data_dict))  # Convert each dict to a JSON string
 
-        ndjson_content = "\n".join(ndjson_lines)  # Join JSON strings with newline
+        ndjson_content = "\n".join(ndjson_lines)  # Join JSON strings with a newline
         # Compress the NDJSON string to a gzip byte array
         compressed_data: bytes = gzip.compress(ndjson_content.encode("utf-8"))
         files: List[Tuple[str, Tuple[str, bytes, str]]] = [
@@ -1525,7 +1525,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         file_path: Path
             Path to the file containing entities in NDJSON format.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -1576,7 +1576,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         job_id: str
             ID of the job
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -1610,7 +1610,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         next_page_id: Optional[str] = None
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -1645,7 +1645,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         next_page_id: Optional[str] = None
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -1675,22 +1675,22 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         Rebuild the vector search index.
 
-        **Remark:**
-        Works for users with role 'TenantAdmin'.
+        **Remark: **
+        Works for users with the role 'TenantAdmin'.
 
         Parameters
         ----------
         prune: bool
             Prune the index before rebuilding.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.REBUILD_VECTOR_SEARCH_INDEX}"
         params: Dict[str, bool] = {PRUNE_PARAM: prune}
         if UserRole.ADMIN.value not in self.current_session.roles:
-            raise WacomServiceException('Only users with role "Admin" can rebuild the vector search index.')
+            raise WacomServiceException('Only users with the role "Admin" can rebuild the vector search index.')
 
         response: Response = self.request_session.post(
             url, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
@@ -1708,8 +1708,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         Rebuild the named entity linking index.
 
-        **Remark:**
-        Works for users with role 'TenantAdmin'
+        **Remark: **
+        Works for users with the role 'TenantAdmin'
 
         Parameters
         ----------
@@ -1718,7 +1718,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         prune: bool
             Prune the index before rebuilding.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -1730,7 +1730,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f"{self.service_base_url}{WacomKnowledgeService.REBUILD_NEL_INDEX}"
         params: Dict[str, str] = {PRUNE_PARAM: prune, NEL_PARAM: nel_index}
         if UserRole.ADMIN.value not in self.current_session.roles:
-            raise WacomServiceException('Only users with role "Admin" can rebuild the vector search index.')
+            raise WacomServiceException('Only users with the role "Admin" can rebuild the vector search index.')
         response: Response = self.request_session.post(
             url, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
         )
@@ -1746,15 +1746,15 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         Update the ontology.
 
-        **Remark:**
-        Works for users with role 'TenantAdmin'.
+        **Remark: **
+        Works for users with the role 'TenantAdmin'.
 
         Parameters
         ----------
         fix: bool [default:=False]
             Fix the ontology if the tenant is in an inconsistent state.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored, and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
