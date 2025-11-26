@@ -133,7 +133,7 @@ class RequestsSession:
 
     def __init__(
         self,
-        client: "RESTAPIClient",
+        client: "WacomServiceAPIClient",
         pool_connections: int = 10,
         pool_maxsize: int = 10,
         max_retries: int = 3,
@@ -505,33 +505,27 @@ class WacomServiceAPIClient(RESTAPIClient):
         URL of the service
     service_endpoint: str
         Base endpoint
-    auth_service_endpoint: str (Default:= 'graph/v1')
-        Authentication service endpoint
     verify_calls: bool (Default:= True)
         Flag if API calls should be verified.
     """
 
     USER_ENDPOINT: str = "user"
-    USER_LOGIN_ENDPOINT: str = f"{USER_ENDPOINT}/login"
-    USER_REFRESH_ENDPOINT: str = f"{USER_ENDPOINT}/refresh"
-    SERVICE_URL: str = "https://private-knowledge.wacom.com"
-    """Production service URL"""
-    STAGING_SERVICE_URL: str = "https://stage-private-knowledge.wacom.com"
-    """Staging service URL"""
+    USER_LOGIN_ENDPOINT: str = f"graph/v1/{USER_ENDPOINT}/login"
+    USER_REFRESH_ENDPOINT: str = f"graph/v1/{USER_ENDPOINT}/refresh"
 
     def __init__(
         self,
-        application_name: str,
         service_url: str,
-        service_endpoint: str,
-        auth_service_endpoint: str = "graph/v1",
+        application_name: str = "Knowledge Client",
+        base_auth_url: Optional[str] = None,
+        service_endpoint: str = "graph/v1",
         verify_calls: bool = True,
         max_retries: int = DEFAULT_MAX_RETRIES,
         backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         self.__application_name: str = application_name
         self.__service_endpoint: str = service_endpoint
-        self.__auth_service_endpoint: str = auth_service_endpoint
+        self.__base_auth_url: str = base_auth_url if base_auth_url is not None else service_url
         self.__token_manager: TokenManager = TokenManager()
         self.__current_session_id: Optional[str] = None
         self.__session: Optional[RequestsSession] = None
@@ -559,7 +553,7 @@ class WacomServiceAPIClient(RESTAPIClient):
     def auth_endpoint(self) -> str:
         """Authentication endpoint."""
         # This is in the graph service REST API
-        return f"{self.service_url}/{self.__auth_service_endpoint}/{self.USER_LOGIN_ENDPOINT}"
+        return f"{self.base_auth_url}/{self.USER_LOGIN_ENDPOINT}"
 
     @property
     def current_session(self) -> Union[RefreshableSession, TimedSession, PermanentSession, None]:
@@ -601,6 +595,11 @@ class WacomServiceAPIClient(RESTAPIClient):
     def service_base_url(self):
         """Service endpoint."""
         return f"{self.service_url}/{self.service_endpoint}"
+
+    @property
+    def base_auth_url(self):
+        """Base authentication endpoint."""
+        return self.__base_auth_url
 
     @property
     def application_name(self):
@@ -764,7 +763,12 @@ class WacomServiceAPIClient(RESTAPIClient):
         }
         payload: Dict[str, str] = {REFRESH_TOKEN_TAG: refresh_token}
         response: Response = self.request_session.post(
-            url, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT, verify=self.verify_calls
+            url,
+            headers=headers,
+            json=payload,
+            timeout=DEFAULT_TIMEOUT,
+            verify=self.verify_calls,
+            ignore_auth=True,
         )
         if response.ok:
             response_token: Dict[str, str] = response.json()

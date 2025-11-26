@@ -8,7 +8,6 @@ from unittest import TestCase
 
 import pytest
 from faker import Faker
-from ontospy import Ontospy
 
 from knowledge.base.language import JA_JP, EN_US, DE_DE, LocaleCode
 from knowledge.base.ontology import OntologyClassReference
@@ -32,7 +31,6 @@ def cache_class(request):
         def __init__(self):
             self.__external_id: Optional[str] = None
             self.__token: Optional[str] = None
-            self.__model: Optional[Ontospy] = None
 
         @property
         def external_id(self) -> Optional[str]:
@@ -51,15 +49,6 @@ def cache_class(request):
         @token.setter
         def token(self, token: Optional[str]):
             self.__token = token
-
-        @property
-        def model(self) -> Optional[Ontospy]:
-            """Ontology model."""
-            return self.__model
-
-        @model.setter
-        def model(self, model: Optional[Ontospy]):
-            self.__model = model
 
     # set a class attribute on the invoking test context
     request.cls.cache = ClassDB()
@@ -82,7 +71,7 @@ class EntityFlow(TestCase):
     ontology: OntologyService = OntologyService(service_url=os.environ.get("INSTANCE"))
     #  Wacom Named Entities Linking
     nel_client: WacomEntityLinkingEngine = WacomEntityLinkingEngine(
-        service_url=os.environ.get("INSTANCE"), service_endpoint=WacomEntityLinkingEngine.SERVICE_ENDPOINT
+        service_url=os.environ.get("INSTANCE")
     )
 
     """User management service."""

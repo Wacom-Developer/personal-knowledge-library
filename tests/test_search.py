@@ -7,9 +7,7 @@ from typing import List, Optional
 from unittest import TestCase
 
 import pytest
-from ontospy import Ontospy
 
-from knowledge.base.entity import LanguageCode
 from knowledge.base.language import EN_US
 from knowledge.base.ontology import (
     ThingObject,
@@ -40,7 +38,6 @@ def cache_class(request):
         def __init__(self):
             self.__external_id: Optional[str] = None
             self.__token: Optional[str] = None
-            self.__model: Optional[Ontospy] = None
 
         @property
         def external_id(self) -> Optional[str]:
