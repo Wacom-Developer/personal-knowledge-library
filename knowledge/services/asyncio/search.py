@@ -33,15 +33,25 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         self,
         service_url: str,
         application_name: str = "Async Semantic Search ",
+        base_auth_url: Optional[str] = None,
         service_endpoint: str = "vector/api/v1",
+        verify_calls: bool = True,
+        timeout: int = DEFAULT_TIMEOUT,
     ):
-        super().__init__(application_name, service_url, service_endpoint)
+        super().__init__(
+            service_url=service_url,
+            application_name=application_name,
+            base_auth_url=base_auth_url,
+            service_endpoint=service_endpoint,
+            verify_calls=verify_calls,
+            timeout=timeout,
+        )
 
     async def retrieve_document_chunks(
         self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
     ) -> List[VectorDBDocument]:
         """
-        Retrieve document chunks from vector database. The service is automatically chunking the document into
+        Retrieve document chunks from a vector database. The service is automatically chunking the document into
         smaller parts. The chunks are returned as a list of dictionaries, with metadata and content.
 
         Parameters
@@ -51,7 +61,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         uri: str
             URI of the document
         auth_key: Optional[str] (Default:= None)
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (default: 60 seconds)
 
@@ -67,8 +77,9 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         """
         url: str = f"{self.service_base_url}documents/"
         session = await self.asyncio_session()
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
-        response = await session.get(url, params={"locale": locale, "uri": uri}, headers=headers, timeout=timeout)
+        response = await session.get(
+            url, params={"locale": locale, "uri": uri}, timeout=timeout, overwrite_auth_token=auth_key
+        )
         if response.ok:
             docs: List[VectorDBDocument] = [
                 VectorDBDocument(vec_doc) for vec_doc in await response.json(loads=orjson.loads)
@@ -77,7 +88,6 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             raise await handle_error(
                 "Failed to retrieve the document.",
                 response,
-                headers=headers,
                 parameters={"locale": locale, "uri": uri},
             )
         return docs
@@ -95,7 +105,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         uri: str
             URI of the document
         auth_key: Optional[str] (Default:= None)
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (default: 60 seconds)
 
@@ -110,9 +120,10 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             If the request fails.
         """
         url: str = f"{self.service_base_url}labels/"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         session = await self.asyncio_session()
-        response = await session.get(url, params={"locale": locale, "uri": uri}, headers=headers, timeout=timeout)
+        response = await session.get(
+            url, params={"locale": locale, "uri": uri}, timeout=timeout, overwrite_auth_token=auth_key
+        )
         if response.ok:
             docs: List[VectorDBDocument] = [
                 VectorDBDocument(vec_doc) for vec_doc in await response.json(loads=orjson.loads)
@@ -121,7 +132,6 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             raise await handle_error(
                 "Failed to retrieve the document.",
                 response,
-                headers=headers,
                 parameters={"locale": locale, "uri": uri},
             )
         return docs
@@ -158,18 +168,15 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             If the request fails.
         """
         url: str = f"{self.service_base_url}documents/count/"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         params: Dict[str, Any] = {"locale": locale}
         if concept_type:
             params["concept_type"] = concept_type
         session = await self.asyncio_session()
-        response = await session.get(url, params=params, headers=headers, timeout=timeout)
+        response = await session.get(url, params=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
             count: int = (await response.json(loads=orjson.loads)).get("count", 0)
         else:
-            raise await handle_error(
-                "Counting documents failed.", response, headers=headers, parameters={"locale": locale}
-            )
+            raise await handle_error("Counting documents failed.", response, parameters={"locale": locale})
         return count
 
     async def count_documents_filter(
@@ -189,7 +196,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         filters: Dict[str, Any]
             Filters for the search
         auth_key: Optional[str] (Default:= None)
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (default: 60 seconds).
 
@@ -204,16 +211,16 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             If the request fails.
         """
         url: str = f"{self.service_base_url}documents/count/filter/"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         session = await self.asyncio_session()
-        response = await session.post(url, json={"locale": locale, "filter": filters}, timeout=timeout, headers=headers)
+        response = await session.post(
+            url, json={"locale": locale, "filter": filters}, timeout=timeout, overwrite_auth_token=auth_key
+        )
         if response.ok:
             count: int = (await response.json(loads=orjson.loads)).get("count", 0)
         else:
             raise await handle_error(
                 "Counting documents failed.",
                 response,
-                headers=headers,
                 parameters={"locale": locale, "filter": filters},
             )
         return count
@@ -252,18 +259,15 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         if auth_key is None:
             auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}labels/count/"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         params: Dict[str, Any] = {"locale": locale}
         if concept_type:
             params["concept_type"] = concept_type
         session = await self.asyncio_session()
-        response = await session.get(url, params=params, headers=headers, timeout=timeout)
+        response = await session.get(url, params=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
             count: int = (await response.json(loads=orjson.loads)).get("count", 0)
         else:
-            raise await handle_error(
-                "Counting labels failed.", response, headers=headers, parameters={"locale": locale}
-            )
+            raise await handle_error("Counting labels failed.", response, parameters={"locale": locale})
         return count
 
     async def count_labels_filter(
@@ -283,7 +287,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         filters: Dict[str, Any]
             Filters for the search
         auth_key: Optional[str] (Default:= None)
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (default: 60 seconds).
 
@@ -298,16 +302,16 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             If the request fails.
         """
         url: str = f"{self.service_base_url}labels/count/filter/"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         session = await self.asyncio_session()
-        response = await session.post(url, json={"locale": locale, "filter": filters}, timeout=timeout, headers=headers)
+        response = await session.post(
+            url, json={"locale": locale, "filter": filters}, timeout=timeout, overwrite_auth_token=auth_key
+        )
         if response.ok:
             count: int = (await response.json(loads=orjson.loads)).get("count", 0)
         else:
             raise await handle_error(
                 "Counting documents failed.",
                 response,
-                headers=headers,
                 parameters={"locale": locale, "filter": filters},
             )
         return count
@@ -352,7 +356,6 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             If the request fails.
         """
         url: str = f"{self.service_base_url}documents/search/"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         params: Dict[str, Any] = {
             "query": query,
             "metadata": filters if filters else {},
@@ -362,12 +365,11 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         if filter_mode:
             params["filter_mode"] = filter_mode
         session = await self.asyncio_session()
-        async with session.post(url, headers=headers, json=params, timeout=timeout) as response:
-            if response.ok:
-                response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
-            else:
-                raise await handle_error("Semantic Search failed.", response, headers=headers, parameters=params)
-        return DocumentSearchResponse.from_dict(response_dict)
+        response = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
+        if response.ok:
+            response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
+            return DocumentSearchResponse.from_dict(response_dict)
+        raise await handle_error("Semantic Search failed.", response, parameters=params)
 
     async def labels_search(
         self,
@@ -395,7 +397,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         filter_mode: Optional[Literal["AND", "OR"]] = None
             Filter mode for the search. If None is provided, the default is "AND".
         auth_key: Optional[str] (Default:= None)
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (default: 60 seconds).
         Returns
@@ -404,7 +406,6 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             Search results response.
         """
         url: str = f"{self.service_base_url}labels/match/"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         params: Dict[str, Any] = {
             "query": query,
             "metadata": filters if filters else {},
@@ -414,14 +415,13 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         if filter_mode:
             params["filter_mode"] = filter_mode
         session = await self.asyncio_session()
-        response = await session.post(url, headers=headers, json=params, timeout=timeout)
+        response = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
             response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
-        else:
-            raise await handle_error("Label fuzzy matching failed.", response, headers=headers, parameters=params)
-        return LabelMatchingResponse.from_dict(response_dict)
+            return LabelMatchingResponse.from_dict(response_dict)
+        raise await handle_error("Label fuzzy matching failed.", response, parameters=params)
 
-    async def list_queues(self, auth_key: Optional[str] = None) -> QueueNames:
+    async def list_queue_names(self, auth_key: Optional[str] = None) -> QueueNames:
         """
         List all available queues in the semantic search service.
 
@@ -441,13 +441,44 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             If the request fails.
         """
         url: str = f"{self.service_base_url}queues/names/"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         session = await self.asyncio_session()
-        response = await session.get(url, headers=headers)
+        response = await session.get(url, overwrite_auth_token=auth_key)
         if response.ok:
             queues: Dict[str, List[str]] = await response.json(loads=orjson.loads)
             return QueueNames.parse_json(queues)
-        raise await handle_error("Failed to list queues.", response, headers=headers)
+        raise await handle_error("Failed to list queues.", response)
+
+    async def list_queues(self, auth_key: Optional[str] = None) -> List[QueueMonitor]:
+        """
+
+        Parameters
+        ----------
+        auth_key: Optional[str] (Default:= None)
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+
+        Returns
+        -------
+        queues: List[QueueMonitor]
+            List of queues.
+
+        Raises
+        ------
+        WacomServiceException
+            If the request fails.
+        """
+        url: str = f"{self.service_base_url}queues/all/"
+        session = await self.asyncio_session()
+        response = await session.get(
+            url,
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            queues: List[Dict[str, Any]] = await response.json()
+            return [QueueMonitor.parse_json(queue) for queue in queues]
+        raise handle_error(
+            "Failed to list queues.",
+            response,
+        )
 
     async def queue_is_empty(self, queue_name: str, auth_key: Optional[str] = None) -> bool:
         """
@@ -471,19 +502,18 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             True if the specified queue is empty, False otherwise.
         """
         url: str = f"{self.service_base_url}queues/empty/"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         params: Dict[str, str] = {"queue_name": queue_name}
         session = await self.asyncio_session()
-        response = await session.get(url, headers=headers, params=params)
+        response = await session.get(url, params=params, overwrite_auth_token=auth_key)
         if response.ok:
             is_empty: bool = await response.json(loads=orjson.loads)
             return is_empty
-        raise await handle_error("Failed to check if the queue is empty.", response, headers=headers)
+        raise await handle_error("Failed to check if the queue is empty.", response)
 
     async def queue_size(self, queue_name: str, auth_key: Optional[str] = None) -> QueueCount:
         """
         Gets the size of a specified queue by making an asynchronous request to the service's
-        queue management endpoint. The method interacts with a remote API, utilizing prepared
+        queue management endpoint. The method interacts with a remote API, using prepared
         headers and query parameters, and parses the returned data into the appropriate
         response structure upon a successful response.
 
@@ -506,14 +536,13 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             If the API request fails, an error is raised with the relevant information.
         """
         url: str = f"{self.service_base_url}queues/count/"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         params: Dict[str, str] = {"queue_name": queue_name}
         session = await self.asyncio_session()
-        response = await session.get(url, headers=headers, params=params)
+        response = await session.get(url, params=params, overwrite_auth_token=auth_key)
         if response.ok:
             response_structure: Dict[str, Any] = await response.json(loads=orjson.loads)
             return QueueCount.parse_json(response_structure)
-        raise await handle_error("Failed to get the queue size.", response, headers=headers)
+        raise await handle_error("Failed to get the queue size.", response)
 
     async def queue_monitor_information(self, queue_name: str, auth_key: Optional[str] = None) -> QueueMonitor:
         """
@@ -539,11 +568,10 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             monitoring data. Details of the failure are included.
         """
         url: str = f"{self.service_base_url}queues/"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         params: Dict[str, str] = {"queue_name": queue_name}
         session = await self.asyncio_session()
-        response = await session.get(url, headers=headers, params=params)
+        response = await session.get(url, params=params, overwrite_auth_token=auth_key)
         if response.ok:
             response_structure: Dict[str, Any] = await response.json(loads=orjson.loads)
             return QueueMonitor.parse_json(response_structure)
-        raise await handle_error("Failed to get the queue monitor information.", response, headers=headers)
+        raise await handle_error("Failed to get the queue monitor information.", response)

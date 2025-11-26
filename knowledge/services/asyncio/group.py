@@ -47,11 +47,21 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
 
     def __init__(
         self,
-        application_name: str,
-        service_url: str = AsyncServiceAPIClient.SERVICE_URL,
+        service_url: str,
+        application_name: str = "Group Management Service",
+        base_auth_url: Optional[str] = None,
         service_endpoint: str = "graph/v1",
+        verify_calls: bool = True,
+        timeout: int = DEFAULT_TIMEOUT,
     ):
-        super().__init__(application_name=application_name, service_url=service_url, service_endpoint=service_endpoint)
+        super().__init__(
+            service_url=service_url,
+            application_name=application_name,
+            base_auth_url=base_auth_url,
+            service_endpoint=service_endpoint,
+            verify_calls=verify_calls,
+            timeout=timeout,
+        )
 
     # ------------------------------------------ Groups handling ------------------------------------------------------
 
@@ -91,13 +101,12 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}"
         payload: Dict[str, str] = {NAME_TAG: name, GROUP_USER_RIGHTS_TAG: rights.to_list()}
         async_session = await self.asyncio_session()
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         response = await async_session.post(
             url,
             json=payload,
             timeout=timeout,
             verify_ssl=self.verify_calls,
-            headers=headers,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
             raise await handle_error("Creation of group failed.", response, payload=payload)
@@ -137,13 +146,12 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}"
         payload: Dict[str, str] = {NAME_TAG: name, GROUP_USER_RIGHTS_TAG: rights.to_list()}
         async_session = await self.asyncio_session()
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         response = await async_session.patch(
             url,
             json=payload,
             timeout=timeout,
             verify_ssl=self.verify_calls,
-            headers=headers,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
             raise await handle_error("Update of group failed.", response, payload=payload)
@@ -172,14 +180,13 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}"
         params: Dict[str, str] = {FORCE_TAG: str(force).lower()}
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         async_session = await self.asyncio_session()
         response = await async_session.delete(
             url,
             params=params,
             timeout=timeout,
             verify_ssl=self.verify_calls,
-            headers=headers,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
             raise await handle_error("Deletion of group failed.", response)
@@ -220,7 +227,6 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         params: Dict[str, str] = {LIMIT_TAG: str(limit), OFFSET_TAG: str(offset)}
         if admin:
             url += "/admin"
@@ -230,7 +236,7 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             params=params,
             timeout=timeout,
             verify_ssl=self.verify_calls,
-            headers=headers,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             groups: List[Dict[str, Any]] = await response.json(loads=orjson.loads)
@@ -261,19 +267,17 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         async_session = await self.asyncio_session()
         response = await async_session.get(
             url,
             timeout=timeout,
             verify_ssl=self.verify_calls,
-            headers=headers,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             group: Dict[str, Any] = await response.json(loads=orjson.loads)
-        else:
-            raise await handle_error("Getting of group information failed.", response)
-        return GroupInfo.parse(group)
+            return GroupInfo.parse(group)
+        raise await handle_error("Getting of group information failed.", response)
 
     async def join_group(
         self, group_id: str, join_key: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
@@ -299,14 +303,13 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         params: Dict[str, str] = {
             JOIN_KEY_PARAM: join_key,
         }
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         async_session = await self.asyncio_session()
         response = await async_session.post(
             url,
             params=params,
             timeout=timeout,
             verify_ssl=self.verify_calls,
-            headers=headers,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
             raise await handle_error("Joining of group failed.", response, parameters=params)
@@ -329,16 +332,20 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/leave"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         async_session = await self.asyncio_session()
-        response = await async_session.post(url, headers=headers, timeout=timeout, verify_ssl=self.verify_calls)
+        response = await async_session.post(
+            url,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            overwrite_auth_token=auth_key,
+        )
         if not response.ok:
-            raise await handle_error("Leaving of group failed.", response, headers=headers)
+            raise await handle_error("Leaving of group failed.", response)
 
     async def add_user_to_group(
         self, group_id: str, user_id: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
     ):
-        """Adding a user to group.
+        """Adding a user to a group.
 
         Parameters
         ----------
@@ -360,13 +367,16 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         params: Dict[str, str] = {
             USER_TO_ADD_PARAM: user_id,
         }
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         async_session = await self.asyncio_session()
         response = await async_session.post(
-            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
+            url,
+            params=params,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
-            raise await handle_error("Adding of user to group failed.", response, headers=headers, parameters=params)
+            raise await handle_error("Adding of user to group failed.", response, parameters=params)
 
     async def remove_user_from_group(
         self,
@@ -396,16 +406,13 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/user/remove"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         params: Dict[str, str] = {USER_TO_REMOVE_PARAM: user_id, FORCE_PARAM: str(force)}
         async_session = await self.asyncio_session()
         response = await async_session.post(
-            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
+            url, params=params, timeout=timeout, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
         )
         if not response.ok:
-            raise await handle_error(
-                "Removing of user from group failed.", response, headers=headers, parameters=params
-            )
+            raise await handle_error("Removing of user from group failed.", response, parameters=params)
 
     async def add_entity_to_group(
         self,
@@ -414,7 +421,7 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ):
-        """Adding an entity to group.
+        """Adding an entity to a group.
 
         Parameters
         ----------
@@ -431,15 +438,17 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         WacomServiceException
             If the tenant service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/entity/{uri}/add"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         async_session = await self.asyncio_session()
-        response = await async_session.post(url, headers=headers, verify_ssl=self.verify_calls, timeout=timeout)
+        response = await async_session.post(
+            url, verify_ssl=self.verify_calls, timeout=timeout, overwrite_auth_token=auth_key
+        )
         if not response.ok:
-            raise await handle_error("Adding of entity to group failed.", response, headers=headers)
+            raise await handle_error(
+                "Adding of entity to group failed.",
+                response,
+            )
 
     async def remove_entity_to_group(
         self,
@@ -448,7 +457,7 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ):
-        """Remove an entity from group.
+        """Remove an entity from a group.
 
         Parameters
         ----------
@@ -457,7 +466,7 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         entity_uri: str
             URI of entity
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (in seconds). Default: 60 seconds.
 
@@ -468,8 +477,9 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         """
         uri: str = urllib.parse.quote(entity_uri)
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/entity/{uri}/remove"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         async_session = await self.asyncio_session()
-        response = await async_session.post(url, headers=headers, verify_ssl=self.verify_calls, timeout=timeout)
+        response = await async_session.post(
+            url, verify_ssl=self.verify_calls, timeout=timeout, overwrite_auth_token=auth_key
+        )
         if not response.ok:
-            raise await handle_error("Removing of entity from group failed.", response, headers=headers)
+            raise await handle_error("Removing of entity from group failed.", response)

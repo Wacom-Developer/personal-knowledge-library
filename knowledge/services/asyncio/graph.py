@@ -39,7 +39,7 @@ from knowledge.base.ontology import (
 )
 from knowledge.base.response import JobStatus, ErrorLogResponse, NewEntityUrisResponse
 from knowledge.nel.base import KnowledgeGraphEntity, EntityType, KnowledgeSource, EntitySource
-from knowledge.services import AUTHORIZATION_HEADER_FLAG, IS_OWNER_PARAM, IndexType
+from knowledge.services import IS_OWNER_PARAM, IndexType
 from knowledge.services import (
     SUBJECT_URI,
     RELATION_URI,
@@ -50,7 +50,6 @@ from knowledge.services import (
     TOTAL_COUNT,
     SEARCH_TERM,
     TYPES_PARAMETER,
-    APPLICATION_JSON_HEADER,
     SUBJECT,
     OBJECT,
     PREDICATE,
@@ -68,10 +67,7 @@ from knowledge.services import (
 )
 from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error
 from knowledge.services.base import (
-    WacomServiceAPIClient,
     WacomServiceException,
-    USER_AGENT_HEADER_FLAG,
-    CONTENT_TYPE_HEADER_FLAG,
     DEFAULT_TIMEOUT,
     format_exception,
 )
@@ -123,15 +119,19 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
 
     def __init__(
         self,
+        service_url: str,
         application_name: str,
-        service_url: str = WacomServiceAPIClient.SERVICE_URL,
+        base_auth_url: Optional[str] = None,
         service_endpoint: str = "graph/v1",
+        verify_calls: bool = True,
         timeout: int = DEFAULT_TIMEOUT,
     ):
         super().__init__(
-            application_name=application_name,
             service_url=service_url,
+            application_name=application_name,
+            base_auth_url=base_auth_url,
             service_endpoint=service_endpoint,
+            verify_calls=verify_calls,
             timeout=timeout,
         )
 
@@ -139,7 +139,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         """
         Retrieve entity information from personal knowledge, using the URI as identifier.
 
-        **Remark:** Object properties (relations) must be requested separately.
+        **Remark: ** Object properties (relations) must be requested separately.
 
         Parameters
         ----------
@@ -160,8 +160,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}"
         session = await self.asyncio_session()
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
-        response = await session.get(url, headers=headers, verify_ssl=self.verify_calls)
+        response = await session.get(url, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key)
         if response.ok:
             e: Dict[str, Any] = await response.json()
             pref_label: List[Label] = []
@@ -173,7 +172,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                 else:  # Alias
                     aliases.append(Label.create_from_dict(label))
         else:
-            raise await handle_error(f"Retrieving of entity content failed. URI:={uri}.", response, headers=headers)
+            raise await handle_error(f"Retrieving of entity content failed. URI:={uri}.", response)
         # Create ThingObject
         thing: ThingObject = ThingObject.from_dict(e)
         return thing
@@ -186,9 +185,9 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         timeout: int = DEFAULT_TIMEOUT,
     ) -> List[ThingObject]:
         """
-        Retrieve entities information from personal knowledge, using the  URI as identifier.
+        Retrieve entities information from personal knowledge, using the URI as identifier.
 
-        **Remark:** Object properties (relations) must be requested separately.
+        **Remark: ** Object properties (relations) must be requested separately.
 
         Parameters
         ----------
@@ -214,14 +213,13 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/"
         things: List[ThingObject] = []
         session = await self.asyncio_session()
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         for chunk in range(0, len(uris), AsyncWacomKnowledgeService.MAX_NUMBER_URIS):
             subset = uris[chunk : chunk + AsyncWacomKnowledgeService.MAX_NUMBER_URIS]
             params: Dict[str, Any] = {URIS_TAG: subset}
             if locale:
                 params[LOCALE_TAG] = locale
             response = await session.get(
-                url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls
+                url, params=params, timeout=timeout, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
             )
             if response.ok:
                 entities: List[Dict[str, Any]] = await response.json()
@@ -229,9 +227,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                     thing: ThingObject = ThingObject.from_dict(e)
                     things.append(thing)
             else:
-                raise await handle_error(
-                    f"Retrieving of entities content failed. List of URIs: {uris}.", response, headers=headers
-                )
+                raise await handle_error(f"Retrieving of entities content failed. List of URIs: {uris}.", response)
         # Create ThingObject
         return things
 
@@ -302,8 +298,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             If the graph service returns an error code.
         """
         session = await self.asyncio_session()
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
-        response = await session.get(image_url, headers=headers, verify_ssl=self.verify_calls)
+        response = await session.get(image_url, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key)
         if response.ok:
             image_bytes: bytes = await response.content.read()
             file_name: str = image_url if file_name is None else file_name
@@ -316,7 +311,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
                 mime_type = MIME_TYPE[file_extension]
 
             return await self.set_entity_image(entity_uri, image_bytes, file_name, mime_type, auth_key=auth_key)
-        raise await handle_error(f"Creation of entity image failed. URI:={entity_uri}.", response, headers=headers)
+        raise await handle_error(f"Creation of entity image failed. URI:={entity_uri}.", response)
 
     async def set_entity_image(
         self,
@@ -355,9 +350,13 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         data.add_field("file", image_byte, filename=file_name, content_type=mime_type)
         url: str = f"{self.service_base_url}{self.ENTITY_IMAGE_ENDPOINT}{urllib.parse.quote(entity_uri)}"
         session = await self.asyncio_session()
-        headers: Dict[str, str] = await self._prepare_headers(ignore_content_type=True, overwrite_auth_token=auth_key)
         response = await session.patch(
-            url, headers=headers, data=data, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls
+            url,
+            data=data,
+            timeout=DEFAULT_TIMEOUT,
+            verify_ssl=self.verify_calls,
+            overwrite_auth_token=auth_key,
+            ignore_content_type=True,
         )
         if response.ok:
             image_id: str = (await response.json(loads=orjson.loads))["imageId"]
@@ -375,7 +374,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         Parameters
         ----------
         uris: List[str]
-            List of entity URIs. **Remark:** More than 100 entities are not possible in one request
+            List of entity URIs. **Remark: ** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
         auth_key: Optional[str]
@@ -393,10 +392,9 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}"
         params: Dict[str, Any] = {URIS_TAG: uris, FORCE_TAG: str(force)}
         session = await self.asyncio_session()
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
-        response = await session.delete(url, headers=headers, params=params, verify_ssl=self.verify_calls)
+        response = await session.delete(url, params=params, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key)
         if not response.ok:
-            raise await handle_error("Deletion of entities failed.", response, parameters=params, headers=headers)
+            raise await handle_error("Deletion of entities failed.", response, parameters=params)
 
     async def delete_entity(self, uri: str, force: bool = False, auth_key: Optional[str] = None):
         """
@@ -417,10 +415,9 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             If the graph service returns an error code
         """
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}"
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         session = await self.asyncio_session()
         response = await session.delete(
-            url, params={FORCE_TAG: str(force)}, verify_ssl=self.verify_calls, headers=headers
+            url, params={FORCE_TAG: str(force)}, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
         )
         if not response.ok:
             raise await handle_error(f"Deletion of entity failed. URI:={uri}.", response)
@@ -496,10 +493,9 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_BULK_ENDPOINT}"
         payload: List[Dict[str, Any]] = [await AsyncWacomKnowledgeService.__entity__(e) for e in entities]
         session = await self.asyncio_session()
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         for bulk_idx in range(0, len(entities), batch_size):
             bulk = payload[bulk_idx : bulk_idx + batch_size]
-            response = await session.post(url, json=bulk, verify_ssl=self.verify_calls, headers=headers)
+            response = await session.post(url, json=bulk, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key)
             if response.ok:
                 response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
                 for idx, uri in enumerate(response_dict[URIS_TAG]):
@@ -520,7 +516,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         self, entity: ThingObject, auth_key: Optional[str] = None, ignore_image: bool = False
     ) -> str:
         """
-        Creates entity in graph.
+        Creates entity in the graph.
 
         Parameters
         ----------
@@ -544,8 +540,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}"
         payload: Dict[str, Any] = await AsyncWacomKnowledgeService.__entity__(entity)
         session = await self.asyncio_session()
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
-        response = await session.post(url, json=payload, verify_ssl=self.verify_calls, headers=headers)
+        response = await session.post(url, json=payload, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key)
         if response.ok:
             uri: str = (await response.json(loads=orjson.loads))[URI_TAG]
             if not ignore_image:
@@ -569,7 +564,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         entities: List[ThingObject]
             List of entities to import.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -588,15 +583,21 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             data_dict = obj.__import_format_dict__()
             ndjson_lines.append(json.dumps(data_dict))  # Convert each dict to a JSON string
 
-        ndjson_content = "\n".join(ndjson_lines)  # Join JSON strings with newline
+        ndjson_content = "\n".join(ndjson_lines)  # Join JSON strings with a newline
         # Compress the NDJSON string to a gzip byte array
         compressed_data: bytes = gzip.compress(ndjson_content.encode("utf-8"))
         url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}"
         data: aiohttp.FormData = aiohttp.FormData()
         data.add_field("file", compressed_data, filename="import.njson.gz", content_type="application/x-gzip")
         session = await self.asyncio_session()
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key, ignore_content_type=True)
-        response = await session.post(url, data=data, timeout=timeout, verify_ssl=self.verify_calls, headers=headers)
+        response = await session.post(
+            url,
+            data=data,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            overwrite_auth_token=auth_key,
+            ignore_content_type=True,
+        )
         if response.ok:
             structure: Dict[str, Any] = await response.json(loads=orjson.loads)
             return structure["jobId"]
@@ -630,7 +631,6 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         """
         if not file_path.exists():
             raise FileNotFoundError(f"The file {file_path} does not exist.")
-        headers: Dict[str, str] = await self._prepare_headers(overwrite_auth_token=auth_key)
         with file_path.open("rb") as file:
             # Compress the NDJSON string to a gzip byte array
             compressed_data: bytes = file.read()
@@ -639,7 +639,12 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}"
             session = await self.asyncio_session()
             response = await session.post(
-                url, data=data, timeout=timeout, verify_ssl=self.verify_calls, headers=headers
+                url,
+                data=data,
+                timeout=timeout,
+                verify_ssl=self.verify_calls,
+                overwrite_auth_token=auth_key,
+                ignore_content_type=True,
             )
             if response.ok:
                 structure: Dict[str, Any] = await response.json(loads=orjson.loads)
@@ -657,7 +662,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         job_id: str
             ID of the job
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -670,12 +675,11 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}/{job_id}"
         session = await self.asyncio_session()
-        headers: dict = await self._prepare_headers(overwrite_auth_token=auth_key)
-        response = await session.get(url, headers=headers, timeout=timeout, verify_ssl=self.verify_calls)
+        response = await session.get(url, timeout=timeout, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key)
         if response.ok:
             structure: Dict[str, Any] = await response.json(loads=orjson.loads)
             return JobStatus.from_dict(structure)
-        raise await handle_error(f"Retrieving job status for {job_id} failed.", response, headers=headers)
+        raise await handle_error(f"Retrieving job status for {job_id} failed.", response)
 
     async def import_error_log(
         self,
@@ -694,7 +698,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         next_page_id: Optional[str] = None
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -706,8 +710,9 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{self.IMPORT_ERROR_LOG_ENDPOINT}/{job_id}"
         params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
         session = await self.asyncio_session()
-        headers: dict = await self._prepare_headers(overwrite_auth_token=auth_key)
-        response = await session.get(url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls)
+        response = await session.get(
+            url, params=params, timeout=timeout, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
+        )
         if response.ok:
             structure: Dict[str, Any] = await response.json(loads=orjson.loads)
             return ErrorLogResponse.from_dict(structure)
@@ -730,7 +735,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         next_page_id: Optional[str] = None
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -742,16 +747,17 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}/{job_id}/new-entities"
         params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
         session = await self.asyncio_session()
-        headers: dict = await self._prepare_headers(overwrite_auth_token=auth_key)
-        response = await session.get(url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls)
+        response = await session.get(
+            url, params=params, timeout=timeout, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
+        )
         if response.ok:
             structure: Dict[str, Any] = await response.json(loads=orjson.loads)
             return NewEntityUrisResponse.from_dict(structure)
-        raise await handle_error(f"Retrieving job status for {job_id} failed.", response, headers=headers)
+        raise await handle_error(f"Retrieving job status for {job_id} failed.", response)
 
     async def update_entity(self, entity: ThingObject, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT):
         """
-        Updates entity in graph.
+        Updates entity in the graph.
 
         Parameters
         ----------
@@ -772,24 +778,18 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         uri: str = entity.uri
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}"
         # Header info
-        headers: dict = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
+
         payload: Dict[str, Any] = await AsyncWacomKnowledgeService.__entity__(entity)
         session = await self.asyncio_session()
-        async with session.patch(
-            url,
-            json=payload,
-            headers=headers,
-            timeout=timeout,
-            verify_ssl=self.verify_calls,
-        ) as response:
-            if not response.ok:
-                raise await handle_error(
-                    f"Update of entity failed. URI:={uri}.", response, payload=payload, headers=headers
-                )
+        response = await session.patch(
+            url, json=payload, timeout=timeout, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise await handle_error(
+                f"Update of entity failed. URI:={uri}.",
+                response,
+                payload=payload,
+            )
 
     async def add_entity_indexes(
         self,
@@ -817,8 +817,8 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         Returns
         -------
         update_status: Dict[str, Any]
-            Status per target (depending on the targets of entity and the ones set in the request). If the entity
-            already has the target set, the status will be "Target already exists" for that target,
+            Status per target (depending on the targets of the entity and the ones set in the request). If the entity
+            already has the target set, the status will be "Target already exists" for that target;
             otherwise it will be "UPSERT".
 
         Raises
@@ -829,24 +829,17 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         if auth_key is None:
             auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{entity_uri}/indexes"
-        # Header info
-        headers: dict = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         session = await self.asyncio_session()
-        async with session.patch(
-            url, json=targets, headers=headers, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error(
-                    f"Update of entity indexes failed. URI:={entity_uri}.",
-                    response,
-                    payload={"targets": targets},
-                    headers=headers,
-                )
-            response_dict: Dict[IndexType, Any] = await response.json(loads=orjson.loads)
+        response = await session.patch(
+            url, json=targets, timeout=timeout, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise await handle_error(
+                f"Update of entity indexes failed. URI:={entity_uri}.",
+                response,
+                payload={"targets": targets},
+            )
+        response_dict: Dict[IndexType, Any] = await response.json(loads=orjson.loads)
         return response_dict
 
     async def remove_entity_indexes(
@@ -884,24 +877,17 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         if auth_key is None:
             auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{entity_uri}/indexes"
-        # Header info
-        headers: dict = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         session = await self.asyncio_session()
-        async with session.delete(
-            url, json=targets, headers=headers, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error(
-                    f"Deletion of entity indexes failed. URI:={entity_uri}.",
-                    response,
-                    payload={"targets": targets},
-                    headers=headers,
-                )
-            response_dict: Dict[IndexType, Any] = await response.json(loads=orjson.loads)
+        response = await session.delete(
+            url, json=targets, timeout=timeout, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise await handle_error(
+                f"Deletion of entity indexes failed. URI:={entity_uri}.",
+                response,
+                payload={"targets": targets},
+            )
+        response_dict: Dict[IndexType, Any] = await response.json(loads=orjson.loads)
         return response_dict
 
     async def relations(
@@ -931,24 +917,17 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = (
             f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{urllib.parse.quote(uri)}"
             f"/relations"
         )
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         session = await self.asyncio_session()
-        async with session.get(url, headers=headers, verify_ssl=self.verify_calls, timeout=timeout) as response:
-            if response.ok:
-                rel: list = (await response.json(loads=orjson.loads)).get(RELATIONS_TAG)
-            else:
-                raise await handle_error(f"Retrieving of relations failed. URI:={uri}.", response, headers=headers)
-        # Graceful shutdown to close the session and file descriptor
-        return ObjectProperty.create_from_list(rel)
+        response = await session.get(url, verify_ssl=self.verify_calls, timeout=timeout, overwrite_auth_token=auth_key)
+        if response.ok:
+            rel: list = (await response.json(loads=orjson.loads)).get(RELATIONS_TAG)
+            return ObjectProperty.create_from_list(rel)
+
+        raise await handle_error(f"Retrieving of relations failed. URI:={uri}.", response)
 
     async def labels(self, uri: str, locale: LocaleCode = EN_US, auth_key: Optional[str] = None) -> List[Label]:
         """
@@ -976,21 +955,19 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         if auth_key is None:
             auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/labels"
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         session = await self.asyncio_session()
-        async with session.get(
+        response = await session.get(
             url,
-            headers=headers,
             params={
                 LOCALE_TAG: locale,
             },
             verify_ssl=self.verify_calls,
-        ) as response:
-            if response.ok:
-                labels: list = (await response.json(loads=orjson.loads)).get(LABELS_TAG)
-            else:
-                raise await handle_error(f"Failed to pull labels. URI:={uri}.", response, headers=headers)
-        return [Label.create_from_dict(label) for label in labels]
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            labels: list = (await response.json(loads=orjson.loads)).get(LABELS_TAG)
+            return [Label.create_from_dict(label) for label in labels]
+        raise await handle_error(f"Failed to pull labels. URI:={uri}.", response)
 
     async def literals(
         self, uri: str, locale: LocaleCode = EN_US, auth_key: Optional[str] = None
@@ -1016,27 +993,20 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/literals"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         session = await self.asyncio_session()
-        async with session.get(
+        response = await session.get(
             url,
-            headers=headers,
             params={
                 LOCALE_TAG: locale,
             },
             verify_ssl=self.verify_calls,
-        ) as response:
-            if response.ok:
-                literals: list = (await response.json(loads=orjson.loads)).get(DATA_PROPERTIES_TAG)
-            else:
-                raise await handle_error(f"Failed to pull literals. URI:={uri}.", response, headers=headers)
-        return DataProperty.create_from_list(literals)
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            literals: list = (await response.json(loads=orjson.loads)).get(DATA_PROPERTIES_TAG)
+            return DataProperty.create_from_list(literals)
+        raise await handle_error(f"Failed to pull literals. URI:={uri}.", response)
 
     async def create_relation(
         self, source: str, relation: OntologyPropertyReference, target: str, auth_key: Optional[str] = None
@@ -1060,17 +1030,12 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation"
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         params: dict = {RELATION_TAG: relation.iri, TARGET: target}
         session = await self.asyncio_session()
-        async with session.post(url, params=params, headers=headers, verify_ssl=self.verify_calls) as response:
-            if not response.ok:
-                raise await handle_error(
-                    f"Creation of relation failed. URI:={source}.", response, headers=headers, parameters=params
-                )
+        response = await session.post(url, params=params, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key)
+        if not response.ok:
+            raise await handle_error(f"Creation of relation failed. URI:={source}.", response, parameters=params)
 
     async def create_relations_bulk(
         self,
@@ -1088,10 +1053,10 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             Entities URI of the source
 
         relations: Dict[OntologyPropertyReference, List[str]]
-            ObjectProperty property and targets mapping.
+            ObjectProperty property and target mapping.
 
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
 
         timeout: int
             Request timeout in seconds (default: 60 seconds)
@@ -1101,22 +1066,18 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relations"
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         session = await self.asyncio_session()
         for update_bulk in split_updates(relations):
-            async with session.post(
-                url, json=update_bulk, headers=headers, verify_ssl=self.verify_calls, timeout=timeout
-            ) as response:
-                if not response.ok:
-                    raise await handle_error(
-                        f"Creation of relation failed. URI:={source}.",
-                        response,
-                        headers=headers,
-                        parameters=update_bulk,
-                    )
+            response = await session.post(
+                url, json=update_bulk, verify_ssl=self.verify_calls, timeout=timeout, overwrite_auth_token=auth_key
+            )
+            if not response.ok:
+                raise await handle_error(
+                    f"Creation of relation failed. URI:={source}.",
+                    response,
+                    parameters=update_bulk,
+                )
 
     async def remove_relation(
         self,
@@ -1147,22 +1108,14 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation"
         params: Dict[str, str] = {RELATION_TAG: relation.iri, TARGET: target}
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         session = await self.asyncio_session()
-        async with session.delete(
-            url, params=params, headers=headers, timeout=timeout, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error(
-                    f"Removal of relation failed. URI:={source}.", response, headers=headers, parameters=params
-                )
+        response = await session.delete(
+            url, params=params, timeout=timeout, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise await handle_error(f"Removal of relation failed. URI:={source}.", response, parameters=params)
 
     async def activations(
         self, uris: List[str], depth: int, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
@@ -1184,7 +1137,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         Returns
         -------
         entity_map: Dict[str, ThingObject]
-            Map with entity and its URI as key.
+            Map with entity and its URI as a key.
         relations: List[Tuple[str, OntologyPropertyReference, str]]
             List of relations with subject predicate, (Property), and subject
 
@@ -1193,33 +1146,25 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code, and activation failed.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ACTIVATIONS_ENDPOINT}"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         params: dict = {URIS_TAG: uris, ACTIVATION_TAG: depth}
 
         session = await self.asyncio_session()
-        async with session.get(
-            url, headers=headers, params=params, verify_ssl=self.verify_calls, timeout=timeout
-        ) as response:
-            if response.ok:
-                entities: Dict[str, Any] = await response.json(loads=orjson.loads)
-                things: Dict[str, ThingObject] = {e[URI_TAG]: ThingObject.from_dict(e) for e in entities[ENTITIES_TAG]}
-                relations: List[Tuple[str, OntologyPropertyReference, str]] = []
-                for r in entities[RELATIONS_TAG]:
-                    relation: OntologyPropertyReference = OntologyPropertyReference.parse(r[PREDICATE])
-                    relations.append((r[SUBJECT], relation, r[OBJECT]))
-                    if r[SUBJECT] in things:
-                        things[r[SUBJECT]].add_relation(ObjectProperty(relation, outgoing=[r[OBJECT]]))
-            else:
-                raise await handle_error(
-                    f"Activation failed. URIS:={uris}.", response, headers=headers, parameters=params
-                )
-        return things, relations
+        response = await session.get(
+            url, params=params, verify_ssl=self.verify_calls, timeout=timeout, overwrite_auth_token=auth_key
+        )
+        if response.ok:
+            entities: Dict[str, Any] = await response.json(loads=orjson.loads)
+            things: Dict[str, ThingObject] = {e[URI_TAG]: ThingObject.from_dict(e) for e in entities[ENTITIES_TAG]}
+            relations: List[Tuple[str, OntologyPropertyReference, str]] = []
+            for r in entities[RELATIONS_TAG]:
+                relation: OntologyPropertyReference = OntologyPropertyReference.parse(r[PREDICATE])
+                relations.append((r[SUBJECT], relation, r[OBJECT]))
+                if r[SUBJECT] in things:
+                    things[r[SUBJECT]].add_relation(ObjectProperty(relation, outgoing=[r[OBJECT]]))
+            return things, relations
+
+        raise await handle_error(f"Activation failed. URIS:={uris}.", response, parameters=params)
 
     async def listing(
         self,
@@ -1275,13 +1220,6 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             If the graph service returns an error code
         """
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.LISTING_ENDPOINT}"
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
-        # Header with auth token
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         # Parameter with filtering and limit
         parameters: Dict[str, str] = {
             TYPE_TAG: filter_type.iri,
@@ -1302,35 +1240,34 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         session = await self.asyncio_session()
 
         # Send request
-        async with session.get(
-            url, params=parameters, headers=headers, verify_ssl=self.verify_calls, timeout=timeout
-        ) as response:
-            # If response is successful
-            if response.ok:
-                entities_resp: Dict[str, Any] = await response.json(loads=orjson.loads)
-                next_page_id: str = entities_resp[NEXT_PAGE_ID_TAG]
-                estimated_total_number: int = entities_resp.get(TOTAL_COUNT, 0)
-                entities: List[ThingObject] = []
-                if LISTING in entities_resp:
-                    for e in entities_resp[LISTING]:
-                        thing: ThingObject = ThingObject.from_dict(e)
-                        thing.status_flag = EntityStatus.SYNCED
-                        entities.append(thing)
-            else:
-                raise await handle_error(f"Failed to list the entities (since:= {page_id}, limit:={limit}). ", response)
-        return entities, estimated_total_number, next_page_id
+        response = await session.get(
+            url, params=parameters, verify_ssl=self.verify_calls, timeout=timeout, overwrite_auth_token=auth_key
+        )
+        # If the response is successful
+        if response.ok:
+            entities_resp: Dict[str, Any] = await response.json(loads=orjson.loads)
+            next_page_id: str = entities_resp[NEXT_PAGE_ID_TAG]
+            estimated_total_number: int = entities_resp.get(TOTAL_COUNT, 0)
+            entities: List[ThingObject] = []
+            if LISTING in entities_resp:
+                for e in entities_resp[LISTING]:
+                    thing: ThingObject = ThingObject.from_dict(e)
+                    thing.status_flag = EntityStatus.SYNCED
+                    entities.append(thing)
+            return entities, estimated_total_number, next_page_id
+        raise await handle_error(f"Failed to list the entities (since:= {page_id}, limit:={limit}). ", response)
 
     async def ontology_update(self, fix: bool = False, auth_key: Optional[str] = None):
         """
         Update the ontology.
 
-        **Remark:**
-        Works for users with role 'TenantAdmin'.
+        **Remark: **
+        Works for users with the role 'TenantAdmin'.
 
         Parameters
         ----------
         fix: bool [default:=False]
-            Fix the ontology if tenant is in inconsistent state.
+            Fix the ontology if the tenant is in an inconsistent state.
         auth_key: Optional[str] [default:=None]
             Auth key from user if not set, the client auth key will be used
 
@@ -1339,19 +1276,15 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code and commit failed.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = (
             f"{self.service_base_url}{AsyncWacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}" f'{"/fix" if fix else ""}'
         )
-        # Header with auth token
-        headers: dict = {USER_AGENT_HEADER_FLAG: self.user_agent, AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         session = await self.asyncio_session()
         async with session.patch(
-            url, headers=headers, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls
+            url, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
         ) as response:
             if not response.ok:
-                raise await handle_error("Ontology update failed. ", response, headers=headers)
+                raise await handle_error("Ontology update failed. ", response)
 
     async def search_all(
         self,
@@ -1391,30 +1324,22 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         parameters: Dict[str, Any] = {
             SEARCH_TERM: search_term,
             LANGUAGE_PARAMETER: language_code,
             TYPES_PARAMETER: [ot.iri for ot in types],
             LIMIT: limit,
         }
-        # Only add next page id if it is not None
+        # Only add the next page id if it is not None
         if next_page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = next_page_id
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.SEARCH_TYPES_ENDPOINT}"
         session = await self.asyncio_session()
-        async with session.get(
-            url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error(
-                    f"Search on labels {search_term} failed. ", response, headers=headers, parameters=parameters
-                )
+        response = await session.get(
+            url, params=parameters, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise await handle_error(f"Search on labels {search_term} failed. ", response, parameters=parameters)
         return await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
 
     async def search_labels(
@@ -1455,34 +1380,26 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.SEARCH_LABELS_ENDPOINT}"
-        headers: Dict[str, str] = {
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-        }
         parameters: Dict[str, Any] = {
             SEARCH_TERM: search_term,
             LOCALE_TAG: language_code,
             EXACT_MATCH: str(exact_match),
             LIMIT: str(limit),
         }
-        # Only add next page id if it is not None
+        # Only add the next page id if it is not None
         if next_page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = next_page_id
 
         session = await self.asyncio_session()
-        async with session.get(
-            url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error(
-                    f"Search on labels {search_term} failed. ", response, headers=headers, parameters=parameters
-                )
-            entities, next_page_id = await AsyncWacomKnowledgeService.__search_results__(
-                await response.json(loads=orjson.loads)
-            )
+        response = await session.get(
+            url, params=parameters, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise await handle_error(f"Search on labels {search_term} failed. ", response, parameters=parameters)
+        entities, next_page_id = await AsyncWacomKnowledgeService.__search_results__(
+            await response.json(loads=orjson.loads)
+        )
         return entities, next_page_id
 
     async def search_literal(
@@ -1505,7 +1422,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
          literal: OntologyPropertyReference
              Literal used for the search
          pattern: SearchPattern (default:= SearchPattern.REGEX)
-             Search pattern. The chosen search pattern must fit the type of the entity.
+             A search pattern. The chosen search pattern must fit the type of the entity.
          language_code: LocaleCode
              ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
          limit: int (default:= 30)
@@ -1526,8 +1443,6 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.SEARCH_LITERALS_ENDPOINT}"
         parameters: Dict[str, Any] = {
             VALUE: search_term,
@@ -1536,19 +1451,16 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             LIMIT: str(limit),
             SEARCH_PATTERN_PARAMETER: pattern.value,
         }
-        # Only add next page id if it is not None
+        # Only add the next page id if it is not None
         if next_page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = next_page_id
-        headers: Dict[str, str] = {AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         session = await self.asyncio_session()
-        async with session.get(
-            url, headers=headers, params=parameters, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls
-        ) as response:
-            if not response.ok:
-                raise await handle_error(
-                    f"Search on literals {search_term} failed. ", response, headers=headers, parameters=parameters
-                )
-            entities, n_p = await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
+        response = await session.get(
+            url, params=parameters, timeout=DEFAULT_TIMEOUT, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise await handle_error(f"Search on literals {search_term} failed. ", response, parameters=parameters)
+        entities, n_p = await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
         return entities, n_p
 
     async def search_relation(
@@ -1593,8 +1505,6 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.SEARCH_RELATION_ENDPOINT}"
         parameters: Dict[str, Any] = {RELATION_URI: relation.iri, LANGUAGE_PARAMETER: language_code, LIMIT: str(limit)}
         if subject_uri is not None and object_uri is not None:
@@ -1605,20 +1515,20 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
             parameters[SUBJECT_URI] = subject_uri
         if object_uri is not None:
             parameters[OBJECT_URI] = object_uri
-        # Only add next page id if it is not None
+        # Only add the next page id if it is not None
         if next_page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = next_page_id
-        headers: dict = {AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         session = await self.asyncio_session()
-        async with session.get(url, headers=headers, params=parameters, verify_ssl=self.verify_calls) as response:
-            if not response.ok:
-                raise await handle_error(
-                    f"Search on: subject:={subject_uri}, relation {relation.iri}, " f"object:= {object_uri} failed. ",
-                    response,
-                    headers=headers,
-                    parameters=parameters,
-                )
-            entities, n_p = await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
+        response = await session.get(
+            url, params=parameters, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise await handle_error(
+                f"Search on: subject:={subject_uri}, relation {relation.iri}, " f"object:= {object_uri} failed. ",
+                response,
+                parameters=parameters,
+            )
+        entities, n_p = await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
         return entities, n_p
 
     async def search_description(
@@ -1629,7 +1539,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         auth_key: Optional[str] = None,
         next_page_id: str = None,
     ) -> Tuple[List[ThingObject], str]:
-        """Search for matches in description.
+        """Search for matches in the description.
 
         Parameters
         ----------
@@ -1656,24 +1566,22 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.SEARCH_DESCRIPTION_ENDPOINT}"
         parameters: Dict[str, Any] = {SEARCH_TERM: search_term, LOCALE_TAG: language_code, LIMIT: str(limit)}
-        # Only add next page id if it is not None
+        # Only add the next page id if it is not None
         if next_page_id is not None:
             parameters[NEXT_PAGE_ID_TAG] = next_page_id
-        headers: dict = {AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}"}
         session = await self.asyncio_session()
-        async with session.get(url, headers=headers, params=parameters, verify_ssl=self.verify_calls) as response:
-            if not response.ok:
-                raise await handle_error(
-                    f"Search on descriptions {search_term} failed. ",
-                    response,
-                    headers=headers,
-                    parameters=parameters,
-                )
-            entities, n_p = await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
+        response = await session.get(
+            url, params=parameters, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key
+        )
+        if not response.ok:
+            raise await handle_error(
+                f"Search on descriptions {search_term} failed. ",
+                response,
+                parameters=parameters,
+            )
+        entities, n_p = await AsyncWacomKnowledgeService.__search_results__(await response.json(loads=orjson.loads))
         return entities, n_p
 
     @staticmethod
@@ -1709,55 +1617,48 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         WacomServiceException
             If the Named Entities Linking service returns an error code.
         """
-        if auth_key is None:
-            auth_key, _ = await self.handle_token()
         named_entities: List[KnowledgeGraphEntity] = []
         url: str = f"{self.service_base_url}{self.NAMED_ENTITY_LINKING_ENDPOINT}"
-        headers: Dict[str, str] = {
-            AUTHORIZATION_HEADER_FLAG: f"Bearer {auth_key}",
-            USER_AGENT_HEADER_FLAG: self.user_agent,
-            CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
-        }
+
         payload: Dict[str, str] = {LOCALE_TAG: language_code, TEXT_TAG: text}
 
         # Create a session and mount the retry adapter
         session = await self.asyncio_session()
 
-        async with session.post(url, headers=headers, json=payload, verify_ssl=self.verify_calls) as response:
-            if response.ok:
-                results: dict = await response.json(loads=orjson.loads)
-                for e in results:
-                    entity_types: List[str] = []
-                    # --------------------------- Entities content ---------------------------------------------------
-                    source: Optional[EntitySource] = None
-                    if "uri" in e:
-                        source = EntitySource(e["uri"], KnowledgeSource.WACOM_KNOWLEDGE)
-                    # --------------------------- Ontology types ---------------------------------------------------
-                    if "type" in e:
-                        entity_types.append(e["type"])
-                    # ----------------------------------------------------------------------------------------------
-                    start: int = e["startPosition"]
-                    end: int = e["endPosition"]
-                    ne: KnowledgeGraphEntity = KnowledgeGraphEntity(
-                        ref_text=text[start : end + 1],
-                        start_idx=start,
-                        end_idx=end,
-                        label=e["value"],
-                        confidence=0.0,
-                        source=source,
-                        content_link="",
-                        ontology_types=entity_types,
-                        entity_type=EntityType.PERSONAL_ENTITY,
-                        tokens=e.get("tokens"),
-                        token_indexes=e.get("tokenIndexes"),
-                    )
-                    ne.relevant_type = OntologyClassReference.parse(e["type"])
-                    named_entities.append(ne)
-            else:
-                raise await handle_error(
-                    f"Named entity linking for text:={text}@{language_code} failed. ",
-                    response,
-                    headers=headers,
-                    parameters=payload,
+        response = await session.post(url, json=payload, verify_ssl=self.verify_calls, overwrite_auth_token=auth_key)
+        if response.ok:
+            results: dict = await response.json(loads=orjson.loads)
+            for e in results:
+                entity_types: List[str] = []
+                # --------------------------- Entities content ---------------------------------------------------
+                source: Optional[EntitySource] = None
+                if "uri" in e:
+                    source = EntitySource(e["uri"], KnowledgeSource.WACOM_KNOWLEDGE)
+                # --------------------------- Ontology types ---------------------------------------------------
+                if "type" in e:
+                    entity_types.append(e["type"])
+                # ----------------------------------------------------------------------------------------------
+                start: int = e["startPosition"]
+                end: int = e["endPosition"]
+                ne: KnowledgeGraphEntity = KnowledgeGraphEntity(
+                    ref_text=text[start : end + 1],
+                    start_idx=start,
+                    end_idx=end,
+                    label=e["value"],
+                    confidence=0.0,
+                    source=source,
+                    content_link="",
+                    ontology_types=entity_types,
+                    entity_type=EntityType.PERSONAL_ENTITY,
+                    tokens=e.get("tokens"),
+                    token_indexes=e.get("tokenIndexes"),
                 )
+                ne.relevant_type = OntologyClassReference.parse(e["type"])
+                named_entities.append(ne)
+        else:
+            raise await handle_error(
+                f"Named entity linking for text:={text}@{language_code} failed. ",
+                response,
+                parameters=payload,
+            )
         return named_entities
