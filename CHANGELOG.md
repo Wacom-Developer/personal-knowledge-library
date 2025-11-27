@@ -1,7 +1,8 @@
-2025/11/24 - RELEASE 4.0.0
+2025/11/27 - RELEASE 4.0.1
 ==========================
 - Major refactoring of the session management and reusing of the same requests and asyncio session for multiple requests
 - Adding queue API support for async client
+- Changing the constructor parameters of all clients and make it more consistent
 - Minor fixes
 
 2025/11//07 - RELEASE 3.5.0
@@ -12,7 +13,7 @@
 
 2025/10/24 - RELEASE 3.4.0
 ==========================
-- Adding timeout parameter to async client
+- Adding timeout parameter to an async client
 - Support new version of GZIP new uri endpoint
 - Update parameters for create tenant parameters
 - Minor fixes
