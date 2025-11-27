@@ -5,7 +5,7 @@ from typing import Optional, List, Dict
 from requests import Response
 
 from knowledge.base.entity import LOCALE_TAG, TEXT_TAG
-from knowledge.base.language import LocaleCode, DE_DE, EN_US, JA_JP
+from knowledge.base.language import LocaleCode, EN_US
 from knowledge.base.ontology import OntologyClassReference
 from knowledge.nel.base import (
     PersonalEntityLinkingProcessor,
@@ -14,7 +14,7 @@ from knowledge.nel.base import (
     KnowledgeGraphEntity,
     EntityType,
 )
-from knowledge.services.base import handle_error
+from knowledge.services.base import handle_error, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
 
 
 class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
@@ -31,13 +31,25 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
         Endpoint of the service
     """
 
-    SERVICE_ENDPOINT: str = "graph/v1/nel/text"
-    SERVICE_URL: str = "https://private-knowledge.wacom.com"
-    LANGUAGES: List[LocaleCode] = [DE_DE, EN_US, JA_JP]
-
-    def __init__(self, service_url: str = SERVICE_URL, service_endpoint: str = SERVICE_ENDPOINT):
-        self.__service_endpoint: str = service_endpoint
-        super().__init__(supported_languages=WacomEntityLinkingEngine.LANGUAGES, service_url=service_url)
+    def __init__(
+        self,
+        service_url: str,
+        application_name: str = "NEL Client",
+        base_auth_url: Optional[str] = None,
+        service_endpoint: str = "graph/v1",
+        verify_calls: bool = True,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+    ):
+        super().__init__(
+            service_url=service_url,
+            application_name=application_name,
+            base_auth_url=base_auth_url,
+            service_endpoint=service_endpoint,
+            verify_calls=verify_calls,
+            max_retries=max_retries,
+            backoff_factor=backoff_factor,
+        )
 
     def link_personal_entities(
         self, text: str, language_code: LocaleCode = EN_US, auth_key: Optional[str] = None, max_retries: int = 5
@@ -52,10 +64,10 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
             Text where the entities shall be tagged in.
         language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
-        auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
-        max_retries: int
-            Maximum number of retries, if the service is not available.
+        auth_key: Optional[str] (Default:= None)
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        max_retries: int (Default:= 5)
+            Maximum number of retries if the service is not available.
 
         Returns
         -------
@@ -68,7 +80,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
             If the Named Entity Linking service returns an error code.
         """
         named_entities: List[KnowledgeGraphEntity] = []
-        url: str = f"{self.service_url}/{self.__service_endpoint}"
+        url: str = f"{self.service_base_url}nel/text"
 
         payload: Dict[str, str] = {LOCALE_TAG: language_code, TEXT_TAG: text}
         # Define the retry policy

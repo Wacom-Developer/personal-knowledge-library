@@ -4,16 +4,29 @@ import abc
 from enum import Enum
 from typing import Optional, List
 
-from knowledge.base.language import LocaleCode, EN_US
+from knowledge.base.language import LocaleCode, EN_US, DE_DE, JA_JP
 from knowledge.base.ontology import THING_CLASS, OntologyClassReference
-from knowledge.services.base import WacomServiceAPIClient, RESTAPIClient
+from knowledge.services.base import WacomServiceAPIClient, RESTAPIClient, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
 
 
 class EntityType(Enum):
     """
-    Entity types
-    ------------
-    Different types of entities.
+    Represents different types of entities.
+
+    This enumeration class categorizes entities into three distinct types: Public,
+    Personal, and Named. These types help to identify whether the entity belongs
+    to a globally accessible knowledge graph, a specific private knowledge source,
+    or if it is a standalone named entity without a linkage to an external knowledge graph.
+
+    Attributes
+    ----------
+    PUBLIC_ENTITY : int
+        Public entity - Entity from a public knowledge graph.
+    PERSONAL_ENTITY : int
+        Personal entity - Entity from a personal or organizational knowledge
+        graph.
+    NAMED_ENTITY : int
+        Simple entity - Entity type not linked to a knowledge graph.
     """
 
     PUBLIC_ENTITY = 0
@@ -26,9 +39,21 @@ class EntityType(Enum):
 
 class KnowledgeSource(Enum):
     """
-    Knowledge source
-    ----------------
-    List of knowledge sources which a used within Semantic Ink.
+    KnowledgeSource defines an enumeration for different knowledge sources.
+
+    This enumeration lists predefined constants representing various sources
+    of knowledge. It helps standardize and unify the representation of external
+    knowledge systems used within an application. Each attribute corresponds
+    to a specific knowledge source, represented as a string.
+
+    Attributes
+    ----------
+    WIKIDATA : str
+        Wikidata
+    DBPEDIA : str
+        dbpedia
+    WACOM_KNOWLEDGE : str
+        Wacom Personal Knowledge
     """
 
     WIKIDATA = "wikidata"
@@ -41,9 +66,29 @@ class KnowledgeSource(Enum):
 
 class BasicType(Enum):
     """
-    Basic type
+    Enumeration representing basic types of entities.
+
+    Defines a set of basic entity types used for categorization and identification
+    in various contexts. This enumeration allows for easy comparison, clarity, and
+    definition of specific categories for entities that can be encountered in
+    different scenarios.
+
+    Attributes
     ----------
-    Basic type of entities use for instance in named entity recognition.
+    UNKNOWN : str
+        Represents an unknown or undefined type.
+    MONEY : str
+        Represents a monetary value or currency-related type.
+    PERSON : str
+        Represents a person or an entity associated with a human being.
+    DATE : str
+        Represents a calendar date.
+    PLACE : str
+        Represents a physical or geographical location.
+    TIME : str
+        Represents a specific point in time or a duration.
+    NUMBER : str
+        Represents a numerical value or type.
     """
 
     UNKNOWN = "Unknown"
@@ -91,7 +136,7 @@ class NamedEntity(abc.ABC):
     """
     NamedEntity
     -----------
-    A named entity which is recognized by recognition engine.
+    A named entity which is recognized by the recognition engine.
     The class contains information on the found entity, found in reference text.
 
     Parameters
@@ -119,7 +164,7 @@ class NamedEntity(abc.ABC):
 
     @property
     def start_idx(self) -> int:
-        """Start index within the text handed to the named entity recognition."""
+        """Start an index within the text handed to the named entity recognition."""
         return self.__start_idx
 
     @property
@@ -224,7 +269,7 @@ class KnowledgeGraphEntity(NamedEntity):
 
     @property
     def thumbnail(self) -> Optional[str]:
-        """Thumbnail to describes the entity."""
+        """Thumbnail to describe the entity."""
         return self.__thumbnail
 
     @thumbnail.setter
@@ -243,7 +288,7 @@ class KnowledgeGraphEntity(NamedEntity):
 
     @property
     def relevant_type(self) -> OntologyClassReference:
-        """Most relevant ontology type. That likes to Wacom's personal knowledge base ontology."""
+        """Most relevant ontology type. That like to Wacom's personal knowledge base ontology."""
         return self.__relevant_type
 
     @relevant_type.setter
@@ -305,20 +350,31 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: List[str] = None
-        List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
     """
 
-    def __init__(self, service_url: str = str, supported_languages: List[str] = None, verify_calls: bool = True):
+    LANGUAGES: List[LocaleCode] = [DE_DE, EN_US, JA_JP]
+
+    def __init__(
+        self,
+        service_url: str,
+        application_name: str = "Semantic Search Client",
+        base_auth_url: Optional[str] = None,
+        service_endpoint: str = "vector/api/v1",
+        verify_calls: bool = True,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+    ):
         super().__init__(
-            application_name="Personal entity linking",
             service_url=service_url,
-            service_endpoint="graph/v1",
+            application_name=application_name,
+            base_auth_url=base_auth_url,
+            service_endpoint=service_endpoint,
             verify_calls=verify_calls,
+            max_retries=max_retries,
+            backoff_factor=backoff_factor,
         )
-        self.__supported_languages: List[str] = supported_languages if supported_languages else []
 
     @abc.abstractmethod
     def link_personal_entities(
@@ -348,7 +404,7 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
     @property
     def supported_language(self) -> List[str]:
         """List of supported languages."""
-        return self.__supported_languages
+        return self.LANGUAGES
 
     def is_language_supported(self, language_code: LocaleCode) -> bool:
         """Is the language_code code supported by the engine.
@@ -441,7 +497,7 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
     """
     Public Entity Linking
     ---------------------
-    Service that links entities to a public entities in a knowledge graph.
+    Service that links entities to a public entity in a knowledge graph.
 
     Parameters
     ----------
@@ -479,7 +535,7 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
         Returns
         -------
         entities: List[KnowledgeGraphEntity]
-            List of knowledge public knowledge entities.
+            List of public knowledge entities.
         """
         raise NotImplementedError
 
