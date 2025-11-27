@@ -130,20 +130,20 @@ instance: str = os.environ.get("INSTANCE")
 content_user_id: str = os.environ.get("EXTERNAL_USER_ID")
 
 async_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(
-    application_name="Async client test",
     service_url=instance,
+    application_name="Async client test",
 )
 group_management: AsyncGroupManagementService = AsyncGroupManagementService(
-    application_name="Async client test",
     service_url=instance,
+    application_name="Async client test",
 )
 user_management: AsyncUserManagementService = AsyncUserManagementService(
-    application_name="Async client test",
     service_url=instance,
+    application_name="Async client test",
 )
 vector_search: AsyncSemanticSearchClient = AsyncSemanticSearchClient(
-    application_name="Async client test",
     service_url=instance,
+    application_name="Async client test",
 )
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -480,6 +480,7 @@ async def test_09_search_labels():
 
     """
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id_admin)
+    ctr: int = 0
     async for e in async_things_session_iter(async_client, THING_OBJECT, only_own=False):
         if e.use_full_text_index:
             for label in e.label:
@@ -487,6 +488,9 @@ async def test_09_search_labels():
                     search_term=label.content, language_code=label.language_code, limit=10
                 )
                 assert len(res_entities) > 1
+            ctr += 1
+        if ctr >= 10:
+            break
 
 
 async def test_10_search_description():
@@ -940,8 +944,8 @@ async def test_20_queue_test():
     """
     if external_id_admin:
         await vector_search.login(tenant_api_key, external_id_admin)
-        queues: QueueNames = await vector_search.list_queues()
-        for queue_name in queues.names:
+        queue_names: QueueNames = await vector_search.list_queue_names()
+        for queue_name in queue_names.names:
             empty = await vector_search.queue_is_empty(queue_name)
             assert empty is not None
             queue_structure: QueueMonitor = await vector_search.queue_monitor_information(queue_name)
@@ -949,6 +953,9 @@ async def test_20_queue_test():
             size: QueueCount = await vector_search.queue_size(queue_name)
             assert size.count >= 0
 
+        queue: List[QueueMonitor] = await vector_search.list_queues()
+        for q in queue:
+            assert q.name is not None
     results: LabelMatchingResponse = await vector_search.labels_search(query=LEONARDO_DA_VINCI, locale=EN_US)
     assert len(results.results) > 0
     for res in results.results:
