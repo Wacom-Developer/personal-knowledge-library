@@ -17,22 +17,22 @@ Please contact your Wacom representative for more information.
 
 ## Introduction
 
-In knowledge management there is a distinction between data, information and knowledge.
+In knowledge management there is a distinction between data, information, and knowledge.
 In the domain of digital ink this means:
 
-- **Data** - The equivalent would be the ink strokes
-- **Information** - After using handwriting-, shape-, math-, or other recognition processes ink strokes are converted into machine readable content, such as text, shapes, math representations, other other digital content
-- **Knowledge / Semantics** -  Beyond recognition content needs to be semantically analysed to become semantically understood based on a shared common knowledge.
+- **Data—** The equivalent would be the ink strokes
+- **Information—** After using handwriting-, shape-, math-, or other recognition processes, ink strokes are converted into machine-readable content, such as text, shapes, math representations, other digital content
+- **Knowledge / Semantics** - Beyond recognition content needs to be semantically analyzed to become semantically understood based on shared common knowledge.
 
 The following illustration shows the different layers of knowledge:
 ![Levels of ink knowledge layers](https://github.com/Wacom-Developer/personal-knowledge-library/blob/main/assets/knowledge-levels.png)
 
 For handling semantics, Wacom introduced the Wacom Private Knowledge (WPK) cloud service to manage personal ontologies and its associated personal knowledge graph.
 
-This library provide simplified access to Wacom's personal knowledge cloud service.
+This library provides simplified access to Wacom's personal knowledge cloud service.
 It contains:
 
-- Basic datastructures for Ontology object and entities from the knowledge graph
+- Basic datastructures for an Ontology object and entities from the knowledge graph
 - Clients for the REST APIs
 - Connector for Wikidata public knowledge graph
 
@@ -45,7 +45,7 @@ It contains:
 **Entity service:**
 
 - List all entities
-- Add entities to knowledge graph
+- Add entities to the knowledge graph
 - Access object properties
 
 **Search service:**
@@ -67,7 +67,7 @@ It contains:
 
 **Named Entity Linking service:**
 
-- Linking words to knowledge entities from graph in a given text (Ontology-based Named Entity Linking)
+- Linking words to knowledge entities from the graph in a given text (Ontology-based Named Entity Linking)
 
 **Wikidata connector:**
 
@@ -78,15 +78,15 @@ It contains:
 
 ## Domain Knowledge
 
-The tasks of the ontology within Wacom's private knowledge system is to formalised the domain the technology is used in, such as education-, smart home-, or creative domein.
-The domain model will be the foundation for the entities collected within the knowledge graph, describing real world concepts in a formal language understood by artificial intelligence system:
+The tasks of the ontology within Wacom's private knowledge system are to formalize the domain the technology is used in, such as education-, smart home-, or creative domain.
+The domain model will be the foundation for the entities collected within the knowledge graph, describing real world concepts in a formal language understood by an artificial intelligence system:
 
 - Foundation for structured data, knowledge representation as concepts and relations among concepts
 - Being explicit definitions of shared vocabularies for interoperability
 - Being actionable fragments of explicit knowledge that engines can use for inferencing (Reasoning)
-- Can be used for problem solving
+- Can be used for problem-solving
 
-An ontology defines (specifies) the concepts, relationships, and other distinctions that are relevant for modelling a domain.
+An ontology defines (specifies) the concepts, relationships, and other distinctions that are relevant for modeling a domain.
 
 ## Knowledge Graph
 
@@ -97,7 +97,7 @@ An ontology defines (specifies) the concepts, relationships, and other distincti
 ## Semantic Technology
 
 - Extract knowledge from various sources (Connectors)
-- Linking words to knowledge entities from graph in a given text (Ontology-based Named Entity Linking)
+- Linking words to knowledge entities from the graph in a given text (Ontology-based Named Entity Linking)
 - Enables a smart search functionality which understands the context and finds related documents (Semantic Search)
 
 
@@ -107,7 +107,7 @@ An ontology defines (specifies) the concepts, relationships, and other distincti
 
 For importing entities into the knowledge graph, the tools/import_entities.py script can be used.
 
-The ThingObject support a NDJSON based import format, where the individual JSON files can contain the following structure.
+The ThingObject supports a NDJSON-based import format, where the individual JSON files can contain the following structure.
 
 | Field name             | Subfield name | Data Structure | Description                                                                                    |
 |------------------------|---------------|----------------|------------------------------------------------------------------------------------------------|
@@ -127,33 +127,33 @@ The ThingObject support a NDJSON based import format, where the individual JSON 
 
 ## Access API
 
-The personal knowledge graph backend is implement as a multi-tenancy system.
-Thus, several tenants can be logically separated from each other and different organisations can build their one knowledge graph.
+The personal knowledge graph backend is implemented as a multi-tenancy system.
+Thus, several tenants can be logically separated from each other and different organizations can build their one knowledge graph.
 
 ![Tenant concept](https://github.com/Wacom-Developer/personal-knowledge-library/blob/main/assets/tenant-concept.png)
 
 In general, a tenant with their users, groups, and entities are logically separated.
-Physically the entities are store in the same instance of the Wacom Private Knowledge (WPK) backend database system.
+Physically, the entities are stored in the same instance of the Wacom Private Knowledge (WPK) backend database system.
 
-The user management is rather limited, each organisation must provide their own authentication service and user management.
+The user management is rather limited, each organization must provide their own authentication service and user management.
 The backend only has a reference of the user (*“shadow user”*) by an **external user id**.
 
-The management of tenants is limited to the system owner - Wacom -, as it requires a **tenant management API** key.
+The management of tenants is limited to the system owner —Wacom —, as it requires a **tenant management API** key.
 While users for each tenant can be created by the owner of the **Tenant API Key**.
 You will receive this token from the system owner after the creation of the tenant.
 
 
-> :warning: Store the **Tenant API Key** in a secure key store, as attackers can use the key to harm your system.
+> :warning: Stores the **Tenant API Key** in a secure key store, as attackers can use the key to harm your system.
 
 
-The **Tenant API Key** should be only used by your authentication service to create shadow users and to login your user into the WPK backend.
+The **Tenant API Key** should be only used by your authentication service to create shadow users and to log in your user into the WPK backend.
 After a successful user login, you will receive a token which can be used by the user to create, update, or delete entities and relations.
 
 The following illustration summarizes the flows for creation of tenant and users:
 
 ![Tenant and user creation](https://github.com/Wacom-Developer/personal-knowledge-library/blob/main/assets/tenant-user-creation.png)
 
-The organisation itself needs to implement their own authentication service which:
+The organization itself needs to implement their own authentication service which:
 
 - handles the users and their passwords,
 - controls the personal data of the users,
@@ -166,19 +166,19 @@ The illustration shows how the access token is received from the WPK endpoint:
 
 # Entity API
 
-The entities used within the knowledge graph and the relationship among them is defined within an ontology that is manage with Wacom Ontology Management System (WOMS).
+The entities used within the knowledge graph and the relationship among them are defined within an ontology managed with Wacom Ontology Management System (WOMS).
 
-An entity within the personal knowledge graphs consist of these major parts:
+An entity within the personal knowledge graphs consists of these major parts:
 
-- **Icon** - a visual representation of the entity, for instance a portrait of a person.
-- **URI** - a unique resource identifier of an entity in the graph.
-- **Type** - the type links to the defined concept class in the ontology.
-- **Labels** - labels are the word(s) use in a language for the concept.
-- **Description** - a short abstract that describes the entity.
-- **Literals** - literals are properties of an entity, such as first name of a person. The ontology defines all literals of the concept class as well as its data type.
-- **Relations** - the relationship among different entities is described using relations.
+- **Icon—** a visual representation of the entity, for instance, a portrait of a person.
+- **URI—** a unique resource identifier of an entity in the graph.
+- **Type—** the type links to the defined concept class in the ontology.
+- **Labels—** labels are the word(s) used in a language for the concept.
+- **Description—** a short abstract that describes the entity.
+- **Literals—** literals are properties of an entity, such as the first name of a person. The ontology defines all literals of the concept class as well as its data type.
+- **Relations—** the relationship among different entities is described using relations.
 
-The following illustration provides an example for an entity:
+The following illustration provides an example of an entity:
 
 ![Entity description](https://github.com/Wacom-Developer/personal-knowledge-library/blob/main/assets/entity-description.png)
 
@@ -193,19 +193,19 @@ Moreover, he is also known as _Leonardo di ser Piero da Vinci_ or _ダ・ビン�
 
 ### Labels
 
-Now, in the given example all words that a assigned to the concept are labels.
+Now, in the given example all words that are assigned to the concept are labels.
 The label _Leonardo da Vinci_ is stored in the backend with an additional language code, e.g. _en_.
 
-There is always a main label, which refers to the most common or official name of entity.
+There is always a main label, which refers to the most common or official name of an entity.
 Another example would be Wacom, where _Wacom Co., Ltd._ is the official name while _Wacom_ is commonly used and be considered as an alias.
 
->  :pushpin: For the language code the **ISO 639-1:2002**, codes for the representation of names of languages—Part 1: Alpha-2 code. Read more, [here](https://www.iso.org/standard/22109.html)
+>  :pushpin: For the language code the **ISO 639-1:2002**, codes for the representation language names —Part 1: Alpha-2 code. Read more, [here](https://www.iso.org/standard/22109.html)
 
 ## Samples
 
 ### Entity handling
 
-This samples shows how to work with graph service.
+This samples shows how to work with the graph service.
 
 ```python
 import argparse
@@ -294,8 +294,7 @@ if __name__ == '__main__':
     TENANT_KEY: str = args.tenant
     EXTERNAL_USER_ID: str = args.user
     # Wacom personal knowledge REST API Client
-    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(application_name="Wacom Knowledge Listing",
-                                                                    service_url=args.instance)
+    knowledge_client: WacomKnowledgeService = WacomKnowledgeService(service_url=args.instance, application_name="Wacom Knowledge Listing")
     knowledge_client.login(args.tenant, args.user)
     page_id: Optional[str] = None
     page_number: int = 1
@@ -308,7 +307,7 @@ if __name__ == '__main__':
     leo: Optional[ThingObject] = None
     s_idx: int = 1
     for res_entity in res_entities:
-        #  Entity must be a person and the label match with full string
+        #  Entity must be a person and the label matches with full string
         if res_entity.concept_type == PERSON_CLASS and LEONARDO_DA_VINCI in [la.content for la in res_entity.label]:
             leo = res_entity
             break
@@ -358,7 +357,7 @@ if __name__ == '__main__':
     relations_dict = knowledge_client.relations(uri=artwork_entity_uri)
     for ontology_property, object_property in relations_dict.items():
         print(f'  {object_property}')
-    # You will see that wacom:core#isCreatedBy is automatically inferred as relation as it is the inverse property of
+    # You will see that wacom:core#isCreatedBy is automatically inferred as a relation as it is the inverse property of
     # wacom:core#created.
 
     # Now, more search options
@@ -377,7 +376,7 @@ if __name__ == '__main__':
     art_style: Optional[ThingObject] = None
     s_idx: int = 1
     for entity in res_entities:
-        #  Entity must be a person and the label match with full string
+        #  Entity must be a person and the label matches with full string
         if entity.concept_type == ART_STYLE_CLASS and SELF_PORTRAIT_STYLE in [la.content for la in entity.label]:
             art_style = entity
             break
@@ -409,7 +408,7 @@ if __name__ == '__main__':
     print('-----------------------------------------------------------------------------------------------------------')
     page_id = None
 
-    # Listing all entities which have the type
+    # Listing all entities that have the type
     idx: int = 1
     while True:
         # pull
@@ -530,7 +529,7 @@ if __name__ == '__main__':
         service_url=args.instance,
         service_endpoint=WacomEntityLinkingEngine.SERVICE_ENDPOINT
     )
-    # Use special tenant for testing:  Unit-test tenant
+    # Use special tenant for testing: Unit-test tenant
     user_token, refresh_token, expiration_time = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     entities: List[KnowledgeGraphEntity] = nel_client.\
         link_personal_entities(text=TEXT, language_code=EN_US, auth_key=user_token)
@@ -546,7 +545,7 @@ if __name__ == '__main__':
 
 ### Access Management
 
-The sample shows, how access to entities can be shared with a group of users or the tenant.
+The sample shows how access to entities can be shared with a group of users or the tenant.
 
 ```python
 import argparse
@@ -582,7 +581,7 @@ def create_entity() -> ThingObject:
     # Topic description
     topic_description: List[Description] = [
         Description('Hidden entity to explain access management.', EN_US),
-        Description('Verstecke Entität, um die Zugriffsteuerung zu erlären.', DE_DE)
+        Description('Verstecke Entität, um die Zugriffsteuerung zu erklären.', DE_DE)
     ]
     # Topic
     topic_object: ThingObject = ThingObject(label=topic_labels, concept_type=TOPIC_CLASS, description=topic_description)
@@ -608,7 +607,7 @@ if __name__ == '__main__':
     # Group Management
     group_management: GroupManagementService = GroupManagementService(service_url=args.instance)
     admin_token, refresh_token, expiration_time = user_management.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
-    # Now, we create a users
+    # Now, we create a user
     u1, u1_token, _, _ = user_management.create_user(TENANT_KEY, "u1")
     u2, u2_token, _, _ = user_management.create_user(TENANT_KEY, "u2")
     u3, u3_token, _, _ = user_management.create_user(TENANT_KEY, "u3")
@@ -637,7 +636,7 @@ if __name__ == '__main__':
     g: Group = group_management.create_group("test-group", auth_key=u1_token)
     # Shares the join key with user 2 and user 2 joins
     group_management.join_group(g.id, g.join_key, auth_key=u2_token)
-    # Share entity with group
+    # Share entity with a group
     group_management.add_entity_to_group(g.id, entity_uri, auth_key=u1_token)
     # Now, user 2 should have access
     other_thing: ThingObject = knowledge_client.entity(entity_uri, auth_key=u2_token)
@@ -785,7 +784,7 @@ if __name__ == '__main__':
                                                                     language_code=EN_US, limit=1000)
     leo: Optional[ThingObject] = None
     for entity in res_entities:
-        #  Entity must be a person and the label match with full string
+        #  Entity must be a person and the label matches with full string
         if entity.concept_type == PERSON_TYPE and LEONARDO_DA_VINCI in [la.content for la in entity.label]:
             leo = entity
             break
@@ -815,7 +814,8 @@ from knowledge.base.ontology import ThingObject
 from knowledge.ontomapping import load_configuration
 from knowledge.ontomapping.manager import wikidata_to_thing
 from knowledge.public.relations import wikidata_relations_extractor
-from knowledge.public.wikidata import WikidataSearchResult, WikiDataAPIClient, WikidataThing
+from knowledge.public.wikidata import WikidataSearchResult, WikidataThing
+from knowledge.public.client import WikiDataAPIClient
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
 from knowledge.services.asyncio.group import AsyncGroupManagementService
 from knowledge.services.asyncio.users import AsyncUserManagementService
@@ -838,7 +838,7 @@ def import_entity_from_wikidata(search_term: str, locale: LanguageCode) -> Dict[
     Returns
     -------
     things: Dict[str, ThingObject]
-        Mapping qid to thing object
+        Mapping qid to a thing object
     """
     search_results: List[WikidataSearchResult] = WikiDataAPIClient.search_term(search_term, locale)
     # Load mapping configuration
@@ -890,7 +890,7 @@ async def user_management_sample(tenant_api_key: str, instance: str) -> Tuple[Us
 
 async def clean_up(instance: str, tenant_api_key: str):
     """
-    Clean up sample.
+    Cleanup sample.
     Parameters
     ----------
     instance: str
@@ -915,7 +915,7 @@ async def main(external_user_id: str, tenant_api_key: str, instance: str):
     Parameters
     ----------
     external_user_id: str
-        External Id of the shadow user within the Wacom Personal Knowledge.
+        External id of the shadow user within the Wacom Personal Knowledge.
     tenant_api_key: str
         Tenant api key of the shadow user within the Wacom Personal Knowledge.
     instance: str
@@ -1040,14 +1040,14 @@ def clean_text(text: str, max_length: int = -1) -> str:
     text: str
         Text to clean.
     max_length: int [default=-1]
-        Maximum length of the cleaned text. If length is - 1 then the text is not truncated.
+        Maximum length of the cleaned text. If the length is-1, then the text is not truncated.
 
     Returns
     -------
     str
         Cleaned text.
     """
-    # First remove new lines
+    # First, remove new lines
     text = text.strip().replace('\n', ' ')
     # Then remove multiple spaces
     text = re.sub(r'\s+', ' ', text)
@@ -1119,7 +1119,7 @@ You can find more detailed technical documentation, [here](https://developer-doc
 API documentation is available [here](./docs/).
 
 ## Contributing
-Contribution guidelines are still work in progress.
+Contribution guidelines are still a work in progress.
 
 ## License
 [Apache License 2.0](LICENSE)
