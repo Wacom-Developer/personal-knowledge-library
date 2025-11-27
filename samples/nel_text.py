@@ -90,16 +90,17 @@ if __name__ == "__main__":
     EXTERNAL_USER_ID: str = args.user
     # Wacom personal knowledge REST API Client
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
-        service_url=args.instance, application_name="Named Entities Linking Knowledge access",
+        service_url=args.instance,
+        application_name="Named Entities Linking Knowledge access",
     )
     #  Wacom Named Entities Linking
     nel_client: WacomEntityLinkingEngine = WacomEntityLinkingEngine(
-        service_url=args.instance, service_endpoint=WacomEntityLinkingEngine.SERVICE_ENDPOINT
+        service_url=args.instance
     )
-    # Use special tenant for testing:  Unit-test tenant
+    # Use special tenant for testing: Unit-test tenant
     user_token, refresh_token, expiration_time = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
     entities: List[KnowledgeGraphEntity] = nel_client.link_personal_entities(
-        text=TEXT, language_code=EN_US, auth_key=user_token
+        text=TEXT, auth_key=user_token
     )
     idx: int = 1
     print("-----------------------------------------------------------------------------------------------------------")
