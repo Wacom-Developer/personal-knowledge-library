@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from unittest import TestCase
 
+import loguru
 import pytest
 
 from knowledge.base.language import SUPPORTED_LOCALES, SUPPORTED_LANGUAGES, EN
@@ -34,6 +35,7 @@ DATE_OF_BIRTH: OntologyPropertyReference = OntologyPropertyReference.parse("waco
 WEBSITE: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:core#website")
 INCEPTION: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:education#inception")
 COORDINATE_LOCATION: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:geography#coordinateLocation")
+logger = loguru.logger
 
 
 @pytest.fixture(scope="class")
@@ -82,7 +84,7 @@ class WikidataFlow(TestCase):
     """
 
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
-        application_name="Wacom Knowledge Listing", service_url=os.environ.get("INSTANCE"), service_endpoint="graph/v1"
+        service_url=os.environ.get("INSTANCE"), application_name="Wacom Knowledge Listing"
     )
     tenant_api_key: str = os.environ.get("TENANT_API_KEY")
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get("INSTANCE"))
@@ -112,7 +114,7 @@ class WikidataFlow(TestCase):
     def test_1_wikidata(self):
         """Test the retrieval of entities from Wikidata."""
         # Q762 is Leonardo da Vinci and Q12418 is Mona Lisa
-        print("Retrieving entities from Wikidata...")
+        logger.info("Retrieving entities from Wikidata...")
         entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(["Q762", "Q12418"])
         self.assertEqual(len(entities), 2)
         self.cache.wikidata_things = dict([(e.qid, e) for e in entities])
@@ -153,7 +155,6 @@ class WikidataFlow(TestCase):
         for qid, wiki_thing in self.cache.wikidata_things.items():
             for source, item in wiki_thing.sitelinks.items():
                 if source == "wiki":
-                    print(item)
                     for lang, title in item.titles.items():
                         if lang in SUPPORTED_LANGUAGES:
                             # Get summary
@@ -248,4 +249,4 @@ class WikidataFlow(TestCase):
         self.assertGreater(cache.number_of_cached_properties(), 0)
         for pid in self.cache.WIKIDATA_PIDS:
             prop = cache.property_in_cache(pid)
-            print(prop)
+            self.assertIsNotNone(prop)
