@@ -10,7 +10,7 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from knowledge import logger
+from knowledge import logger, __version__
 from knowledge.base.entity import (
     LanguageCode,
 )
@@ -24,6 +24,7 @@ from knowledge.public.helper import (
     API_LIMIT,
 )
 from knowledge.public.wikidata import WikidataClass, WikidataThing, WikidataSearchResult, WikidataProperty
+from knowledge.services import USER_AGENT_HEADER_FLAG, DEFAULT_TIMEOUT
 
 # Constants
 QUALIFIERS_TAG: str = "QUALIFIERS"
@@ -49,18 +50,49 @@ def chunks(lst: List[str], chunk_size: int):
 
 class WikiDataAPIClient:
     """
-    WikiDataAPIClient
-    -----------------
-    Utility class for the WikiData.
+    Client for performing operations on Wikidata.
 
+    This class provides methods to query Wikidata using SPARQL, retrieve superclasses
+    and subclasses for a given Wikidata entity, and search for terms in Wikidata.
+    It is intended to serve as a convenience interface for interacting with the Wikidata
+    API and working with entity relationships.
+
+    Methods
+    -------
+    sparql_query(query_string: str, wikidata_sparql_url: str = WIKIDATA_SPARQL_URL, max_retries: int = 3)
+        Send a SPARQL query and return the JSON-formatted result.
+
+    superclasses(qid: str) -> Dict[str, WikidataClass]
+        Returns the Wikidata class and its superclasses for a given QID.
+
+    subclasses(qid: str) -> Dict[str, WikidataClass]
+        Returns the Wikidata class and its subclasses for a given QID.
+
+    search_term(search_term: str, language: LanguageCode, url: str = WIKIDATA_SEARCH_URL) -> List[WikidataSearchResult]
+        Search for a term in Wikidata.
     """
 
     def __init__(self):
         pass
 
     @staticmethod
-    def sparql_query(query_string: str, wikidata_sparql_url: str = WIKIDATA_SPARQL_URL, max_retries: int = 3) -> dict:
-        """Send a SPARQL query and return the JSON formatted result.
+    def headers() -> Dict[str, str]:
+        """Return standard headers for Wikidata API requests."""
+        return {
+            USER_AGENT_HEADER_FLAG: (
+                f"Personal Knowledge Library(WikiDataAPIClient)/{__version__}"
+                f"(+https://github.com/Wacom-Developer/personal-knowledge-library)"
+            )
+        }
+
+    @staticmethod
+    def sparql_query(
+        query_string: str,
+        wikidata_sparql_url: str = WIKIDATA_SPARQL_URL,
+        max_retries: int = 3,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> dict:
+        """Send a SPARQL query and return the JSON-formatted result.
 
         Parameters
         -----------
@@ -70,6 +102,8 @@ class WikiDataAPIClient:
           Wikidata SPARQL endpoint to use
         max_retries: int
             Maximum number of retries
+        timeout: int
+            Default timeout.
         """
         # Define the retry policy
         retry_policy: Retry = Retry(
@@ -78,7 +112,7 @@ class WikiDataAPIClient:
             status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
             respect_retry_after_header=True,  # respect the Retry-After header
         )
-
+        headers: Dict[str, str] = WikiDataAPIClient.headers()
         # Create a session and mount the retry adapter
         with requests.Session() as session:
             retry_adapter = HTTPAdapter(max_retries=retry_policy)
@@ -86,7 +120,7 @@ class WikiDataAPIClient:
 
             # Make a request using the session
             response: Response = session.get(
-                wikidata_sparql_url, params={"query": query_string, "format": "json"}, timeout=10000
+                wikidata_sparql_url, params={"query": query_string, "format": "json"}, timeout=timeout, headers=headers
             )
             if response.ok:
                 return response.json()
@@ -173,7 +207,7 @@ class WikiDataAPIClient:
             classes with their subclasses populated.
         """
         # Fetch subclasses
-        query = f"""
+        query: str = f"""
             SELECT DISTINCT ?class ?classLabel ?subclass ?subclassLabel
             WHERE
             {{
@@ -230,7 +264,7 @@ class WikiDataAPIClient:
 
     @staticmethod
     def search_term(
-        search_term: str, language: LanguageCode, url: str = WIKIDATA_SEARCH_URL
+        search_term: str, language: LanguageCode, url: str = WIKIDATA_SEARCH_URL, timeout: int = DEFAULT_TIMEOUT
     ) -> List[WikidataSearchResult]:
         """
         Search for a term in the WikiData.
@@ -242,6 +276,8 @@ class WikiDataAPIClient:
             The language to search in.
         url: str
             The URL of the WikiData search API.
+        timeout: int (Default: DEFAULT_TIMEOUT)
+            The timeout for the request.
 
         Returns
         -------
@@ -256,7 +292,7 @@ class WikiDataAPIClient:
             status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
             respect_retry_after_header=True,  # respect the Retry-After header
         )
-
+        headers: Dict[str, str] = WikiDataAPIClient.headers()
         # Create a session and mount the retry adapter
         with requests.Session() as session:
             retry_adapter = HTTPAdapter(max_retries=retry_policy)
@@ -268,7 +304,7 @@ class WikiDataAPIClient:
                 "search": search_term,
             }
             # Make a request using the session
-            response: Response = session.get(url, params=params, timeout=200000)
+            response: Response = session.get(url, params=params, timeout=timeout, headers=headers)
 
             # Check the response status code
             if not response.ok:
