@@ -2,7 +2,7 @@
 # Copyright © 2021-present Wacom. All rights reserved.
 import enum
 from datetime import datetime
-from typing import Any, Union, Dict, List, Tuple
+from typing import Any, Union, Dict, List, Tuple, Optional
 
 import requests
 from requests import Response
@@ -60,7 +60,7 @@ class User:
     user_id: str
         User id
     external_user_id: str
-        External user id, referencing the user to authentication system.
+        External user id, referencing the user to an authentication system.
     meta_data: Dict[str, Any]
         Metadata associated with user.
     user_roles: List[UserRole]
@@ -160,8 +160,25 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
 
     USER_DETAILS_ENDPOINT: str = f"{WacomServiceAPIClient.USER_ENDPOINT}/internal-id"
 
-    def __init__(self, service_url: str = WacomServiceAPIClient.SERVICE_URL, service_endpoint: str = "graph/v1"):
-        super().__init__("UserManagementServiceAPI", service_url=service_url, service_endpoint=service_endpoint)
+    def __init__(
+        self,
+        service_url: str,
+        application_name: str = "UserManagement Service API",
+        base_auth_url: Optional[str] = None,
+        service_endpoint: str = "graph/v1",
+        verify_calls: bool = True,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+    ):
+        super().__init__(
+            service_url=service_url,
+            application_name=application_name,
+            base_auth_url=base_auth_url,
+            service_endpoint=service_endpoint,
+            verify_calls=verify_calls,
+            max_retries=max_retries,
+            backoff_factor=backoff_factor,
+        )
 
     # ------------------------------------------ Users handling --------------------------------------------------------
 
@@ -171,8 +188,6 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         external_id: str,
         meta_data: Dict[str, str] = None,
         roles: List[UserRole] = None,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Tuple[User, str, str, datetime]:
         """
@@ -188,10 +203,6 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             Meta-data dictionary.
         roles: List[UserRole]
             List of roles.
-        max_retries: int - [optional]
-            Maximum number of retries. [DEFAULT:= 3]
-        backoff_factor: float - [optional]
-            Backoff factor for retries. [DEFAULT:= 0.1]
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]
 
@@ -211,37 +222,34 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}"
-        headers: dict = {
-            USER_AGENT_TAG: self.user_agent,
-            TENANT_API_KEY_FLAG: tenant_key,
-            CONTENT_TYPE_FLAG: "application/json",
-        }
+
         payload: dict = {
             EXTERNAL_USER_ID_TAG: external_id,
             META_DATA_TAG: meta_data if meta_data is not None else {},
             ROLES_TAG: [r.value for r in roles] if roles is not None else [UserRole.USER.value],
         }
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.post(
-                url, headers=headers, json=payload, timeout=timeout, verify=self.verify_calls
+        response: Response = self.request_session.post(
+            url,
+            json=payload,
+            timeout=timeout,
+            verify=self.verify_calls,
+            headers={TENANT_API_KEY_FLAG: tenant_key},
+            ignore_auth=True,
+        )
+        if response.ok:
+            results: Dict[str, Union[str, Dict[str, str], List[str]]] = response.json()
+            try:
+                date_object: datetime = datetime.fromisoformat(results["token"][EXPIRATION_DATE_TAG])
+            except (TypeError, ValueError) as _:
+                date_object: datetime = datetime.now()
+                logger.warning(f'Parsing of expiration date failed. {results["token"][EXPIRATION_DATE_TAG]}')
+            return (
+                User.parse(results["user"]),
+                results["token"]["accessToken"],
+                results["token"]["refreshToken"],
+                date_object,
             )
-            if response.ok:
-                results: Dict[str, Union[str, Dict[str, str], List[str]]] = response.json()
-                try:
-                    date_object: datetime = datetime.fromisoformat(results["token"][EXPIRATION_DATE_TAG])
-                except (TypeError, ValueError) as _:
-                    date_object: datetime = datetime.now()
-                    logger.warning(f'Parsing of expiration date failed. {results["token"][EXPIRATION_DATE_TAG]}')
-                return (
-                    User.parse(results["user"]),
-                    results["token"]["accessToken"],
-                    results["token"]["refreshToken"],
-                    date_object,
-                )
-            raise handle_error("Failed to create user.", response)
+        raise handle_error("Failed to create user.", response)
 
     def update_user(
         self,
@@ -281,7 +289,13 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         }
         params: Dict[str, str] = {USER_ID_TAG: internal_id, EXTERNAL_USER_ID_TAG: external_id}
         response: Response = self.request_session.patch(
-            url, json=payload, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=tenant_key
+            url,
+            json=payload,
+            params=params,
+            timeout=timeout,
+            verify=self.verify_calls,
+            headers={TENANT_API_KEY_FLAG: tenant_key},
+            ignore_auth=True,
         )
         if not response.ok:
             raise handle_error("Updating of user failed.", response)
@@ -292,8 +306,6 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         external_id: str,
         internal_id: str,
         force: bool = False,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
         timeout: int = DEFAULT_TIMEOUT,
     ):
         """Deletes user from tenant.
@@ -307,11 +319,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         internal_id: str
             Internal id of user.
         force: bool
-            If set to true removes all user data including groups and entities.
-        max_retries: int - [optional]
-            Maximum number of retries. [DEFAULT:= 3]
-        backoff_factor: float - [optional]
-            Backoff factor for retries. [DEFAULT:= 0.1]
+            If set to true, removes all user data including groups and entities.
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]
 
@@ -321,24 +329,22 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}"
-        headers: Dict[str, str] = {USER_AGENT_TAG: self.user_agent, TENANT_API_KEY_FLAG: tenant_key}
         params: Dict[str, str] = {USER_ID_TAG: internal_id, EXTERNAL_USER_ID_TAG: external_id, FORCE_TAG: force}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.delete(
-                url, headers=headers, params=params, timeout=timeout, verify=self.verify_calls
-            )
-            if not response.ok:
-                raise handle_error("Deletion of user failed.", response)
+        response: Response = self.request_session.delete(
+            url,
+            params=params,
+            timeout=timeout,
+            verify=self.verify_calls,
+            headers={TENANT_API_KEY_FLAG: tenant_key},
+            ignore_auth=True,
+        )
+        if not response.ok:
+            raise handle_error("Deletion of user failed.", response)
 
     def user_internal_id(
         self,
         tenant_key: str,
         external_id: str,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> str:
         """User internal id.
@@ -349,10 +355,6 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             API key for tenant
         external_id: str
             External id of user
-        max_retries: int - [optional]
-            Maximum number of retries. [DEFAULT:= 3]
-        backoff_factor: float - [optional]
-            Backoff factor for retries. [DEFAULT:= 0.1]
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]
 
@@ -367,27 +369,25 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{UserManagementServiceAPI.USER_DETAILS_ENDPOINT}"
-        headers: dict = {USER_AGENT_TAG: self.user_agent, TENANT_API_KEY_FLAG: tenant_key}
         parameters: Dict[str, str] = {EXTERNAL_USER_ID_TAG: external_id}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, params=parameters, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                response_dict: Dict[str, Any] = response.json()
-                return response_dict[INTERNAL_USER_ID_TAG]
-            raise handle_error("Retrieval of user internal id failed.", response)
+        response: Response = self.request_session.get(
+            url,
+            params=parameters,
+            timeout=timeout,
+            verify=self.verify_calls,
+            headers={TENANT_API_KEY_FLAG: tenant_key},
+            ignore_auth=True,
+        )
+        if response.ok:
+            response_dict: Dict[str, Any] = response.json()
+            return response_dict[INTERNAL_USER_ID_TAG]
+        raise handle_error("Retrieval of user internal id failed.", response)
 
     def listing_users(
         self,
         tenant_key: str,
         offset: int = 0,
         limit: int = 20,
-        max_retries: int = DEFAULT_MAX_RETRIES,
-        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> List[User]:
         """
@@ -398,13 +398,9 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         tenant_key: str
             API key for tenant
         offset: int - [optional]
-            Offset value to define starting position in list. [DEFAULT:= 0]
+            Offset value to define the starting position in a list. [DEFAULT:= 0]
         limit: int - [optional]
             Define the limit of the list size. [DEFAULT:= 20]
-        max_retries: int - [optional]
-            Maximum number of retries. [DEFAULT:= 3]
-        backoff_factor: float - [optional]
-            Backoff factor for retries. [DEFAULT:= 0.1]
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]
 
@@ -414,19 +410,19 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             List of users.
         """
         url: str = f"{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}"
-        headers: Dict[str, str] = {USER_AGENT_TAG: self.user_agent, TENANT_API_KEY_FLAG: tenant_key}
         params: Dict[str, int] = {OFFSET_TAG: offset, LIMIT_TAG: limit}
-        mount_point: str = "https://" if self.service_url.startswith("https") else "http://"
-        with requests.Session() as session:
-            retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=STATUS_FORCE_LIST)
-            session.mount(mount_point, HTTPAdapter(max_retries=retries))
-            response: Response = session.get(
-                url, headers=headers, params=params, timeout=timeout, verify=self.verify_calls
-            )
-            if response.ok:
-                users: List[Dict[str, Any]] = response.json()
-                results: List[User] = []
-                for u in users:
-                    results.append(User.parse(u))
-                return results
-            raise handle_error("Listing of users failed.", response)
+        response: Response = self.request_session.get(
+            url,
+            params=params,
+            timeout=timeout,
+            verify=self.verify_calls,
+            headers={TENANT_API_KEY_FLAG: tenant_key},
+            ignore_auth=True,
+        )
+        if response.ok:
+            users: List[Dict[str, Any]] = response.json()
+            results: List[User] = []
+            for u in users:
+                results.append(User.parse(u))
+            return results
+        raise handle_error("Listing of users failed.", response)
