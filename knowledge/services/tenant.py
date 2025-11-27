@@ -52,15 +52,15 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
     USER_DETAILS_ENDPOINT: str = f"{WacomServiceAPIClient.USER_ENDPOINT}/users"
 
     def __init__(
-            self,
-            tenant_token: str,
-            service_url: str,
-            application_name: str = "Tenant Manager Client",
-            base_auth_url: Optional[str] = None,
-            service_endpoint: str = "graph/v1",
-            verify_calls: bool = True,
-            max_retries: int = DEFAULT_MAX_RETRIES,
-            backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
+        self,
+        tenant_token: str,
+        service_url: str,
+        application_name: str = "Tenant Manager Client",
+        base_auth_url: Optional[str] = None,
+        service_endpoint: str = "graph/v1",
+        verify_calls: bool = True,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
     ):
         super().__init__(
             service_url=service_url,
