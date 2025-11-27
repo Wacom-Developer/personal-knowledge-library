@@ -16,7 +16,7 @@ Classes
     user_id: str
         User id
     external_user_id: str
-        External user id, referencing the user to authentication system.
+        External user id, referencing the user to an authentication system.
     meta_data: Dict[str, Any]
         Metadata associated with user.
     user_roles: List[UserRole]
@@ -53,7 +53,7 @@ Classes
     `user_roles: List[knowledge.services.users.UserRole]`
     :   List of user roles
 
-`UserManagementServiceAPI(service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
+`UserManagementServiceAPI(service_url: str, application_name: str = 'UserManagement Service API', base_auth_url: str | None = None, service_endpoint: str = 'graph/v1', verify_calls: bool = True, max_retries: int = 3, backoff_factor: float = 0.1)`
 :   User-Management Service API
     -----------------------------
     
@@ -81,7 +81,7 @@ Classes
 
     ### Methods
 
-    `create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None, roles: List[knowledge.services.users.UserRole] = None, max_retries: int = 3, backoff_factor: float = 0.1, timeout: int = 60) ‑> Tuple[knowledge.services.users.User, str, str, datetime.datetime]`
+    `create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None, roles: List[knowledge.services.users.UserRole] = None, timeout: int = 60) ‑> Tuple[knowledge.services.users.User, str, str, datetime.datetime]`
     :   Creates a user for a tenant.
         
         Parameters
@@ -94,10 +94,6 @@ Classes
             Meta-data dictionary.
         roles: List[UserRole]
             List of roles.
-        max_retries: int - [optional]
-            Maximum number of retries. [DEFAULT:= 3]
-        backoff_factor: float - [optional]
-            Backoff factor for retries. [DEFAULT:= 0.1]
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]
         
@@ -116,7 +112,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `delete_user(self, tenant_key: str, external_id: str, internal_id: str, force: bool = False, max_retries: int = 3, backoff_factor: float = 0.1, timeout: int = 60)`
+    `delete_user(self, tenant_key: str, external_id: str, internal_id: str, force: bool = False, timeout: int = 60)`
     :   Deletes user from tenant.
         
         Parameters
@@ -128,11 +124,7 @@ Classes
         internal_id: str
             Internal id of user.
         force: bool
-            If set to true removes all user data including groups and entities.
-        max_retries: int - [optional]
-            Maximum number of retries. [DEFAULT:= 3]
-        backoff_factor: float - [optional]
-            Backoff factor for retries. [DEFAULT:= 0.1]
+            If set to true, removes all user data including groups and entities.
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]
         
@@ -141,7 +133,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `listing_users(self, tenant_key: str, offset: int = 0, limit: int = 20, max_retries: int = 3, backoff_factor: float = 0.1, timeout: int = 60) ‑> List[knowledge.services.users.User]`
+    `listing_users(self, tenant_key: str, offset: int = 0, limit: int = 20, timeout: int = 60) ‑> List[knowledge.services.users.User]`
     :   Listing all users configured for this instance.
         
         Parameters
@@ -149,13 +141,9 @@ Classes
         tenant_key: str
             API key for tenant
         offset: int - [optional]
-            Offset value to define starting position in list. [DEFAULT:= 0]
+            Offset value to define the starting position in a list. [DEFAULT:= 0]
         limit: int - [optional]
             Define the limit of the list size. [DEFAULT:= 20]
-        max_retries: int - [optional]
-            Maximum number of retries. [DEFAULT:= 3]
-        backoff_factor: float - [optional]
-            Backoff factor for retries. [DEFAULT:= 0.1]
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]
         
@@ -187,7 +175,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `user_internal_id(self, tenant_key: str, external_id: str, max_retries: int = 3, backoff_factor: float = 0.1, timeout: int = 60) ‑> str`
+    `user_internal_id(self, tenant_key: str, external_id: str, timeout: int = 60) ‑> str`
     :   User internal id.
         
         Parameters
@@ -196,10 +184,6 @@ Classes
             API key for tenant
         external_id: str
             External id of user
-        max_retries: int - [optional]
-            Maximum number of retries. [DEFAULT:= 3]
-        backoff_factor: float - [optional]
-            Backoff factor for retries. [DEFAULT:= 0.1]
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]
         

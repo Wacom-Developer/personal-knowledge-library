@@ -111,7 +111,7 @@ Classes
     `group_users: List`
     :   List of all users that are part of the group.
 
-`GroupManagementService(service_url: str = 'https://private-knowledge.wacom.com', application_name: str = 'Group Management Service', service_endpoint: str = 'graph/v1')`
+`GroupManagementService(service_url: str, application_name: str = 'Group Management Service', service_endpoint: str = 'graph/v1')`
 :   Group Management Service API
     -----------------------------
     The service is managing groups.

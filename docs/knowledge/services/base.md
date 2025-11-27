@@ -71,7 +71,7 @@ Classes
     `verify_calls`
     :   Certificate verification activated.
 
-`RequestsSession(client: RESTAPIClient, pool_connections: int = 10, pool_maxsize: int = 10, max_retries: int = 3, backoff_factor: float = 0.3)`
+`RequestsSession(client: WacomServiceAPIClient, pool_connections: int = 10, pool_maxsize: int = 10, max_retries: int = 3, backoff_factor: float = 0.3)`
 :   Reusable requests session with automatic token management.
     
     This session wrapper provides connection pooling, automatic token refresh,
@@ -185,7 +185,7 @@ Classes
     `request(self, method: str, url: str, headers: Dict[str, str] | None = None, timeout: int = 60, **kwargs) ‑> requests.models.Response`
     :   Execute a request with automatic token handling.
 
-`WacomServiceAPIClient(application_name: str, service_url: str, service_endpoint: str, auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True, max_retries: int = 3, backoff_factor: float = 0.1)`
+`WacomServiceAPIClient(service_url: str, application_name: str = 'Knowledge Client', base_auth_url: str | None = None, service_endpoint: str = 'graph/v1', verify_calls: bool = True, max_retries: int = 3, backoff_factor: float = 0.1)`
 :   Wacom Service API Client
     ------------------------
     Abstract class for Wacom service APIs.
@@ -198,8 +198,6 @@ Classes
         URL of the service
     service_endpoint: str
         Base endpoint
-    auth_service_endpoint: str (Default:= 'graph/v1')
-        Authentication service endpoint
     verify_calls: bool (Default:= True)
         Flag if API calls should be verified.
 
@@ -221,12 +219,6 @@ Classes
 
     ### Class variables
 
-    `SERVICE_URL: str`
-    :   Production service URL
-
-    `STAGING_SERVICE_URL: str`
-    :   Staging service URL
-
     `USER_ENDPOINT: str`
     :
 
@@ -243,6 +235,9 @@ Classes
 
     `auth_endpoint: str`
     :   Authentication endpoint.
+
+    `base_auth_url`
+    :   Base authentication endpoint.
 
     `current_session: knowledge.services.session.RefreshableSession | knowledge.services.session.TimedSession | knowledge.services.session.PermanentSession | None`
     :   Current session.

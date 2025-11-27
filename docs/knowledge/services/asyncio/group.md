@@ -4,7 +4,7 @@ Module knowledge.services.asyncio.group
 Classes
 -------
 
-`AsyncGroupManagementService(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
+`AsyncGroupManagementService(service_url: str, application_name: str = 'Group Management Service', base_auth_url: str | None = None, service_endpoint: str = 'graph/v1', verify_calls: bool = True, timeout: int = 60)`
 :   Group Management Service API
     -----------------------------
     The service is managing groups.
@@ -36,7 +36,7 @@ Classes
     ### Methods
 
     `add_entity_to_group(self, group_id: str, entity_uri: str, auth_key: str | None = None, timeout: int = 60)`
-    :   Adding an entity to group.
+    :   Adding an entity to a group.
         
         Parameters
         ----------
@@ -54,7 +54,7 @@ Classes
             If the tenant service returns an error code.
 
     `add_user_to_group(self, group_id: str, user_id: str, auth_key: str | None = None, timeout: int = 60)`
-    :   Adding a user to group.
+    :   Adding a user to a group.
         
         Parameters
         ----------
@@ -202,7 +202,7 @@ Classes
             If the tenant service returns an error code.
 
     `remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: str | None = None, timeout: int = 60)`
-    :   Remove an entity from group.
+    :   Remove an entity from a group.
         
         Parameters
         ----------
@@ -211,7 +211,7 @@ Classes
         entity_uri: str
             URI of entity
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (in seconds). Default: 60 seconds.
         

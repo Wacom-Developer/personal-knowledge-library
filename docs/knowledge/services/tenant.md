@@ -4,25 +4,39 @@ Module knowledge.services.tenant
 Classes
 -------
 
-`TenantManagementServiceAPI(tenant_token: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
-:   Tenant Management Service API
-    -----------------------------
+`TenantManagementServiceAPI(tenant_token: str, service_url: str, application_name: str = 'Tenant Manager Client', base_auth_url: str | None = None, service_endpoint: str = 'graph/v1', verify_calls: bool = True, max_retries: int = 3, backoff_factor: float = 0.1)`
+:   Handles tenant management services by interacting with a Wacom API client.
     
-    Functionality:
-        - List all tenants
-        - Create tenants
-    
-    This is service is used to manage tenants. Only admins can use this service, as it requires the secret key for
-    tenant administration.
+    This class provides functionalities to create, list, update, and delete tenants.
+    It extends the `WacomServiceAPIClient` base class, leveraging its shared capabilities
+    to interact with the API endpoints.
     
     Parameters
     ----------
     tenant_token: str
-        Tenant Management token
+        Tenant Management token.
     service_url: str
-        URL of the service
-    service_endpoint: str
-        Base endpoint
+        Base URL of the Wacom service.
+    application_name: str = "Tenant Manager Client"
+        Name of the application using the client.
+    base_auth_url: Optional[str] = None
+        Base URL of the authentication service.
+    service_endpoint: str = "tenant"
+        Service endpoint for tenant management.
+    verify_calls: bool = True
+        Verify API calls.
+    max_retries: int = DEFAULT_MAX_RETRIES
+        Maximum number of retries for failed requests.
+    backoff_factor: float = DEFAULT_BACKOFF_FACTOR
+        Backoff factor between retries.
+    
+    
+    Attributes
+    ----------
+    TENANT_ENDPOINT : str
+        API endpoint for tenant-related functionalities.
+    USER_DETAILS_ENDPOINT : str
+        API endpoint for retrieving user details.
 
     ### Ancestors (in MRO)
 

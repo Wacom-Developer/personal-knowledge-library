@@ -4,7 +4,7 @@ Module knowledge.services.asyncio.graph
 Classes
 -------
 
-`AsyncWacomKnowledgeService(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1', timeout: int = 60)`
+`AsyncWacomKnowledgeService(service_url: str, application_name: str, base_auth_url: str | None = None, service_endpoint: str = 'graph/v1', verify_calls: bool = True, timeout: int = 60)`
 :   AsyncWacomKnowledgeService
     ---------------------
     Client for the Semantic Ink Private knowledge system.
@@ -105,7 +105,7 @@ Classes
         Returns
         -------
         entity_map: Dict[str, ThingObject]
-            Map with entity and its URI as key.
+            Map with entity and its URI as a key.
         relations: List[Tuple[str, OntologyPropertyReference, str]]
             List of relations with subject predicate, (Property), and subject
         
@@ -133,8 +133,8 @@ Classes
         Returns
         -------
         update_status: Dict[str, Any]
-            Status per target (depending on the targets of entity and the ones set in the request). If the entity
-            already has the target set, the status will be "Target already exists" for that target,
+            Status per target (depending on the targets of the entity and the ones set in the request). If the entity
+            already has the target set, the status will be "Target already exists" for that target;
             otherwise it will be "UPSERT".
         
         Raises
@@ -143,7 +143,7 @@ Classes
             If the graph service returns an error code
 
     `create_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: str | None = None, ignore_image: bool = False) ‑> str`
-    :   Creates entity in graph.
+    :   Creates entity in the graph.
         
         Parameters
         ----------
@@ -216,10 +216,10 @@ Classes
             Entities URI of the source
         
         relations: Dict[OntologyPropertyReference, List[str]]
-            ObjectProperty property and targets mapping.
+            ObjectProperty property and target mapping.
         
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         
         timeout: int
             Request timeout in seconds (default: 60 seconds)
@@ -235,7 +235,7 @@ Classes
         Parameters
         ----------
         uris: List[str]
-            List of entity URIs. **Remark:** More than 100 entities are not possible in one request
+            List of entity URIs. **Remark: ** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
         auth_key: Optional[str]
@@ -266,9 +266,9 @@ Classes
             If the graph service returns an error code
 
     `entities(self, uris: List[str], locale: knowledge.base.language.LocaleCode | None = None, auth_key: str | None = None, timeout: int = 60) ‑> List[knowledge.base.ontology.ThingObject]`
-    :   Retrieve entities information from personal knowledge, using the  URI as identifier.
+    :   Retrieve entities information from personal knowledge, using the URI as identifier.
         
-        **Remark:** Object properties (relations) must be requested separately.
+        **Remark: ** Object properties (relations) must be requested separately.
         
         Parameters
         ----------
@@ -294,7 +294,7 @@ Classes
     `entity(self, uri: str, auth_key: str | None = None) ‑> knowledge.base.ontology.ThingObject`
     :   Retrieve entity information from personal knowledge, using the URI as identifier.
         
-        **Remark:** Object properties (relations) must be requested separately.
+        **Remark: ** Object properties (relations) must be requested separately.
         
         Parameters
         ----------
@@ -334,7 +334,7 @@ Classes
         entities: List[ThingObject]
             List of entities to import.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -382,7 +382,7 @@ Classes
         next_page_id: Optional[str] = None
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -401,7 +401,7 @@ Classes
         next_page_id: Optional[str] = None
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -418,7 +418,7 @@ Classes
         job_id: str
             ID of the job
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -536,13 +536,13 @@ Classes
     `ontology_update(self, fix: bool = False, auth_key: str | None = None)`
     :   Update the ontology.
         
-        **Remark:**
-        Works for users with role 'TenantAdmin'.
+        **Remark: **
+        Works for users with the role 'TenantAdmin'.
         
         Parameters
         ----------
         fix: bool [default:=False]
-            Fix the ontology if tenant is in inconsistent state.
+            Fix the ontology if the tenant is in an inconsistent state.
         auth_key: Optional[str] [default:=None]
             Auth key from user if not set, the client auth key will be used
         
@@ -652,7 +652,7 @@ Classes
             If the graph service returns an error code.
 
     `search_description(self, search_term: str, language_code: knowledge.base.language.LocaleCode, limit: int = 30, auth_key: str | None = None, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
-    :   Search for matches in description.
+    :   Search for matches in the description.
         
         Parameters
         ----------
@@ -719,7 +719,7 @@ Classes
          literal: OntologyPropertyReference
              Literal used for the search
          pattern: SearchPattern (default:= SearchPattern.REGEX)
-             Search pattern. The chosen search pattern must fit the type of the entity.
+             A search pattern. The chosen search pattern must fit the type of the entity.
          language_code: LocaleCode
              ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
          limit: int (default:= 30)
@@ -851,7 +851,7 @@ Classes
             If the graph service returns an error code.
 
     `update_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: str | None = None, timeout: int = 60)`
-    :   Updates entity in graph.
+    :   Updates entity in the graph.
         
         Parameters
         ----------

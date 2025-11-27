@@ -1,12 +1,6 @@
 Module knowledge.services.asyncio.base
 ======================================
 
-Variables
----------
-
-`cached_resolver: knowledge.services.asyncio.base.CachedResolver`
-:   Cached resolver for aiohttp.
-
 Functions
 ---------
 
@@ -51,7 +45,7 @@ Functions
 Classes
 -------
 
-`AsyncServiceAPIClient(application_name: str = 'Async Knowledge Client', service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1', auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True, timeout: int = 60)`
+`AsyncServiceAPIClient(service_url: str, application_name: str = 'Async Knowledge Client', base_auth_url: str | None = None, service_endpoint: str = 'graph/v1', verify_calls: bool = True, timeout: int = 60)`
 :   Async Wacom Service API Client
     ------------------------------
     Abstract class for Wacom service APIs.
@@ -60,12 +54,14 @@ Classes
     ----------
     service_url: str
         URL of the service
+    base_auth_url: Optional[str] (Default:= None)
+        Authentication URL for local development
     service_endpoint: str
-        Base endpoint
-    auth_service_endpoint: str (Default:= 'graph/v1')
-        Authentication service endpoint
+        Base endpoint for the service
     verify_calls: bool (Default:= True)
         Flag if API calls should be verified.
+    timeout: int (Default:= DEFAULT_TIMEOUT)
+        Timeout for the request in seconds.
 
     ### Ancestors (in MRO)
 
@@ -80,12 +76,6 @@ Classes
     * knowledge.services.asyncio.users.AsyncUserManagementService
 
     ### Class variables
-
-    `SERVICE_URL: str`
-    :   Production service URL
-
-    `STAGING_SERVICE_URL: str`
-    :   Staging service URL
 
     `USER_ENDPOINT: str`
     :
@@ -103,6 +93,9 @@ Classes
 
     `auth_endpoint: str`
     :   Authentication endpoint.
+
+    `base_auth_url`
+    :   Base authentication URL.
 
     `current_session: knowledge.services.session.RefreshableSession | knowledge.services.session.TimedSession | knowledge.services.session.PermanentSession | None`
     :   Current session.
@@ -128,19 +121,13 @@ Classes
 
     ### Methods
 
-    `asyncio_session(self) ‑> aiohttp.client.ClientSession`
-    :   Creates and manages an asynchronous HTTP session.
-        
-        The `session` method ensures that an `aiohttp.ClientSession` is properly created
-        and reused for making HTTP requests. It checks whether there's an existing session
-        that is closed or uninitialized and re-initializes it if required. Thread safety
-        is achieved using an asynchronous lock.
+    `asyncio_session(self) ‑> knowledge.services.asyncio.base.AsyncSession`
+    :   Returns an asynchronous session.
         
         Returns
         -------
-        aiohttp.ClientSession
-            An instance of aiohttp.ClientSession, either previously created or newly
-            instantiated and ready for use in asynchronous operations.
+        session: AsyncSession
+            Asynchronous session
 
     `close(self)`
     :   Closes the asynchronous session if it is open.
@@ -157,8 +144,8 @@ Classes
         ----------
         force_refresh: bool
             Force refresh token
-        force_refresh_timeout: int
-            Force refresh timeout
+        force_refresh_timeout: float
+            Force refresh timeout in seconds
         Returns
         -------
         user_token: str
@@ -259,6 +246,169 @@ Classes
         session_id: str
             Session id
 
+`AsyncSession(client: AsyncServiceAPIClient, timeout: int = 60)`
+:   Represents an asynchronous session manager for making HTTP requests.
+    
+    The `AsyncSession` class is designed to handle and manage asynchronous HTTP
+    requests using the `aiohttp` library. It manages session creation,
+    handles headers, manages authentication, and supports multiple HTTP methods
+    (GET, POST, PUT, DELETE, PATCH). It is intended to simplify structured
+    HTTP requests in an asynchronous context.
+    
+    Parameters
+    ----------
+    client: AsyncServiceAPIClient
+        The client instance.
+    timeout: int
+        The default timeout duration in seconds for requests.
+
+    ### Methods
+
+    `close(self)`
+    :   Closes the existing session asynchronously.
+        
+        This method ensures that the session is properly closed and reset to `None`.
+        It acquires a session lock to guarantee thread-safe operations.
+        
+        Notes
+        -----
+        It is essential to invoke this method to release system resources
+        associated with the session.
+        
+        Raises
+        ------
+        Exception
+            If an error occurs during the session closure operation.
+
+    `delete(self, url: str, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    :   Asynchronously performs an HTTP DELETE request.
+        
+        This method sends a DELETE request to the specified URL with additional
+        optional parameters provided as keyword arguments. It utilizes the
+        `request` method internally for executing the DELETE operation.
+        
+        Parameters
+        ----------
+        url : str
+            The URL to which the DELETE request should be sent.
+        **kwargs
+            Optional parameters to include in the DELETE request, such as
+            headers, data, or additional request configurations.
+        
+        Returns
+        -------
+        aiohttp.ClientResponse
+            The response object resulting from the DELETE request. This
+            provides access to the response data, status, and headers.
+
+    `get(self, url: str, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    :   Asynchronously sends an HTTP GET request to the specified URL.
+        
+        This method allows sending GET requests with optional additional parameters
+        passed through `kwargs`. It leverages the `request` method to handle the
+        operation and returns the corresponding response.
+        
+        Parameters
+        ----------
+        url : str
+            The target URL for the HTTP GET request.
+        **kwargs
+            Additional keyword arguments to configure the GET request. These may
+            include headers, query parameters, or other request-specific options.
+        
+        Returns
+        -------
+        aiohttp.ClientResponse
+            The response object resulting from the GET request, containing status,
+            headers, and body data.
+
+    `patch(self, url: str, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    :   Asynchronously sends a HTTP PATCH request to the specified URL.
+        
+        This method is a coroutine that simplifies sending PATCH requests
+        using the underlying `request` method. It allows adding additional
+        parameters such as headers, data, or query parameters to the request,
+        passed via `**kwargs`. The response is returned as an instance of
+        `aiohttp.ClientResponse`.
+        
+        Parameters
+        ----------
+        url : str
+            The target URL for the HTTP PATCH request.
+        **kwargs
+            Additional request parameters like headers, data, or query parameters.
+        
+        Returns
+        -------
+        aiohttp.ClientResponse
+            The response object resulting from the PATCH request, which provides
+            methods for accessing the content, status, and headers of the HTTP
+            response.
+
+    `post(self, url: str, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    :   Sends an asynchronous HTTP POST request to the specified URL with the given parameters.
+        
+        This method uses the underlying `request` method to perform the HTTP POST
+        operation. Any additional keyword arguments provided will be forwarded
+        to the `request` method for customization of the request. Returns the
+        response object resulting from the POST operation.
+        
+        Parameters
+        ----------
+        url : str
+            The URL to which the POST request will be sent.
+        **kwargs
+            Arbitrary keyword arguments that will be passed to the `request`
+            method, allowing customization of the request (e.g., headers,
+            json data, params).
+        
+        Returns
+        -------
+        aiohttp.ClientResponse
+            Represents the response object from the POST request.
+
+    `put(self, url: str, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    :   Asynchronously performs an HTTP PUT request.
+        
+        The method sends an HTTP PUT request to the specified URL with the given
+        arguments. Typically used to update or create data at the target URL.
+        
+        Parameters
+        ----------
+        url : str
+            The URL to which the PUT request is sent.
+        **kwargs : dict
+            Additional request parameters passed to the underlying request method.
+        
+        Returns
+        -------
+        aiohttp.ClientResponse
+            The response object returned after the PUT request is completed.
+
+    `request(self, method: Literal['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], url: str, headers: Dict[str, str] | None = None, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    :   Executes an HTTP request using the specified method, URL, headers, and additional options.
+        
+        Parameters
+        ----------
+        method : HTTPMethodFunction
+            The HTTP method to execute (e.g., "GET", "POST", "PUT", "DELETE", or "PATCH").
+        url : str
+            The URL to which the request should be sent.
+        headers : Optional[Dict[str, str]]
+            Headers to include in the request. Defaults to None.
+        kwargs : dict
+            Additional arguments to pass to the request method of aiohttp.ClientSession.
+        
+        Returns
+        -------
+        aiohttp.ClientResponse
+            The response object resulting from the HTTP request.
+        
+        Raises
+        ------
+        ValueError
+            If the specified HTTP method is unsupported.
+
 `CachedResolver()`
 :   CachedResolver
     ==============
@@ -275,4 +425,27 @@ Classes
     :   Release resolver
 
     `resolve(self, host: str, port: int = 0, family: int = 2)`
-    :   Return IP address for given hostname
+    :   Resolves a hostname to a list of address information. This is an asynchronous
+        method that fetches the address details for the given hostname. The result
+        includes protocol, host address, port, and family information. The family
+        parameter defaults to IPv4.
+        
+        Parameters
+        ----------
+        host : str
+            The hostname or IP address to be resolved.
+        port : int, optional
+            The port number to include in the resolved information. Defaults to 0.
+        family : int, optional
+            The address family to use for the resolution. Defaults to socket.AF_INET.
+        
+        Returns
+        -------
+        list of dict
+            A list of dictionaries containing resolved address information, including
+            - `hostname`: The original host input.
+            - `host`: The resolved host address.
+            - `port`: The port number.
+            - `family`: The address family used for resolution.
+            - `proto`: Protocol number, set to 0.
+            - `flags`: Address information flags, set to socket.AI_NUMERICHOST.

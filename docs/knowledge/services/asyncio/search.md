@@ -4,7 +4,7 @@ Module knowledge.services.asyncio.search
 Classes
 -------
 
-`AsyncSemanticSearchClient(service_url: str, application_name: str = 'Async Semantic Search ', service_endpoint: str = 'vector/api/v1')`
+`AsyncSemanticSearchClient(service_url: str, application_name: str = 'Async Semantic Search ', base_auth_url: str | None = None, service_endpoint: str = 'vector/api/v1', verify_calls: bool = True, timeout: int = 60)`
 :   Semantic Search Client
     ======================
     Client for searching semantically similar documents and labels.
@@ -60,7 +60,7 @@ Classes
         filters: Dict[str, Any]
             Filters for the search
         auth_key: Optional[str] (Default:= None)
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (default: 60 seconds).
         
@@ -108,7 +108,7 @@ Classes
         filters: Dict[str, Any]
             Filters for the search
         auth_key: Optional[str] (Default:= None)
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (default: 60 seconds).
         
@@ -167,7 +167,7 @@ Classes
         filter_mode: Optional[Literal["AND", "OR"]] = None
             Filter mode for the search. If None is provided, the default is "AND".
         auth_key: Optional[str] (Default:= None)
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (default: 60 seconds).
         Returns
@@ -175,7 +175,7 @@ Classes
         response: LabelMatchingResponse
             Search results response.
 
-    `list_queues(self, auth_key: str | None = None) ‑> knowledge.base.queue.QueueNames`
+    `list_queue_names(self, auth_key: str | None = None) ‑> knowledge.base.queue.QueueNames`
     :   List all available queues in the semantic search service.
         
         Parameters
@@ -187,6 +187,22 @@ Classes
         -------
         queues: QueueNames
             List of queue names.
+        
+        Raises
+        ------
+        WacomServiceException
+            If the request fails.
+
+    `list_queues(self, auth_key: str | None = None) ‑> List[knowledge.base.queue.QueueMonitor]`
+    :   Parameters
+        ----------
+        auth_key: Optional[str] (Default:= None)
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        
+        Returns
+        -------
+        queues: List[QueueMonitor]
+            List of queues.
         
         Raises
         ------
@@ -237,7 +253,7 @@ Classes
 
     `queue_size(self, queue_name: str, auth_key: str | None = None) ‑> knowledge.base.queue.QueueCount`
     :   Gets the size of a specified queue by making an asynchronous request to the service's
-        queue management endpoint. The method interacts with a remote API, utilizing prepared
+        queue management endpoint. The method interacts with a remote API, using prepared
         headers and query parameters, and parses the returned data into the appropriate
         response structure upon a successful response.
         
@@ -260,7 +276,7 @@ Classes
             If the API request fails, an error is raised with the relevant information.
 
     `retrieve_document_chunks(self, locale: knowledge.base.language.LocaleCode, uri: str, auth_key: str | None = None, timeout: int = 60) ‑> List[knowledge.base.search.VectorDBDocument]`
-    :   Retrieve document chunks from vector database. The service is automatically chunking the document into
+    :   Retrieve document chunks from a vector database. The service is automatically chunking the document into
         smaller parts. The chunks are returned as a list of dictionaries, with metadata and content.
         
         Parameters
@@ -270,7 +286,7 @@ Classes
         uri: str
             URI of the document
         auth_key: Optional[str] (Default:= None)
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (default: 60 seconds)
         
@@ -294,7 +310,7 @@ Classes
         uri: str
             URI of the document
         auth_key: Optional[str] (Default:= None)
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (default: 60 seconds)
         

@@ -31,9 +31,29 @@ Classes
     :   Basic type that is recognized.
 
 `BasicType(*args, **kwds)`
-:   Basic type
+:   Enumeration representing basic types of entities.
+    
+    Defines a set of basic entity types used for categorization and identification
+    in various contexts. This enumeration allows for easy comparison, clarity, and
+    definition of specific categories for entities that can be encountered in
+    different scenarios.
+    
+    Attributes
     ----------
-    Basic type of entities use for instance in named entity recognition.
+    UNKNOWN : str
+        Represents an unknown or undefined type.
+    MONEY : str
+        Represents a monetary value or currency-related type.
+    PERSON : str
+        Represents a person or an entity associated with a human being.
+    DATE : str
+        Represents a calendar date.
+    PLACE : str
+        Represents a physical or geographical location.
+    TIME : str
+        Represents a specific point in time or a duration.
+    NUMBER : str
+        Represents a numerical value or type.
 
     ### Ancestors (in MRO)
 
@@ -83,9 +103,22 @@ Classes
     :   Identifier with the knowledge graph.
 
 `EntityType(*args, **kwds)`
-:   Entity types
-    ------------
-    Different types of entities.
+:   Represents different types of entities.
+    
+    This enumeration class categorizes entities into three distinct types: Public,
+    Personal, and Named. These types help to identify whether the entity belongs
+    to a globally accessible knowledge graph, a specific private knowledge source,
+    or if it is a standalone named entity without a linkage to an external knowledge graph.
+    
+    Attributes
+    ----------
+    PUBLIC_ENTITY : int
+        Public entity - Entity from a public knowledge graph.
+    PERSONAL_ENTITY : int
+        Personal entity - Entity from a personal or organizational knowledge
+        graph.
+    NAMED_ENTITY : int
+        Simple entity - Entity type not linked to a knowledge graph.
 
     ### Ancestors (in MRO)
 
@@ -158,10 +191,10 @@ Classes
     :   List of ontology types.
 
     `relevant_type: knowledge.base.ontology.OntologyClassReference`
-    :   Most relevant ontology type. That likes to Wacom's personal knowledge base ontology.
+    :   Most relevant ontology type. That like to Wacom's personal knowledge base ontology.
 
     `thumbnail: str | None`
-    :   Thumbnail to describes the entity.
+    :   Thumbnail to describe the entity.
 
     `token_indexes: List[int] | None`
     :   List of token indexes used to identify the entity.
@@ -170,9 +203,21 @@ Classes
     :   List of tokens used to identify the entity.
 
 `KnowledgeSource(*args, **kwds)`
-:   Knowledge source
-    ----------------
-    List of knowledge sources which a used within Semantic Ink.
+:   KnowledgeSource defines an enumeration for different knowledge sources.
+    
+    This enumeration lists predefined constants representing various sources
+    of knowledge. It helps standardize and unify the representation of external
+    knowledge systems used within an application. Each attribute corresponds
+    to a specific knowledge source, represented as a string.
+    
+    Attributes
+    ----------
+    WIKIDATA : str
+        Wikidata
+    DBPEDIA : str
+        dbpedia
+    WACOM_KNOWLEDGE : str
+        Wacom Personal Knowledge
 
     ### Ancestors (in MRO)
 
@@ -192,7 +237,7 @@ Classes
 `NamedEntity(ref_text: str, start_idx: int, end_idx: int, entity_type: knowledge.nel.base.EntityType)`
 :   NamedEntity
     -----------
-    A named entity which is recognized by recognition engine.
+    A named entity which is recognized by the recognition engine.
     The class contains information on the found entity, found in reference text.
     
     Parameters
@@ -227,7 +272,7 @@ Classes
     :   Reference text for which the entity has been found
 
     `start_idx: int`
-    :   Start index within the text handed to the named entity recognition.
+    :   Start an index within the text handed to the named entity recognition.
 
 `NamedEntityRecognitionProcessor(service_url: str, supported_languages: List[knowledge.base.language.LocaleCode] = None, verify_calls: bool = False)`
 :   NamedEntityRecognitionProcessor
@@ -284,7 +329,7 @@ Classes
         entities: List[NamedEntity]
             List of knowledge named entities.
 
-`PersonalEntityLinkingProcessor(service_url: str = builtins.str, supported_languages: List[str] = None, verify_calls: bool = True)`
+`PersonalEntityLinkingProcessor(service_url: str, application_name: str = 'Semantic Search Client', base_auth_url: str | None = None, service_endpoint: str = 'vector/api/v1', verify_calls: bool = True, max_retries: int = 3, backoff_factor: float = 0.1)`
 :   PersonalEntityLinkingProcessor
     ------------------------------
     Service that links entities to entities in a personal knowledge graph.
@@ -293,8 +338,6 @@ Classes
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: List[str] = None
-        List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
 
@@ -307,6 +350,11 @@ Classes
     ### Descendants
 
     * knowledge.nel.engine.WacomEntityLinkingEngine
+
+    ### Class variables
+
+    `LANGUAGES: List[knowledge.base.language.LocaleCode]`
+    :
 
     ### Instance variables
 
@@ -350,7 +398,7 @@ Classes
 `PublicEntityLinkingProcessor(service_url: str, provider: str = 'external', supported_languages: List[str] = None, verify_calls: bool = False)`
 :   Public Entity Linking
     ---------------------
-    Service that links entities to a public entities in a knowledge graph.
+    Service that links entities to a public entity in a knowledge graph.
     
     Parameters
     ----------
@@ -402,4 +450,4 @@ Classes
         Returns
         -------
         entities: List[KnowledgeGraphEntity]
-            List of knowledge public knowledge entities.
+            List of public knowledge entities.

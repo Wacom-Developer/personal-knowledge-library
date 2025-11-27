@@ -4,7 +4,7 @@ Module knowledge.services.ontology
 Classes
 -------
 
-`OntologyService(application_name: str = 'Ontology Service', service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'ontology/v1', max_retries: int = 3, backoff_factor: float = 0.1)`
+`OntologyService(service_url: str, application_name: str = 'Ontology Service', base_auth_url: str | None = None, service_endpoint: str = 'ontology/v1', max_retries: int = 3, backoff_factor: float = 0.1)`
 :   Ontology API Client
     -------------------
     Client to access the ontology service. Offers the following functionality:

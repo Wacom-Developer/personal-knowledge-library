@@ -57,7 +57,7 @@ Classes
     `SHARED`
     :   Everyone who joined the group can see the entity.
 
-`WacomKnowledgeService(application_name: str = 'Knowledge Client', service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1', auth_service_endpoint: str = 'graph/v1', verify_calls: bool = True, max_retries: int = 3, backoff_factor: float = 0.1)`
+`WacomKnowledgeService(service_url: str, application_name: str = 'Knowledge Client', base_auth_url: str | None = None, service_endpoint: str = 'graph/v1', verify_calls: bool = True, max_retries: int = 3, backoff_factor: float = 0.1)`
 :   WacomKnowledgeService
     ---------------------
     Client for the Semantic Ink Private knowledge system.
@@ -151,14 +151,14 @@ Classes
         depth: int
             Depth of activations
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
         Returns
         -------
         entity_map: Dict[str, ThingObject]
-            Map with entity and its URI as key.
+            Map with entity and its URI as a key.
         relations: List[Tuple[str, OntologyPropertyReference, str]]
             List of relations with subject predicate, (Property), and subject
         
@@ -179,14 +179,14 @@ Classes
         targets: List[Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]]
             List of indexing targets
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
         Returns
         -------
         update_status: Dict[str, Any]
-            Status per target (depending on the targets of entity and the ones set in the request). If the entity
+            Status per target (depending on the targets of the entity and the ones set in the request). If the entity
             already has the target set, the status will be "Target already exists" for that target;
             otherwise it will be "UPSERT".
         
@@ -196,7 +196,7 @@ Classes
             If the graph service returns an error code
 
     `create_entity(self, entity: knowledge.base.ontology.ThingObject, ignore_image: bool = False, auth_key: str | None = None, timeout: int = 60) ‑> str`
-    :   Creates entity in graph.
+    :   Creates entity in the graph.
         
         Parameters
         ----------
@@ -205,7 +205,7 @@ Classes
         ignore_image: bool [default:= False]
             Ignore image.
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int [default:= 5]
             Timeout for the request
         Returns
@@ -219,7 +219,7 @@ Classes
             If the graph service returns an error code
 
     `create_entity_bulk(self, entities: List[knowledge.base.ontology.ThingObject], batch_size: int = 10, ignore_images: bool = False, auth_key: str | None = None, timeout: int = 60) ‑> List[knowledge.base.ontology.ThingObject]`
-    :   Creates entity in graph.
+    :   Creates entity in the graph.
         
         Parameters
         ----------
@@ -230,7 +230,7 @@ Classes
         ignore_images: bool
             Ignore images
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds).
         
@@ -256,7 +256,7 @@ Classes
         target: str
             Entity URI of the target
         auth_key: Optional[str] = None
-            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -290,11 +290,11 @@ Classes
         Parameters
         ----------
         uris: List[str]
-            List of entity URIS. **Remark:** More than 100 entities are not possible in one request
+            List of entity URIS. **Remark: ** More than 100 entities are not possible in one request
         force: bool
             Force deletion process
         auth_key: Optional[str] [default:= None]
-            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -315,7 +315,7 @@ Classes
         force: bool
             Force deletion process
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -325,18 +325,18 @@ Classes
             If the graph service returns an error code
 
     `entities(self, uris: List[str], locale: knowledge.base.language.LocaleCode | None = None, auth_key: str | None = None, timeout: int = 60) ‑> List[knowledge.base.ontology.ThingObject]`
-    :   Retrieve entity information from personal knowledge, using the  URI as identifier.
+    :   Retrieve entity information from personal knowledge, using the URI as identifier.
         
-        **Remark:** Object properties (relations) must be requested separately.
+        **Remark: ** Object properties (relations) must be requested separately.
         
         Parameters
         ----------
         uris: List[str]
-            List of URIs of entities
+            List of entities URIs.
         locale: Optional[LocaleCode]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -351,16 +351,16 @@ Classes
             If the graph service returns an error code or the entity is not found in the knowledge graph
 
     `entity(self, uri: str, auth_key: str | None = None, timeout: int = 60) ‑> knowledge.base.ontology.ThingObject`
-    :   Retrieve entity information from personal knowledge, using the  URI as identifier.
+    :   Retrieve entity information from personal knowledge, using the URI as identifier.
         
-        **Remark:** Object properties (relations) must be requested separately.
+        **Remark: ** Object properties (relations) must be requested separately.
         
         Parameters
         ----------
         uri: str
             URI of entity
         auth_key: Optional[str]
-            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -399,7 +399,7 @@ Classes
         entities: List[ThingObject]
             List of entities to import.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -421,7 +421,7 @@ Classes
         file_path: Path
             Path to the file containing entities in NDJSON format.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -447,7 +447,7 @@ Classes
         next_page_id: Optional[str] = None
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -466,7 +466,7 @@ Classes
         next_page_id: Optional[str] = None
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -483,7 +483,7 @@ Classes
         job_id: str
             ID of the job
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -502,7 +502,7 @@ Classes
         locale: LocaleCode  [default:= EN_US]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored, and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -538,7 +538,7 @@ Classes
         include_relations: bool = [default:=False]
             Include relations in the response.
         auth_key: Optional[str] = [default:=None]
-            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -566,7 +566,7 @@ Classes
         locale: LocaleCode  [default:= EN_US]
             ISO-3166 Country Codes and ISO-639 Language Codes in the format <language_code>_<country>, e.g., en_US.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -583,15 +583,15 @@ Classes
     `ontology_update(self, fix: bool = False, auth_key: str | None = None, timeout: int = 60)`
     :   Update the ontology.
         
-        **Remark:**
-        Works for users with role 'TenantAdmin'.
+        **Remark: **
+        Works for users with the role 'TenantAdmin'.
         
         Parameters
         ----------
         fix: bool [default:=False]
             Fix the ontology if the tenant is in an inconsistent state.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored, and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -603,8 +603,8 @@ Classes
     `rebuild_nel_index(self, nel_index: Literal['Western', 'Japanese'], prune: bool = False, auth_key: str | None = None, timeout: int = 60)`
     :   Rebuild the named entity linking index.
         
-        **Remark:**
-        Works for users with role 'TenantAdmin'
+        **Remark: **
+        Works for users with the role 'TenantAdmin'
         
         Parameters
         ----------
@@ -613,7 +613,7 @@ Classes
         prune: bool
             Prune the index before rebuilding.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -625,15 +625,15 @@ Classes
     `rebuild_vector_search_index(self, prune: bool = False, auth_key: str | None = None, timeout: int = 60)`
     :   Rebuild the vector search index.
         
-        **Remark:**
-        Works for users with role 'TenantAdmin'.
+        **Remark: **
+        Works for users with the role 'TenantAdmin'.
         
         Parameters
         ----------
         prune: bool
             Prune the index before rebuilding.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -645,7 +645,7 @@ Classes
         uri: str
             Entity URI of the source
         auth_key: Optional[str]
-            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         Returns
@@ -668,7 +668,7 @@ Classes
         targets: List[Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]]
             List of indexing targets
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -695,7 +695,7 @@ Classes
         target: str
             Entity uri of the target
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -737,7 +737,7 @@ Classes
             If the graph service returns an error code.
 
     `search_description(self, search_term: str, language_code: knowledge.base.language.LocaleCode, limit: int = 30, next_page_id: str = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
-    :   Search for matches in description.
+    :   Search for matches in the description.
         
         Parameters
         ----------
@@ -750,7 +750,7 @@ Classes
         next_page_id: str (default:=None)
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -780,7 +780,7 @@ Classes
         next_page_id: str (default:=None)
             ID of the next page within pagination.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -806,7 +806,7 @@ Classes
          literal: OntologyPropertyReference
              Literal used for the search
          pattern: SearchPattern (default:= SearchPattern.REGEX)
-             Search pattern. The chosen search pattern must fit the type of the entity.
+             The search pattern. The chosen search pattern must fit the type of the entity.
          language_code: LocaleCode (default:= EN_US)
              ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
          limit: int (default:= 30)
@@ -849,7 +849,7 @@ Classes
          next_page_id: str (default:=None)
              ID of the next page within pagination.
          auth_key: Optional[str] = None
-             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+             If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
          timeout: int
              Timeout for the request (default: 60 seconds)
         
@@ -905,7 +905,7 @@ Classes
         path: Path
            The path of image.
         auth_key: Optional[str] = None
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -950,14 +950,14 @@ Classes
             If the graph service returns an error code.
 
     `update_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: str | None = None, timeout: int = 60)`
-    :   Updates entity in graph.
+    :   Updates entity in the graph.
         
         Parameters
         ----------
         entity: ThingObject
             entity object
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         

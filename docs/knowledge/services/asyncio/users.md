@@ -4,7 +4,7 @@ Module knowledge.services.asyncio.users
 Classes
 -------
 
-`AsyncUserManagementService(application_name: str, service_url: str = 'https://private-knowledge.wacom.com', service_endpoint: str = 'graph/v1')`
+`AsyncUserManagementService(service_url: str, application_name: str = 'UserManagementServiceAPI', base_auth_url: str | None = None, service_endpoint: str = 'graph/v1', verify_calls: bool = True, timeout: int = 60)`
 :   Async User-Management Service API
     ---------------------------------
     Functionality:
@@ -34,7 +34,7 @@ Classes
     ### Methods
 
     `create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None, roles: List[knowledge.services.users.UserRole] = None, timeout: int = 60) ‑> Tuple[knowledge.services.users.User, str, str, datetime.datetime]`
-    :   Creates user for a tenant.
+    :   Creates a user for a tenant.
         
         Parameters
         ----------
@@ -76,7 +76,7 @@ Classes
         internal_id: str
             Internal id of user.
         force: bool
-            If set to true removes all user data including groups and entities.
+            If set to true, removes all user data including groups and entities.
         timeout: int
             Default timeout for the request (in seconds) (Default:= 60 seconds).
         
@@ -93,7 +93,7 @@ Classes
         tenant_key: str
             API key for tenant
         offset: int - [optional]
-            Offset value to define starting position in list. [DEFAULT:= 0]
+            Offset value to define starting position in a list. [DEFAULT:= 0]
         limit: int - [optional]
             Define the limit of the list size. [DEFAULT:= 20]
         timeout: int - [optional]

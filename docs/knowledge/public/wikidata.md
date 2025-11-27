@@ -232,7 +232,7 @@ Classes
     `repository: str`
     :   Repository of the search result.
 
-`WikidataThing(revision: str, qid: str, modified: datetime.datetime, label: Dict[str, knowledge.base.entity.Label] | None = None, aliases: Dict[str, List[knowledge.base.entity.Label]] | None = None, description: Dict[str, knowledge.base.entity.Description] | None = None, sync_time: datetime.datetime = datetime.datetime(2025, 11, 24, 21, 33, 54, 681975))`
+`WikidataThing(revision: str, qid: str, modified: datetime.datetime, label: Dict[str, knowledge.base.entity.Label] | None = None, aliases: Dict[str, List[knowledge.base.entity.Label]] | None = None, description: Dict[str, knowledge.base.entity.Description] | None = None, sync_time: datetime.datetime = datetime.datetime(2025, 11, 27, 10, 2, 56, 635860))`
 :   WikidataEntity
     -----------
     Generic entity within wikidata.
