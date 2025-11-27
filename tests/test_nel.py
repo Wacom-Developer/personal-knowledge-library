@@ -70,9 +70,7 @@ class EntityFlow(TestCase):
     user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get("INSTANCE"))
     ontology: OntologyService = OntologyService(service_url=os.environ.get("INSTANCE"))
     #  Wacom Named Entities Linking
-    nel_client: WacomEntityLinkingEngine = WacomEntityLinkingEngine(
-        service_url=os.environ.get("INSTANCE")
-    )
+    nel_client: WacomEntityLinkingEngine = WacomEntityLinkingEngine(service_url=os.environ.get("INSTANCE"))
 
     """User management service."""
     tenant_api_key: str = os.environ.get("TENANT_API_KEY")
