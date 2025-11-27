@@ -31,14 +31,14 @@ def clean_text(text: str, max_length: int = -1) -> str:
     text: str
         Text to clean.
     max_length: int [default=-1]
-        Maximum length of the cleaned text. If length is - 1 then the text is not truncated.
+        Maximum length of the cleaned text. If the length is-1, then the text is not truncated.
 
     Returns
     -------
     str
         Cleaned text.
     """
-    # First remove new lines
+    # First, remove new lines
     text = text.strip().replace("\n", " ")
     # Then remove multiple spaces
     text = re.sub(r"\s+", " ", text)

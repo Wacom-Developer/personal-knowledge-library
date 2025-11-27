@@ -50,8 +50,8 @@ if __name__ == "__main__":
             thing.reference_id = uuid.uuid4().hex
     thing_map: Dict[str, ThingObject] = {el.default_source_reference_id(): el for el in things}
     knowledge_service = WacomKnowledgeService(
-        application_name="Content Importer",
         service_url=args.instance,
+        application_name="Content Importer",
     )
     knowledge_service.login(args.tenant, args.user)
     total_before = count_things_session(knowledge_service, THING_OBJECT)

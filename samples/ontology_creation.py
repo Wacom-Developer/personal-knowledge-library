@@ -130,7 +130,7 @@ if __name__ == "__main__":
     )
     leo: Optional[ThingObject] = None
     for entity in res_entities:
-        #  Entities must be a person and the label match with full string
+        #  Entities must be a person and the label matches with full string
         if entity.concept_type == PERSON_TYPE and LEONARDO_DA_VINCI in [la.content for la in entity.label]:
             leo = entity
             break

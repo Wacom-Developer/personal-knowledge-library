@@ -101,7 +101,7 @@ if __name__ == "__main__":
     EXTERNAL_USER_ID: str = args.user
     # Wacom personal knowledge REST API Client
     knowledge_client: WacomKnowledgeService = WacomKnowledgeService(
-        application_name="Wacom Knowledge Listing", service_url=args.instance
+        service_url=args.instance, application_name="Wacom Knowledge Listing",
     )
     knowledge_client.login(args.tenant, args.user)
     page_id: Optional[str] = None

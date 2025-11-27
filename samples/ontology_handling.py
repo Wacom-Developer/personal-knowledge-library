@@ -50,7 +50,7 @@ if __name__ == "__main__":
     if session.roles != "TenantAdmin":
         print(f"User {EXTERNAL_USER_ID} is not an admin user.")
         sys.exit(1)
-    # Use special tenant for testing:  Unit-test tenant
+    # Use special tenant for testing: Unit-test tenant
     context: Optional[OntologyContext] = ontology_client.context()
     if not context:
         # No context available. So, let's create one
@@ -61,10 +61,10 @@ if __name__ == "__main__":
         )
         knowledge_client.ontology_update()
         context: Optional[OntologyContext] = ontology_client.context()
-    # All context create for a tenant.
+    # All context creates for a tenant.
     desc = ontology_client.context_metadata(context.context)
     concepts: List[Tuple[OntologyClassReference, OntologyClassReference]] = ontology_client.concepts(context.iri)
-    # All context create for a tenant.
+    # All context creates for a tenant.
     print("-------------------------------------------------------------------------------------------------------")
     print(f" Concepts for: {context.iri}.")
     print("-------------------------------------------------------------------------------------------------------")
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     properties: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]] = ontology_client.properties(
         context.iri
     )
-    # All context create for a tenant.
+    # All context creates for a tenant.
     print("-------------------------------------------------------------------------------------------------------")
     print(f" Properties for: {context.iri}.")
     print("-------------------------------------------------------------------------------------------------------")

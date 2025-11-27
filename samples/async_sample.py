@@ -135,7 +135,7 @@ async def main(external_user_id: str, tenant_api_key: str, instance: str):
         URL of instance
     """
     async_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(
-        application_name="Async sample", service_url=instance
+        service_url=instance, application_name="Async sample"
     )
     permanent_session: PermanentSession = await async_client.login(
         tenant_api_key=tenant_api_key, external_user_id=external_user_id
