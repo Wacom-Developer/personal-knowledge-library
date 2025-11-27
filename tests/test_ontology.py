@@ -25,11 +25,8 @@ class OntologyFlow(TestCase):
     """
 
     # -----------------------------------------------------------------------------------------------------------------
-    user_management: UserManagementServiceAPI = UserManagementServiceAPI(
-        service_url=os.environ.get("INSTANCE")
-    )
-    ontology: OntologyService = OntologyService(service_url=os.environ.get("INSTANCE"),
-                                                service_endpoint="ontology/v1")
+    user_management: UserManagementServiceAPI = UserManagementServiceAPI(service_url=os.environ.get("INSTANCE"))
+    ontology: OntologyService = OntologyService(service_url=os.environ.get("INSTANCE"), service_endpoint="ontology/v1")
 
     """User management service."""
     tenant_api_key: str = os.environ.get("TENANT_API_KEY")
