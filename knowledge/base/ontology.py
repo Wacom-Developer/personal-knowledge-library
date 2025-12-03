@@ -2232,6 +2232,7 @@ class ThingObject:
         alias: List[Label] = []
         descriptions: List[Description] = []
         main_labels: Dict[str, bool] = {}
+        source_reference_id: Optional[str] = entity.get(SOURCE_REFERENCE_ID_TAG)
         for label in entity[LABELS_TAG]:
             if label[LOCALE_TAG] in SUPPORTED_LOCALES:
                 if label[IS_MAIN_TAG]:
@@ -2290,15 +2291,22 @@ class ThingObject:
         )
         if EXTERNAL_USER_ID_TAG in entity:
             thing.owner_external_user_id = entity[EXTERNAL_USER_ID_TAG]
+        ref_id_found: bool = False
         if DATA_PROPERTIES_TAG in entity:
             if isinstance(entity[DATA_PROPERTIES_TAG], dict):
                 for data_property_type_str, data_properties in entity[DATA_PROPERTIES_TAG].items():
                     data_property_type: OntologyPropertyReference = OntologyPropertyReference.parse(
                         data_property_type_str
                     )
+                    if data_property_type == SYSTEM_SOURCE_REFERENCE_ID:
+                        ref_id_found = True
+
                     for data_property in data_properties:
                         language_code: LocaleCode = LocaleCode(data_property[LOCALE_TAG])
                         value: str = data_property[VALUE_TAG]
+                        if source_reference_id != value:
+                            logger.warning(f"Source reference id mismatch: {source_reference_id} != {value}")
+                            raise ValueError(f"Source reference id mismatch: {source_reference_id} != {value}")
                         thing.add_data_property(DataProperty(value, data_property_type, language_code))
             elif isinstance(entity[DATA_PROPERTIES_TAG], list):
                 for data_property in entity[DATA_PROPERTIES_TAG]:
@@ -2307,7 +2315,17 @@ class ThingObject:
                     data_property_type: OntologyPropertyReference = OntologyPropertyReference.parse(
                         data_property[DATA_PROPERTY_TAG]
                     )
+                    if data_property_type == SYSTEM_SOURCE_REFERENCE_ID:
+                        ref_id_found = True
+                        if source_reference_id != value:
+                            logger.warning(f"Source reference id mismatch: {source_reference_id} != {value}")
+                            raise ValueError(f"Source reference id mismatch: {source_reference_id} != {value}")
+
                     thing.add_data_property(DataProperty(value, data_property_type, language_code))
+        if not ref_id_found and source_reference_id:
+            thing.add_data_property(DataProperty(source_reference_id, SYSTEM_SOURCE_REFERENCE_ID))
+        else:
+            logger.warning(f"No source reference id found for {thing.uri}")
         if OBJECT_PROPERTIES_TAG in entity:
             for object_property in entity[OBJECT_PROPERTIES_TAG]:
                 _, obj = ObjectProperty.create_from_dict(object_property)
