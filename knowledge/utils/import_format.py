@@ -121,15 +121,20 @@ def load_import_format(file_path: Path) -> List[ThingObject]:
                 try:
                     cached_entities.append(__import_format_to_thing__(line))
                 except JSONDecodeError as e:
-                    logging.error(f"Error decoding JSON: {e}. Line: {line}")
+                    logging.error(f"[line:={line_number}] Error decoding JSON: {e}.")
+                except Exception as e:
+                    logging.error(f"[line:={line_number}] Error loading entity: {e}.")
+
     else:
         with file_path.open(encoding="utf8") as f:
             # Skip the first line
-            for line in f.readlines():
+            for line_number, line in enumerate(f.readlines()):
                 try:
                     cached_entities.append(__import_format_to_thing__(line))
                 except JSONDecodeError as e:
-                    logging.error(f"Error decoding JSON: {e}. Line: {line}")
+                    logging.error(f"[line:={line_number}] Error decoding JSON: {e}.")
+                except Exception as e:
+                    logging.error(f"[line:={line_number}] - Error parsing import format {e}.")
     return cached_entities
 
 
