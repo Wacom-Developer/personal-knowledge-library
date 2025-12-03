@@ -1,4 +1,4 @@
-2025/12/03 - RELEASE 4.0.2
+2025/12/03 - RELEASE 4.0.3
 ==========================
 - Minor improvements in import format handling
 - Adding exact match filter for semantic search sync client
