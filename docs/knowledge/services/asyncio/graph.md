@@ -123,7 +123,7 @@ Classes
         ----------
         entity_uri: str
             URI of entity
-        targets: List[Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]]
+        targets: List[IndexType]
             List of indexing targets
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
@@ -582,7 +582,7 @@ Classes
         ----------
         entity_uri: str
             URI of entity
-        targets: List[Literal["NEL", "ElasticSearch", "VectorSearchWord", "VectorSearchDocument"]]
+        targets: List[IndexType]
             List of indexing targets
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.

@@ -64,7 +64,8 @@ from knowledge.services import (
     DEFAULT_BACKOFF_FACTOR,
     ENTITIES_TAG,
     NEL_PARAM,
-    IndexType, EXACT_MATCH,
+    IndexType,
+    EXACT_MATCH,
 )
 from knowledge.services.base import (
     WacomServiceAPIClient,

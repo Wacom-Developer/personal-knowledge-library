@@ -1,3 +1,8 @@
+2025/12/03 - RELEASE 4.0.2
+==========================
+- Minor improvements in import format handling
+- Adding exact match filter for semantic search sync client
+
 2025/11/27 - RELEASE 4.0.1
 ==========================
 - Major refactoring of the session management and reusing of the same requests and asyncio session for multiple requests
@@ -7,7 +12,7 @@
 
 2025/11//07 - RELEASE 3.5.0
 ==========================
-- Adding support for new include relations feature of listing entities
+- Adding support for the new include relations feature of listing entities
 - Save import format export now supports export of group ids 
 - Minor fixes and improvements
 

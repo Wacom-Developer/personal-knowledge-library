@@ -766,7 +766,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_labels(self, search_term: str, language_code: knowledge.base.language.LocaleCode, limit: int = 30, next_page_id: str = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_labels(self, search_term: str, language_code: knowledge.base.language.LocaleCode, exact_match: bool = False, limit: int = 30, next_page_id: str = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in labels.
         
         Parameters
@@ -775,6 +775,8 @@ Classes
             Search term.
         language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
+        exact_match: bool  (default:= False)
+            If true, only exact matches are returned.
         limit: int  (default:= 30)
             Size of the page for pagination.
         next_page_id: str (default:=None)
