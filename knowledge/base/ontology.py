@@ -2324,8 +2324,8 @@ class ThingObject:
                     thing.add_data_property(DataProperty(value, data_property_type, language_code))
         if not ref_id_found and source_reference_id:
             thing.add_data_property(DataProperty(source_reference_id, SYSTEM_SOURCE_REFERENCE_ID))
-        else:
-            logger.warning(f"No source reference id found for {thing.uri}")
+        elif not ref_id_found and not source_reference_id:
+            logger.warning(f"No source reference id found for {thing.label[0]}")
         if OBJECT_PROPERTIES_TAG in entity:
             for object_property in entity[OBJECT_PROPERTIES_TAG]:
                 _, obj = ObjectProperty.create_from_dict(object_property)
