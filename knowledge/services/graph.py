@@ -64,7 +64,7 @@ from knowledge.services import (
     DEFAULT_BACKOFF_FACTOR,
     ENTITIES_TAG,
     NEL_PARAM,
-    IndexType,
+    IndexType, EXACT_MATCH,
 )
 from knowledge.services.base import (
     WacomServiceAPIClient,
@@ -1056,6 +1056,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         self,
         search_term: str,
         language_code: LocaleCode,
+        exact_match: bool = False,
         limit: int = 30,
         next_page_id: str = None,
         auth_key: Optional[str] = None,
@@ -1069,6 +1070,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Search term.
         language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
+        exact_match: bool  (default:= False)
+            If true, only exact matches are returned.
         limit: int  (default:= 30)
             Size of the page for pagination.
         next_page_id: str (default:=None)
@@ -1094,6 +1097,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         parameters: Dict[str, Any] = {
             SEARCH_TERM: search_term,
             LOCALE_TAG: language_code,
+            EXACT_MATCH: str(exact_match),
             LIMIT: limit,
             NEXT_PAGE_ID_TAG: next_page_id,
         }
