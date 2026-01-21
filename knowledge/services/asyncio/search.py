@@ -6,7 +6,12 @@ import orjson
 
 from knowledge.base.language import LocaleCode
 from knowledge.base.queue import QueueNames, QueueCount, QueueMonitor
-from knowledge.base.search import DocumentSearchResponse, LabelMatchingResponse, VectorDBDocument
+from knowledge.base.search import (
+    DocumentSearchResponse,
+    LabelMatchingResponse,
+    VectorDBDocument,
+    FilterVectorDocumentsResponse,
+)
 from knowledge.services import (
     DEFAULT_TIMEOUT,
 )
@@ -316,6 +321,66 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             )
         return count
 
+    async def filter_documents(
+        self,
+        locale: str,
+        filters: Optional[Dict[str, Any]] = None,
+        filter_mode: Optional[Literal["AND", "OR"]] = None,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> FilterVectorDocumentsResponse:
+        """
+        Filters documents based on the provided criteria, locale, and other optional
+        parameters. This method sends an asynchronous POST request to the filtering
+        endpoint, allowing users to retrieve filtered documents.
+
+        Parameters
+        ----------
+        locale : str
+            The locale against which the filtering operation is performed.
+
+        filters : Optional[Dict[str, Any]], default=None
+            A dictionary of filters that define the criteria for document filtering.
+            If not provided, the default is an empty dictionary.
+
+        filter_mode : Optional[Literal["AND", "OR"]], default=None
+            Specifies the filter mode to apply: "AND" for matching all filter criteria
+            or "OR" for matching any of the criteria. If not provided, the default is
+            None, which may use a predefined behavior.
+
+        auth_key : Optional[str], default=None
+            An optional authentication key to override the default authorization token
+            for this specific request.
+
+        timeout : int, default=DEFAULT_TIMEOUT
+            The maximum duration in seconds to wait for the filtering operation before
+            a timeout is triggered.
+
+        Returns
+        -------
+        FilterVectorDocumentsResponse
+            The response object containing the filtered documents and any related
+            metadata.
+
+        Raises
+        ------
+        Exception
+            If the filtering operation fails or the server returns an error status code.
+        """
+        url: str = f"{self.service_base_url}documents/filter/"
+        params: Dict[str, Any] = {
+            "metadata": filters if filters else {},
+            "locale": locale,
+        }
+        if filter_mode:
+            params["filter_mode"] = filter_mode
+        session = await self.asyncio_session()
+        response = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
+        if response.ok:
+            response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
+            return FilterVectorDocumentsResponse.from_dict(response_dict)
+        raise await handle_error("Filter documents.", response, parameters=params)
+
     async def document_search(
         self,
         query: str,
@@ -420,6 +485,67 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
             return LabelMatchingResponse.from_dict(response_dict)
         raise await handle_error("Label fuzzy matching failed.", response, parameters=params)
+
+    async def filter_labels(
+        self,
+        locale: str,
+        filters: Optional[Dict[str, Any]] = None,
+        filter_mode: Optional[Literal["AND", "OR"]] = None,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> FilterVectorDocumentsResponse:
+        """
+        Filters labels based on the provided criteria, locale, and other optional
+        parameters. This method sends an asynchronous POST request to the filtering
+        endpoint, allowing users to retrieve filtered documents.
+
+        Parameters
+        ----------
+        locale : str
+            The locale against which the filtering operation is performed.
+
+        filters : Optional[Dict[str, Any]], default=None
+            A dictionary of filters that define the criteria for document filtering.
+            If not provided, the default is an empty dictionary.
+
+        filter_mode : Optional[Literal["AND", "OR"]], default=None
+            Specifies the filter mode to apply: "AND" for matching all filter criteria
+            or "OR" for matching any of the criteria. If not provided, the default is
+            None, which may use a predefined behavior.
+
+        auth_key : Optional[str], default=None
+            An optional authentication key to override the default authorization token
+            for this specific request.
+
+        timeout : int, default=DEFAULT_TIMEOUT
+            The maximum duration in seconds to wait for the filtering operation before
+            a timeout is triggered.
+
+        Returns
+        -------
+        FilterVectorDocumentsResponse
+            The response object containing the filtered documents and any related
+            metadata.
+
+        Raises
+        ------
+        Exception
+            If the filtering operation fails or the server returns an error status code.
+        """
+        url: str = f"{self.service_base_url}labels/filter/"
+        params: Dict[str, Any] = {
+            "metadata": filters if filters else {},
+            "locale": locale,
+        }
+        if filter_mode:
+            params["filter_mode"] = filter_mode
+        session = await self.asyncio_session()
+        response = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
+        if response.ok:
+            response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
+            return FilterVectorDocumentsResponse.from_dict(response_dict)
+        raise await handle_error("Filter labels failed.", response, parameters=params)
+
 
     async def list_queue_names(self, auth_key: Optional[str] = None) -> QueueNames:
         """
