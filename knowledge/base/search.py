@@ -374,6 +374,119 @@ class DocumentSearchResponse:
         )
 
 
+class VectorDocument:
+    """
+    Represents a filtered document with specific metadata, content, and locale.
+
+    This class encapsulates the details of a document, including its unique
+    identifier (content URI), content chunk, metadata, and locale. It provides
+    access to these properties via specific attributes and ensures the proper
+    handling and parsing of metadata.
+
+    Attributes
+    ----------
+    content_uri : str
+        Unique identifier of the content.
+    content_chunk : str
+        Chunk of the document.
+    metadata : Dict[str, Any]
+        Metadata of the search result, excluding `concept_type` and `locale`.
+    locale : LocaleCode
+        Locale of the search result, as derived from the metadata or default
+        value.
+    """
+
+    def __init__(self, content_uri: str, metadata: Dict[str, Any], content: str):
+        self.__content_uri: str = content_uri
+        self.__content: str = content
+        self.__metadata: Dict[str, Any] = metadata
+        self.__concept_type: OntologyClassReference = OntologyClassReference.parse(
+            metadata.get("concept_type", "wacom:core#Thing")
+        )
+        self.__locale: LocaleCode = LocaleCode(metadata.get("locale", "en_US"))
+        if "concept_type" in self.__metadata:
+            del self.__metadata["concept_type"]
+        if "locale" in self.__metadata:
+            del self.__metadata["locale"]
+
+    @property
+    def content_uri(self) -> str:
+        """Unique identifier of the content."""
+        return self.__content_uri
+
+    @property
+    def content_chunk(self) -> str:
+        """Chunk of the document."""
+        return self.__content
+
+    @property
+    def metadata(self) -> Dict[str, Any]:
+        """Metadata of the search result."""
+        return self.__metadata
+
+    @property
+    def locale(self) -> LocaleCode:
+        """Locale of the search result."""
+        return self.__locale
+
+    @property
+    def concept_type(self) -> OntologyClassReference:
+        """Concept type of the search result."""
+        return self.__concept_type
+
+
+class FilterVectorDocumentsResponse:
+    """
+    Representation of a response containing filtered documents.
+
+    This class encapsulates information about documents resulting from a
+    filtering process, including the associated tenant identifier. It
+    provides properties for accessing the list of filtered documents and
+    the tenant ID, and also includes functionality to create an instance
+    from a dictionary representation.
+
+    Attributes
+    ----------
+    results : List[VectorDocument]
+        List of filter document results.
+    tenant_id : str
+        Identifier for the tenant associated with the response.
+    """
+
+    def __init__(self, results: List[VectorDocument], tenant_id: str):
+        self.__results: List[VectorDocument] = results
+        self.__tenant_id: str = tenant_id
+
+    @property
+    def results(self) -> List[VectorDocument]:
+        """List of search results."""
+        return self.__results
+
+    @property
+    def tenant_id(self):
+        """Tenant ID."""
+        return self.__tenant_id
+
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> "FilterVectorDocumentsResponse":
+        """
+        Create a FilterDocumentsResponse from a dictionary.
+        Parameters
+        ----------
+        data: Dict[str, Any]
+            Dictionary with the response data.
+
+        Returns
+        -------
+        FilterVectorDocumentsResponse
+            Filter documents response.
+        """
+        return FilterVectorDocumentsResponse(
+            results=[VectorDocument(**result) for result in data["results"]],
+            tenant_id=data["tenantId"],
+        )
+
+
 class LabelMatchingResponse:
     """
     SemanticSearchResponse
