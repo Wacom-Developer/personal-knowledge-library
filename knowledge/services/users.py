@@ -4,13 +4,10 @@ import enum
 from datetime import datetime
 from typing import Any, Union, Dict, List, Tuple, Optional
 
-import requests
 from requests import Response
-from requests.adapters import HTTPAdapter
-from urllib3 import Retry
 
 from knowledge import logger
-from knowledge.services import EXPIRATION_DATE_TAG, STATUS_FORCE_LIST, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
+from knowledge.services import EXPIRATION_DATE_TAG, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
 from knowledge.services.base import WacomServiceAPIClient, handle_error
 
 # -------------------------------------- Constant flags ----------------------------------------------------------------
