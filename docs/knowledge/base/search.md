@@ -114,6 +114,44 @@ Classes
     `preprocessing_time: float`
     :   Preprocessing time in milliseconds for search query.
 
+`FilterVectorDocumentsResponse(results: List[knowledge.base.search.VectorDocument], tenant_id: str)`
+:   Representation of a response containing filtered documents.
+    
+    This class encapsulates information about documents resulting from a
+    filtering process, including the associated tenant identifier. It
+    provides properties for accessing the list of filtered documents and
+    the tenant ID, and also includes functionality to create an instance
+    from a dictionary representation.
+    
+    Attributes
+    ----------
+    results : List[VectorDocument]
+        List of filter document results.
+    tenant_id : str
+        Identifier for the tenant associated with the response.
+
+    ### Static methods
+
+    `from_dict(data: Dict[str, Any]) ‑> knowledge.base.search.FilterVectorDocumentsResponse`
+    :   Create a FilterDocumentsResponse from a dictionary.
+        Parameters
+        ----------
+        data: Dict[str, Any]
+            Dictionary with the response data.
+        
+        Returns
+        -------
+        FilterVectorDocumentsResponse
+            Filter documents response.
+
+    ### Instance variables
+
+    `results: List[knowledge.base.search.VectorDocument]`
+    :   List of search results.
+
+    `tenant_id`
+    :   Tenant ID.
+
 `LabelMatchingResponse(results: List[knowledge.base.search.LabelSearchResult], max_results: int = 10, stats: knowledge.base.search.LabelSearchStats | None = None)`
 :   SemanticSearchResponse
     ======================
@@ -309,3 +347,40 @@ Classes
 
     `uri: str`
     :   URI of the document.
+
+`VectorDocument(content_uri: str, metadata: Dict[str, Any], content: str)`
+:   Represents a filtered document with specific metadata, content, and locale.
+    
+    This class encapsulates the details of a document, including its unique
+    identifier (content URI), content chunk, metadata, and locale. It provides
+    access to these properties via specific attributes and ensures the proper
+    handling and parsing of metadata.
+    
+    Attributes
+    ----------
+    content_uri : str
+        Unique identifier of the content.
+    content_chunk : str
+        Chunk of the document.
+    metadata : Dict[str, Any]
+        Metadata of the search result, excluding `concept_type` and `locale`.
+    locale : LocaleCode
+        Locale of the search result, as derived from the metadata or default
+        value.
+
+    ### Instance variables
+
+    `concept_type: knowledge.base.ontology.OntologyClassReference`
+    :   Concept type of the search result.
+
+    `content_chunk: str`
+    :   Chunk of the document.
+
+    `content_uri: str`
+    :   Unique identifier of the content.
+
+    `locale: knowledge.base.language.LocaleCode`
+    :   Locale of the search result.
+
+    `metadata: Dict[str, Any]`
+    :   Metadata of the search result.

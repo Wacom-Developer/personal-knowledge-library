@@ -151,6 +151,82 @@ Classes
         WacomServiceException
             If the request fails.
 
+    `filter_documents(self, locale: str, filters: Dict[str, Any] | None = None, filter_mode: Literal['AND', 'OR'] | None = None, auth_key: str | None = None, timeout: int = 60) ‑> knowledge.base.search.FilterVectorDocumentsResponse`
+    :   Filters documents based on the provided criteria, locale, and other optional
+        parameters. This method sends an asynchronous POST request to the filtering
+        endpoint, allowing users to retrieve filtered documents.
+        
+        Parameters
+        ----------
+        locale : str
+            The locale against which the filtering operation is performed.
+        
+        filters : Optional[Dict[str, Any]], default=None
+            A dictionary of filters that define the criteria for document filtering.
+            If not provided, the default is an empty dictionary.
+        
+        filter_mode : Optional[Literal["AND", "OR"]], default=None
+            Specifies the filter mode to apply: "AND" for matching all filter criteria
+            or "OR" for matching any of the criteria. If not provided, the default is
+            None, which may use a predefined behavior.
+        
+        auth_key : Optional[str], default=None
+            An optional authentication key to override the default authorization token
+            for this specific request.
+        
+        timeout : int, default=DEFAULT_TIMEOUT
+            The maximum duration in seconds to wait for the filtering operation before
+            a timeout is triggered.
+        
+        Returns
+        -------
+        FilterVectorDocumentsResponse
+            The response object containing the filtered documents and any related
+            metadata.
+        
+        Raises
+        ------
+        Exception
+            If the filtering operation fails or the server returns an error status code.
+
+    `filter_labels(self, locale: str, filters: Dict[str, Any] | None = None, filter_mode: Literal['AND', 'OR'] | None = None, auth_key: str | None = None, timeout: int = 60) ‑> knowledge.base.search.FilterVectorDocumentsResponse`
+    :   Filters labels based on the provided criteria, locale, and other optional
+        parameters. This method sends an asynchronous POST request to the filtering
+        endpoint, allowing users to retrieve filtered documents.
+        
+        Parameters
+        ----------
+        locale : str
+            The locale against which the filtering operation is performed.
+        
+        filters : Optional[Dict[str, Any]], default=None
+            A dictionary of filters that define the criteria for document filtering.
+            If not provided, the default is an empty dictionary.
+        
+        filter_mode : Optional[Literal["AND", "OR"]], default=None
+            Specifies the filter mode to apply: "AND" for matching all filter criteria
+            or "OR" for matching any of the criteria. If not provided, the default is
+            None, which may use a predefined behavior.
+        
+        auth_key : Optional[str], default=None
+            An optional authentication key to override the default authorization token
+            for this specific request.
+        
+        timeout : int, default=DEFAULT_TIMEOUT
+            The maximum duration in seconds to wait for the filtering operation before
+            a timeout is triggered.
+        
+        Returns
+        -------
+        FilterVectorDocumentsResponse
+            The response object containing the filtered documents and any related
+            metadata.
+        
+        Raises
+        ------
+        Exception
+            If the filtering operation fails or the server returns an error status code.
+
     `labels_search(self, query: str, locale: str, filters: Dict[str, Any] | None = None, max_results: int = 10, filter_mode: Literal['AND', 'OR'] | None = None, auth_key: str | None = None, timeout: int = 60) ‑> knowledge.base.search.LabelMatchingResponse`
     :   Async search for semantically similar labels.
         
