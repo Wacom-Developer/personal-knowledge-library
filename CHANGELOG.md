@@ -1,3 +1,7 @@
+2026/01/21 - RELEASE 4.0.4
+==========================
+- Adding a new function to use filtering of documents endpoint
+
 2025/12/03 - RELEASE 4.0.3
 ==========================
 - Minor improvements in import format handling
