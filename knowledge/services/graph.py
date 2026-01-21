@@ -1100,8 +1100,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             LOCALE_TAG: language_code,
             EXACT_MATCH: str(exact_match),
             LIMIT: limit,
-            NEXT_PAGE_ID_TAG: next_page_id,
         }
+        if next_page_id:
+            parameters[NEXT_PAGE_ID_TAG] = next_page_id
         response: Response = self.request_session.get(
             url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
         )
