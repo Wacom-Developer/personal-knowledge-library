@@ -7,7 +7,7 @@ import orjson
 
 from knowledge import logger
 from knowledge.services import APPLICATION_JSON_HEADER, EXPIRATION_DATE_TAG
-from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error
+from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error, ResponseData, AsyncSession
 from knowledge.services.base import WacomServiceAPIClient
 from knowledge.services.users import (
     UserRole,
@@ -71,8 +71,8 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         self,
         tenant_key: str,
         external_id: str,
-        meta_data: Dict[str, str] = None,
-        roles: List[UserRole] = None,
+        meta_data: Optional[Dict[str, str]] = None,
+        roles: Optional[List[UserRole]] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Tuple[User, str, str, datetime]:
         """
@@ -84,9 +84,9 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             API key for tenant
         external_id: str -
             External id of user identification service.
-        meta_data: Dict[str, str]
+        meta_data: Optional[Dict[str, str]] = None
             Meta-data dictionary.
-        roles: List[UserRole]
+        roles: Optional[List[UserRole]] = None
             List of roles.
         timeout: int
             Denotes the timeout for the request in seconds (default: 60 seconds).
@@ -107,22 +107,22 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{AsyncUserManagementService.USER_ENDPOINT}"
-        headers: dict = {
+        headers: Dict[str, str] = {
             USER_AGENT_TAG: self.user_agent,
             TENANT_API_KEY_FLAG: tenant_key,
             CONTENT_TYPE_FLAG: "application/json",
         }
-        payload: dict = {
+        payload: Dict[str, Any] = {
             EXTERNAL_USER_ID_TAG: external_id,
             META_DATA_TAG: meta_data if meta_data is not None else {},
             ROLES_TAG: [r.value for r in roles] if roles is not None else [UserRole.USER.value],
         }
-        session = await self.asyncio_session()
-        response = await session.post(
+        session: AsyncSession = await self.asyncio_session()
+        response: ResponseData = await session.post(
             url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls, ignore_auth=True
         )
         if response.ok:
-            results: Dict[str, Union[str, Dict[str, str], List[str]]] = await response.json(loads=orjson.loads)
+            results: Dict[str, Union[str, Dict[str, str], List[str]]] = response.content
             try:
                 date_object: datetime = datetime.fromisoformat(results["token"][EXPIRATION_DATE_TAG])
             except (TypeError, ValueError) as _:
@@ -141,7 +141,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         tenant_key: str,
         internal_id: str,
         external_id: str,
-        meta_data: Dict[str, str] = None,
+        meta_data: Optional[Dict[str, str]] = None,
         roles: List[UserRole] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ):
@@ -155,7 +155,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             Internal id of semantic service.
         external_id: str
             External id of user identification service.
-        meta_data: Dict[str, str]
+        meta_data: Optional[Dict[str, str]] = None
             Meta-data dictionary.
         roles: List[UserRole]
             List of roles.
@@ -178,8 +178,8 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             ROLES_TAG: [r.value for r in roles] if roles is not None else [UserRole.USER.value],
         }
         params: Dict[str, str] = {USER_ID_TAG: internal_id, EXTERNAL_USER_ID_TAG: external_id}
-        session = await self.asyncio_session()
-        response = await session.patch(
+        session: AsyncSession = await self.asyncio_session()
+        response: ResponseData = await session.patch(
             url,
             headers=headers,
             json=payload,
@@ -217,8 +217,8 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{AsyncUserManagementService.USER_ENDPOINT}"
         headers: Dict[str, str] = {TENANT_API_KEY_FLAG: tenant_key}
         params: Dict[str, str] = {USER_ID_TAG: internal_id, EXTERNAL_USER_ID_TAG: external_id, FORCE_TAG: str(force)}
-        session = await self.asyncio_session()
-        response = await session.delete(
+        session: AsyncSession = await self.asyncio_session()
+        response: ResponseData = await session.delete(
             url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls, ignore_auth=True
         )
         if not response.ok:
@@ -248,12 +248,12 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{AsyncUserManagementService.USER_DETAILS_ENDPOINT}"
         headers: dict = {TENANT_API_KEY_FLAG: tenant_key}
         parameters: Dict[str, str] = {EXTERNAL_USER_ID_TAG: external_id}
-        session = await self.asyncio_session()
-        response = await session.get(
+        session: AsyncSession = await self.asyncio_session()
+        response: ResponseData = await session.get(
             url, headers=headers, params=parameters, timeout=timeout, verify_ssl=self.verify_calls, ignore_auth=True
         )
         if response.ok:
-            response_dict: Dict[str, Any] = await response.json(loads=orjson.loads)
+            response_dict: Dict[str, Any] = response.content
         else:
             raise await handle_error("Failed to get the user.", response, headers=headers)
         return response_dict[INTERNAL_USER_ID_TAG]
@@ -269,7 +269,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         tenant_key: str
             API key for tenant
         offset: int - [optional]
-            Offset value to define starting position in a list. [DEFAULT:= 0]
+            Offset value to define the starting position in a list. [DEFAULT:= 0]
         limit: int - [optional]
             Define the limit of the list size. [DEFAULT:= 20]
         timeout: int - [optional]
@@ -283,12 +283,12 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}{AsyncUserManagementService.USER_ENDPOINT}"
         headers: Dict[str, str] = {TENANT_API_KEY_FLAG: tenant_key}
         params: Dict[str, int] = {OFFSET_TAG: offset, LIMIT_TAG: limit}
-        session = await self.asyncio_session()
-        response = await session.get(
+        session: AsyncSession = await self.asyncio_session()
+        response: ResponseData = await session.get(
             url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls, ignore_auth=True
         )
         if response.ok:
-            users: List[Dict[str, Any]] = await response.json(loads=orjson.loads)
+            users: List[Dict[str, Any]] = response.content
             results: List[User] = []
             for u in users:
                 results.append(User.parse(u))

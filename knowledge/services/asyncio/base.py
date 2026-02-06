@@ -4,8 +4,9 @@ import asyncio
 import json
 import socket
 import ssl
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Tuple, Dict, Optional, Union, Literal
+from typing import Any, Tuple, Dict, Optional, Union, Literal, List
 
 import aiohttp
 import certifi
@@ -61,6 +62,38 @@ async def cached_getaddrinfo(host: str, *args, **kwargs) -> Any:
     except (OSError, socket.gaierror) as e:
         logger.warning(f"DNS resolution failed for {host}: {e}")
         raise
+
+
+@dataclass
+class ResponseData:
+    """
+    Represents the data returned from an HTTP request.
+
+    The ResponseData dataclass encapsulates the response from an HTTP
+    call by storing whether the call succeeded, the status code
+    received, and the raw content of the response. It is used by
+    client code to distinguish between successful and failed
+    requests and to access the payload returned by the server.
+
+    Attributes
+    ----------
+    ok
+        Boolean flag indicating success of the request.
+    status
+        Numeric status code returned by the server.
+    content
+        Raw payload returned in the response body.
+    url
+        URL of the request.
+    method:
+        Request method.
+    """
+
+    ok: bool
+    status: int
+    content: Union[str, bytes, bool, Dict[str, Any], List[Any]]
+    url: str
+    method: str
 
 
 class CachedResolver(aiohttp.resolver.AbstractResolver):
@@ -253,7 +286,7 @@ class AsyncSession:
         url: str,
         headers: Optional[Dict[str, str]] = None,
         **kwargs,
-    ) -> aiohttp.ClientResponse:
+    ) -> ResponseData:
         """
         Executes an HTTP request using the specified method, URL, headers, and additional options.
 
@@ -270,7 +303,7 @@ class AsyncSession:
 
         Returns
         -------
-        aiohttp.ClientResponse
+        ResponseData
             The response object resulting from the HTTP request.
 
         Raises
@@ -287,19 +320,56 @@ class AsyncSession:
         )
         session: aiohttp.ClientSession = await self._create_session()
         # Use provided timeout or fall back to session default
-        if method == "GET":
-            return await session.get(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
-        if method == "POST":
-            return await session.post(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
-        if method == "PUT":
-            return await session.put(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
-        if method == "DELETE":
-            return await session.delete(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
-        if method == "PATCH":
-            return await session.patch(url=url, headers=request_headers, timeout=request_timeout, **kwargs)
-        raise ValueError(f"Unsupported method: {method}")
 
-    async def get(self, url: str, **kwargs) -> aiohttp.ClientResponse:
+        if method == "GET":
+            async with session.get(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
+                return ResponseData(
+                    ok=response.ok,
+                    content=await AsyncSession._request_content(response),
+                    status=response.status,
+                    url=response.url.human_repr(),
+                    method=response.method,
+                )
+        elif method == "POST":
+            async with session.post(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
+                return ResponseData(
+                    ok=response.ok,
+                    content=await AsyncSession._request_content(response),
+                    status=response.status,
+                    url=response.url.human_repr(),
+                    method=response.method,
+                )
+        elif method == "PUT":
+            async with session.put(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
+                return ResponseData(
+                    ok=response.ok,
+                    content=await AsyncSession._request_content(response),
+                    status=response.status,
+                    url=response.url.human_repr(),
+                    method=response.method,
+                )
+        elif method == "DELETE":
+            async with session.delete(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
+                return ResponseData(
+                    ok=response.ok,
+                    content=await AsyncSession._request_content(response),
+                    status=response.status,
+                    url=response.url.human_repr(),
+                    method=response.method,
+                )
+        elif method == "PATCH":
+            async with session.patch(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
+                return ResponseData(
+                    ok=response.ok,
+                    content=await AsyncSession._request_content(response),
+                    status=response.status,
+                    url=response.url.human_repr(),
+                    method=response.method,
+                )
+        else:
+            raise ValueError(f"Unsupported method: {method}")
+
+    async def get(self, url: str, **kwargs) -> ResponseData:
         """
         Asynchronously sends an HTTP GET request to the specified URL.
 
@@ -317,13 +387,13 @@ class AsyncSession:
 
         Returns
         -------
-        aiohttp.ClientResponse
-            The response object resulting from the GET request, containing status,
+        ResponseData
+            The response object resulting from the get-go request, containing status,
             headers, and body data.
         """
         return await self.request("GET", url, **kwargs)
 
-    async def post(self, url: str, **kwargs) -> aiohttp.ClientResponse:
+    async def post(self, url: str, **kwargs) -> ResponseData:
         """
         Sends an asynchronous HTTP POST request to the specified URL with the given parameters.
 
@@ -343,13 +413,13 @@ class AsyncSession:
 
         Returns
         -------
-        aiohttp.ClientResponse
+        ResponseData
             Represents the response object from the POST request.
 
         """
         return await self.request("POST", url, **kwargs)
 
-    async def put(self, url: str, **kwargs) -> aiohttp.ClientResponse:
+    async def put(self, url: str, **kwargs) -> ResponseData:
         """
         Asynchronously performs an HTTP PUT request.
 
@@ -365,12 +435,12 @@ class AsyncSession:
 
         Returns
         -------
-        aiohttp.ClientResponse
+        ResponseData
             The response object returned after the PUT request is completed.
         """
         return await self.request("PUT", url, **kwargs)
 
-    async def delete(self, url: str, **kwargs) -> aiohttp.ClientResponse:
+    async def delete(self, url: str, **kwargs) -> ResponseData:
         """
         Asynchronously performs an HTTP DELETE request.
 
@@ -388,13 +458,13 @@ class AsyncSession:
 
         Returns
         -------
-        aiohttp.ClientResponse
+        ResponseData
             The response object resulting from the DELETE request. This
             provides access to the response data, status, and headers.
         """
         return await self.request("DELETE", url, **kwargs)
 
-    async def patch(self, url: str, **kwargs) -> aiohttp.ClientResponse:
+    async def patch(self, url: str, **kwargs) -> ResponseData:
         """
         Asynchronously sends a HTTP PATCH request to the specified URL.
 
@@ -402,7 +472,7 @@ class AsyncSession:
         using the underlying `request` method. It allows adding additional
         parameters such as headers, data, or query parameters to the request,
         passed via `**kwargs`. The response is returned as an instance of
-        `aiohttp.ClientResponse`.
+        `ResponseData`.
 
         Parameters
         ----------
@@ -413,14 +483,14 @@ class AsyncSession:
 
         Returns
         -------
-        aiohttp.ClientResponse
+        ResponseData
             The response object resulting from the PATCH request, which provides
             methods for accessing the content, status, and headers of the HTTP
             response.
         """
         return await self.request("PATCH", url, **kwargs)
 
-    async def close(self):
+    async def close(self) -> None:
         """
         Closes the existing session asynchronously.
 
@@ -444,6 +514,44 @@ class AsyncSession:
         # Clear DNS cache to prevent memory leaks
         dns_cache.clear()
 
+    @staticmethod
+    async def _request_content(response: aiohttp.ClientResponse) -> Union[str, bytes, Dict[str, Any], List[Any]]:
+        """
+        Retrieve and decode the body of an aiohttp response.
+
+        Parameters
+        ----------
+        response
+            The aiohttp.ClientResponse instance whose body should be decoded.
+
+        Returns
+        -------
+        Union[str, bytes, Dict[str, Any], List[Any]]
+            Decoded response body.
+
+        Raises
+        ------
+        aiohttp.ContentTypeError
+            If the response content type is not `application/json`.
+        orjson.JSONDecodeError
+            If the response body cannot be parsed as JSON.
+        Exception
+            If an error occurs while decoding the response body as text after a JSON parsing failure.
+
+        """
+        try:
+            if "json" in response.headers.get("Content-Type", "not-set").lower():
+                content = await response.json(encoding="utf-8", loads=orjson.loads)
+            else:
+                content = await response.read()
+        except (aiohttp.ContentTypeError | orjson.JSONDecodeError) as e:
+            logger.warning(f"Failed to decode response body: {e}")
+            try:
+                content = await response.text(encoding="utf-8", errors="ignore")
+            except Exception:
+                content = "Exception occurred while decoding response body."
+        return content
+
     async def __aenter__(self):
         return self
 
@@ -453,7 +561,7 @@ class AsyncSession:
 
 async def handle_error(
     message: str,
-    response: aiohttp.ClientResponse,
+    response: ResponseData,
     parameters: Optional[Dict[str, Any]] = None,
     payload: Optional[Dict[str, Any]] = None,
     headers: Optional[Dict[str, str]] = None,
@@ -465,7 +573,7 @@ async def handle_error(
     ----------
     message: str
         Error message
-    response: aiohttp.ClientResponse
+    response: ResponseData
         Response
     parameters: Optional[Dict[str, Any]] (Default:= None)
         Parameters
@@ -479,19 +587,15 @@ async def handle_error(
     WacomServiceException
         Create exception.
     """
-    try:
-        response_text: str = await response.text()
-    except Exception as _:
-        response_text: str = ""
     return WacomServiceException(
         message,
         method=response.method,
-        url=response.url.human_repr(),
+        url=response.url,
         params=parameters,
         payload=payload,
         headers=headers,
         status_code=response.status,
-        service_response=response_text,
+        service_response=response.content,
     )
 
 
@@ -579,7 +683,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         """
         return self
 
-    async def close(self):
+    async def close(self) -> None:
         """
         Closes the asynchronous session if it is open.
 
@@ -745,7 +849,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         )
 
         if response.ok:
-            response_token: Dict[str, str] = await response.json(loads=orjson.loads)
+            response_token: Dict[str, str] = response.content
             try:
                 date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
             except (TypeError, ValueError) as _:
@@ -787,11 +891,11 @@ class AsyncServiceAPIClient(RESTAPIClient):
         }
         payload: Dict[str, str] = {REFRESH_TOKEN_TAG: refresh_token}
         session = await self.asyncio_session()  # Await the session
-        response = await session.post(
+        response: ResponseData = await session.post(
             url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls, ignore_auth=True
         )
         if response.ok:
-            response_token: Dict[str, str] = await response.json()
+            response_token: Dict[str, str] = response.content
             timestamp_str_truncated: str = ""
             try:
                 timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
