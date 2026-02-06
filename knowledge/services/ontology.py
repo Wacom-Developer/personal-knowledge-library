@@ -24,6 +24,8 @@ from knowledge.base.ontology import (
 from knowledge.services import DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
 from knowledge.services.base import WacomServiceAPIClient, handle_error
 
+__all__ = ["OntologyService"]
+
 # ------------------------------------------------- Constants ----------------------------------------------------------
 BASE_URI_TAG: str = "baseUri"
 COMMENTS_TAG: str = "comments"
@@ -421,7 +423,10 @@ class OntologyService(WacomServiceAPIClient):
         concept_url: str = urllib.parse.quote_plus(property_name)
         param: str = f"context/{context_url}/properties/{concept_url}"
         response: Response = self.request_session.get(
-            f"{self.service_base_url}{param}", overwrite_auth_token=auth_key, verify=self.verify_calls, timeout=timeout
+            f"{self.service_base_url}{param}",
+            overwrite_auth_token=auth_key,
+            verify=self.verify_calls,
+            timeout=timeout,
         )
         if response.ok:
             return OntologyProperty.from_dict(response.json())
@@ -489,7 +494,11 @@ class OntologyService(WacomServiceAPIClient):
         )
 
         response: Response = self.request_session.post(
-            url, overwrite_auth_token=auth_key, json=payload, verify=self.verify_calls, timeout=timeout
+            url,
+            overwrite_auth_token=auth_key,
+            json=payload,
+            verify=self.verify_calls,
+            timeout=timeout,
         )
         if response.ok:
             result_dict: Dict[str, str] = response.json()
@@ -558,7 +567,11 @@ class OntologyService(WacomServiceAPIClient):
         )
 
         response: Response = self.request_session.put(
-            url, overwrite_auth_token=auth_key, json=payload, verify=self.verify_calls, timeout=timeout
+            url,
+            overwrite_auth_token=auth_key,
+            json=payload,
+            verify=self.verify_calls,
+            timeout=timeout,
         )
         if response.ok:
             return response.json()
@@ -596,7 +609,10 @@ class OntologyService(WacomServiceAPIClient):
         concept_url: str = urllib.parse.quote_plus(reference.iri)
         url: str = f"{self.service_base_url}context/{context_url}/concepts/{concept_url}"
         response: Response = self.request_session.delete(
-            url, overwrite_auth_token=auth_key, verify=self.verify_calls, timeout=timeout
+            url,
+            overwrite_auth_token=auth_key,
+            verify=self.verify_calls,
+            timeout=timeout,
         )
         if not response.ok:
             raise handle_error("Failed to delete concept", response)
@@ -802,7 +818,10 @@ class OntologyService(WacomServiceAPIClient):
         property_url: str = urllib.parse.quote_plus(reference.iri)
         url: str = f"{self.service_base_url}context/{context_url}/properties/{property_url}"
         response: Response = self.request_session.delete(
-            url, verify=self.verify_calls, timeout=timeout, overwrite_auth_token=auth_key
+            url,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
             raise handle_error("Failed to delete property", response)
@@ -909,7 +928,7 @@ class OntologyService(WacomServiceAPIClient):
         WacomServiceException
             Raised if the ontology service returns an error code.
         """
-        url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{name}{"/force" if force else ""}'
+        url: str = f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{name}{'/force' if force else ''}"
 
         response: Response = self.request_session.delete(
             url,

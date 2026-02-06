@@ -6,13 +6,19 @@ from requests import Response
 
 from knowledge.base.language import LocaleCode
 from knowledge.base.queue import QueueMonitor, QueueCount, QueueNames
-from knowledge.base.search import DocumentSearchResponse, LabelMatchingResponse, VectorDBDocument
+from knowledge.base.search import (
+    DocumentSearchResponse,
+    LabelMatchingResponse,
+    VectorDBDocument,
+)
 from knowledge.services import (
     DEFAULT_TIMEOUT,
     DEFAULT_MAX_RETRIES,
     DEFAULT_BACKOFF_FACTOR,
 )
 from knowledge.services.base import WacomServiceAPIClient, handle_error
+
+__all__ = ["SemanticSearchClient"]
 
 
 class SemanticSearchClient(WacomServiceAPIClient):
@@ -89,7 +95,11 @@ class SemanticSearchClient(WacomServiceAPIClient):
         )
         if response.ok:
             return [VectorDBDocument(elem) for elem in response.json()]
-        raise handle_error("Failed to retrieve the document.", response, parameters={"locale": locale, "uri": uri})
+        raise handle_error(
+            "Failed to retrieve the document.",
+            response,
+            parameters={"locale": locale, "uri": uri},
+        )
 
     def retrieve_labels(
         self,
@@ -131,7 +141,11 @@ class SemanticSearchClient(WacomServiceAPIClient):
         )
         if response.ok:
             return [VectorDBDocument(elem) for elem in response.json()]
-        raise handle_error("Failed to retrieve the labels.", response, parameters={"locale": locale, "uri": uri})
+        raise handle_error(
+            "Failed to retrieve the labels.",
+            response,
+            parameters={"locale": locale, "uri": uri},
+        )
 
     def count_documents(
         self,
@@ -211,11 +225,18 @@ class SemanticSearchClient(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}documents/count/filter/"
         response: Response = self.request_session.post(
-            url, json={"locale": locale, "filter": filters}, timeout=timeout, overwrite_auth_token=auth_key
+            url,
+            json={"locale": locale, "filter": filters},
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             return response.json().get("count", 0)
-        raise handle_error("Counting documents failed.", response, parameters={"locale": locale, "filter": filters})
+        raise handle_error(
+            "Counting documents failed.",
+            response,
+            parameters={"locale": locale, "filter": filters},
+        )
 
     def count_labels(
         self,
@@ -300,7 +321,11 @@ class SemanticSearchClient(WacomServiceAPIClient):
         )
         if response.ok:
             return response.json().get("count", 0)
-        raise handle_error("Counting labels failed.", response, parameters={"locale": locale, "filter": filters})
+        raise handle_error(
+            "Counting labels failed.",
+            response,
+            parameters={"locale": locale, "filter": filters},
+        )
 
     def document_search(
         self,

@@ -6,6 +6,74 @@ from typing import Any, List, Dict, Union
 
 from knowledge.base.language import LocaleCode, LanguageCode, EN_US
 
+__all__ = [
+    # Exceptions
+    "ServiceException",
+    "KnowledgeException",
+    # Constants
+    "RDF_SYNTAX_NS_TYPE",
+    "RDF_SCHEMA_COMMENT",
+    "RDF_SCHEMA_LABEL",
+    "ALIAS_TAG",
+    "DATA_PROPERTY_TAG",
+    "VALUE_TAG",
+    "LANGUAGE_TAG",
+    "LOCALE_TAG",
+    "DATA_PROPERTIES_TAG",
+    "SEND_TO_NEL_TAG",
+    "SEND_VECTOR_INDEX_TAG",
+    "SOURCE_REFERENCE_ID_TAG",
+    "EXTERNAL_USER_ID_TAG",
+    "SOURCE_SYSTEM_TAG",
+    "OBJECT_PROPERTIES_TAG",
+    "OWNER_TAG",
+    "OWNER_ID_TAG",
+    "GROUP_IDS",
+    "LOCALIZED_CONTENT_TAG",
+    "STATUS_FLAG_TAG",
+    "CONTENT_TAG",
+    "URI_TAG",
+    "URIS_TAG",
+    "FORCE_TAG",
+    "ERRORS_TAG",
+    "TEXT_TAG",
+    "TYPE_TAG",
+    "IMAGE_TAG",
+    "DESCRIPTION_TAG",
+    "COMMENT_TAG",
+    "COMMENTS_TAG",
+    "DESCRIPTIONS_TAG",
+    "REPOSITORY_TAG",
+    "DISPLAY_TAG",
+    "USE_NEL_TAG",
+    "USE_VECTOR_INDEX_TAG",
+    "USE_VECTOR_DOCUMENT_INDEX_TAG",
+    "USE_FULLTEXT_TAG",
+    "TARGETS_TAG",
+    "VISIBILITY_TAG",
+    "RELATIONS_TAG",
+    "INCLUDE_RELATIONS_TAG",
+    "LABELS_TAG",
+    "IS_MAIN_TAG",
+    "DATA_TYPE_TAG",
+    "RELATION_TAG",
+    "OUTGOING_TAG",
+    "INCOMING_TAG",
+    "TENANT_RIGHTS_TAG",
+    "INFLECTION_CONCEPT_CLASS",
+    "INFLECTION_SETTING",
+    "INFLECTION_CASE_SENSITIVE",
+    "INDEXING_NEL_TARGET",
+    "INDEXING_VECTOR_SEARCH_TARGET",
+    "INDEXING_VECTOR_SEARCH_DOCUMENT_TARGET",
+    "INDEXING_FULLTEXT_TARGET",
+    # Classes
+    "EntityStatus",
+    "LocalizedContent",
+    "Label",
+    "Description",
+]
+
 
 #  ---------------------------------------- Exceptions -----------------------------------------------------------------
 class ServiceException(Exception):
@@ -156,7 +224,9 @@ class Label(LocalizedContent):
 
     @staticmethod
     def create_from_dict(
-        dict_label: Dict[str, Any], tag_name: str = CONTENT_TAG, locale_name: str = LOCALE_TAG
+        dict_label: Dict[str, Any],
+        tag_name: str = CONTENT_TAG,
+        locale_name: str = LOCALE_TAG,
     ) -> "Label":
         """
         Create a label from a dictionary.
@@ -179,7 +249,11 @@ class Label(LocalizedContent):
         if locale_name not in dict_label:
             raise ValueError("Dict is does not contain a language code")
         if IS_MAIN_TAG in dict_label:
-            return Label(dict_label[tag_name], LocaleCode(dict_label[locale_name]), dict_label[IS_MAIN_TAG])
+            return Label(
+                dict_label[tag_name],
+                LocaleCode(dict_label[locale_name]),
+                dict_label[IS_MAIN_TAG],
+            )
         return Label(dict_label[tag_name], LocaleCode(dict_label[locale_name]))
 
     @staticmethod
@@ -209,7 +283,11 @@ class Label(LocalizedContent):
             Dictionary containing the object's content, language code, and main flag.
             The dictionary keys are ``CONTENT_TAG``, ``LOCALE_TAG``, and ``IS_MAIN_TAG`` respectively.
         """
-        return {CONTENT_TAG: self.content, LOCALE_TAG: self.language_code, IS_MAIN_TAG: self.main}
+        return {
+            CONTENT_TAG: self.content,
+            LOCALE_TAG: self.language_code,
+            IS_MAIN_TAG: self.main,
+        }
 
 
 class Description(LocalizedContent):
@@ -231,7 +309,9 @@ class Description(LocalizedContent):
 
     @staticmethod
     def create_from_dict(
-        dict_description: Dict[str, Any], tag_name: str = DESCRIPTION_TAG, locale_name: str = LOCALE_TAG
+        dict_description: Dict[str, Any],
+        tag_name: str = DESCRIPTION_TAG,
+        locale_name: str = LOCALE_TAG,
     ) -> "Description":
         """
         Create a description from a dictionary.

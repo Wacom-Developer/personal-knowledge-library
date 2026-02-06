@@ -6,7 +6,27 @@ from typing import Optional, List
 
 from knowledge.base.language import LocaleCode, EN_US, DE_DE, JA_JP
 from knowledge.base.ontology import THING_CLASS, OntologyClassReference
-from knowledge.services.base import WacomServiceAPIClient, RESTAPIClient, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
+from knowledge.services.base import (
+    WacomServiceAPIClient,
+    RESTAPIClient,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_BACKOFF_FACTOR,
+)
+
+__all__ = [
+    # Enums
+    "EntityType",
+    "KnowledgeSource",
+    "BasicType",
+    # Classes
+    "EntitySource",
+    "NamedEntity",
+    "KnowledgeGraphEntity",
+    "BasicNamedEntity",
+    "PersonalEntityLinkingProcessor",
+    "NamedEntityRecognitionProcessor",
+    "PublicEntityLinkingProcessor",
+]
 
 
 class EntityType(Enum):
@@ -378,7 +398,11 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
 
     @abc.abstractmethod
     def link_personal_entities(
-        self, text: str, language_code: LocaleCode = EN_US, auth_key: Optional[str] = None, max_retries: int = 5
+        self,
+        text: str,
+        language_code: LocaleCode = EN_US,
+        auth_key: Optional[str] = None,
+        max_retries: int = 5,
     ) -> List[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by
@@ -442,7 +466,10 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
     """
 
     def __init__(
-        self, service_url: str, supported_languages: Optional[List[str]] = None, verify_calls: bool = False
+        self,
+        service_url: str,
+        supported_languages: Optional[List[str]] = None,
+        verify_calls: bool = False,
     ) -> None:
         super().__init__(
             application_name="Named Entity Linking",

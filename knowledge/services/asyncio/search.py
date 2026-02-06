@@ -15,7 +15,14 @@ from knowledge.base.search import (
 from knowledge.services import (
     DEFAULT_TIMEOUT,
 )
-from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error, AsyncSession, ResponseData
+from knowledge.services.asyncio.base import (
+    AsyncServiceAPIClient,
+    handle_error,
+    AsyncSession,
+    ResponseData,
+)
+
+__all__ = ["AsyncSemanticSearchClient"]
 
 
 class AsyncSemanticSearchClient(AsyncServiceAPIClient):
@@ -53,7 +60,11 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         )
 
     async def retrieve_document_chunks(
-        self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
+        self,
+        locale: LocaleCode,
+        uri: str,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> List[VectorDBDocument]:
         """
         Retrieve document chunks from a vector database. The service is automatically chunking the document into
@@ -83,7 +94,10 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}documents/"
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(
-            url, params={"locale": locale, "uri": uri}, timeout=timeout, overwrite_auth_token=auth_key
+            url,
+            params={"locale": locale, "uri": uri},
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in response.content]
@@ -96,7 +110,11 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         return docs
 
     async def retrieve_labels(
-        self, locale: LocaleCode, uri: str, auth_key: Optional[str] = None, timeout: int = DEFAULT_TIMEOUT
+        self,
+        locale: LocaleCode,
+        uri: str,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> List[VectorDBDocument]:
         """
         Retrieve labels from a vector database.
@@ -125,7 +143,10 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}labels/"
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(
-            url, params={"locale": locale, "uri": uri}, timeout=timeout, overwrite_auth_token=auth_key
+            url,
+            params={"locale": locale, "uri": uri},
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in response.content]
@@ -175,7 +196,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(url, params=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
-            count: int = (response.content).get("count", 0)
+            count: int = response.content.get("count", 0)
         else:
             raise await handle_error("Counting documents failed.", response, parameters={"locale": locale})
         return count
@@ -214,10 +235,13 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}documents/count/filter/"
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.post(
-            url, json={"locale": locale, "filter": filters}, timeout=timeout, overwrite_auth_token=auth_key
+            url,
+            json={"locale": locale, "filter": filters},
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
-            count: int = (response.content).get("count", 0)
+            count: int = response.content.get("count", 0)
         else:
             raise await handle_error(
                 "Counting documents failed.",
@@ -266,7 +290,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(url, params=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
-            count: int = (response.content).get("count", 0)
+            count: int = response.content.get("count", 0)
         else:
             raise await handle_error("Counting labels failed.", response, parameters={"locale": locale})
         return count
@@ -305,7 +329,10 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}labels/count/filter/"
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.post(
-            url, json={"locale": locale, "filter": filters}, timeout=timeout, overwrite_auth_token=auth_key
+            url,
+            json={"locale": locale, "filter": filters},
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             count: int = response.content.get("count", 0)

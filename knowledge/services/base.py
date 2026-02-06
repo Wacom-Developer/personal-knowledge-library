@@ -22,7 +22,24 @@ from knowledge.services import (
     APPLICATION_JSON_HEADER,
     EXTERNAL_USER_ID,
 )
-from knowledge.services.session import TokenManager, RefreshableSession, TimedSession, PermanentSession
+from knowledge.services.session import (
+    TokenManager,
+    RefreshableSession,
+    TimedSession,
+    PermanentSession,
+)
+
+__all__ = [
+    "WacomServiceException",
+    "RequestsSession",
+    "RESTAPIClient",
+    "WacomServiceAPIClient",
+    "format_exception",
+    "handle_error",
+    "STATUS_FORCE_LIST",
+    "DEFAULT_BACKOFF_FACTOR",
+    "DEFAULT_MAX_RETRIES",
+]
 
 STATUS_FORCE_LIST: List[int] = [502, 503, 504]
 DEFAULT_BACKOFF_FACTOR: float = 0.1
@@ -271,7 +288,12 @@ class RequestsSession:
         return request_headers
 
     def request(
-        self, method: str, url: str, headers: Optional[Dict[str, str]] = None, timeout: int = DEFAULT_TIMEOUT, **kwargs
+        self,
+        method: str,
+        url: str,
+        headers: Optional[Dict[str, str]] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+        **kwargs,
     ) -> Response:
         """Execute a request with automatic token handling."""
         request_headers = self._prepare_headers(
@@ -540,7 +562,9 @@ class WacomServiceAPIClient(RESTAPIClient):
         with self.__session_lock:
             if self.__session is None:
                 self.__session = RequestsSession(
-                    self, max_retries=self.__max_retries, backoff_factor=self.__backoff_factor
+                    self,
+                    max_retries=self.__max_retries,
+                    backoff_factor=self.__backoff_factor,
                 )
         return self.__session
 
@@ -556,7 +580,9 @@ class WacomServiceAPIClient(RESTAPIClient):
         return f"{self.base_auth_url}/{self.USER_LOGIN_ENDPOINT}"
 
     @property
-    def current_session(self) -> Union[RefreshableSession, TimedSession, PermanentSession, None]:
+    def current_session(
+        self,
+    ) -> Union[RefreshableSession, TimedSession, PermanentSession, None]:
         """Current session.
 
         Returns
@@ -664,7 +690,11 @@ class WacomServiceAPIClient(RESTAPIClient):
                         f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]} "
                         f"-> {timestamp_str_truncated}"
                     )
-                return response_token["accessToken"], response_token["refreshToken"], date_object
+                return (
+                    response_token["accessToken"],
+                    response_token["refreshToken"],
+                    date_object,
+                )
             except Exception as e:
                 raise handle_error(f"Parsing of response failed. {e}", response) from e
         raise handle_error("User login failed.", response)
@@ -777,7 +807,11 @@ class WacomServiceAPIClient(RESTAPIClient):
             except (TypeError, ValueError) as _:
                 date_object: datetime = datetime.now()
                 logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
-            return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
+            return (
+                response_token[ACCESS_TOKEN_TAG],
+                response_token[REFRESH_TOKEN_TAG],
+                date_object,
+            )
         raise handle_error("Refreshing token failed.", response)
 
     def handle_token(self, force_refresh: bool = False, force_refresh_timeout: float = 120) -> Tuple[str, str]:
@@ -819,7 +853,8 @@ class WacomServiceAPIClient(RESTAPIClient):
                 if isinstance(session, PermanentSession):
                     permanent_session: PermanentSession = session
                     auth_key, refresh_token, _ = self.request_user_token(
-                        permanent_session.tenant_api_key, permanent_session.external_user_id
+                        permanent_session.tenant_api_key,
+                        permanent_session.external_user_id,
                     )
                 else:
                     logger.error(f"Error refreshing token: {e}")

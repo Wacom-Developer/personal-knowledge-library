@@ -75,7 +75,18 @@ from knowledge.services.base import (
 from knowledge.services.helper import split_updates, entity_payload
 from knowledge.services.users import UserRole
 
-MIME_TYPE: Dict[str, str] = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
+__all__ = [
+    "SearchPattern",
+    "Visibility",
+    "WacomKnowledgeService",
+    "MIME_TYPE",
+]
+
+MIME_TYPE: Dict[str, str] = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+}
 
 
 # ------------------------------- Enum ---------------------------------------------------------------------------------
@@ -349,7 +360,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}"
         response: Response = self.request_session.delete(
-            url, params={FORCE_TAG: force}, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params={FORCE_TAG: force},
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
             raise handle_error(f"Deletion of entity (URI:={uri}) failed.", response)
@@ -447,7 +462,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         for bulk_idx in range(0, len(entities), batch_size):
             bulk = payload[bulk_idx : bulk_idx + batch_size]
             response: Response = self.request_session.post(
-                url, json=bulk, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+                url,
+                json=bulk,
+                timeout=timeout,
+                verify=self.verify_calls,
+                overwrite_auth_token=auth_key,
             )
             if response.ok:
                 response_dict: Dict[str, Any] = response.json()
@@ -497,7 +516,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}"
         payload: Dict[str, Any] = WacomKnowledgeService._entity_(entity)
         response: Response = self.request_session.post(
-            url, json=payload, verify=self.verify_calls, timeout=timeout, overwrite_auth_token=auth_key
+            url,
+            json=payload,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
         )
 
         if response.ok and not ignore_image:
@@ -545,7 +568,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}"
         payload: Dict[str, Any] = WacomKnowledgeService._entity_(entity)
         response: Response = self.request_session.patch(
-            url, json=payload, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            json=payload,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
             raise handle_error("Updating entity failed.", response)
@@ -588,7 +615,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{entity_uri}/indexes"
 
         response: Response = self.request_session.patch(
-            url, json=targets, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            json=targets,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             return response.json()
@@ -628,7 +659,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{entity_uri}/indexes"
         response: Response = self.request_session.delete(
-            url, json=targets, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            json=targets,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             return response.json()
@@ -663,7 +698,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{urllib.parse.quote(uri)}/relations"
         response: Response = self.request_session.get(
-            url, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             rel: list = response.json().get(RELATIONS_TAG)
@@ -703,7 +741,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/labels"
         response: Response = self.request_session.get(
-            url, params={LOCALE_TAG: locale}, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params={LOCALE_TAG: locale},
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             response_dict: dict = response.json()
@@ -745,7 +787,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}/literals"
         response: Response = self.request_session.get(
-            url, params={LOCALE_TAG: locale}, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params={LOCALE_TAG: locale},
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             literals: list = response.json().get(DATA_PROPERTIES_TAG)
@@ -784,7 +830,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation"
         params: dict = {RELATION_TAG: relation.iri, TARGET: target}
         response: Response = self.request_session.post(
-            url, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params=params,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
             raise handle_error("Creation of relation failed.", response)
@@ -818,7 +868,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relations"
         for updates in split_updates(relations):
             response: Response = self.request_session.post(
-                url, timeout=timeout, json=updates, verify=self.verify_calls, overwrite_auth_token=auth_key
+                url,
+                timeout=timeout,
+                json=updates,
+                verify=self.verify_calls,
+                overwrite_auth_token=auth_key,
             )
             if not response.ok:
                 raise handle_error("Creation of relation failed.", response, payload=updates)
@@ -897,7 +951,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ACTIVATIONS_ENDPOINT}"
         params: Dict[str, Any] = {URIS_TAG: uris, ACTIVATION_TAG: depth}
         response: Response = self.request_session.get(
-            url, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params=params,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             entities: Dict[str, Any] = response.json()
@@ -966,7 +1024,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.LISTING_ENDPOINT}"
         # Parameter with filtering and limit
-        parameters: Dict[str, Any] = {TYPE_TAG: filter_type.iri, LIMIT_PARAMETER: limit, ESTIMATE_COUNT: estimate_count}
+        parameters: Dict[str, Any] = {
+            TYPE_TAG: filter_type.iri,
+            LIMIT_PARAMETER: limit,
+            ESTIMATE_COUNT: estimate_count,
+        }
         if locale:
             parameters[LOCALE_TAG] = locale
         if visibility:
@@ -981,7 +1043,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         # Send request
         response: Response = self.request_session.get(
-            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params=parameters,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         # If the response is successful
         if response.ok:
@@ -995,7 +1061,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                     thing.status_flag = EntityStatus.SYNCED
                     entities.append(thing)
             return entities, estimated_total_number, next_page_id
-        raise handle_error(f"Failed to list the entities (since:= {page_id}, limit:={limit}).", response)
+        raise handle_error(
+            f"Failed to list the entities (since:= {page_id}, limit:={limit}).",
+            response,
+        )
 
     def search_all(
         self,
@@ -1047,7 +1116,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             NEXT_PAGE_ID_TAG: next_page_id,
         }
         response: Response = self.request_session.get(
-            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params=parameters,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             return WacomKnowledgeService._search_results_(response.json())
@@ -1104,7 +1177,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         if next_page_id:
             parameters[NEXT_PAGE_ID_TAG] = next_page_id
         response: Response = self.request_session.get(
-            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params=parameters,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             return WacomKnowledgeService._search_results_(response.json())
@@ -1166,7 +1243,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             NEXT_PAGE_ID_TAG: next_page_id,
         }
         response: Response = self.request_session.get(
-            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params=parameters,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             return WacomKnowledgeService._search_results_(response.json())
@@ -1227,7 +1308,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             NEXT_PAGE_ID_TAG: next_page_id,
         }
         response: Response = self.request_session.get(
-            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params=parameters,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             return WacomKnowledgeService._search_results_(response.json())
@@ -1282,7 +1367,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             NEXT_PAGE_ID_TAG: next_page_id,
         }
         response: Response = self.request_session.get(
-            url, params=parameters, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params=parameters,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             return WacomKnowledgeService._search_results_(response.json())
@@ -1593,7 +1682,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{self.IMPORT_ENTITIES_ENDPOINT}/{job_id}"
         response: Response = self.request_session.get(
-            url, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             return JobStatus.from_dict(response.json())
@@ -1628,7 +1720,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f"{self.service_base_url}{self.IMPORT_ERROR_LOG_ENDPOINT}/{job_id}"
         params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
         response: Response = self.request_session.get(
-            url, timeout=timeout, params=params, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            timeout=timeout,
+            params=params,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             return ErrorLogResponse.from_dict(response.json())
@@ -1664,7 +1760,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         params: Dict[str, str] = {NEXT_PAGE_ID_TAG: next_page_id} if next_page_id else {}
 
         response: Response = self.request_session.get(
-            url, timeout=timeout, params=params, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            timeout=timeout,
+            params=params,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if response.ok:
             return NewEntityUrisResponse.from_dict(response.json())
@@ -1699,7 +1799,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             raise WacomServiceException('Only users with the role "Admin" can rebuild the vector search index.')
 
         response: Response = self.request_session.post(
-            url, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params=params,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
             raise handle_error("Rebuilding vector search index failed.", response)
@@ -1738,7 +1842,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         if UserRole.ADMIN.value not in self.current_session.roles:
             raise WacomServiceException('Only users with the role "Admin" can rebuild the vector search index.')
         response: Response = self.request_session.post(
-            url, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            params=params,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
             raise handle_error("Rebuilding vector search index failed.", response)
@@ -1769,9 +1877,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code and commit failed.
         """
-        url: str = f'{self.service_base_url}{WacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}{"/fix" if fix else ""}'
+        url: str = f"{self.service_base_url}{WacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}{'/fix' if fix else ''}"
         response: Response = self.request_session.patch(
-            url, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
+            url,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
         )
         if not response.ok:
             raise handle_error("Ontology update fails.", response)

@@ -14,7 +14,15 @@ from knowledge.nel.base import (
     KnowledgeGraphEntity,
     EntityType,
 )
-from knowledge.services.base import handle_error, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
+from knowledge.services.base import (
+    handle_error,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_BACKOFF_FACTOR,
+)
+
+__all__ = [
+    "WacomEntityLinkingEngine",
+]
 
 
 class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
@@ -52,7 +60,11 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
         )
 
     def link_personal_entities(
-        self, text: str, language_code: LocaleCode = EN_US, auth_key: Optional[str] = None, max_retries: int = 5
+        self,
+        text: str,
+        language_code: LocaleCode = EN_US,
+        auth_key: Optional[str] = None,
+        max_retries: int = 5,
     ) -> List[KnowledgeGraphEntity]:
         """
         Performs Named Entity Linking on a text. It only finds entities which are accessible by the user identified by

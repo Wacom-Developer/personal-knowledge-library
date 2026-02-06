@@ -8,6 +8,14 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 
+__all__ = [
+    "ExtractionException",
+    "get_wikipedia_summary",
+    "get_wikipedia_summary_image",
+    "get_wikipedia_summary_url",
+]
+
+
 class ExtractionException(Exception):
     """
     Exception for extraction errors.
@@ -47,7 +55,11 @@ def __extract_abstract__(title: str, language: str = "en", max_retries: int = 5,
     url: str = f"https://{language}.wikipedia.org/w/api.php"
     mount_point: str = "https://"
     with requests.Session() as session:
-        retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=[502, 503, 504])
+        retries: Retry = Retry(
+            total=max_retries,
+            backoff_factor=backoff_factor,
+            status_forcelist=[502, 503, 504],
+        )
         session.mount(mount_point, HTTPAdapter(max_retries=retries))
         response: Response = session.get(url, params=params)
         if response.ok:
@@ -92,7 +104,11 @@ def __extract_thumb__(title: str, language: str = "en", max_retries: int = 5, ba
     url: str = f"https://{language}.wikipedia.org/w/api.php"
     mount_point: str = "https://"
     with requests.Session() as session:
-        retries: Retry = Retry(total=max_retries, backoff_factor=backoff_factor, status_forcelist=[502, 503, 504])
+        retries: Retry = Retry(
+            total=max_retries,
+            backoff_factor=backoff_factor,
+            status_forcelist=[502, 503, 504],
+        )
         session.mount(mount_point, HTTPAdapter(max_retries=retries))
         response: Response = session.get(url, params=params)
         if response.ok:

@@ -12,6 +12,19 @@ from knowledge.services.graph import WacomKnowledgeService, Visibility
 
 logger = loguru.logger
 
+__all__ = [
+    # Sync functions
+    "count_things",
+    "count_things_session",
+    "things_session_iter",
+    "things_iter",
+    # Async functions
+    "async_count_things",
+    "async_count_things_session",
+    "async_things_iter",
+    "async_things_session_iter",
+]
+
 
 def count_things(
     wacom_client: WacomKnowledgeService,
@@ -83,7 +96,12 @@ def count_things_session(
         The number of things
     """
     _, total, _ = wacom_client.listing(
-        concept_type, visibility=visibility, locale=locale, is_owner=only_own, limit=1, estimate_count=True
+        concept_type,
+        visibility=visibility,
+        locale=locale,
+        is_owner=only_own,
+        limit=1,
+        estimate_count=True,
     )
     return total
 
@@ -302,7 +320,12 @@ async def async_count_things_session(
         The number of things
     """
     _, total, _ = await async_client.listing(
-        concept_type, visibility=visibility, is_owner=only_own, locale=locale, limit=1, estimate_count=True
+        concept_type,
+        visibility=visibility,
+        is_owner=only_own,
+        locale=locale,
+        limit=1,
+        estimate_count=True,
     )
     return total
 

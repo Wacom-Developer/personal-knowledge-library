@@ -7,7 +7,12 @@ import orjson
 
 from knowledge import logger
 from knowledge.services import APPLICATION_JSON_HEADER, EXPIRATION_DATE_TAG
-from knowledge.services.asyncio.base import AsyncServiceAPIClient, handle_error, ResponseData, AsyncSession
+from knowledge.services.asyncio.base import (
+    AsyncServiceAPIClient,
+    handle_error,
+    ResponseData,
+    AsyncSession,
+)
 from knowledge.services.base import WacomServiceAPIClient
 from knowledge.services.users import (
     UserRole,
@@ -25,6 +30,8 @@ from knowledge.services.users import (
     DEFAULT_TIMEOUT,
     INTERNAL_USER_ID_TAG,
 )
+
+__all__ = ["AsyncUserManagementService"]
 
 
 class AsyncUserManagementService(AsyncServiceAPIClient):
@@ -119,7 +126,12 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         }
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.post(
-            url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls, ignore_auth=True
+            url,
+            headers=headers,
+            json=payload,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            ignore_auth=True,
         )
         if response.ok:
             results: Dict[str, Union[str, Dict[str, str], List[str]]] = response.content
@@ -127,7 +139,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
                 date_object: datetime = datetime.fromisoformat(results["token"][EXPIRATION_DATE_TAG])
             except (TypeError, ValueError) as _:
                 date_object: datetime = datetime.now()
-                logger.warning(f'Parsing of expiration date failed. {results["token"][EXPIRATION_DATE_TAG]}')
+                logger.warning(f"Parsing of expiration date failed. {results['token'][EXPIRATION_DATE_TAG]}")
             return (
                 User.parse(results["user"]),
                 results["token"]["accessToken"],
@@ -177,7 +189,10 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             META_DATA_TAG: meta_data if meta_data is not None else {},
             ROLES_TAG: [r.value for r in roles] if roles is not None else [UserRole.USER.value],
         }
-        params: Dict[str, str] = {USER_ID_TAG: internal_id, EXTERNAL_USER_ID_TAG: external_id}
+        params: Dict[str, str] = {
+            USER_ID_TAG: internal_id,
+            EXTERNAL_USER_ID_TAG: external_id,
+        }
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.patch(
             url,
@@ -192,7 +207,12 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             raise await handle_error("Failed to update the user.", response, headers=headers, payload=payload)
 
     async def delete_user(
-        self, tenant_key: str, external_id: str, internal_id: str, force: bool = False, timeout: int = DEFAULT_TIMEOUT
+        self,
+        tenant_key: str,
+        external_id: str,
+        internal_id: str,
+        force: bool = False,
+        timeout: int = DEFAULT_TIMEOUT,
     ):
         """Deletes user from tenant.
 
@@ -216,10 +236,19 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{AsyncUserManagementService.USER_ENDPOINT}"
         headers: Dict[str, str] = {TENANT_API_KEY_FLAG: tenant_key}
-        params: Dict[str, str] = {USER_ID_TAG: internal_id, EXTERNAL_USER_ID_TAG: external_id, FORCE_TAG: str(force)}
+        params: Dict[str, str] = {
+            USER_ID_TAG: internal_id,
+            EXTERNAL_USER_ID_TAG: external_id,
+            FORCE_TAG: str(force),
+        }
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.delete(
-            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls, ignore_auth=True
+            url,
+            headers=headers,
+            params=params,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            ignore_auth=True,
         )
         if not response.ok:
             raise await handle_error("Failed to delete the user.", response, headers=headers)
@@ -250,7 +279,12 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         parameters: Dict[str, str] = {EXTERNAL_USER_ID_TAG: external_id}
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(
-            url, headers=headers, params=parameters, timeout=timeout, verify_ssl=self.verify_calls, ignore_auth=True
+            url,
+            headers=headers,
+            params=parameters,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            ignore_auth=True,
         )
         if response.ok:
             response_dict: Dict[str, Any] = response.content
@@ -259,7 +293,11 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         return response_dict[INTERNAL_USER_ID_TAG]
 
     async def listing_users(
-        self, tenant_key: str, offset: int = 0, limit: int = 20, timeout: int = DEFAULT_TIMEOUT
+        self,
+        tenant_key: str,
+        offset: int = 0,
+        limit: int = 20,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> List[User]:
         """
         Listing all users configured for this instance.
@@ -285,7 +323,12 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         params: Dict[str, int] = {OFFSET_TAG: offset, LIMIT_TAG: limit}
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(
-            url, headers=headers, params=params, timeout=timeout, verify_ssl=self.verify_calls, ignore_auth=True
+            url,
+            headers=headers,
+            params=params,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            ignore_auth=True,
         )
         if response.ok:
             users: List[Dict[str, Any]] = response.content

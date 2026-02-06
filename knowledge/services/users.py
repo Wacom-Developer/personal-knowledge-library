@@ -7,8 +7,19 @@ from typing import Any, Union, Dict, List, Tuple, Optional
 from requests import Response
 
 from knowledge import logger
-from knowledge.services import EXPIRATION_DATE_TAG, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
+from knowledge.services import (
+    EXPIRATION_DATE_TAG,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_BACKOFF_FACTOR,
+)
 from knowledge.services.base import WacomServiceAPIClient, handle_error
+
+__all__ = [
+    "UserRole",
+    "User",
+    "UserManagementServiceAPI",
+    "USER_ROLE_MAPPING",
+]
 
 # -------------------------------------- Constant flags ----------------------------------------------------------------
 TENANT_ID: str = "tenantId"
@@ -65,7 +76,12 @@ class User:
     """
 
     def __init__(
-        self, tenant_id: str, user_id: str, external_user_id: str, meta_data: Dict[str, Any], user_roles: List[UserRole]
+        self,
+        tenant_id: str,
+        user_id: str,
+        external_user_id: str,
+        meta_data: Dict[str, Any],
+        user_roles: List[UserRole],
     ):
         self.__tenant_id: str = tenant_id
         self.__user_id: str = user_id
@@ -239,7 +255,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
                 date_object: datetime = datetime.fromisoformat(results["token"][EXPIRATION_DATE_TAG])
             except (TypeError, ValueError) as _:
                 date_object: datetime = datetime.now()
-                logger.warning(f'Parsing of expiration date failed. {results["token"][EXPIRATION_DATE_TAG]}')
+                logger.warning(f"Parsing of expiration date failed. {results['token'][EXPIRATION_DATE_TAG]}")
             return (
                 User.parse(results["user"]),
                 results["token"]["accessToken"],
@@ -284,7 +300,10 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             META_DATA_TAG: meta_data if meta_data is not None else {},
             ROLES_TAG: [r.value for r in roles] if roles is not None else [UserRole.USER.value],
         }
-        params: Dict[str, str] = {USER_ID_TAG: internal_id, EXTERNAL_USER_ID_TAG: external_id}
+        params: Dict[str, str] = {
+            USER_ID_TAG: internal_id,
+            EXTERNAL_USER_ID_TAG: external_id,
+        }
         response: Response = self.request_session.patch(
             url,
             json=payload,
@@ -326,7 +345,11 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}"
-        params: Dict[str, str] = {USER_ID_TAG: internal_id, EXTERNAL_USER_ID_TAG: external_id, FORCE_TAG: force}
+        params: Dict[str, str] = {
+            USER_ID_TAG: internal_id,
+            EXTERNAL_USER_ID_TAG: external_id,
+            FORCE_TAG: force,
+        }
         response: Response = self.request_session.delete(
             url,
             params=params,

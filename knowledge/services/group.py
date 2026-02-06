@@ -17,6 +17,12 @@ from knowledge.services import (
 )
 from knowledge.services.base import WacomServiceAPIClient, handle_error
 
+__all__ = [
+    "Group",
+    "GroupInfo",
+    "GroupManagementService",
+]
+
 # -------------------------------------- Constant flags ----------------------------------------------------------------
 from knowledge.services.users import User, FORCE_TAG, LIMIT_TAG, OFFSET_TAG
 
@@ -57,7 +63,15 @@ class Group:
         Access rights for the group
     """
 
-    def __init__(self, tenant_id: str, group_id: str, owner: str, name: str, join_key: str, rights: GroupAccessRight):
+    def __init__(
+        self,
+        tenant_id: str,
+        group_id: str,
+        owner: str,
+        name: str,
+        join_key: str,
+        rights: GroupAccessRight,
+    ):
         self.__tenant_id: str = tenant_id
         self.__group_id: str = group_id
         self.__owner_id: str = owner
@@ -116,7 +130,12 @@ class Group:
         name: str = param.get("name")
         rights: GroupAccessRight = GroupAccessRight.parse(param.get("groupUserRights", ["Read"]))
         return Group(
-            tenant_id=tenant_id, group_id=group_id, owner=owner_id, join_key=join_key, name=name, rights=rights
+            tenant_id=tenant_id,
+            group_id=group_id,
+            owner=owner_id,
+            join_key=join_key,
+            name=name,
+            rights=rights,
         )
 
     def __repr__(self):
@@ -224,7 +243,11 @@ class GroupManagementService(WacomServiceAPIClient):
         application_name: str = "Group Management Service",
         service_endpoint: str = "graph/v1",
     ):
-        super().__init__(service_url=service_url, application_name=application_name, service_endpoint=service_endpoint)
+        super().__init__(
+            service_url=service_url,
+            application_name=application_name,
+            service_endpoint=service_endpoint,
+        )
 
     # ------------------------------------------ Groups handling ------------------------------------------------------
 
@@ -259,7 +282,10 @@ class GroupManagementService(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}"
-        payload: Dict[str, str] = {NAME_TAG: name, GROUP_USER_RIGHTS_TAG: rights.to_list()}
+        payload: Dict[str, str] = {
+            NAME_TAG: name,
+            GROUP_USER_RIGHTS_TAG: rights.to_list(),
+        }
         response: Response = self.request_session.post(
             url,
             json=payload,
@@ -301,7 +327,10 @@ class GroupManagementService(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}"
-        payload: Dict[str, str] = {NAME_TAG: name, GROUP_USER_RIGHTS_TAG: rights.to_list()}
+        payload: Dict[str, str] = {
+            NAME_TAG: name,
+            GROUP_USER_RIGHTS_TAG: rights.to_list(),
+        }
         response: Response = self.request_session.patch(
             url,
             json=payload,

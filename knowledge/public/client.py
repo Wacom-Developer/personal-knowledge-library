@@ -23,8 +23,21 @@ from knowledge.public.helper import (
     WIKIDATA_SEARCH_URL,
     API_LIMIT,
 )
-from knowledge.public.wikidata import WikidataClass, WikidataThing, WikidataSearchResult, WikidataProperty
+from knowledge.public.wikidata import (
+    WikidataClass,
+    WikidataThing,
+    WikidataSearchResult,
+    WikidataProperty,
+)
 from knowledge.services import USER_AGENT_HEADER_FLAG, DEFAULT_TIMEOUT
+
+__all__ = [
+    "QUALIFIERS_TAG",
+    "LITERALS_TAG",
+    "wikidata_cache",
+    "chunks",
+    "WikiDataAPIClient",
+]
 
 # Constants
 QUALIFIERS_TAG: str = "QUALIFIERS"
@@ -120,7 +133,10 @@ class WikiDataAPIClient:
 
             # Make a request using the session
             response: Response = session.get(
-                wikidata_sparql_url, params={"query": query_string, "format": "json"}, timeout=timeout, headers=headers
+                wikidata_sparql_url,
+                params={"query": query_string, "format": "json"},
+                timeout=timeout,
+                headers=headers,
             )
             if response.ok:
                 return response.json()
@@ -264,7 +280,10 @@ class WikiDataAPIClient:
 
     @staticmethod
     def search_term(
-        search_term: str, language: LanguageCode, url: str = WIKIDATA_SEARCH_URL, timeout: int = DEFAULT_TIMEOUT
+        search_term: str,
+        language: LanguageCode,
+        url: str = WIKIDATA_SEARCH_URL,
+        timeout: int = DEFAULT_TIMEOUT,
     ) -> List[WikidataSearchResult]:
         """
         Search for a term in the WikiData.
@@ -385,7 +404,8 @@ class WikiDataAPIClient:
 
     @staticmethod
     def retrieve_entities(
-        qids: Union[List[str], Set[str]], progress: Optional[Callable[[int, int], None]] = None
+        qids: Union[List[str], Set[str]],
+        progress: Optional[Callable[[int, int], None]] = None,
     ) -> List[WikidataThing]:
         """
         Retrieve multiple Wikidata things.

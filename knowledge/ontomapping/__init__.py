@@ -9,10 +9,46 @@ from typing import Dict, Any, List, Optional, Set
 import loguru
 from rdflib import Graph, RDFS, URIRef
 
-from knowledge.base.ontology import OntologyClassReference, OntologyPropertyReference, DataPropertyType
+from knowledge.base.ontology import (
+    OntologyClassReference,
+    OntologyPropertyReference,
+    DataPropertyType,
+)
 from knowledge.public.cache import WikidataCache
 from knowledge.public.wikidata import WikidataClass
 from knowledge.public.client import WikiDataAPIClient
+
+__all__ = [
+    # Constants
+    "TOPIC_CLASS",
+    "DBPEDIA_TYPES",
+    "WIKIDATA_TYPES",
+    "OBJECT_PROPERTIES",
+    "DATA_PROPERTIES",
+    "DOMAIN_PROPERTIES",
+    "CLASSES",
+    "CONTEXT_NAME",
+    "CWD",
+    "ontology_graph",
+    "wikidata_cache",
+    # Helper functions
+    "flatten",
+    "subclasses_of",
+    "is_iso_date",
+    # Classes
+    "WikidataClassEncoder",
+    "ClassConfiguration",
+    "PropertyType",
+    "PropertyConfiguration",
+    "MappingConfiguration",
+    # Configuration functions
+    "build_configuration",
+    "register_ontology",
+    "load_configuration",
+    "get_mapping_configuration",
+    # Module-level variable
+    "mapping_configuration",
+]
 
 # Classes
 TOPIC_CLASS: str = "wacom:core#Topic"

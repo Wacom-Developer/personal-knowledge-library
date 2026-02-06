@@ -4,6 +4,14 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from typing import Literal
 
+__all__ = [
+    "JobStatus",
+    "ErrorDetail",
+    "ErrorLogEntry",
+    "ErrorLogResponse",
+    "NewEntityUrisResponse",
+]
+
 
 class JobStatus:
     """
@@ -106,7 +114,9 @@ class JobStatus:
         return self._jobId
 
     @property
-    def status(self) -> Literal["Pending", "InProgress", "Completed", "Failed", "Retrying"]:
+    def status(
+        self,
+    ) -> Literal["Pending", "InProgress", "Completed", "Failed", "Retrying"]:
         """
         The status of the job. Possible values are:
         - Pending - The job is pending.

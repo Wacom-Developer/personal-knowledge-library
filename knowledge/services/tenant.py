@@ -5,11 +5,17 @@ from typing import List, Dict, Optional
 from requests import Response
 
 from knowledge.base.tenant import TenantConfiguration
-from knowledge.services import DEFAULT_TIMEOUT, DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
+from knowledge.services import (
+    DEFAULT_TIMEOUT,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_BACKOFF_FACTOR,
+)
 from knowledge.services.base import (
     WacomServiceAPIClient,
     handle_error,
 )
+
+__all__ = ["TenantManagementServiceAPI"]
 
 
 class TenantManagementServiceAPI(WacomServiceAPIClient):
@@ -160,7 +166,11 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{TenantManagementServiceAPI.TENANT_ENDPOINT}"
         response: Response = self.request_session.get(
-            url, data={}, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=self.__tenant_management_token
+            url,
+            data={},
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=self.__tenant_management_token,
         )
         if response.ok:
             return [TenantConfiguration.from_dict(tenant) for tenant in response.json()]
@@ -232,7 +242,10 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{TenantManagementServiceAPI.TENANT_ENDPOINT}/{identifier}"
         response: Response = self.request_session.delete(
-            url, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=self.__tenant_management_token
+            url,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=self.__tenant_management_token,
         )
         if not response.ok:
             raise handle_error("Creation of tenant failed.", response)

@@ -15,6 +15,15 @@ from knowledge.base.ontology import ThingObject, OntologyPropertyReference
 
 logger = loguru.logger
 
+__all__ = [
+    "is_http_url",
+    "is_local_url",
+    "iterate_large_import_format",
+    "load_import_format",
+    "save_import_format",
+    "append_import_format",
+]
+
 
 def is_http_url(url: str) -> bool:
     """Check if a string is an HTTP(S) URL.
@@ -178,7 +187,10 @@ def load_import_format(file_path: Path) -> List[ThingObject]:
 
 
 def save_import_format(
-    file_path: Path, entities: List[ThingObject], save_groups: bool = True, generate_missing_ref_ids: bool = True
+    file_path: Path,
+    entities: List[ThingObject],
+    save_groups: bool = True,
+    generate_missing_ref_ids: bool = True,
 ) -> None:
     """
     Save the import format file.

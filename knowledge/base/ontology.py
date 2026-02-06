@@ -2512,9 +2512,7 @@ class ThingObject:
                 for data_property in entity[DATA_PROPERTIES_TAG]:
                     language_code = LocaleCode(data_property[LOCALE_TAG])
                     value = data_property[VALUE_TAG]
-                    data_property_type = OntologyPropertyReference.parse(
-                        data_property[DATA_PROPERTY_TAG]
-                    )
+                    data_property_type = OntologyPropertyReference.parse(data_property[DATA_PROPERTY_TAG])
                     thing.add_data_property(DataProperty(value, data_property_type, language_code))
         if OBJECT_PROPERTIES_TAG in entity:
             if isinstance(entity[OBJECT_PROPERTIES_TAG], list):
@@ -2857,5 +2855,6 @@ def ontology_import(rdf_content: str, tenant_id: str = "", context: str = "") ->
             )
         )
     return ontology
+
 
 __all__ = []

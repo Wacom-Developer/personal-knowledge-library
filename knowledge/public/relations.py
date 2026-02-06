@@ -10,6 +10,12 @@ from knowledge.public.helper import CLAIMS_TAG, PID_TAG, LABEL_TAG, QID_TAG
 from knowledge.public.wikidata import LITERALS_TAG, WikidataThing
 from knowledge.public.client import WikiDataAPIClient
 
+__all__ = [
+    "wikidata_extractor_entities",
+    "wikidata_relations_extractor",
+    "wikidata_relations_extractor_qids",
+]
+
 
 def __relations__(thing: Dict[str, Any], wikidata: Set[str]) -> Tuple[str, List[Dict[str, Any]]]:
     """
@@ -31,7 +37,10 @@ def __relations__(thing: Dict[str, Any], wikidata: Set[str]) -> Tuple[str, List[
     relations: List[Dict[str, Any]] = []
     for _, p_value in thing[CLAIMS_TAG].items():
         for v in p_value[LITERALS_TAG]:
-            if isinstance(v, dict) and v.get("type") in {"wikibase-entityid", "wikibase-item"}:
+            if isinstance(v, dict) and v.get("type") in {
+                "wikibase-entityid",
+                "wikibase-item",
+            }:
                 ref_qid = v["value"]["id"]
                 prop = p_value[PID_TAG][LABEL_TAG]
                 if ref_qid in wikidata:
@@ -40,7 +49,10 @@ def __relations__(thing: Dict[str, Any], wikidata: Set[str]) -> Tuple[str, List[
                             "subject": {
                                 "qid": thing[QID_TAG],
                             },
-                            "predicate": {"pid": p_value[PID_TAG][PID_TAG], "label": prop},
+                            "predicate": {
+                                "pid": p_value[PID_TAG][PID_TAG],
+                                "label": prop,
+                            },
                             "target": {"qid": ref_qid},
                         }
                     )
@@ -90,7 +102,8 @@ def wikidata_relations_extractor(
     with multiprocessing.Pool(processes=num_processes) as pool:
         # Wikidata thing is not support in multiprocessing
         for qid, rels in pool.map(
-            functools.partial(__relations__, wikidata=qids), [e.__dict__() for e in wikidata.values()]
+            functools.partial(__relations__, wikidata=qids),
+            [e.__dict__() for e in wikidata.values()],
         ):
             relations[qid] = rels
             ctr += 1
@@ -122,7 +135,8 @@ def wikidata_relations_extractor_qids(
         # Wikidata thing is not support in multiprocessing
         with tqdm(total=round(len(wikidata) / num_processes), desc="Check Wikidata relations.") as pbar:
             for qid, rels in pool.map(
-                functools.partial(__relations__, wikidata=qids), [e.__dict__() for e in wikidata.values()]
+                functools.partial(__relations__, wikidata=qids),
+                [e.__dict__() for e in wikidata.values()],
             ):
                 relations[qid] = rels
                 pbar.update(1)

@@ -26,6 +26,12 @@ from knowledge.base.ontology import OntologyPropertyReference
 from knowledge.base.ontology import ThingObject, EN_US
 from knowledge.services import TENANT_RIGHTS_TAG
 
+__all__ = [
+    "split_updates",
+    "entity_payload",
+    "RELATIONS_BULK_LIMIT",
+]
+
 RELATIONS_BULK_LIMIT: int = 30
 """
 In one request only 30 relations can be created, otherwise the database operations are too many.
@@ -34,7 +40,8 @@ logger = loguru.logger
 
 
 def split_updates(
-    updates: Dict[OntologyPropertyReference, List[str]], max_operations: int = RELATIONS_BULK_LIMIT
+    updates: Dict[OntologyPropertyReference, List[str]],
+    max_operations: int = RELATIONS_BULK_LIMIT,
 ) -> Iterator[Dict[str, List[str]]]:
     """
 
@@ -96,11 +103,23 @@ def entity_payload(entity: ThingObject) -> Dict[str, Any]:
     # Labels are tagged as main label
     for label in entity.label:
         if label is not None and label.content is not None and len(label.content) > 0 and label.content != " ":
-            labels.append({VALUE_TAG: label.content, LOCALE_TAG: label.language_code, IS_MAIN_TAG: True})
+            labels.append(
+                {
+                    VALUE_TAG: label.content,
+                    LOCALE_TAG: label.language_code,
+                    IS_MAIN_TAG: True,
+                }
+            )
     # Alias are no main labels
     for label in entity.alias:
         if label is not None and len(label.content) > 0 and label.content != " ":
-            labels.append({VALUE_TAG: label.content, LOCALE_TAG: label.language_code, IS_MAIN_TAG: False})
+            labels.append(
+                {
+                    VALUE_TAG: label.content,
+                    LOCALE_TAG: label.language_code,
+                    IS_MAIN_TAG: False,
+                }
+            )
     # Labels are tagged as main label
     for _, list_literals in entity.data_properties.items():
         for li in list_literals:

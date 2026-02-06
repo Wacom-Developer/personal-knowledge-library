@@ -2,6 +2,8 @@
 # Copyright © 2021-present Wacom. All rights reserved.
 from typing import List
 
+__all__ = ["AccessRight", "TenantAccessRight", "GroupAccessRight"]
+
 
 class AccessRight:
     """

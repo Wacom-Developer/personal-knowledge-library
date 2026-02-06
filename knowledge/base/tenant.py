@@ -2,6 +2,8 @@
 # Copyright © 2024-present Wacom. All rights reserved.
 from typing import List, Dict, Any, Optional
 
+__all__ = ["TenantConfiguration"]
+
 
 class TenantConfiguration:
     """

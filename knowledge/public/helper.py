@@ -13,7 +13,75 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 from knowledge import logger, __version__
-from knowledge.public import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, DEFAULT_BACKOFF_FACTOR, STATUS_FORCE_LIST
+from knowledge.public import (
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_TIMEOUT,
+    DEFAULT_BACKOFF_FACTOR,
+    STATUS_FORCE_LIST,
+)
+
+
+__all__ = [
+    # Enums
+    "Precision",
+    # Exceptions
+    "WikiDataAPIException",
+    # Constants/Tags
+    "CLASS_TAG",
+    "ALIASES_TAG",
+    "ID_TAG",
+    "QID_TAG",
+    "PID_TAG",
+    "LAST_REVID_TAG",
+    "MODIFIED_TAG",
+    "SYNC_TIME_TAG",
+    "WIKIDATA_LANGUAGE_TAG",
+    "LABEL_VALUE_TAG",
+    "LABEL_TAG",
+    "SUPERCLASSES_TAG",
+    "SUBCLASSES_TAG",
+    "CLAIMS_TAG",
+    "ONTOLOGY_TYPES_TAG",
+    "REVISION_TAG",
+    "SITELINKS_TAG",
+    "TITLES_TAG",
+    "URLS_TAG",
+    "SOURCE_TAG",
+    "API_LIMIT",
+    # API URLs
+    "THUMB_IMAGE_URL",
+    "MULTIPLE_ENTITIES_API",
+    "WIKIDATA_LDI_URL",
+    # Wikidata Properties
+    "STUDENT_OF",
+    "STUDENT",
+    "INCEPTION",
+    "MOVEMENT",
+    "SUBCLASS_OF",
+    "TITLE",
+    "COLLECTION",
+    "GENRE",
+    "CREATOR",
+    "LOGO_IMAGE",
+    "FLAG_IMAGE",
+    "GREGORIAN_CALENDAR",
+    "START_TIME",
+    "END_TIME",
+    "FOLLOWS",
+    "FOLLOWED_BY",
+    "COUNTRY_OF_ORIGIN",
+    "COUNTRY",
+    "INSTANCE_OF",
+    "IMAGE",
+    "GREGORIAN_CALENDAR_URL",
+    "WIKIDATA_SPARQL_URL",
+    "WIKIDATA_SEARCH_URL",
+    # Helper functions
+    "user_agent",
+    "image_url",
+    "parse_date",
+    "wikidate",
+]
 
 
 # --------------------------------------- Structures -------------------------------------------------------------------

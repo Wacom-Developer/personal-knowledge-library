@@ -3,9 +3,27 @@
 from typing import Any, Dict, List
 
 from knowledge import logger
-from knowledge.base.entity import LanguageCode, IMAGE_TAG, STATUS_FLAG_TAG, Description, Label
+from knowledge.base.entity import (
+    LanguageCode,
+    IMAGE_TAG,
+    STATUS_FLAG_TAG,
+    Description,
+    Label,
+)
 from knowledge.base.language import LANGUAGE_LOCALE_MAPPING, LocaleCode
 from knowledge.base.ontology import ThingObject, OntologyClassReference
+
+
+__all__ = [
+    "update_language_code",
+    "localized_list_description",
+    "localized_list_label",
+    "localized_flatten_alias_list",
+    "from_dict",
+    "strip",
+    "build_query",
+    "extract_qid",
+]
 
 
 # ----------------------------------------------- Helper functions -----------------------------------------------------

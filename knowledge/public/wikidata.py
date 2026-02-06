@@ -47,6 +47,19 @@ from knowledge.public.helper import (
     SUBCLASSES_TAG,
 )
 
+__all__ = [
+    # Constants
+    "QUALIFIERS_TAG",
+    "LITERALS_TAG",
+    # Classes
+    "WikidataProperty",
+    "WikidataSearchResult",
+    "WikidataClass",
+    "Claim",
+    "SiteLinks",
+    "WikidataThing",
+]
+
 # Constants
 QUALIFIERS_TAG: str = "QUALIFIERS"
 LITERALS_TAG: str = "LITERALS"
@@ -137,7 +150,14 @@ class WikidataSearchResult:
     Search result from wikidata.
     """
 
-    def __init__(self, qid: str, label: Label, description: Optional[Description], repository: str, aliases: List[str]):
+    def __init__(
+        self,
+        qid: str,
+        label: Label,
+        description: Optional[Description],
+        repository: str,
+        aliases: List[str],
+    ):
         self.__qid: str = qid
         self.__label: Label = label
         self.__description: Optional[Description] = description
@@ -192,12 +212,17 @@ class WikidataSearchResult:
         description: Optional[Description] = None
         if DESCRIPTION_TAG in display:
             description = Description(
-                description=display[DESCRIPTION_TAG]["value"], language_code=display[DESCRIPTION_TAG]["language"]
+                description=display[DESCRIPTION_TAG]["value"],
+                language_code=display[DESCRIPTION_TAG]["language"],
             )
         aliases: List[str] = [alias["value"] for alias in display.get(ALIASES_TAG, [])]
         repository: str = search_result[REPOSITORY_TAG]
         return WikidataSearchResult(
-            qid=qid, label=label, description=description, repository=repository, aliases=aliases
+            qid=qid,
+            label=label,
+            description=description,
+            repository=repository,
+            aliases=aliases,
         )
 
     def __repr__(self):
@@ -356,7 +381,12 @@ class Claim:
     be easily queried, analyzed, and visualized.
     """
 
-    def __init__(self, pid: WikidataProperty, literal: List[Dict[str, Any]], qualifiers: List[Dict[str, Any]]):
+    def __init__(
+        self,
+        pid: WikidataProperty,
+        literal: List[Dict[str, Any]],
+        qualifiers: List[Dict[str, Any]],
+    ):
         super().__init__()
         self.__pid: WikidataProperty = pid
         self.__literals: List[Dict[str, Any]] = literal
@@ -378,7 +408,11 @@ class Claim:
         return self.__qualifiers
 
     def __dict__(self):
-        return {PID_TAG: self.pid.__dict__(), LITERALS_TAG: self.literals, QUALIFIERS_TAG: self.qualifiers}
+        return {
+            PID_TAG: self.pid.__dict__(),
+            LITERALS_TAG: self.literals,
+            QUALIFIERS_TAG: self.qualifiers,
+        }
 
     def __eq__(self, other):
         if not isinstance(other, Claim):
@@ -423,7 +457,10 @@ class SiteLinks:
     """
 
     def __init__(
-        self, source: str, urls: Union[Dict[str, str], None] = None, titles: Union[Dict[str, str], None] = None
+        self,
+        source: str,
+        urls: Union[Dict[str, str], None] = None,
+        titles: Union[Dict[str, str], None] = None,
     ):
         self.__source: str = source
         self.__urls: Dict[str, str] = {} if urls is None else urls
@@ -465,14 +502,20 @@ class SiteLinks:
             The SiteLinks instance.
         """
         return SiteLinks(
-            source=entity_dict[SOURCE_TAG], urls=entity_dict.get(URLS_TAG), titles=entity_dict.get(TITLES_TAG)
+            source=entity_dict[SOURCE_TAG],
+            urls=entity_dict.get(URLS_TAG),
+            titles=entity_dict.get(TITLES_TAG),
         )
 
     def __dict__(self):
-        return {SOURCE_TAG: self.__source, URLS_TAG: self.__urls, TITLES_TAG: self.__title}
+        return {
+            SOURCE_TAG: self.__source,
+            URLS_TAG: self.__urls,
+            TITLES_TAG: self.__title,
+        }
 
     def __repr__(self):
-        return f'<SiteLinks:={self.source}, supported languages:=[{"|".join(self.urls_languages)}]>'
+        return f"<SiteLinks:={self.source}, supported languages:=[{'|'.join(self.urls_languages)}]>"
 
 
 class WikidataThing:
@@ -810,7 +853,11 @@ class WikidataThing:
                     la_content: str = label[LABEL_VALUE_TAG]
                     la_lang: LanguageCode = LanguageCode(label[WIKIDATA_LANGUAGE_TAG])
                     if la_lang in LANGUAGE_LOCALE_MAPPING:
-                        la: Label = Label(content=la_content, language_code=LANGUAGE_LOCALE_MAPPING[la_lang], main=True)
+                        la: Label = Label(
+                            content=la_content,
+                            language_code=LANGUAGE_LOCALE_MAPPING[la_lang],
+                            main=True,
+                        )
                         labels[la.language_code] = la
         else:
             labels["en_US"] = Label("No Label", EN_US)
@@ -823,7 +870,9 @@ class WikidataThing:
                         la_lang: LanguageCode = LanguageCode(a[WIKIDATA_LANGUAGE_TAG])
                         if la_lang in LANGUAGE_LOCALE_MAPPING:
                             la: Label = Label(
-                                content=la_content, language_code=LANGUAGE_LOCALE_MAPPING[la_lang], main=False
+                                content=la_content,
+                                language_code=LANGUAGE_LOCALE_MAPPING[la_lang],
+                                main=False,
                             )
                             if la.language_code not in aliases:
                                 aliases[la.language_code] = []
@@ -836,7 +885,8 @@ class WikidataThing:
                     desc_lang: LanguageCode = LanguageCode(desc[WIKIDATA_LANGUAGE_TAG])
                     if desc_lang in LANGUAGE_LOCALE_MAPPING:
                         de: Description = Description(
-                            description=desc_content, language_code=LANGUAGE_LOCALE_MAPPING[desc_lang]
+                            description=desc_content,
+                            language_code=LANGUAGE_LOCALE_MAPPING[desc_lang],
                         )
                         descriptions[de.language_code] = de
         # Initiate the wikidata thing
@@ -871,7 +921,10 @@ class WikidataThing:
                             val = wikidate(data_value["value"])
                         elif data_type == "quantity":
                             if "amount" in data_value["value"]:
-                                val = {"amount": data_value["value"]["amount"], "unit": data_value["value"]["unit"]}
+                                val = {
+                                    "amount": data_value["value"]["amount"],
+                                    "unit": data_value["value"]["unit"],
+                                }
                         elif data_type == "wikibase-lexeme":
                             val = {"id": data_value["value"]["id"]}
                         elif data_type in {"geo-shape", "wikibase-property"}:

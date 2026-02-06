@@ -6,6 +6,19 @@ from knowledge.base.entity import Label
 from knowledge.base.language import LocaleCode
 from knowledge.base.ontology import OntologyClassReference
 
+__all__ = [
+    "LabelSearchResult",
+    "DocumentSearchResult",
+    "PerformanceStats",
+    "DocumentSearchStats",
+    "LabelSearchStats",
+    "DocumentSearchResponse",
+    "VectorDocument",
+    "FilterVectorDocumentsResponse",
+    "LabelMatchingResponse",
+    "VectorDBDocument",
+]
+
 
 class LabelSearchResult:
     """
@@ -292,7 +305,7 @@ class LabelSearchStats(PerformanceStats):
 
     def __init__(self, stats: Dict[str, Any]):
         super().__init__(stats)
-        self.__tokenizer: float = stats.get("tokenizer", 0.)
+        self.__tokenizer: float = stats.get("tokenizer", 0.0)
         self.__number_of_tokens: int = stats.get("number-of-tokens", 0)
 
     @property
@@ -332,7 +345,10 @@ class DocumentSearchResponse:
     """
 
     def __init__(
-        self, results: List[DocumentSearchResult], max_results: int = 10, stats: Optional[DocumentSearchStats] = None
+        self,
+        results: List[DocumentSearchResult],
+        max_results: int = 10,
+        stats: Optional[DocumentSearchStats] = None,
     ):
         self.__results: List[DocumentSearchResult] = results
         self.__max_results = max_results
@@ -504,7 +520,10 @@ class LabelMatchingResponse:
     """
 
     def __init__(
-        self, results: List[LabelSearchResult], max_results: int = 10, stats: Optional[LabelSearchStats] = None
+        self,
+        results: List[LabelSearchResult],
+        max_results: int = 10,
+        stats: Optional[LabelSearchStats] = None,
     ) -> None:
         self.__results = results
         self.__max_results = max_results

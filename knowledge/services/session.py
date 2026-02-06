@@ -12,6 +12,7 @@ There are three types of sessions:
         Moreover, the session is bound to then _tenant api key_ and the _external user id_, which can be used to
         re-login when the refresh token expires.
 """
+
 import hashlib
 import logging
 import threading
@@ -20,6 +21,14 @@ from datetime import datetime, timezone
 from typing import Union, Optional, Dict, Any
 
 import jwt
+
+__all__ = [
+    "Session",
+    "TimedSession",
+    "RefreshableSession",
+    "PermanentSession",
+    "TokenManager",
+]
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -383,7 +392,13 @@ class PermanentSession(RefreshableSession):
         The external user identifier for the session.
     """
 
-    def __init__(self, tenant_api_key: str, external_user_id: str, auth_token: str, refresh_token: str) -> None:
+    def __init__(
+        self,
+        tenant_api_key: str,
+        external_user_id: str,
+        auth_token: str,
+        refresh_token: str,
+    ) -> None:
         super().__init__(auth_token, refresh_token)
         self.__tenant_api_key: str = tenant_api_key
         self.__external_user_id: str = external_user_id

@@ -11,6 +11,11 @@ import orjson
 
 from knowledge.public.wikidata import WikidataThing, WikidataProperty, WikidataClass
 
+__all__ = [
+    "singleton",
+    "WikidataCache",
+]
+
 # Configure logging
 logger = loguru.logger
 

@@ -28,7 +28,23 @@ from knowledge.services import (
     AUTHORIZATION_HEADER_FLAG,
 )
 from knowledge.services.base import WacomServiceException, RESTAPIClient
-from knowledge.services.session import TokenManager, PermanentSession, RefreshableSession, TimedSession
+from knowledge.services.session import (
+    TokenManager,
+    PermanentSession,
+    RefreshableSession,
+    TimedSession,
+)
+
+__all__ = [
+    "ResponseData",
+    "CachedResolver",
+    "AsyncSession",
+    "AsyncServiceAPIClient",
+    "handle_error",
+    "cached_getaddrinfo",
+    "dns_cache",
+    "HTTPMethodFunction",
+]
 
 # A cache for storing DNS resolutions
 dns_cache: TTLCache = TTLCache(maxsize=100, ttl=300)  # Adjust size and ttl as needed
@@ -190,7 +206,9 @@ class AsyncSession:
         ssl_context: ssl.SSLContext = ssl.create_default_context(cafile=certifi.where())
         connector: aiohttp.TCPConnector = aiohttp.TCPConnector(ssl=ssl_context, resolver=CachedResolver())
         return aiohttp.ClientSession(
-            json_serialize=lambda x: orjson.dumps(x).decode(), timeout=client_timeout, connector=connector
+            json_serialize=lambda x: orjson.dumps(x).decode(),
+            timeout=client_timeout,
+            connector=connector,
         )
 
     async def _create_session(self) -> aiohttp.ClientSession:
@@ -515,7 +533,9 @@ class AsyncSession:
         dns_cache.clear()
 
     @staticmethod
-    async def _request_content(response: aiohttp.ClientResponse) -> Union[str, bytes, Dict[str, Any], List[Any]]:
+    async def _request_content(
+        response: aiohttp.ClientResponse,
+    ) -> Union[str, bytes, Dict[str, Any], List[Any]]:
         """
         Retrieve and decode the body of an aiohttp response.
 
@@ -544,7 +564,7 @@ class AsyncSession:
                 content = await response.json(encoding="utf-8", loads=orjson.loads)
             else:
                 content = await response.read()
-        except (aiohttp.ContentTypeError | orjson.JSONDecodeError) as e:
+        except aiohttp.ContentTypeError | orjson.JSONDecodeError as e:
             logger.warning(f"Failed to decode response body: {e}")
             try:
                 content = await response.text(encoding="utf-8", errors="ignore")
@@ -710,7 +730,9 @@ class AsyncServiceAPIClient(RESTAPIClient):
         )
 
     @property
-    def current_session(self) -> Union[RefreshableSession, TimedSession, PermanentSession, None]:
+    def current_session(
+        self,
+    ) -> Union[RefreshableSession, TimedSession, PermanentSession, None]:
         """Current session.
 
         Returns
@@ -784,7 +806,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
                     if isinstance(self.current_session, PermanentSession):
                         permanent_session: PermanentSession = self.current_session
                         auth_key, refresh_token, _ = await self.request_user_token(
-                            permanent_session.tenant_api_key, permanent_session.external_user_id
+                            permanent_session.tenant_api_key,
+                            permanent_session.external_user_id,
                         )
                     else:
                         logger.error(f"Error refreshing token: {e}")
@@ -845,7 +868,11 @@ class AsyncServiceAPIClient(RESTAPIClient):
         session = await self.asyncio_session()  # Await the session
 
         response = await session.post(
-            self.auth_endpoint, data=json.dumps(payload), timeout=timeout, headers=headers, ignore_auth=True
+            self.auth_endpoint,
+            data=json.dumps(payload),
+            timeout=timeout,
+            headers=headers,
+            ignore_auth=True,
         )
 
         if response.ok:
@@ -857,7 +884,11 @@ class AsyncServiceAPIClient(RESTAPIClient):
                 logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
         else:
             raise await handle_error("Login failed.", response, payload=payload, headers=headers)
-        return response_token["accessToken"], response_token["refreshToken"], date_object
+        return (
+            response_token["accessToken"],
+            response_token["refreshToken"],
+            date_object,
+        )
 
     async def refresh_token(self, refresh_token: str, timeout: int = DEFAULT_TIMEOUT) -> Tuple[str, str, datetime]:
         """
@@ -892,7 +923,12 @@ class AsyncServiceAPIClient(RESTAPIClient):
         payload: Dict[str, str] = {REFRESH_TOKEN_TAG: refresh_token}
         session = await self.asyncio_session()  # Await the session
         response: ResponseData = await session.post(
-            url, headers=headers, json=payload, timeout=timeout, verify_ssl=self.verify_calls, ignore_auth=True
+            url,
+            headers=headers,
+            json=payload,
+            timeout=timeout,
+            verify_ssl=self.verify_calls,
+            ignore_auth=True,
         )
         if response.ok:
             response_token: Dict[str, str] = response.content
@@ -903,7 +939,11 @@ class AsyncServiceAPIClient(RESTAPIClient):
             except (TypeError, ValueError) as _:
                 date_object: datetime = datetime.now()
                 logger.warning(f"Parsing of expiration date failed. {timestamp_str_truncated}")
-            return response_token[ACCESS_TOKEN_TAG], response_token[REFRESH_TOKEN_TAG], date_object
+            return (
+                response_token[ACCESS_TOKEN_TAG],
+                response_token[REFRESH_TOKEN_TAG],
+                date_object,
+            )
         raise await handle_error("Refresh of token failed.", response, payload=payload, headers=headers)
 
     async def login(self, tenant_api_key: str, external_user_id: str) -> PermanentSession:

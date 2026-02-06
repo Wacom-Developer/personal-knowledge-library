@@ -7,7 +7,12 @@ from typing import Optional, Any, List, Dict, Tuple, Set
 import loguru
 
 from knowledge.base.entity import Label, LanguageCode, Description
-from knowledge.base.language import LOCALE_LANGUAGE_MAPPING, LocaleCode, LANGUAGE_LOCALE_MAPPING, EN_US
+from knowledge.base.language import (
+    LOCALE_LANGUAGE_MAPPING,
+    LocaleCode,
+    LANGUAGE_LOCALE_MAPPING,
+    EN_US,
+)
 from knowledge.base.ontology import (
     ThingObject,
     DataProperty,
@@ -32,6 +37,14 @@ from knowledge.utils.wikipedia import get_wikipedia_summary
 logger = loguru.logger
 # Initialize the cache
 cache: WikidataCache = WikidataCache()
+
+__all__ = [
+    "cache",
+    "flatten",
+    "wikidata_taxonomy",
+    "convert_dict",
+    "wikidata_to_thing",
+]
 
 
 def flatten(hierarchy: WikidataClass, use_names: bool = False) -> List[str]:
@@ -129,7 +142,7 @@ def convert_dict(structure: Dict[str, Any], locale: str) -> Optional[str]:
                 return value["text"]
             return None
         if structure_type == "globe-coordinate" and isinstance(value, dict):
-            return f'{value["latitude"]},{value["longitude"]}'
+            return f"{value['latitude']},{value['longitude']}"
         if structure_type == "url" and isinstance(value, str):
             return str(value)
     raise NotImplementedError()
@@ -195,12 +208,30 @@ def wikidata_to_thing(
         if str(lang) in supported_locales:
             if str(lang) not in main_languages:
                 main_languages.add(str(lang))
-                labels_entity.append(Label(content=aliases[0].content, language_code=LocaleCode(lang), main=True))
+                labels_entity.append(
+                    Label(
+                        content=aliases[0].content,
+                        language_code=LocaleCode(lang),
+                        main=True,
+                    )
+                )
                 for alias in aliases[1:]:
-                    aliases_entity.append(Label(content=alias.content, language_code=LocaleCode(lang), main=False))
+                    aliases_entity.append(
+                        Label(
+                            content=alias.content,
+                            language_code=LocaleCode(lang),
+                            main=False,
+                        )
+                    )
             else:
                 for alias in aliases:
-                    aliases_entity.append(Label(content=alias.content, language_code=LocaleCode(lang), main=False))
+                    aliases_entity.append(
+                        Label(
+                            content=alias.content,
+                            language_code=LocaleCode(lang),
+                            main=False,
+                        )
+                    )
     t2: float = time.perf_counter()
     descriptions: List[Description] = []
     if "wiki" in wikidata_thing.sitelinks and pull_wikipedia:
@@ -211,7 +242,8 @@ def wikidata_to_thing(
                     try:
                         descriptions.append(
                             Description(
-                                description=get_wikipedia_summary(title, lang), language_code=LocaleCode(locale)
+                                description=get_wikipedia_summary(title, lang),
+                                language_code=LocaleCode(locale),
                             )
                         )
                     except Exception as e:
@@ -220,7 +252,11 @@ def wikidata_to_thing(
         descriptions = list(wikidata_thing.description.values())
     t3: float = time.perf_counter()
     # Create the thing
-    thing: ThingObject = ThingObject(label=labels_entity, description=descriptions, icon=wikidata_thing.image(dpi=500))
+    thing: ThingObject = ThingObject(
+        label=labels_entity,
+        description=descriptions,
+        icon=wikidata_thing.image(dpi=500),
+    )
     thing.alias = aliases_entity
     thing.add_source_system(DataProperty(content="wikidata", property_ref=SYSTEM_SOURCE_SYSTEM, language_code=EN_US))
     thing.add_source_reference_id(
@@ -256,12 +292,18 @@ def wikidata_to_thing(
                             if get_mapping_configuration().check_data_property_range(property_type, content):
                                 thing.add_data_property(
                                     DataProperty(
-                                        content=content, property_ref=property_type, language_code=LocaleCode(locale)
+                                        content=content,
+                                        property_ref=property_type,
+                                        language_code=LocaleCode(locale),
                                     )
                                 )
                         elif isinstance(c, (str, float, int)):
                             thing.add_data_property(
-                                DataProperty(content=c, property_ref=property_type, language_code=LocaleCode(locale))
+                                DataProperty(
+                                    content=c,
+                                    property_ref=property_type,
+                                    language_code=LocaleCode(locale),
+                                )
                             )
                     except NotImplementedError as e:
                         import_warnings.append({"qid": qid, "pid": pid, "error": str(e)})
@@ -312,8 +354,8 @@ def wikidata_to_thing(
         thing.add_relation(ObjectProperty(p, outgoing=lst))
     t7: float = time.perf_counter()
     logger.debug(
-        f"Wikidata to Thing: {(t2 - t1) * 1000.:.2f} ms for labels, {(t3 - t2) * 1000.:.2f} ms for descriptions, "
-        f"{(t4 - t3) * 1000.:.2f} ms for sources, {(t5 - t4) * 1000.:.2f} ms for class types, "
-        f"{(t6 - t5) * 1000.:.2f} ms for data properties, {(t7 - t6) * 1000.:.2f} ms for object properties"
+        f"Wikidata to Thing: {(t2 - t1) * 1000.0:.2f} ms for labels, {(t3 - t2) * 1000.0:.2f} ms for descriptions, "
+        f"{(t4 - t3) * 1000.0:.2f} ms for sources, {(t5 - t4) * 1000.0:.2f} ms for class types, "
+        f"{(t6 - t5) * 1000.0:.2f} ms for data properties, {(t7 - t6) * 1000.0:.2f} ms for object properties"
     )
     return thing, import_warnings

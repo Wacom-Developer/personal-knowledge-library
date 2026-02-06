@@ -2,6 +2,33 @@
 # Copyright © 2024-present Wacom. All rights reserved.
 from typing import NewType, List, Dict
 
+__all__ = [
+    # Type definitions
+    "LanguageCode",
+    "LocaleCode",
+    # Locale codes
+    "EN_US",
+    "JA_JP",
+    "DE_DE",
+    "BG_BG",
+    "FR_FR",
+    "IT_IT",
+    "ES_ES",
+    # Language codes
+    "EN",
+    "DE",
+    "BG",
+    "JA",
+    "FR",
+    "IT",
+    "ES",
+    # Mappings
+    "SUPPORTED_LOCALES",
+    "SUPPORTED_LANGUAGES",
+    "LANGUAGE_LOCALE_MAPPING",
+    "LOCALE_LANGUAGE_MAPPING",
+]
+
 #  ---------------------------------------- Type definitions -----------------------------------------------------------
 LanguageCode = NewType("LanguageCode", str)
 LocaleCode = NewType("LocaleCode", str)
