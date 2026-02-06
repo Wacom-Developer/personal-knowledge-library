@@ -232,14 +232,14 @@ class WikidataFlow(TestCase):
             self.assertIsInstance(cls, WikidataClass)
             self.assertIsInstance(cls.qid, str)
             self.assertIsInstance(cls.label, str)
-            self.assertIsInstance(cls.__dict__(), dict)
+            self.assertIsInstance(cls.as_dict(), dict)
         subclasses: Dict[str, WikidataClass] = WikiDataAPIClient.subclasses("Q5")
         self.assertGreaterEqual(len(subclasses), 1)
         for cls in subclasses.values():
             self.assertIsInstance(cls, WikidataClass)
             self.assertIsInstance(cls.qid, str)
             self.assertIsInstance(cls.label, str)
-            self.assertIsInstance(cls.__dict__(), dict)
+            self.assertIsInstance(cls.as_dict(), dict)
 
     def test_8_check_test(self):
         """Test the cache functionality."""
