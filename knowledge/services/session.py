@@ -96,7 +96,7 @@ class Session(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def update_session(self, auth_token: str, refresh_token: str):
+    def update_session(self, auth_token: str, refresh_token: str) -> None:
         """
         Update the session.
 
@@ -119,7 +119,7 @@ class TimedSession(Session):
     This class represents a session authenticated via a JWT token with an expiration timestamp.
     It provides utilities to decode and extract information such as roles, tenant id, service URL,
     and external user ID. Additionally, it generates and validates session IDs and keeps track of
-    expiration and refreshability.
+    expiration and refresh ability.
 
     Attributes
     ----------
@@ -145,11 +145,11 @@ class TimedSession(Session):
         Indicates whether the session token can be refreshed.
     """
 
-    def __init__(self, auth_token: str):
+    def __init__(self, auth_token: str) -> None:
         self.__auth_token: str = auth_token
         self._auth_token_details_(auth_token)
 
-    def _auth_token_details_(self, auth_token: str):
+    def _auth_token_details_(self, auth_token: str) -> None:
         """
         Extract the details from the authentication token.
         Parameters
@@ -174,7 +174,7 @@ class TimedSession(Session):
         self.__id: str = TimedSession._session_id_(self.__service_url, self.__tenant_id, self.__external_user_id)
 
     @staticmethod
-    def _session_id_(service_url: str, tenant_id: str, external_user_id: str):
+    def _session_id_(service_url: str, tenant_id: str, external_user_id: str) -> str:
         """
         Create a session id.
 
@@ -248,7 +248,7 @@ class TimedSession(Session):
         return self.__auth_token
 
     @auth_token.setter
-    def auth_token(self, value: str):
+    def auth_token(self, value: str) -> None:
         self.__auth_token = value
 
     @property
@@ -272,10 +272,20 @@ class TimedSession(Session):
         """Is the session refreshable."""
         return False
 
-    def update_session(self, auth_token: str, refresh_token: str):
+    def update_session(self, auth_token: str, refresh_token: str) -> None:
+        """
+        Updates the authentication session with new tokens.
+
+        Parameters
+        ----------
+        auth_token
+            New authentication token to be used for API requests.
+        refresh_token
+            New refresh token to update the session credentials.
+        """
         raise NotImplementedError
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"TimedSession(auth_token={self.auth_token})"
 
 
@@ -299,7 +309,7 @@ class RefreshableSession(TimedSession):
         The refresh token used to renew the session.
     """
 
-    def __init__(self, auth_token: str, refresh_token: str):
+    def __init__(self, auth_token: str, refresh_token: str) -> None:
         super().__init__(auth_token)
         self.__refresh_token: str = refresh_token
         self.__lock: threading.Lock = threading.Lock()
@@ -310,10 +320,10 @@ class RefreshableSession(TimedSession):
         return self.__refresh_token
 
     @refresh_token.setter
-    def refresh_token(self, value: str):
+    def refresh_token(self, value: str) -> None:
         self.__refresh_token = value
 
-    def update_session(self, auth_token: str, refresh_token: str):
+    def update_session(self, auth_token: str, refresh_token: str) -> None:
         """
         Refresh the session.
         Parameters
@@ -348,7 +358,7 @@ class RefreshableSession(TimedSession):
         """Is the session refreshable?"""
         return self.refresh_token is not None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"RefreshableSession(auth_token={self.auth_token}, refresh_token={self.refresh_token})"
 
 
@@ -373,7 +383,7 @@ class PermanentSession(RefreshableSession):
         The external user identifier for the session.
     """
 
-    def __init__(self, tenant_api_key: str, external_user_id: str, auth_token: str, refresh_token: str):
+    def __init__(self, tenant_api_key: str, external_user_id: str, auth_token: str, refresh_token: str) -> None:
         super().__init__(auth_token, refresh_token)
         self.__tenant_api_key: str = tenant_api_key
         self.__external_user_id: str = external_user_id
@@ -413,7 +423,7 @@ class TokenManager:
         A dictionary mapping session ids to their corresponding session objects.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.sessions: Dict[str, Union[TimedSession, RefreshableSession, PermanentSession]] = {}
         self.__lock: threading.Lock = threading.Lock()
 

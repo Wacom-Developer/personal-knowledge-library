@@ -895,7 +895,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the graph service returns an error code, and activation failed.
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ACTIVATIONS_ENDPOINT}"
-        params: dict = {URIS_TAG: uris, ACTIVATION_TAG: depth}
+        params: Dict[str, Any] = {URIS_TAG: uris, ACTIVATION_TAG: depth}
         response: Response = self.request_session.get(
             url, params=params, timeout=timeout, verify=self.verify_calls, overwrite_auth_token=auth_key
         )
@@ -985,7 +985,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         )
         # If the response is successful
         if response.ok:
-            entities_resp: dict = response.json()
+            entities_resp: Dict[str, Any] = response.json()
             next_page_id: str = entities_resp[NEXT_PAGE_ID_TAG]
             estimated_total_number: int = entities_resp.get(TOTAL_COUNT, 0)
             entities: List[ThingObject] = []
@@ -1003,7 +1003,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         language_code: LocaleCode,
         types: List[OntologyClassReference],
         limit: int = 30,
-        next_page_id: str = None,
+        next_page_id: Optional[str] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Tuple[List[ThingObject], str]:
@@ -1021,7 +1021,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             Limits the types for search.
         limit: int  (default:= 30)
             Size of the page for pagination.
-        next_page_id: str (default:=None)
+        next_page_id: Optional[str] (default:=None)
             ID of the next page within pagination.
         timeout: int
             Timeout for the request (default: 60 seconds)
@@ -1059,7 +1059,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         language_code: LocaleCode,
         exact_match: bool = False,
         limit: int = 30,
-        next_page_id: str = None,
+        next_page_id: Optional[str] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Tuple[List[ThingObject], str]:
@@ -1075,7 +1075,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If true, only exact matches are returned.
         limit: int  (default:= 30)
             Size of the page for pagination.
-        next_page_id: str (default:=None)
+        next_page_id: Optional[str] (default:=None)
             ID of the next page within pagination.
         auth_key: Optional[str] = None
             If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
@@ -1117,7 +1117,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         pattern: SearchPattern = SearchPattern.REGEX,
         language_code: LocaleCode = EN_US,
         limit: int = 30,
-        next_page_id: str = None,
+        next_page_id: Optional[str] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Tuple[List[ThingObject], str]:
@@ -1136,11 +1136,11 @@ class WacomKnowledgeService(WacomServiceAPIClient):
              ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
          limit: int (default:= 30)
              Size of the page for pagination.
-         next_page_id: str (default:=None)
+         next_page_id: Optional[str] (default:=None)
              ID of the next page within pagination.
-         auth_key: Optional[str] = None
+         auth_key: Optional[str] (default:= None)
              If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
-         timeout: int
+         timeout: int (default:= 60 seconds)
              Timeout for the request (default: 60 seconds)
 
 
@@ -1176,10 +1176,10 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         self,
         relation: OntologyPropertyReference,
         language_code: LocaleCode,
-        subject_uri: str = None,
-        object_uri: str = None,
+        subject_uri: Optional[str] = None,
+        object_uri: Optional[str] = None,
         limit: int = 30,
-        next_page_id: str = None,
+        next_page_id: Optional[str] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Tuple[List[ThingObject], str]:
@@ -1192,13 +1192,13 @@ class WacomKnowledgeService(WacomServiceAPIClient):
              Search term.
          language_code: LocaleCode
              ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
-         subject_uri: str (default:=None)
+         subject_uri: Optional[str] (default:=None)
              URI of the subject
-         object_uri: str (default:=None)
+         object_uri: Optional[str] (default:=None)
              URI of the object
          limit: int (default:= 30)
              Size of the page for pagination.
-         next_page_id: str (default:=None)
+         next_page_id: Optional[str] (default:=None)
              ID of the next page within pagination.
          auth_key: Optional[str] = None
              If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
@@ -1241,7 +1241,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         search_term: str,
         language_code: LocaleCode,
         limit: int = 30,
-        next_page_id: str = None,
+        next_page_id: Optional[str] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Tuple[List[ThingObject], str]:
@@ -1255,7 +1255,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         limit: int  (default:= 30)
             Size of the page for pagination.
-        next_page_id: str (default:=None)
+        next_page_id: Optional[str] (default:=None)
             ID of the next page within pagination.
         auth_key: Optional[str] = None
             If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.

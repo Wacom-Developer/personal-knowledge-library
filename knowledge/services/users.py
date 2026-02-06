@@ -183,8 +183,8 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         self,
         tenant_key: str,
         external_id: str,
-        meta_data: Dict[str, str] = None,
-        roles: List[UserRole] = None,
+        meta_data: Optional[Dict[str, str]] = None,
+        roles: Optional[List[UserRole]] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Tuple[User, str, str, datetime]:
         """
@@ -196,9 +196,9 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             API key for tenant
         external_id: str -
             External id of user identification service.
-        meta_data: Dict[str, str]
+        meta_data: Optional[Dict[str, str]] (default:= None)
             Meta-data dictionary.
-        roles: List[UserRole]
+        roles: Optional[List[UserRole]] (default:= [UserRole.USER])
             List of roles.
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]
@@ -267,9 +267,9 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             Internal id of semantic service.
         external_id: str
             External id of user identification service.
-        meta_data: Dict[str, str]
+        meta_data: Dict[str, str] (default:= None)
             Meta-data dictionary.
-        roles: List[UserRole]
+        roles: List[UserRole] (default:= [UserRole.USER])
             List of roles.
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]

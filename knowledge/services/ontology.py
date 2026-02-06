@@ -614,7 +614,7 @@ class OntologyService(WacomServiceAPIClient):
         comments: Optional[List[Comment]] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ) -> Dict[str, str]:
+    ) -> Dict[str, Any]:
         """Create property.
 
         **Remark:**
@@ -648,7 +648,7 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        result: Dict[str, str]
+        result: Dict[str, Any]
             Result from the service
 
         Raises
@@ -700,7 +700,7 @@ class OntologyService(WacomServiceAPIClient):
         comments: Optional[List[Comment]] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ) -> Dict[str, str]:
+    ) -> Dict[str, Any]:
         """Create a data property.
 
         **Remark:**
@@ -731,7 +731,7 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        result: Dict[str, str]
+        result: Dict[str, Any]
             Result from the service
 
         Raises
@@ -817,7 +817,7 @@ class OntologyService(WacomServiceAPIClient):
         comments: List[Comment] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ) -> Dict[str, str]:
+    ) -> Dict[str, Any]:
         """Create context.
 
         **Remark:**
@@ -846,7 +846,7 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        result: Dict[str, str]
+        result: Dict[str, Any]
             Result from the service
 
         Raises
@@ -904,10 +904,10 @@ class OntologyService(WacomServiceAPIClient):
         timeout: int
             Timeout for the request (default: 60 seconds)
 
-        Returns
-        -------
-        result: Dict[str, str]
-            Result from the service
+        Raises
+        ------
+        WacomServiceException
+            Raised if the ontology service returns an error code.
         """
         url: str = f'{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{name}{"/force" if force else ""}'
 

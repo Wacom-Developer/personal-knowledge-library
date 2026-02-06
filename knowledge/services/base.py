@@ -60,7 +60,7 @@ class WacomServiceException(Exception):
         url: Optional[str] = None,
         service_response: Optional[str] = None,
         status_code: int = 500,
-    ):
+    ) -> None:
         super().__init__(message)
         self.__status_code: int = status_code
         self.__service_response: Optional[str] = service_response
@@ -138,7 +138,7 @@ class RequestsSession:
         pool_maxsize: int = 10,
         max_retries: int = 3,
         backoff_factor: float = 0.3,
-    ):
+    ) -> None:
         self._client = client
         self._session: Optional[requests.Session] = None
         self._pool_connections = pool_connections
@@ -153,7 +153,7 @@ class RequestsSession:
         return self._max_retries
 
     @max_retries.setter
-    def max_retries(self, value: int):
+    def max_retries(self, value: int) -> None:
         if value != self._max_retries:
             self.close()
             self._max_retries = value
@@ -164,7 +164,7 @@ class RequestsSession:
         return self._backoff_factor
 
     @backoff_factor.setter
-    def backoff_factor(self, value: float):
+    def backoff_factor(self, value: float) -> None:
         if value != self._backoff_factor:
             # Close the session to release resources
             self.close()
@@ -187,7 +187,7 @@ class RequestsSession:
         return self._pool_maxsize
 
     @pool_maxsize.setter
-    def pool_maxsize(self, value: int):
+    def pool_maxsize(self, value: int) -> None:
         if value != self._pool_maxsize:
             self.close()
             self._pool_maxsize = value
@@ -373,7 +373,7 @@ class RequestsSession:
         """
         return self.request("PATCH", url, **kwargs)
 
-    def close(self):
+    def close(self) -> None:
         """
         Close the session and release resources.
         """
