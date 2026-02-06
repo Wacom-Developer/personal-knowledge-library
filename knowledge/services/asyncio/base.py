@@ -564,12 +564,9 @@ class AsyncSession:
                 content = await response.json(encoding="utf-8", loads=orjson.loads)
             else:
                 content = await response.read()
-        except aiohttp.ContentTypeError | orjson.JSONDecodeError as e:
+        except (aiohttp.ContentTypeError, orjson.JSONDecodeError) as e:
             logger.warning(f"Failed to decode response body: {e}")
-            try:
-                content = await response.text(encoding="utf-8", errors="ignore")
-            except Exception:
-                content = "Exception occurred while decoding response body."
+            content = await response.text(encoding="utf-8", errors="ignore")
         return content
 
     async def __aenter__(self):
