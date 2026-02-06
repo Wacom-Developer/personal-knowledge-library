@@ -1,3 +1,12 @@
+2026/02/06 - RELEASE 4.1.0
+==========================
+- Added type annotations and return types - Added -> None, -> str, -> Dict[str, Any], etc. to functions missing return type annotations, and added proper type parameters to generic types like Dict, List, and Tuple
+- Fixed response.content type casting - Wrapped all response.content assignments with cast(Dict[str, Any], ...) or appropriate type since the async response content is a union type (str | bytes | bool | dict | list)
+- Fixed variable redefinitions in try/except blocks - Changed patterns like var: Type = value in both try and except branches to declare the type first (var: Type) then assign in each branch to avoid mypy "already defined" errors
+- Added Optional types and logger guards - Changed function parameters from List[T] = None to Optional[List[T]] = None, and wrapped logger calls with if logger: guards since the logger can be None
+- Fixed imports and type compatibility issues - Corrected import paths for symbols like DEFAULT_TIMEOUT, changed setter parameter types to accept Optional[str] where needed, and used cast() with Literal types for enum-like values
+- Refactored response handling - Moved response handling code out of the client classes into a separate structure ResponseData
+
 2026/01/21 - RELEASE 4.0.4
 ==========================
 - Adding a new function to use filtering of documents endpoint
