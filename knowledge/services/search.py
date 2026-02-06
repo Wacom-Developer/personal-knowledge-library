@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024-present Wacom. All rights reserved.
-from typing import Dict, Any, Optional, List, Literal, cast
+from typing import Dict, Any, Optional, List, Literal
 
 from requests import Response
 

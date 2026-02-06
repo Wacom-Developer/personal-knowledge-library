@@ -6,7 +6,7 @@ import logging
 import os
 import urllib
 from pathlib import Path
-from typing import Any, Optional, List, Dict, Tuple, cast, Literal
+from typing import Any, Optional, List, Dict, Tuple, cast
 from urllib.parse import urlparse
 
 import aiohttp
