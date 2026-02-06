@@ -6,7 +6,7 @@ import json
 import os
 import urllib
 from pathlib import Path
-from typing import Any, Optional, List, Dict, Tuple, Literal
+from typing import Any, Optional, List, Dict, Tuple, Literal, Union, cast
 from urllib.parse import urlparse
 
 from requests import Response
@@ -294,7 +294,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         force: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Delete a list of entities.
 
@@ -338,7 +338,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         force: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Deletes an entity.
 
@@ -403,7 +403,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             return False
 
     @staticmethod
-    def _entity_(entity: ThingObject):
+    def _entity_(entity: ThingObject) -> Dict[str, Any]:
         """
         Constructs and returns the payload of a given entity. This method is used to
         process the `ThingObject` and format or extract specific information to create
@@ -472,12 +472,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 response_dict: Dict[str, Any] = response.json()
 
                 for idx, uri in enumerate(response_dict[URIS_TAG]):
-                    if (
-                        entities[bulk_idx + idx].image is not None
-                        and entities[bulk_idx + idx].image != ""
-                        and not ignore_images
-                    ):
-                        self.set_entity_image_url(uri, entities[bulk_idx + idx].image, auth_key=auth_key)
+                    entity_image = entities[bulk_idx + idx].image
+                    if entity_image is not None and entity_image != "" and not ignore_images:
+                        self.set_entity_image_url(uri, entity_image, auth_key=auth_key)
                     entities[bulk_idx + idx].uri = response_dict[URIS_TAG][idx]
             else:
                 raise handle_error("Pushing entity failed.", response)
@@ -512,6 +509,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         ------
         WacomServiceException
             If the graph service returns an error code
+        ValueError
+            If the entity has no URI
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}"
         payload: Dict[str, Any] = WacomKnowledgeService._entity_(entity)
@@ -524,21 +523,21 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         )
 
         if response.ok and not ignore_image:
-            uri: str = response.json()[URI_TAG]
+            entity_uri: str = response.json()[URI_TAG]
             # Set image
             try:
                 if entity.image is not None and entity.image.startswith("file:"):
                     p = urlparse(entity.image)
-                    self.set_entity_image_local(uri, Path(p.path), auth_key=auth_key)
+                    self.set_entity_image_local(entity_uri, Path(p.path), auth_key=auth_key)
                 elif entity.image is not None and entity.image.startswith("/"):
-                    self.set_entity_image_local(uri, Path(entity.image), auth_key=auth_key)
+                    self.set_entity_image_local(entity_uri, Path(entity.image), auth_key=auth_key)
                 elif entity.image is not None and entity.image != "":
-                    self.set_entity_image_url(uri, entity.image, auth_key=auth_key)
+                    self.set_entity_image_url(entity_uri, entity.image, auth_key=auth_key)
             except WacomServiceException as _:
                 pass
         if response.ok:
-            uri: str = response.json()[URI_TAG]
-            return uri
+            result_uri: str = response.json()[URI_TAG]
+            return result_uri
         raise handle_error("Pushing entity failed.", response)
 
     def update_entity(
@@ -546,7 +545,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         entity: ThingObject,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Updates entity in the graph.
 
@@ -564,6 +563,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         WacomServiceException
             If the graph service returns an error code
         """
+        if entity.uri is None:
+            raise ValueError("Entity URI cannot be None for update operation")
         uri: str = entity.uri
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{uri}"
         payload: Dict[str, Any] = WacomKnowledgeService._entity_(entity)
@@ -622,7 +623,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            return response.json()
+            return cast(Dict[IndexType, Any], response.json())
         raise handle_error("Updating entity indexes failed.", response)
 
     def remove_entity_indexes(
@@ -666,7 +667,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            return response.json()
+            return cast(Dict[IndexType, Any], response.json())
         raise handle_error("Deleting entity indexes failed.", response)
 
     def relations(
@@ -704,7 +705,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            rel: list = response.json().get(RELATIONS_TAG)
+            rel: List[Any] = response.json().get(RELATIONS_TAG)
             return ObjectProperty.create_from_list(rel)
         raise handle_error("Retrieving relations failed.", response)
 
@@ -748,7 +749,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            response_dict: dict = response.json()
+            response_dict: Dict[str, Any] = response.json()
             if LABELS_TAG in response_dict:
                 return [Label.create_from_dict(label) for label in response_dict[LABELS_TAG]]
             return []
@@ -794,7 +795,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            literals: list = response.json().get(DATA_PROPERTIES_TAG)
+            literals: List[Any] = response.json().get(DATA_PROPERTIES_TAG)
             return DataProperty.create_from_list(literals)
         raise handle_error(f"Failed to pull literals for {uri}.", response)
 
@@ -805,7 +806,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         target: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Creates a relation for an entity to a source entity.
 
@@ -828,7 +829,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the graph service returns an error code
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation"
-        params: dict = {RELATION_TAG: relation.iri, TARGET: target}
+        params: Dict[str, str] = {RELATION_TAG: relation.iri, TARGET: target}
         response: Response = self.request_session.post(
             url,
             params=params,
@@ -845,7 +846,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         relations: Dict[OntologyPropertyReference, List[str]],
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Creates all the relations for an entity to a source entity.
 
@@ -884,7 +885,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         target: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Removes a relation.
 
@@ -1485,9 +1486,9 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         response: Response = self.request_session.get(image_url, timeout=timeout, verify=self.verify_calls)
         if response.ok:
             image_bytes: bytes = response.content
-            file_name: str = image_url if file_name is None else file_name
+            actual_file_name: str = image_url if file_name is None else file_name
             if mime_type is None:
-                _, file_extension = os.path.splitext(file_name.lower())
+                _, file_extension = os.path.splitext(actual_file_name.lower())
                 if file_extension not in MIME_TYPE:
                     raise handle_error(
                         "Creation of entity image failed. Mime-type cannot be identified or is not supported.",
@@ -1498,7 +1499,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             return self.set_entity_image(
                 entity_uri,
                 image_bytes,
-                file_name,
+                actual_file_name,
                 mime_type,
                 auth_key=auth_key,
                 timeout=timeout,
@@ -1553,7 +1554,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             ignore_content_type=True,
         )
         if response.ok:
-            return response.json()["imageId"]
+            return str(response.json()["imageId"])
         raise handle_error("Creation of entity image failed.", response)
 
     def import_entities(
@@ -1604,7 +1605,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             ignore_content_type=True,
         )
         if response.ok:
-            return response.json()["jobId"]
+            return str(response.json()["jobId"])
         raise handle_error("Import endpoint returns an error.", response)
 
     def import_entities_from_file(
@@ -1654,7 +1655,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 ignore_content_type=True,
             )
             if response.ok:
-                return response.json()["jobId"]
+                return str(response.json()["jobId"])
             raise handle_error("Import endpoint returns an error.", response)
 
     def job_status(
@@ -1777,7 +1778,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         prune: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Rebuild the vector search index.
 
@@ -1795,7 +1796,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.REBUILD_VECTOR_SEARCH_INDEX}"
         params: Dict[str, bool] = {PRUNE_PARAM: prune}
-        if UserRole.ADMIN.value not in self.current_session.roles:
+        if self.current_session is None or UserRole.ADMIN.value not in self.current_session.roles:
             raise WacomServiceException('Only users with the role "Admin" can rebuild the vector search index.')
 
         response: Response = self.request_session.post(
@@ -1814,7 +1815,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         prune: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Rebuild the named entity linking index.
 
@@ -1838,8 +1839,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the graph service returns an error code.
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.REBUILD_NEL_INDEX}"
-        params: Dict[str, str] = {PRUNE_PARAM: prune, NEL_PARAM: nel_index}
-        if UserRole.ADMIN.value not in self.current_session.roles:
+        params: Dict[str, Union[str, bool]] = {PRUNE_PARAM: prune, NEL_PARAM: nel_index}
+        if self.current_session is None or UserRole.ADMIN.value not in self.current_session.roles:
             raise WacomServiceException('Only users with the role "Admin" can rebuild the vector search index.')
         response: Response = self.request_session.post(
             url,
@@ -1856,7 +1857,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         fix: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Update the ontology.
 
