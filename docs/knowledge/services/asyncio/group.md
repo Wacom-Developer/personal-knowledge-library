@@ -35,7 +35,7 @@ Classes
 
     ### Methods
 
-    `add_entity_to_group(self, group_id: str, entity_uri: str, auth_key: str | None = None, timeout: int = 60)`
+    `add_entity_to_group(self, group_id: str, entity_uri: str, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Adding an entity to a group.
         
         Parameters
@@ -53,7 +53,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `add_user_to_group(self, group_id: str, user_id: str, auth_key: str | None = None, timeout: int = 60)`
+    `add_user_to_group(self, group_id: str, user_id: str, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Adding a user to a group.
         
         Parameters
@@ -98,7 +98,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `delete_group(self, group_id: str, force: bool = False, auth_key: str | None = None, timeout: int = 60)`
+    `delete_group(self, group_id: str, force: bool = False, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Delete a group.
         
          Parameters
@@ -139,7 +139,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `join_group(self, group_id: str, join_key: str, auth_key: str | None = None, timeout: int = 60)`
+    `join_group(self, group_id: str, join_key: str, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   User joining a group with his auth token.
         
         Parameters
@@ -157,7 +157,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `leave_group(self, group_id: str, auth_key: str | None = None, timeout: int = 60)`
+    `leave_group(self, group_id: str, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   User leaving a group with his auth token.
         
         Parameters
@@ -201,7 +201,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: str | None = None, timeout: int = 60)`
+    `remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Remove an entity from a group.
         
         Parameters
@@ -220,7 +220,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `remove_user_from_group(self, group_id: str, user_id: str, force: bool = False, auth_key: str | None = None, timeout: int = 60)`
+    `remove_user_from_group(self, group_id: str, user_id: str, force: bool = False, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Remove a user from a group.
         
         Parameters
@@ -240,7 +240,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `update_group(self, group_id: str, name: str, rights: knowledge.base.access.GroupAccessRight = knowledge.base.access.GroupAccessRight, auth_key: str | None = None, timeout: int = 60)`
+    `update_group(self, group_id: str, name: str, rights: knowledge.base.access.GroupAccessRight, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Updates a group.
         
         Parameters

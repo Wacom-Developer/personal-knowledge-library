@@ -145,6 +145,24 @@ Classes
     `superclasses: List[WikidataClass]`
     :   Superclasses.
 
+    ### Methods
+
+    `as_dict(self) ‑> Dict[str, Any]`
+    :   Return a dictionary representation of the object's superclass hierarchy.
+        
+        This method provides a convenient mapping of the object's inheritance
+        structure to a plain Python dictionary. The returned dictionary is
+        constructed by invoking the internal `__superclasses_hierarchy__`
+        method, which encodes each superclass and its attributes in a nested
+        form.
+        
+        Returns
+        -------
+        dict
+            A mapping where keys are the names of the object's superclasses and
+            values are dictionaries representing the attributes of those
+            superclasses.
+
 `WikidataProperty(pid: str, label: str | None = None)`
 :   WikidataProperty
     ----------------
@@ -232,7 +250,7 @@ Classes
     `repository: str`
     :   Repository of the search result.
 
-`WikidataThing(revision: str, qid: str, modified: datetime.datetime, label: Dict[str, knowledge.base.entity.Label] | None = None, aliases: Dict[str, List[knowledge.base.entity.Label]] | None = None, description: Dict[str, knowledge.base.entity.Description] | None = None, sync_time: datetime.datetime = datetime.datetime(2026, 1, 22, 8, 45, 12, 517349))`
+`WikidataThing(revision: str, qid: str, modified: datetime.datetime, label: Dict[str, knowledge.base.entity.Label] | None = None, aliases: Dict[str, List[knowledge.base.entity.Label]] | None = None, description: Dict[str, knowledge.base.entity.Description] | None = None, sync_time: datetime.datetime = datetime.datetime(2026, 2, 6, 21, 58, 0, 771075))`
 :   WikidataEntity
     -----------
     Generic entity within wikidata.
@@ -250,12 +268,14 @@ Classes
         QID for entity. For new entities the URI is None, as the knowledge graph backend assigns this.
     modified: datetime
         Last modified date
-    label: List[Label]
-        List of labels
-    description: List[Description] (optional)
-        List of descriptions
-    qid: str
-         QID for entity. For new entities the URI is None, as the knowledge graph backend assigns this.
+    label: Optional[Dict[str, Label]] (optional)
+        Mapping of language codes to labels
+    aliases: Optional[Dict[str, List[Label]]] (optional)
+        Mapping of language codes to aliases
+    description: Optional[Dict[str, Description]] (optional)
+        Mapping of language codes to descriptions
+    sync_time: datetime (optional)
+        Time of last sync. Default: now()
 
     ### Static methods
 
@@ -348,7 +368,7 @@ Classes
         language_code: str
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `add_claim(self, pid: str, claim: knowledge.public.wikidata.Claim)`
+    `add_claim(self, pid: str, claim: knowledge.public.wikidata.Claim) ‑> None`
     :   Adding a claim.
         
         Parameters

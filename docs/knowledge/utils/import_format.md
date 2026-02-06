@@ -37,6 +37,31 @@ Functions
     bool
         True if the URL is a local file path or relative URL, False otherwise.
 
+`iterate_large_import_format(file_path: pathlib.Path) ‑> Iterable[knowledge.base.ontology.ThingObject]`
+:   Iterates over a gzip‑compressed file containing ThingObject JSON lines, yielding parsed ThingObject instances.
+    
+    Parameters
+    ----------
+    file_path
+        Path to the gzip‑compressed input file.
+    
+    Yields
+    ------
+    ThingObject
+        Parsed ThingObject instance for each line in the input file.
+    
+    Returns
+    -------
+    Iterable[ThingObject]
+        An iterator yielding ThingObject instances.
+    
+    Raises
+    ------
+    FileNotFoundError
+        If the file does not exist.
+    ValueError
+        If the file format is not supported.
+
 `load_import_format(file_path: pathlib.Path) ‑> List[knowledge.base.ontology.ThingObject]`
 :   Load the import format file.
     Parameters

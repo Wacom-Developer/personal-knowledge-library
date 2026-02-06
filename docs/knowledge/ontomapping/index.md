@@ -53,7 +53,7 @@ Functions
     is_iso_date: bool
         True if the date string is an ISO date, otherwise False.
 
-`load_configuration(configuration: pathlib.Path)`
+`load_configuration(configuration: pathlib.Path) ‑> None`
 :   Loads the configuration.
     
     Raises
@@ -61,7 +61,7 @@ Functions
     ValueError
         If the configuration file is not found.
 
-`register_ontology(rdf_str: str)`
+`register_ontology(rdf_str: str) ‑> None`
 :   Registers the ontology.
     Parameters
     ----------
@@ -122,7 +122,7 @@ Classes
 
     ### Methods
 
-    `add_class(self, class_configuration: knowledge.ontomapping.ClassConfiguration)`
+    `add_class(self, class_configuration: knowledge.ontomapping.ClassConfiguration) ‑> None`
     :   Adds a class configuration.
         
         Parameters
@@ -130,7 +130,7 @@ Classes
         class_configuration: ClassConfiguration
             The class configuration
 
-    `add_property(self, property_configuration: knowledge.ontomapping.PropertyConfiguration)`
+    `add_property(self, property_configuration: knowledge.ontomapping.PropertyConfiguration) ‑> None`
     :   Adds a property configuration.
         
         Parameters
@@ -323,20 +323,25 @@ Classes
 
     ### Methods
 
-    `default(self, o)`
-    :   Implement this method in a subclass such that it returns
-        a serializable object for ``o``, or calls the base implementation
-        (to raise a ``TypeError``).
+    `default(self, o) ‑> Dict[str, Any]`
+    :   Handles serialization of objects for JSON encoding.
         
-        For example, to support arbitrary iterators, you could
-        implement default like this::
+        Parameters
+        ----------
+        o : object
+            The object to be serialized. If it is an instance of
+            `WikidataClass`, the method will return its dictionary
+            representation using the `as_dict` method.
         
-            def default(self, o):
-                try:
-                    iterable = iter(o)
-                except TypeError:
-                    pass
-                else:
-                    return list(iterable)
-                # Let the base class default method raise the TypeError
-                return super().default(o)
+        Returns
+        -------
+        dict
+            Dictionary representation of the object for JSON serialization.
+            For objects that are not instances of `WikidataClass`, the
+            behavior is delegated to the base `json.JSONEncoder.default`
+            method.
+        
+        Raises
+        ------
+        TypeError
+            If the object cannot be serialized by the base encoder.

@@ -55,7 +55,7 @@ Classes
 
     ### Instance variables
 
-    `content_data_property_name`
+    `content_data_property_name: str`
     :   Name of the content data property which is used for vector search to index documents.
 
     `identifier: str`
@@ -81,11 +81,11 @@ Classes
     `ontology_version: int`
     :   Version of the ontology.
 
-    `rights`
+    `rights: List[str]`
     :   List of rights being assigned to the tenant, and will be added to the user's rights in the token.
 
     `vector_search_data_properties: List[str]`
     :   List of vector search data properties which are used for vector search in the metadata.
 
-    `vector_search_object_properties`
+    `vector_search_object_properties: List[str]`
     :   List of vector search object properties which are used for vector search in the metadata.

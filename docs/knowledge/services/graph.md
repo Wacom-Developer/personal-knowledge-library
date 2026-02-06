@@ -217,6 +217,8 @@ Classes
         ------
         WacomServiceException
             If the graph service returns an error code
+        ValueError
+            If the entity has no URI
 
     `create_entity_bulk(self, entities: List[knowledge.base.ontology.ThingObject], batch_size: int = 10, ignore_images: bool = False, auth_key: str | None = None, timeout: int = 60) ‑> List[knowledge.base.ontology.ThingObject]`
     :   Creates entity in the graph.
@@ -244,7 +246,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `create_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: str | None = None, timeout: int = 60)`
+    `create_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Creates a relation for an entity to a source entity.
         
         Parameters
@@ -265,7 +267,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `create_relations_bulk(self, source: str, relations: Dict[knowledge.base.ontology.OntologyPropertyReference, List[str]], auth_key: str | None = None, timeout: int = 60)`
+    `create_relations_bulk(self, source: str, relations: Dict[knowledge.base.ontology.OntologyPropertyReference, List[str]], auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Creates all the relations for an entity to a source entity.
         
         Parameters
@@ -284,7 +286,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `delete_entities(self, uris: List[str], force: bool = False, auth_key: str | None = None, timeout: int = 60)`
+    `delete_entities(self, uris: List[str], force: bool = False, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Delete a list of entities.
         
         Parameters
@@ -305,7 +307,7 @@ Classes
         ValueError
             If more than 100 entities are given
 
-    `delete_entity(self, uri: str, force: bool = False, auth_key: str | None = None, timeout: int = 60)`
+    `delete_entity(self, uri: str, force: bool = False, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Deletes an entity.
         
         Parameters
@@ -580,7 +582,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `ontology_update(self, fix: bool = False, auth_key: str | None = None, timeout: int = 60)`
+    `ontology_update(self, fix: bool = False, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Update the ontology.
         
         **Remark: **
@@ -600,7 +602,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code and commit failed.
 
-    `rebuild_nel_index(self, nel_index: Literal['Western', 'Japanese'], prune: bool = False, auth_key: str | None = None, timeout: int = 60)`
+    `rebuild_nel_index(self, nel_index: Literal['Western', 'Japanese'], prune: bool = False, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Rebuild the named entity linking index.
         
         **Remark: **
@@ -622,7 +624,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `rebuild_vector_search_index(self, prune: bool = False, auth_key: str | None = None, timeout: int = 60)`
+    `rebuild_vector_search_index(self, prune: bool = False, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Rebuild the vector search index.
         
         **Remark: **
@@ -683,7 +685,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `remove_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: str | None = None, timeout: int = 60)`
+    `remove_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Removes a relation.
         
         Parameters
@@ -704,7 +706,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `search_all(self, search_term: str, language_code: knowledge.base.language.LocaleCode, types: List[knowledge.base.ontology.OntologyClassReference], limit: int = 30, next_page_id: str = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_all(self, search_term: str, language_code: knowledge.base.language.LocaleCode, types: List[knowledge.base.ontology.OntologyClassReference], limit: int = 30, next_page_id: str | None = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search term in labels, literals, and description.
         
         Parameters
@@ -719,7 +721,7 @@ Classes
             Limits the types for search.
         limit: int  (default:= 30)
             Size of the page for pagination.
-        next_page_id: str (default:=None)
+        next_page_id: Optional[str] (default:=None)
             ID of the next page within pagination.
         timeout: int
             Timeout for the request (default: 60 seconds)
@@ -736,7 +738,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_description(self, search_term: str, language_code: knowledge.base.language.LocaleCode, limit: int = 30, next_page_id: str = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_description(self, search_term: str, language_code: knowledge.base.language.LocaleCode, limit: int = 30, next_page_id: str | None = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in the description.
         
         Parameters
@@ -747,7 +749,7 @@ Classes
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
         limit: int  (default:= 30)
             Size of the page for pagination.
-        next_page_id: str (default:=None)
+        next_page_id: Optional[str] (default:=None)
             ID of the next page within pagination.
         auth_key: Optional[str] = None
             If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
@@ -766,7 +768,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_labels(self, search_term: str, language_code: knowledge.base.language.LocaleCode, exact_match: bool = False, limit: int = 30, next_page_id: str = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_labels(self, search_term: str, language_code: knowledge.base.language.LocaleCode, exact_match: bool = False, limit: int = 30, next_page_id: str | None = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in labels.
         
         Parameters
@@ -779,7 +781,7 @@ Classes
             If true, only exact matches are returned.
         limit: int  (default:= 30)
             Size of the page for pagination.
-        next_page_id: str (default:=None)
+        next_page_id: Optional[str] (default:=None)
             ID of the next page within pagination.
         auth_key: Optional[str] = None
             If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
@@ -798,7 +800,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_literal(self, search_term: str, literal: knowledge.base.ontology.OntologyPropertyReference, pattern: knowledge.services.graph.SearchPattern = SearchPattern.REGEX, language_code: knowledge.base.language.LocaleCode = 'en_US', limit: int = 30, next_page_id: str = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_literal(self, search_term: str, literal: knowledge.base.ontology.OntologyPropertyReference, pattern: knowledge.services.graph.SearchPattern = SearchPattern.REGEX, language_code: knowledge.base.language.LocaleCode = 'en_US', limit: int = 30, next_page_id: str | None = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in literals.
         
          Parameters
@@ -813,11 +815,11 @@ Classes
              ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
          limit: int (default:= 30)
              Size of the page for pagination.
-         next_page_id: str (default:=None)
+         next_page_id: Optional[str] (default:=None)
              ID of the next page within pagination.
-         auth_key: Optional[str] = None
+         auth_key: Optional[str] (default:= None)
              If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
-         timeout: int
+         timeout: int (default:= 60 seconds)
              Timeout for the request (default: 60 seconds)
         
         
@@ -833,7 +835,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_relation(self, relation: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.language.LocaleCode, subject_uri: str = None, object_uri: str = None, limit: int = 30, next_page_id: str = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_relation(self, relation: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.language.LocaleCode, subject_uri: str | None = None, object_uri: str | None = None, limit: int = 30, next_page_id: str | None = None, auth_key: str | None = None, timeout: int = 60) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in literals.
         
          Parameters
@@ -842,13 +844,13 @@ Classes
              Search term.
          language_code: LocaleCode
              ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
-         subject_uri: str (default:=None)
+         subject_uri: Optional[str] (default:=None)
              URI of the subject
-         object_uri: str (default:=None)
+         object_uri: Optional[str] (default:=None)
              URI of the object
          limit: int (default:= 30)
              Size of the page for pagination.
-         next_page_id: str (default:=None)
+         next_page_id: Optional[str] (default:=None)
              ID of the next page within pagination.
          auth_key: Optional[str] = None
              If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
@@ -951,7 +953,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `update_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: str | None = None, timeout: int = 60)`
+    `update_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Updates entity in the graph.
         
         Parameters

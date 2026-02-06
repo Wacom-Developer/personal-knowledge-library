@@ -27,7 +27,7 @@ Classes
 
     ### Methods
 
-    `cache_property(self, prop: knowledge.public.wikidata.WikidataProperty)`
+    `cache_property(self, prop: knowledge.public.wikidata.WikidataProperty) ‑> None`
     :   Adds a property to the property cache with LRU eviction.
         
         Parameters
@@ -35,7 +35,7 @@ Classes
         prop: Dict[str, Any]
             The property to cache.
 
-    `cache_subclass(self, subclass: knowledge.public.wikidata.WikidataClass)`
+    `cache_subclass(self, subclass: knowledge.public.wikidata.WikidataClass) ‑> None`
     :   Adds a subclass to the subclass cache with LRU eviction.
         
         Parameters
@@ -43,7 +43,7 @@ Classes
         subclass: WikidataClass
             The subclass to cache.
 
-    `cache_superclass(self, superclass: knowledge.public.wikidata.WikidataClass)`
+    `cache_superclass(self, superclass: knowledge.public.wikidata.WikidataClass) ‑> None`
     :   Adds a superclass to the superclass cache with LRU eviction.
         
         Parameters
@@ -51,7 +51,7 @@ Classes
         superclass: WikidataClass
             The superclass to cache.
 
-    `cache_wikidata_object(self, wikidata_object: knowledge.public.wikidata.WikidataThing)`
+    `cache_wikidata_object(self, wikidata_object: knowledge.public.wikidata.WikidataThing) ‑> None`
     :   Adds a Wikidata object to the cache with LRU eviction.
         
         Parameters
@@ -177,7 +177,7 @@ Classes
         bool
             True if the QID is in the cache, False otherwise.
 
-    `save_cache(self, cache_path: pathlib.Path)`
+    `save_cache(self, cache_path: pathlib.Path) ‑> None`
     :   Saves the cache to a file.
         
         Parameters

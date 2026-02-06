@@ -68,7 +68,7 @@ Classes
     `service_url: str`
     :   Service URL.
 
-    `verify_calls`
+    `verify_calls: bool`
     :   Certificate verification activated.
 
 `RequestsSession(client: WacomServiceAPIClient, pool_connections: int = 10, pool_maxsize: int = 10, max_retries: int = 3, backoff_factor: float = 0.3)`
@@ -104,10 +104,10 @@ Classes
 
     ### Methods
 
-    `close(self)`
+    `close(self) ‑> None`
     :   Close the session and release resources.
 
-    `delete(self, url: str, **kwargs) ‑> requests.models.Response`
+    `delete(self, url: str, **kwargs: Any) ‑> requests.models.Response`
     :   Execute a DELETE request.
         
         Parameters
@@ -122,7 +122,7 @@ Classes
         response: Response
             Response from the service.
 
-    `get(self, url: str, **kwargs) ‑> requests.models.Response`
+    `get(self, url: str, **kwargs: Any) ‑> requests.models.Response`
     :   Execute GET request.
         
         Parameters
@@ -137,7 +137,7 @@ Classes
         response: Response
             Response from the service.
 
-    `patch(self, url: str, **kwargs) ‑> requests.models.Response`
+    `patch(self, url: str, **kwargs: Any) ‑> requests.models.Response`
     :   Execute a PATCH request.
         
         Parameters
@@ -152,7 +152,7 @@ Classes
         response: Response
             Response from the service.
 
-    `post(self, url: str, **kwargs) ‑> requests.models.Response`
+    `post(self, url: str, **kwargs: Any) ‑> requests.models.Response`
     :   Execute POST request.
         
         Parameters
@@ -167,7 +167,7 @@ Classes
         response: Response
             Response from the service.
 
-    `put(self, url: str, **kwargs) ‑> requests.models.Response`
+    `put(self, url: str, **kwargs: Any) ‑> requests.models.Response`
     :   Execute a PUT request.
         
         Parameters
@@ -182,7 +182,7 @@ Classes
         response: Response
             Response from the service.
 
-    `request(self, method: str, url: str, headers: Dict[str, str] | None = None, timeout: int = 60, **kwargs) ‑> requests.models.Response`
+    `request(self, method: str, url: str, headers: Dict[str, str] | None = None, timeout: int = 60, **kwargs: Any) ‑> requests.models.Response`
     :   Execute a request with automatic token handling.
 
 `WacomServiceAPIClient(service_url: str, application_name: str = 'Knowledge Client', base_auth_url: str | None = None, service_endpoint: str = 'graph/v1', verify_calls: bool = True, max_retries: int = 3, backoff_factor: float = 0.1)`
@@ -230,13 +230,13 @@ Classes
 
     ### Instance variables
 
-    `application_name`
+    `application_name: str`
     :   Application name.
 
     `auth_endpoint: str`
     :   Authentication endpoint.
 
-    `base_auth_url`
+    `base_auth_url: str`
     :   Base authentication endpoint.
 
     `current_session: knowledge.services.session.RefreshableSession | knowledge.services.session.TimedSession | knowledge.services.session.PermanentSession | None`
@@ -255,10 +255,10 @@ Classes
     `request_session: knowledge.services.base.RequestsSession`
     :   Request session.
 
-    `service_base_url`
+    `service_base_url: str`
     :   Service endpoint.
 
-    `service_endpoint`
+    `service_endpoint: str`
     :   Service endpoint.
 
     `token_manager: knowledge.services.session.TokenManager`
@@ -299,7 +299,7 @@ Classes
             Session. The session is stored in the token manager, and the client is using the session id for further
             calls.
 
-    `logout(self)`
+    `logout(self) ‑> None`
     :   Logout user.
 
     `refresh_token(self, refresh_token: str) ‑> Tuple[str, str, datetime.datetime]`
@@ -365,7 +365,7 @@ Classes
         WacomServiceException
             Exception if the service returns HTTP error code.
 
-    `use_session(self, session_id: str)`
+    `use_session(self, session_id: str) ‑> None`
     :   Use session.
         Parameters
         ----------

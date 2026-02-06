@@ -33,7 +33,7 @@ Classes
 
     ### Methods
 
-    `create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None, roles: List[knowledge.services.users.UserRole] = None, timeout: int = 60) ‑> Tuple[knowledge.services.users.User, str, str, datetime.datetime]`
+    `create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] | None = None, roles: List[knowledge.services.users.UserRole] | None = None, timeout: int = 60) ‑> Tuple[knowledge.services.users.User, str, str, datetime.datetime]`
     :   Creates a user for a tenant.
         
         Parameters
@@ -42,9 +42,9 @@ Classes
             API key for tenant
         external_id: str -
             External id of user identification service.
-        meta_data: Dict[str, str]
+        meta_data: Optional[Dict[str, str]] = None
             Meta-data dictionary.
-        roles: List[UserRole]
+        roles: Optional[List[UserRole]] = None
             List of roles.
         timeout: int
             Denotes the timeout for the request in seconds (default: 60 seconds).
@@ -93,7 +93,7 @@ Classes
         tenant_key: str
             API key for tenant
         offset: int - [optional]
-            Offset value to define starting position in a list. [DEFAULT:= 0]
+            Offset value to define the starting position in a list. [DEFAULT:= 0]
         limit: int - [optional]
             Define the limit of the list size. [DEFAULT:= 20]
         timeout: int - [optional]
@@ -104,7 +104,7 @@ Classes
         user: List[User]
             List of users.
 
-    `update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: Dict[str, str] = None, roles: List[knowledge.services.users.UserRole] = None, timeout: int = 60)`
+    `update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: Dict[str, str] | None = None, roles: List[knowledge.services.users.UserRole] = None, timeout: int = 60)`
     :   Updates user for a tenant.
         
         Parameters
@@ -115,7 +115,7 @@ Classes
             Internal id of semantic service.
         external_id: str
             External id of user identification service.
-        meta_data: Dict[str, str]
+        meta_data: Optional[Dict[str, str]] = None
             Meta-data dictionary.
         roles: List[UserRole]
             List of roles.

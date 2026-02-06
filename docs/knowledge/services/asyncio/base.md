@@ -21,14 +21,14 @@ Functions
     addr_info: Any
         Address information
 
-`handle_error(message: str, response: aiohttp.client_reqrep.ClientResponse, parameters: Dict[str, Any] | None = None, payload: Dict[str, Any] | None = None, headers: Dict[str, str] | None = None) ‑> knowledge.services.base.WacomServiceException`
+`handle_error(message: str, response: knowledge.services.asyncio.base.ResponseData, parameters: Dict[str, Any] | None = None, payload: Dict[str, Any] | None = None, headers: Dict[str, str] | None = None) ‑> knowledge.services.base.WacomServiceException`
 :   Handles an error response.
     
     Parameters
     ----------
     message: str
         Error message
-    response: aiohttp.ClientResponse
+    response: ResponseData
         Response
     parameters: Optional[Dict[str, Any]] (Default:= None)
         Parameters
@@ -129,7 +129,7 @@ Classes
         session: AsyncSession
             Asynchronous session
 
-    `close(self)`
+    `close(self) ‑> None`
     :   Closes the asynchronous session if it is open.
         
         This method ensures that the session is closed in a thread-safe manner. It acquires
@@ -264,7 +264,7 @@ Classes
 
     ### Methods
 
-    `close(self)`
+    `close(self) ‑> None`
     :   Closes the existing session asynchronously.
         
         This method ensures that the session is properly closed and reset to `None`.
@@ -280,7 +280,7 @@ Classes
         Exception
             If an error occurs during the session closure operation.
 
-    `delete(self, url: str, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    `delete(self, url: str, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Asynchronously performs an HTTP DELETE request.
         
         This method sends a DELETE request to the specified URL with additional
@@ -297,11 +297,11 @@ Classes
         
         Returns
         -------
-        aiohttp.ClientResponse
+        ResponseData
             The response object resulting from the DELETE request. This
             provides access to the response data, status, and headers.
 
-    `get(self, url: str, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    `get(self, url: str, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Asynchronously sends an HTTP GET request to the specified URL.
         
         This method allows sending GET requests with optional additional parameters
@@ -318,18 +318,18 @@ Classes
         
         Returns
         -------
-        aiohttp.ClientResponse
-            The response object resulting from the GET request, containing status,
+        ResponseData
+            The response object resulting from the get-go request, containing status,
             headers, and body data.
 
-    `patch(self, url: str, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    `patch(self, url: str, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Asynchronously sends a HTTP PATCH request to the specified URL.
         
         This method is a coroutine that simplifies sending PATCH requests
         using the underlying `request` method. It allows adding additional
         parameters such as headers, data, or query parameters to the request,
         passed via `**kwargs`. The response is returned as an instance of
-        `aiohttp.ClientResponse`.
+        `ResponseData`.
         
         Parameters
         ----------
@@ -340,12 +340,12 @@ Classes
         
         Returns
         -------
-        aiohttp.ClientResponse
+        ResponseData
             The response object resulting from the PATCH request, which provides
             methods for accessing the content, status, and headers of the HTTP
             response.
 
-    `post(self, url: str, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    `post(self, url: str, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Sends an asynchronous HTTP POST request to the specified URL with the given parameters.
         
         This method uses the underlying `request` method to perform the HTTP POST
@@ -364,10 +364,10 @@ Classes
         
         Returns
         -------
-        aiohttp.ClientResponse
+        ResponseData
             Represents the response object from the POST request.
 
-    `put(self, url: str, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    `put(self, url: str, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Asynchronously performs an HTTP PUT request.
         
         The method sends an HTTP PUT request to the specified URL with the given
@@ -382,10 +382,10 @@ Classes
         
         Returns
         -------
-        aiohttp.ClientResponse
+        ResponseData
             The response object returned after the PUT request is completed.
 
-    `request(self, method: Literal['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], url: str, headers: Dict[str, str] | None = None, **kwargs) ‑> aiohttp.client_reqrep.ClientResponse`
+    `request(self, method: Literal['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], url: str, headers: Dict[str, str] | None = None, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Executes an HTTP request using the specified method, URL, headers, and additional options.
         
         Parameters
@@ -401,7 +401,7 @@ Classes
         
         Returns
         -------
-        aiohttp.ClientResponse
+        ResponseData
             The response object resulting from the HTTP request.
         
         Raises
@@ -449,3 +449,42 @@ Classes
             - `family`: The address family used for resolution.
             - `proto`: Protocol number, set to 0.
             - `flags`: Address information flags, set to socket.AI_NUMERICHOST.
+
+`ResponseData(ok: bool, status: int, content: str | bytes | bool | Dict[str, Any] | List[Any], url: str, method: str)`
+:   Represents the data returned from an HTTP request.
+    
+    The ResponseData dataclass encapsulates the response from an HTTP
+    call by storing whether the call succeeded, the status code
+    received, and the raw content of the response. It is used by
+    client code to distinguish between successful and failed
+    requests and to access the payload returned by the server.
+    
+    Attributes
+    ----------
+    ok
+        Boolean flag indicating success of the request.
+    status
+        Numeric status code returned by the server.
+    content
+        Raw payload returned in the response body.
+    url
+        URL of the request.
+    method:
+        Request method.
+
+    ### Instance variables
+
+    `content: str | bytes | bool | Dict[str, Any] | List[Any]`
+    :
+
+    `method: str`
+    :
+
+    `ok: bool`
+    :
+
+    `status: int`
+    :
+
+    `url: str`
+    :

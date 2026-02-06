@@ -274,7 +274,7 @@ Classes
     `start_idx: int`
     :   Start an index within the text handed to the named entity recognition.
 
-`NamedEntityRecognitionProcessor(service_url: str, supported_languages: List[knowledge.base.language.LocaleCode] = None, verify_calls: bool = False)`
+`NamedEntityRecognitionProcessor(service_url: str, supported_languages: List[str] | None = None, verify_calls: bool = False)`
 :   NamedEntityRecognitionProcessor
     -------------------------------
     Service that recognizes entities.
@@ -283,7 +283,7 @@ Classes
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: List[str] = None
+    supported_languages: Optional[List[str]] = None
         List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
@@ -358,7 +358,7 @@ Classes
 
     ### Instance variables
 
-    `supported_language: List[str]`
+    `supported_language: List[knowledge.base.language.LocaleCode]`
     :   List of supported languages.
 
     ### Methods
@@ -395,7 +395,7 @@ Classes
         entities: List[KnowledgeGraphEntity]
             List of knowledge graph entities.
 
-`PublicEntityLinkingProcessor(service_url: str, provider: str = 'external', supported_languages: List[str] = None, verify_calls: bool = False)`
+`PublicEntityLinkingProcessor(service_url: str, provider: str = 'external', supported_languages: List[str] | None = None, verify_calls: bool = False)`
 :   Public Entity Linking
     ---------------------
     Service that links entities to a public entity in a knowledge graph.
@@ -404,7 +404,7 @@ Classes
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: List[str] = None
+    supported_languages: Optional[List[str]] = None
         List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
@@ -425,7 +425,7 @@ Classes
     ### Methods
 
     `is_language_supported(self, language_code: knowledge.base.language.LocaleCode) ‑> bool`
-    :   Is the language_code code supported by the engine.
+    :   Does the engine support the language_code code.
         
         Parameters
         ----------

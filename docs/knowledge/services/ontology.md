@@ -50,7 +50,7 @@ Classes
 
     ### Methods
 
-    `commit(self, context: str, force: bool = False, auth_key: str | None = None, timeout: int = 30)`
+    `commit(self, context: str, force: bool = False, auth_key: str | None = None, timeout: int = 30) ‑> None`
     :   Commit the ontology.
         
         Parameters
@@ -85,7 +85,7 @@ Classes
         instance: OntologyClass
             Instance of the concept
 
-    `concepts(self, context: str, auth_key: str | None = None, timeout: int = 30) ‑> List[Tuple[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.OntologyClassReference]]`
+    `concepts(self, context: str, auth_key: str | None = None, timeout: int = 30) ‑> List[Tuple[knowledge.base.ontology.OntologyClassReference, knowledge.base.ontology.OntologyClassReference | None]]`
     :   Retrieve all concept classes.
         
         **Remark:**
@@ -102,7 +102,7 @@ Classes
         
         Returns
         -------
-        concepts: List[Tuple[OntologyClassReference, OntologyClassReference]]
+        concepts: List[Tuple[OntologyClassReference, Optional[OntologyClassReference]]]
             List of ontology classes. Tuple<Classname, Superclass>
 
     `concepts_types(self, context: str, auth_key: str | None = None, timeout: int = 30) ‑> List[knowledge.base.ontology.OntologyClass]`
@@ -191,7 +191,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `create_context(self, name: str, context: str | None = None, base_uri: str | None = None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] = None, comments: List[knowledge.base.ontology.Comment] = None, auth_key: str | None = None, timeout: int = 30) ‑> Dict[str, str]`
+    `create_context(self, name: str, context: str | None = None, base_uri: str | None = None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, auth_key: str | None = None, timeout: int = 30) ‑> Dict[str, Any]`
     :   Create context.
         
         **Remark:**
@@ -220,7 +220,7 @@ Classes
         
         Returns
         -------
-        result: Dict[str, str]
+        result: Dict[str, Any]
             Result from the service
         
         Raises
@@ -228,7 +228,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, an exception is thrown.
 
-    `create_data_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.DataPropertyType], subproperty_of: knowledge.base.ontology.OntologyPropertyReference | None = None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, auth_key: str | None = None, timeout: int = 30) ‑> Dict[str, str]`
+    `create_data_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.DataPropertyType], subproperty_of: knowledge.base.ontology.OntologyPropertyReference | None = None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, auth_key: str | None = None, timeout: int = 30) ‑> Dict[str, Any]`
     :   Create a data property.
         
         **Remark:**
@@ -259,7 +259,7 @@ Classes
         
         Returns
         -------
-        result: Dict[str, str]
+        result: Dict[str, Any]
             Result from the service
         
         Raises
@@ -267,7 +267,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, an exception is thrown.
 
-    `create_object_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.OntologyClassReference], inverse_of: knowledge.base.ontology.OntologyPropertyReference | None = None, subproperty_of: knowledge.base.ontology.OntologyPropertyReference | None = None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, auth_key: str | None = None, timeout: int = 30) ‑> Dict[str, str]`
+    `create_object_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, domains_cls: List[knowledge.base.ontology.OntologyClassReference], ranges_cls: List[knowledge.base.ontology.OntologyClassReference], inverse_of: knowledge.base.ontology.OntologyPropertyReference | None = None, subproperty_of: knowledge.base.ontology.OntologyPropertyReference | None = None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, auth_key: str | None = None, timeout: int = 30) ‑> Dict[str, Any]`
     :   Create property.
         
         **Remark:**
@@ -301,7 +301,7 @@ Classes
         
         Returns
         -------
-        result: Dict[str, str]
+        result: Dict[str, Any]
             Result from the service
         
         Raises
@@ -309,7 +309,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, an exception is thrown.
 
-    `delete_concept(self, context: str, reference: knowledge.base.ontology.OntologyClassReference, auth_key: str | None = None, timeout: int = 30)`
+    `delete_concept(self, context: str, reference: knowledge.base.ontology.OntologyClassReference, auth_key: str | None = None, timeout: int = 30) ‑> None`
     :   Delete concept class.
         
         **Remark:**
@@ -331,7 +331,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, exception is thrown.
 
-    `delete_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, auth_key: str | None = None, timeout: int = 30)`
+    `delete_property(self, context: str, reference: knowledge.base.ontology.OntologyPropertyReference, auth_key: str | None = None, timeout: int = 30) ‑> None`
     :   Delete property.
         
         **Remark:**
@@ -353,7 +353,7 @@ Classes
         WacomServiceException
             If the ontology service returns an error code, an exception is thrown.
 
-    `properties(self, context: str, auth_key: str | None = None, timeout: int = 30) ‑> List[Tuple[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.OntologyPropertyReference]]`
+    `properties(self, context: str, auth_key: str | None = None, timeout: int = 30) ‑> List[Tuple[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.OntologyPropertyReference | None]]`
     :   List all properties.
         
         **Remark:**
@@ -370,7 +370,7 @@ Classes
         
         Returns
         -------
-        contexts: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]
+        contexts: List[Tuple[OntologyPropertyReference, Optional[OntologyPropertyReference]]]
             List of ontology contexts
 
     `properties_types(self, context: str, auth_key: str | None = None, timeout: int = 30) ‑> List[knowledge.base.ontology.OntologyProperty]`
@@ -433,7 +433,7 @@ Classes
         rdf: str
             Ontology as RDFS / OWL ontology
 
-    `remove_context(self, name: str, force: bool = False, auth_key: str | None = None, timeout: int = 30)`
+    `remove_context(self, name: str, force: bool = False, auth_key: str | None = None, timeout: int = 30) ‑> None`
     :   Remove context.
         
         Parameters
@@ -447,10 +447,10 @@ Classes
         timeout: int
             Timeout for the request (default: 60 seconds)
         
-        Returns
-        -------
-        result: Dict[str, str]
-            Result from the service
+        Raises
+        ------
+        WacomServiceException
+            Raised if the ontology service returns an error code.
 
     `update_concept(self, context: str, name: str, subclass_of: str | None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, auth_key: str | None = None, timeout: int = 30) ‑> Dict[str, str]`
     :   Update concept class.

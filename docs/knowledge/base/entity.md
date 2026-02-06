@@ -53,6 +53,47 @@ Classes
         instance: List[Description]
             List of description instances.
 
+    ### Methods
+
+    `as_dict(self) ‑> Dict[str, Any]`
+    :   Creates a dictionary representation of the object containing its textual
+        content and locale information.
+        
+        Parameters
+        ----------
+        None
+        
+        Returns
+        -------
+        dict
+            A mapping where the description tag is associated with the object's
+            content and the locale tag is associated with the object's language
+            code.
+        
+        Raises
+        ------
+        None
+        
+        Warns
+        -----
+        None
+        
+        Notes
+        -----
+        None
+        
+        Examples
+        --------
+        None
+        
+        References
+        ----------
+        None
+        
+        See Also
+        --------
+        None
+
 `EntityStatus(*args, **kwds)`
 :   Entity Status
     -------------
@@ -84,7 +125,7 @@ Classes
     * builtins.Exception
     * builtins.BaseException
 
-`Label(content: str, language_code: knowledge.base.language.LocaleCode = 'en_US', main: bool = False)`
+`Label(content: str, language_code: knowledge.base.language.LocaleCode | knowledge.base.language.LanguageCode = 'en_US', main: bool = False)`
 :   Label
     -----
     Label that is multilingual.
@@ -121,12 +162,12 @@ Classes
         instance: Label
             The Label instance.
 
-    `create_from_list(param: List[dict]) ‑> List[knowledge.base.entity.LocalizedContent]`
+    `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.entity.Label]`
     :   Create a list of labels from a list of dictionaries.
         
         Parameters
         ----------
-        param: List[dict]
+        param: List[Dict[str, Any]]
             List of dictionaries containing the label information.
         
         Returns
@@ -138,6 +179,17 @@ Classes
 
     `main: bool`
     :   Flag if the content is the  main content or an alias.
+
+    ### Methods
+
+    `as_dict(self) ‑> Dict[str, Any]`
+    :   Returns a dictionary representation of the instance.
+        
+        Returns
+        -------
+        dict
+            Dictionary containing the object's content, language code, and main flag.
+            The dictionary keys are ``CONTENT_TAG``, ``LOCALE_TAG``, and ``IS_MAIN_TAG`` respectively.
 
 `LocalizedContent(content: str, language_code: knowledge.base.language.LocaleCode | knowledge.base.language.LanguageCode)`
 :   Localized content

@@ -149,7 +149,7 @@ Classes
     `results: List[knowledge.base.search.VectorDocument]`
     :   List of search results.
 
-    `tenant_id`
+    `tenant_id: str`
     :   Tenant ID.
 
 `LabelMatchingResponse(results: List[knowledge.base.search.LabelSearchResult], max_results: int = 10, stats: knowledge.base.search.LabelSearchStats | None = None)`
@@ -168,7 +168,7 @@ Classes
 
     ### Static methods
 
-    `from_dict(data: Dict[str, Any])`
+    `from_dict(data: Dict[str, Any]) ‑> knowledge.base.search.LabelMatchingResponse`
     :   Create a LabelMatchingResponse from a dictionary.
         Parameters
         ----------

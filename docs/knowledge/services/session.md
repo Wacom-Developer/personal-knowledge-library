@@ -83,7 +83,7 @@ Classes
 
     ### Methods
 
-    `update_session(self, auth_token: str, refresh_token: str)`
+    `update_session(self, auth_token: str, refresh_token: str) ‑> None`
     :   Refresh the session.
         Parameters
         ----------
@@ -153,7 +153,7 @@ Classes
 
     ### Methods
 
-    `update_session(self, auth_token: str, refresh_token: str)`
+    `update_session(self, auth_token: str, refresh_token: str) ‑> None`
     :   Update the session.
         
         Parameters
@@ -171,7 +171,7 @@ Classes
     This class represents a session authenticated via a JWT token with an expiration timestamp.
     It provides utilities to decode and extract information such as roles, tenant id, service URL,
     and external user ID. Additionally, it generates and validates session IDs and keeps track of
-    expiration and refreshability.
+    expiration and refresh ability.
     
     Attributes
     ----------
@@ -238,6 +238,18 @@ Classes
 
     `service_url: str`
     :   Service url.
+
+    ### Methods
+
+    `update_session(self, auth_token: str, refresh_token: str) ‑> None`
+    :   Updates the authentication session with new tokens.
+        
+        Parameters
+        ----------
+        auth_token
+            New authentication token to be used for API requests.
+        refresh_token
+            New refresh token to update the session credentials.
 
 `TokenManager()`
 :   TokenManager
@@ -314,7 +326,7 @@ Classes
         available: bool
             True if the session exists, otherwise False.
 
-    `remove_session(self, session_id: str)`
+    `remove_session(self, session_id: str) ‑> None`
     :   Remove a session by its id.
         
         Parameters

@@ -81,7 +81,7 @@ Classes
 
     ### Methods
 
-    `create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] = None, roles: List[knowledge.services.users.UserRole] = None, timeout: int = 60) ‑> Tuple[knowledge.services.users.User, str, str, datetime.datetime]`
+    `create_user(self, tenant_key: str, external_id: str, meta_data: Dict[str, str] | None = None, roles: List[knowledge.services.users.UserRole] | None = None, timeout: int = 60) ‑> Tuple[knowledge.services.users.User, str, str, datetime.datetime]`
     :   Creates a user for a tenant.
         
         Parameters
@@ -90,9 +90,9 @@ Classes
             API key for tenant
         external_id: str -
             External id of user identification service.
-        meta_data: Dict[str, str]
+        meta_data: Optional[Dict[str, str]] (default:= None)
             Meta-data dictionary.
-        roles: List[UserRole]
+        roles: Optional[List[UserRole]] (default:= [UserRole.USER])
             List of roles.
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]
@@ -112,7 +112,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `delete_user(self, tenant_key: str, external_id: str, internal_id: str, force: bool = False, timeout: int = 60)`
+    `delete_user(self, tenant_key: str, external_id: str, internal_id: str, force: bool = False, timeout: int = 60) ‑> None`
     :   Deletes user from tenant.
         
         Parameters
@@ -152,7 +152,7 @@ Classes
         user: List[User]
             List of users.
 
-    `update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: Dict[str, str] = None, roles: List[knowledge.services.users.UserRole] = None, timeout: int = 60)`
+    `update_user(self, tenant_key: str, internal_id: str, external_id: str, meta_data: Dict[str, str] | None = None, roles: List[knowledge.services.users.UserRole] | None = None, timeout: int = 60) ‑> None`
     :   Updates user for a tenant.
         
         Parameters
@@ -163,9 +163,9 @@ Classes
             Internal id of semantic service.
         external_id: str
             External id of user identification service.
-        meta_data: Dict[str, str]
+        meta_data: Dict[str, str] (default:= None)
             Meta-data dictionary.
-        roles: List[UserRole]
+        roles: List[UserRole] (default:= [UserRole.USER])
             List of roles.
         timeout: int - [optional]
             Timeout for the request. [DEFAULT:= 60]

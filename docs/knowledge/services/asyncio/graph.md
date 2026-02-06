@@ -600,7 +600,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `remove_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: str | None = None, timeout: int = 60)`
+    `remove_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Removes a relation.
         
         Parameters
@@ -621,7 +621,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `search_all(self, search_term: str, language_code: knowledge.base.language.LocaleCode, types: List[knowledge.base.ontology.OntologyClassReference], limit: int = 30, next_page_id: str = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_all(self, search_term: str, language_code: knowledge.base.language.LocaleCode, types: List[knowledge.base.ontology.OntologyClassReference], limit: int = 30, next_page_id: str | None = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search term in labels, literals, and description.
         
         Parameters
@@ -634,7 +634,7 @@ Classes
             Limits the types for search.
         limit: int  (default:= 30)
             Size of the page for pagination.
-        next_page_id: str [default:=None]
+        next_page_id: Optional[str] [default:=None]
             ID of the next page within pagination.
         auth_key: Optional[str] [default:=None]
             Auth key from user if not set, the client auth key will be used
@@ -651,7 +651,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_description(self, search_term: str, language_code: knowledge.base.language.LocaleCode, limit: int = 30, auth_key: str | None = None, next_page_id: str = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_description(self, search_term: str, language_code: knowledge.base.language.LocaleCode, limit: int = 30, auth_key: str | None = None, next_page_id: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in the description.
         
         Parameters
@@ -664,7 +664,7 @@ Classes
             Size of the page for pagination.
         auth_key: Optional[str] [default:=None]
             Auth key from user if not set, the client auth key will be used
-        next_page_id: str [default:=None]
+        next_page_id: Optional[str] [default:=None]
             ID of the next page within pagination.
         
         Returns
@@ -679,7 +679,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_labels(self, search_term: str, language_code: knowledge.base.language.LocaleCode, exact_match: bool = False, limit: int = 30, next_page_id: str = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_labels(self, search_term: str, language_code: knowledge.base.language.LocaleCode, exact_match: bool = False, limit: int = 30, next_page_id: str | None = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in labels.
         
         Parameters
@@ -709,7 +709,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_literal(self, search_term: str, literal: knowledge.base.ontology.OntologyPropertyReference, pattern: knowledge.services.graph.SearchPattern = SearchPattern.REGEX, language_code: knowledge.base.language.LocaleCode = 'en_US', limit: int = 30, next_page_id: str = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_literal(self, search_term: str, literal: knowledge.base.ontology.OntologyPropertyReference, pattern: knowledge.services.graph.SearchPattern = SearchPattern.REGEX, language_code: knowledge.base.language.LocaleCode = 'en_US', limit: int = 30, next_page_id: str | None = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in literals.
         
          Parameters
@@ -724,7 +724,7 @@ Classes
              ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
          limit: int (default:= 30)
              Size of the page for pagination.
-         next_page_id: str [default:=None]
+         next_page_id: Optional[str] [default:=None]
              ID of the next page within pagination.
          auth_key: Optional[str] [default:=None]
              Auth key from user if not set, the client auth key will be used
@@ -740,7 +740,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `search_relation(self, relation: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.language.LocaleCode, subject_uri: str = None, object_uri: str = None, limit: int = 30, next_page_id: str = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
+    `search_relation(self, relation: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.language.LocaleCode, subject_uri: str | None = None, object_uri: str | None = None, limit: int = 30, next_page_id: str | None = None, auth_key: str | None = None) ‑> Tuple[List[knowledge.base.ontology.ThingObject], str]`
     :   Search for matches in literals.
         
          Parameters
@@ -749,13 +749,13 @@ Classes
              Search term.
          language_code: LocaleCode
              ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., en_US.
-         subject_uri: str [default:=None]
+         subject_uri: Optional[str] [default:=None]
              URI of the subject
-         object_uri: str [default:=None]
+         object_uri: Optional[str] [default:=None]
              URI of the object
          limit: int (default:= 30)
              Size of the page for pagination.
-         next_page_id: str [default:=None]
+         next_page_id: Optional[str] [default:=None]
              ID of the next page within pagination.
          auth_key: Optional[str] [default:=None]
              Auth key from user if not set, the client auth key will be used

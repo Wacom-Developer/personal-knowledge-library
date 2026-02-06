@@ -1,32 +1,6 @@
 Module knowledge.base.ontology
 ==============================
 
-Variables
----------
-
-`INVERSE_DATA_PROPERTY_TYPE_MAPPING: Dict[str, knowledge.base.ontology.DataPropertyType]`
-:   Maps the string representation of the XSD data types to the data types enum constants.
-
-Functions
----------
-
-`ontology_import(rdf_content: str, tenant_id: str = '', context: str = '') ‑> knowledge.base.ontology.Ontology`
-:   Import Ontology from RDF ontology file.
-    
-    Parameters
-    ----------
-    rdf_content: str
-        Content of the RDF content file.
-    tenant_id: str (default:= '')
-        Tenant ID.
-    context: str (default:= '')
-        Context file.
-    
-    Returns
-    -------
-    ontology: Ontology
-        Instance of ontology.
-
 Classes
 -------
 
@@ -73,7 +47,23 @@ Classes
         instances: List[Comment]
             List of instances of comments
 
-`DataProperty(content: Any, property_ref: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.language.LocaleCode = 'en_US', data_type: knowledge.base.ontology.DataPropertyType = None)`
+    ### Methods
+
+    `as_dict(self) ‑> Dict[str, Any]`
+    :   Return a dictionary representation of the object.
+        
+        Parameters
+        ----------
+        None
+        
+        Returns
+        -------
+        dict
+            A mapping where the key ``COMMENT_TAG`` maps to the object's
+            ``content`` attribute and the key ``LOCALE_TAG`` maps to the
+            object's ``language_code`` attribute.
+
+`DataProperty(content: Any, property_ref: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.language.LocaleCode = 'en_US', data_type: knowledge.base.ontology.DataPropertyType | None = None)`
 :   DataProperty
     ------------
     Data property for entities.
@@ -86,7 +76,7 @@ Classes
         OntologyPropertyReference type
     language_code: str
         Language code
-    data_type: str
+    data_type: Optional[DataPropertyType] (default: None)
         Data type
 
     ### Ancestors (in MRO)
@@ -96,7 +86,7 @@ Classes
 
     ### Static methods
 
-    `create_from_dict(data_property_struct: dict)`
+    `create_from_dict(data_property_struct: Dict[str, Any]) ‑> knowledge.base.ontology.DataProperty`
     :   Create data property from dictionary.
         
         Parameters
@@ -109,12 +99,12 @@ Classes
         instance: DataProperty
             Data property instance.
 
-    `create_from_list(param: List[dict]) ‑> List[knowledge.base.ontology.DataProperty]`
+    `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.ontology.DataProperty]`
     :   Create data property list from dictionary list.
         
         Parameters
         ----------
-        param: List[dict]
+        param: List[Dict[str, Any]]
             List of dictionaries containing data property information.
         
         Returns
@@ -135,6 +125,23 @@ Classes
 
     `value: Any`
     :   Content of the data property.
+
+    ### Methods
+
+    `as_dict(self) ‑> Dict[str, Any]`
+    :   Returns a dictionary representing the object's content, locale, and data type.
+        
+        Parameters
+        ----------
+        self : object
+            Instance of the class.
+        
+        Returns
+        -------
+        A mapping of the following keys:
+            CONTENT_TAG, LOCALE_TAG, DATA_PROPERTY_TAG, and DATA_TYPE_TAG.
+        The values correspond to the object's value, language_code,
+        data_property_type.iri, and data_type.value (or None if data_type is None).
 
 `DataPropertyType(*args, **kwds)`
 :   DataPropertyType.
@@ -264,62 +271,6 @@ Classes
     `YEAR_MONTH_DURATION`
     :   Duration of time (months and years only)
 
-`EntityProperty()`
-:   EntityProperty
-    --------------
-    Abstract class for the different types of properties.
-
-    ### Ancestors (in MRO)
-
-    * abc.ABC
-
-    ### Descendants
-
-    * knowledge.base.ontology.DataProperty
-    * knowledge.base.ontology.ObjectProperty
-
-`InflectionSetting(concept: str, inflection: str, case_sensitive: bool)`
-:   Inflection settings
-    --------------------
-    
-    Parameters
-    ----------
-    concept: str
-        Concept class
-    inflection: str
-        Inflection setting
-    case_sensitive: bool
-        Entity labels of the class treated case-sensitive
-
-    ### Ancestors (in MRO)
-
-    * abc.ABC
-
-    ### Static methods
-
-    `from_dict(entity: Dict[str, Any]) ‑> knowledge.base.ontology.InflectionSetting`
-    :   Create inflection setting from dictionary.
-        Parameters
-        ----------
-        entity: Dict[str, Any]
-            Entity dictionary
-        
-        Returns
-        -------
-        instance: InflectionSetting
-            Inflection setting instance
-
-    ### Instance variables
-
-    `case_sensitive: bool`
-    :   Are entity labels of the class treated case-sensitive.
-
-    `concept: knowledge.base.ontology.OntologyClassReference`
-    :   Concept class.
-
-    `inflection: str`
-    :   Inflection setting
-
 `ObjectProperty(relation: knowledge.base.ontology.OntologyPropertyReference, incoming: List[str | ForwardRef('ThingObject')] | None = None, outgoing: List[str | ForwardRef('ThingObject')] | None = None)`
 :   Object Property
     ---------------
@@ -354,11 +305,11 @@ Classes
         relation_type: OntologyPropertyReference
             The OntologyPropertyReference type
 
-    `create_from_list(param: List[dict]) ‑> Dict[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.ObjectProperty]`
+    `create_from_list(param: List[Dict[str, Any]]) ‑> Dict[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.ObjectProperty]`
     :   Create object property list from dictionary list.
         Parameters
         ----------
-        param: List[dict]
+        param: List[Dict[str, Any]]
             List of dictionaries containing object property information.
         
         Returns
@@ -377,105 +328,22 @@ Classes
     `relation: knowledge.base.ontology.OntologyPropertyReference`
     :   Reference from the ontology.
 
-`Ontology()`
-:   Ontology
-    --------
-    The ontology consists of classes and properties.
-
-    ### Instance variables
-
-    `classes: List[knowledge.base.ontology.OntologyClass]`
-    :   All classes.
-
-    `data_properties: List[knowledge.base.ontology.OntologyProperty]`
-    :   All data properties.
-
-    `object_properties: List[knowledge.base.ontology.OntologyProperty]`
-    :   All object properties.
-
     ### Methods
 
-    `add_class(self, class_obj: knowledge.base.ontology.OntologyClass)`
-    :   Adding class object.
-        
-        Parameters
-        ----------
-        class_obj: OntologyClass
-            Class object
-
-    `add_properties(self, prop_obj: knowledge.base.ontology.OntologyProperty)`
-    :   Adding properties.
-        
-        Parameters
-        ----------
-        prop_obj: OntologyProperty
-
-    `data_properties_for(self, cls_reference: knowledge.base.ontology.OntologyClassReference) ‑> List[knowledge.base.ontology.OntologyPropertyReference]`
-    :   Retrieve a list of data properties.
-        
-        Parameters
-        ----------
-        cls_reference: OntologyClassReference
-            Class of the ontology
+    `as_dict(self) ‑> Dict[str, Any]`
+    :   Creates a dictionary representation of the object's relationships.
         
         Returns
         -------
-        data_properties: List[OntologyPropertyReference]
-            List of data properties, where domain fit for the class of one of its super classes.
+        dict
+            A mapping with the keys ``RELATION_TAG``, ``INCOMING_TAG``, and
+            ``OUTGOING_TAG``.  The value associated with ``RELATION_TAG`` is the
+            IRI of the relation linked to the object.  ``INCOMING_TAG`` contains a
+            list of identifiers (either the URI or the reference ID) of all
+            objects that have incoming relations to this object.  ``OUTGOING_TAG``
+            holds a list of identifiers of all objects that this object points to.
 
-    `get_class(self, class_reference: knowledge.base.ontology.OntologyClassReference) ‑> knowledge.base.ontology.OntologyClass | None`
-    :   Get class instance by reference.
-        
-        Parameters
-        ----------
-        class_reference: OntologyClassReference
-            Class reference
-        
-        Returns
-        --------
-        instance: Optional[OntologyClass]
-            Instance of ontology class.
-
-    `get_data_properties(self, property_reference: knowledge.base.ontology.OntologyPropertyReference) ‑> knowledge.base.ontology.OntologyProperty | None`
-    :   Get object property instance by reference.
-        
-        Parameters
-        ----------
-        property_reference: OntologyPropertyReference
-            Property reference
-        
-        Returns
-        --------
-        instance: Optional[OntologyProperty]
-            Instance of ontology object property.
-
-    `get_object_properties(self, property_reference: knowledge.base.ontology.OntologyPropertyReference) ‑> knowledge.base.ontology.OntologyProperty | None`
-    :   Get object property instance by reference.
-        
-        Parameters
-        ----------
-        property_reference: OntologyPropertyReference
-            Property reference
-        
-        Returns
-        --------
-        instance: Optional[OntologyProperty]
-            Instance of ontology object property.
-
-    `object_properties_for(self, cls_reference: knowledge.base.ontology.OntologyClassReference) ‑> List[knowledge.base.ontology.OntologyPropertyReference]`
-    :   Retrieve a list of object properties.
-        
-        Parameters
-        ----------
-        cls_reference: OntologyClassReference
-            Class of the ontology
-        
-        Returns
-        -------
-        object_properties: List[OntologyPropertyReference]
-            List of object properties, where domain fit for the class of one of its super classes.
-
-`OntologyClass(tenant_id: str, context: str, reference: knowledge.base.ontology.OntologyClassReference, subclass_of: knowledge.base.ontology.OntologyClassReference = None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None)`
+`OntologyClass(tenant_id: str, context: str, reference: knowledge.base.ontology.OntologyClassReference, subclass_of: knowledge.base.ontology.OntologyClassReference | None = None, icon: str | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None)`
 :   OntologyClass
     ----------------
     Concept for ontology.
@@ -486,17 +354,16 @@ Classes
         Tenant id for ontology
     context: str
         Context
+    subclass_of: Optional[OntologyClassReference] (default: None)
+        Subclass of ontology class.
     reference: OntologyClassReference
         Reference for ontology class
-    icon: str
+    icon: Optional[str] (default: None)
         Icon representing concept
-    labels: List[Label]
+    labels: Optional[List[OntologyLabel]] (default: None)
         List of labels
-    comments: List[Comment]
+    comments: Optional[List[Comment]] (default: None)
         List of comments
-    
-    subclass_of: str (default: None)
-        Subclass of ontology class
 
     ### Ancestors (in MRO)
 
@@ -505,7 +372,7 @@ Classes
 
     ### Static methods
 
-    `from_dict(concept_dict: Dict[str, Any])`
+    `from_dict(concept_dict: Dict[str, Any]) ‑> knowledge.base.ontology.OntologyClass`
     :   Create OntologyClass from dictionary.
         
         Parameters
@@ -570,10 +437,10 @@ Classes
 
     ### Instance variables
 
-    `class_name`
+    `class_name: str`
     :   Class name.
 
-`OntologyContext(cid: str, tenant_id: str, name: str, icon: str, labels: List[knowledge.base.ontology.OntologyLabel], comments: List[knowledge.base.ontology.Comment], date_added: datetime.datetime, date_modified: datetime.datetime, context: str, base_uri: str, version: int, orphaned: bool, concepts: List[str], properties: List[str])`
+`OntologyContext(cid: str, tenant_id: str, name: str, icon: str, labels: List[knowledge.base.ontology.OntologyLabel], comments: List[knowledge.base.ontology.Comment], date_added: datetime.datetime, date_modified: datetime.datetime, context: str, base_uri: str, version: int, orphaned: bool, concepts: List[str] | None = None, properties: List[str] | None = None)`
 :   OntologyContext
     ----------------
     Ontology context representation.
@@ -588,7 +455,7 @@ Classes
         Name of the ontology context
     icon: str
         Icon or Base64 encoded
-    labels: List[Label]
+    labels: List[OntologyLabel]
         List of labels
     comments: List[Comment]
         List of comments
@@ -608,8 +475,8 @@ Classes
 
     ### Static methods
 
-    `from_dict(context_dict: Dict[str, Any])`
-    :   Create OntologyContext from dictionary.
+    `from_dict(context_dict: Dict[str, Any]) ‑> knowledge.base.ontology.OntologyContext`
+    :   Create OntologyContext from a dictionary.
         
         Parameters
         ----------
@@ -646,39 +513,6 @@ Classes
 
     `version: int`
     :   Version.
-
-`OntologyContextSettings(rdf_prefix: str, rdfs_prefix: str, owl_prefix: str, base_literal_uri: str, base_class_uri: str, description_literal_name: str, depth: int)`
-:   OntologyContextSettings
-    -----------------------
-    Describes the settings of the context, such as:
-    - prefixes for RDF, RDFS and OWL
-    - Base literal URI
-    - Base class URI
-    - Description literal name
-    - depth
-
-    ### Instance variables
-
-    `base_class_uri`
-    :   Base class URI.
-
-    `base_literal_uri`
-    :   Base literal URI.
-
-    `depth: int`
-    :   Depth.
-
-    `description_literal_name: str`
-    :   Literal name of the description.
-
-    `owl_prefix`
-    :   OWL prefix
-
-    `rdf_prefix`
-    :   RDF prefix
-
-    `rdfs_prefix`
-    :   RDFS prefix
 
 `OntologyLabel(content: str, language_code: knowledge.base.language.LanguageCode = 'en', main: bool = False)`
 :   Ontology Label
@@ -718,11 +552,11 @@ Classes
         instance: OntologyLabel
             Instance of the label
 
-    `create_from_list(param: List[dict]) ‑> List[knowledge.base.ontology.OntologyLabel]`
+    `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.ontology.OntologyLabel]`
     :   Create a list of labels from a list of dictionaries.
         Parameters
         ----------
-        param: List[dict]
+        param: List[Dict[str, Any]]
             List of dictionaries with the label information
         
         Returns
@@ -735,162 +569,55 @@ Classes
     `main: bool`
     :   Flag if the content is the  main content or an alias.
 
-`OntologyObject(tenant_id: str, iri: str, icon: str, labels: List[knowledge.base.ontology.OntologyLabel], comments: List[knowledge.base.ontology.Comment], context: str)`
-:   Generic ontology object
-    -----------------------
-    
-    Parameters
-    ----------
-    tenant_id: str
-        Reference id for tenant
-    iri: str
-        IRI of the ontology object
-    icon: str
-        Icon assigned to object, visually representing it
-    labels: List[Label]
-        List of multi-language_code labels
-    comments: List[Label]
-        List of multi-language_code comments
-    context: str
-        Context
-
-    ### Ancestors (in MRO)
-
-    * abc.ABC
-
-    ### Descendants
-
-    * knowledge.base.ontology.OntologyClass
-    * knowledge.base.ontology.OntologyContext
-    * knowledge.base.ontology.OntologyProperty
-
-    ### Instance variables
-
-    `comments: List[knowledge.base.ontology.Comment]`
-    :   Comment related to ontology object.
-
-    `context: str`
-    :   Context.
-
-    `icon: str`
-    :   Icon.
-
-    `iri: str`
-    :   IRI
-
-    `labels: List[knowledge.base.ontology.OntologyLabel]`
-    :   Labels related to ontology object.
-
-    `tenant_id: str`
-    :   Tenant id.
-
     ### Methods
 
-    `comment_for_lang(self, language_code: knowledge.base.language.LanguageCode) ‑> knowledge.base.ontology.Comment | None`
-    :   Get comment for language_code.
-        Parameters
-        ----------
-        language_code: LanguageCode
-            Language code
+    `as_dict(self) ‑> Dict[str, Any]`
+    :   Returns a dictionary mapping tag constants to the object's content, language code, and main status.
         
         Returns
         -------
-        comment: Optional[Comment]
-            Comment for language_code
-
-    `label_for_lang(self, language_code: knowledge.base.language.LanguageCode) ‑> knowledge.base.ontology.OntologyLabel | None`
-    :   Get label for language_code.
-        Parameters
-        ----------
-        language_code: LanguageCode
-            Language code
+        dict
+            A mapping with keys:
+            CONTENT_TAG : str
+                The content of the object.
+            LOCALE_TAG : str
+                The language code.
+            IS_MAIN_TAG : bool
+                Indicates if this is the main entry.
         
-        Returns
-        -------
-        label: Optional[OntologyLabel]
-            Label for language_code
+        Notes
+        -----
+        This method does not expose any private or protected attributes.
 
-`OntologyObjectReference(scheme: str, context: str, name: str)`
-:   Ontology class type
-    ------------------
-    Associated to an entity to link the type of the entity.
-    
-    Parameters
-    ----------
-    scheme: str
-        Scheme or owner of the ontology object
-    context: str
-        Context of ontology object
-    name: str
-        Ontology object reference name
-
-    ### Ancestors (in MRO)
-
-    * abc.ABC
-
-    ### Descendants
-
-    * knowledge.base.ontology.OntologyClassReference
-    * knowledge.base.ontology.OntologyPropertyReference
-
-    ### Static methods
-
-    `parse_iri(iri: str) ‑> Tuple[str, str, str]`
-    :   Parse an IRI into its components.
-        
-        Parameters
-        ----------
-        iri: str
-            IRI to parse
-        
-        Returns
-        -------
-        Tuple[str, str, str]
-            Scheme, context and name of the IRI
-
-    ### Instance variables
-
-    `context`
-    :   Context.
-
-    `iri`
-    :   Internationalized Resource Identifier (IRI) encoded ontology class name.
-
-    `name`
-    :   Name.
-
-    `scheme`
-    :   Scheme.
-
-`OntologyProperty(kind: knowledge.base.ontology.PropertyType, tenant_id: str, context: str, name: knowledge.base.ontology.OntologyPropertyReference, icon: str = None, property_domain: List[knowledge.base.ontology.OntologyClassReference] | None = None, property_range: List[knowledge.base.ontology.OntologyClassReference | knowledge.base.ontology.DataPropertyType] | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, sub_property_of: knowledge.base.ontology.OntologyPropertyReference | None = None, inverse_property_of: knowledge.base.ontology.OntologyPropertyReference | None = None)`
+`OntologyProperty(kind: knowledge.base.ontology.PropertyType, tenant_id: str, context: str, name: knowledge.base.ontology.OntologyPropertyReference, icon: str | None = None, property_domain: List[knowledge.base.ontology.OntologyClassReference] | None = None, property_range: List[knowledge.base.ontology.OntologyClassReference | knowledge.base.ontology.DataPropertyType] | None = None, labels: List[knowledge.base.ontology.OntologyLabel] | None = None, comments: List[knowledge.base.ontology.Comment] | None = None, sub_property_of: knowledge.base.ontology.OntologyPropertyReference | None = None, inverse_property_of: knowledge.base.ontology.OntologyPropertyReference | None = None)`
 :   Ontology Property
-    -----------------
-    Property ontology object.
+     -----------------
+     Property ontology object.
     
-    Parameters
-    ----------
-    kind: str
-        Kind of relation
-    tenant_id: str
-        Tenant id
-    context: str
-        Context
-    name: OntologyPropertyReference
-        Name of property object
-    icon: str
-        Icon describing the property
-    property_domain: OntologyClassReference
-        Domain for the property
-    property_range: OntologyClassReference
-        Range for the property
-    labels: List[Label]
-        List of labels (localized)
-    comments: List[Comment],
-        List of comments
-    sub_property_of: str (default: = None)
-        Sub property of.
-    inverse_property_of: str (optional)
-        Inverse property
+     Parameters
+     ----------
+     kind: PropertyType
+         Kind of relation
+     tenant_id: str
+         Tenant id
+     context: str
+         Context
+     name: OntologyPropertyReference
+         Name of property object
+     icon: Optional[str] [default: = None]
+         Icon describing the property
+     property_domain: Optional[List[OntologyClassReference]] [default: = None]
+         Domain for the property
+     property_range: Optional[List[Union[OntologyClassReference, DataPropertyType]]] [default: = None]
+         Range for the property
+     labels: Optional[List[OntologyLabel]] (default: = None)
+         List of labels (localized)
+     comments: Optional[List[Comment]] (default: = None)
+         List of comments
+     sub_property_of: Optional[OntologyPropertyReference] (default: = None)
+         Sub property of.
+    inverse_property_of: Optional[OntologyPropertyReference] (default: = None)
+         Inverse property
 
     ### Ancestors (in MRO)
 
@@ -899,7 +626,7 @@ Classes
 
     ### Static methods
 
-    `from_dict(property_dict: Dict[str, Any])`
+    `from_dict(property_dict: Dict[str, Any]) ‑> knowledge.base.ontology.OntologyProperty`
     :   Create ontology property from dictionary.
         Parameters
         ----------
@@ -987,25 +714,8 @@ Classes
 
     ### Instance variables
 
-    `property_name`
+    `property_name: str`
     :   Property name.
-
-`PropertyType(*args, **kwds)`
-:   PropertyType
-    -----------
-    Within the ontology two different property types are defined. A data- and an object property.
-
-    ### Ancestors (in MRO)
-
-    * enum.Enum
-
-    ### Class variables
-
-    `DATA_PROPERTY`
-    :
-
-    `OBJECT_PROPERTY`
-    :
 
 `ThingEncoder(*, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True, sort_keys=False, indent=None, separators=None, default=None)`
 :   Thing encoder
@@ -1056,7 +766,7 @@ Classes
 
     ### Methods
 
-    `default(self, o: Any)`
+    `default(self, o: Any) ‑> Any`
     :   Implement this method in a subclass such that it returns
         a serializable object for ``o``, or calls the base implementation
         (to raise a ``TypeError``).
@@ -1074,7 +784,7 @@ Classes
                 # Let the base class default method raise the TypeError
                 return super().default(o)
 
-`ThingObject(label: List[knowledge.base.entity.Label] = None, concept_type: knowledge.base.ontology.OntologyClassReference = wacom:core#Thing, description: List[knowledge.base.entity.Description] | None = None, uri: str | None = None, icon: str | None = None, tenant_rights: knowledge.base.access.TenantAccessRight = [], owner: bool = True, use_for_nel: bool = True, use_vector_index: bool = False, use_vector_index_document: bool = False, use_full_text_index: bool = True)`
+`ThingObject(label: List[knowledge.base.entity.Label] | None = None, concept_type: knowledge.base.ontology.OntologyClassReference = wacom:core#Thing, description: List[knowledge.base.entity.Description] | None = None, uri: str | None = None, icon: str | None = None, tenant_rights: knowledge.base.access.TenantAccessRight = [], owner: bool = True, use_for_nel: bool = True, use_vector_index: bool = False, use_vector_index_document: bool = False, use_full_text_index: bool = True)`
 :   ThingObject
     -----------
     Generic entity within the knowledge graph.
@@ -1091,27 +801,27 @@ Classes
     
     Parameters
     ----------
-    label: List[Label]
+    label: Optional[List[Label]] (default:= None)
         List of labels
-    icon: str (optional)
+    icon: str (default:= None)
         Icon
-    description: List[Description] (optional)
+    description: List[Description] (default:= [])
         List of descriptions
-    concept_type: OntologyClassReference
+    concept_type: OntologyClassReference (default:= None)
         Type of the concept
-    uri: str
+    uri: str (default:= None)
          URI for entity. For new entities the URI is None, as the knowledge graph backend assigns this.
-    tenant_rights: TenantAccessRight
+    tenant_rights: TenantAccessRight (default:= None)
         Rights for tenants
-    owner: bool
+    owner: bool (default:= False)
         Is the logged-in user the owner of the entity
-    use_for_nel: bool
+    use_for_nel: bool (default:= Ture)
         Use the entity for named entity linking
-    use_vector_index: bool
+    use_vector_index: bool (default:= False)
         Use vector index for labels
-    use_vector_index_document: bool
+    use_vector_index_document: bool (default:= False)
         Use vector index for document
-    use_full_text_index: bool
+    use_full_text_index: bool (default:= True)
         Use full text index for entity
 
     ### Static methods
@@ -1153,7 +863,7 @@ Classes
     `data_properties: Dict[knowledge.base.ontology.OntologyPropertyReference, List[knowledge.base.ontology.DataProperty]]`
     :   Literals of the concept.
 
-    `description: List[knowledge.base.entity.Description] | None`
+    `description: List[knowledge.base.entity.Description]`
     :   Description of the thing (optional).
 
     `group_ids: List[str]`
@@ -1177,7 +887,7 @@ Classes
     `owner_external_user_id: str | None`
     :   External user id of the owner.
 
-    `owner_id: str`
+    `owner_id: str | None`
     :   Internal id of the owner.
 
     `reference_id: str | None`
@@ -1195,8 +905,8 @@ Classes
     `tenant_access_right: knowledge.base.access.TenantAccessRight`
     :   Access rights for tenant.
 
-    `uri: str`
-    :   Unique identifier for entity.
+    `uri: str | None`
+    :   Unique identifier for entity. If the entity not yet imported into the knowledge graph, the URI is None.
 
     `use_for_nel: bool`
     :   Use the entity for named entity linking.
@@ -1210,12 +920,12 @@ Classes
     `use_vector_index_document: bool`
     :   Use vector index for document.
 
-    `visibility: str`
+    `visibility: str | None`
     :   Visibility.
 
     ### Methods
 
-    `add_alias(self, alias: str, language_code: knowledge.base.language.LocaleCode)`
+    `add_alias(self, alias: str, language_code: knowledge.base.language.LocaleCode) ‑> None`
     :   Adding an alias for entity.
         
         Parameters
@@ -1225,7 +935,7 @@ Classes
         language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `add_data_property(self, data_property: knowledge.base.ontology.DataProperty)`
+    `add_data_property(self, data_property: knowledge.base.ontology.DataProperty) ‑> None`
     :   Add data property to the entity.
         
         Parameters
@@ -1233,7 +943,7 @@ Classes
         data_property: DataProperty
             Data property that is added
 
-    `add_description(self, description: str, language_code: knowledge.base.language.LocaleCode)`
+    `add_description(self, description: str, language_code: knowledge.base.language.LocaleCode) ‑> None`
     :   Adding the description for entity.
         
         Parameters
@@ -1243,7 +953,7 @@ Classes
         language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `add_label(self, label: str, language_code: knowledge.base.language.LocaleCode)`
+    `add_label(self, label: str, language_code: knowledge.base.language.LocaleCode) ‑> None`
     :   Adding a label for entity.
         
         Parameters
@@ -1253,7 +963,7 @@ Classes
         language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `add_relation(self, prop: knowledge.base.ontology.ObjectProperty)`
+    `add_relation(self, prop: knowledge.base.ontology.ObjectProperty) ‑> None`
     :   Adding a relation to the entity.
         
         Parameters
@@ -1261,7 +971,7 @@ Classes
         prop: ObjectProperty
             Object property that is added
 
-    `add_source_reference_id(self, value: knowledge.base.ontology.DataProperty)`
+    `add_source_reference_id(self, value: knowledge.base.ontology.DataProperty) ‑> None`
     :   Adding the reference id from the source system of the entity.
         
         Parameters
@@ -1270,7 +980,7 @@ Classes
             Adds the source system reference id as a Data Property.
             **Remark:** The data property must have the property type 'wacom:core#sourceReferenceId'.
 
-    `add_source_system(self, value: knowledge.base.ontology.DataProperty)`
+    `add_source_system(self, value: knowledge.base.ontology.DataProperty) ‑> None`
     :   Adding the source system  of the entity.
         
         Parameters
@@ -1279,7 +989,7 @@ Classes
             Adds the source system as a Data Property. **Remark:** The data property must have the property type
             'wacom:core#sourceSystem'.
 
-    `alias_lang(self, language_code: knowledge.base.language.LocaleCode) ‑> List[knowledge.base.entity.Label]`
+    `alias_lang(self, language_code: knowledge.base.language.LocaleCode | knowledge.base.language.LanguageCode) ‑> List[knowledge.base.entity.Label]`
     :   Get alias for language_code code.
         
         Parameters
@@ -1290,6 +1000,36 @@ Classes
         -------
         aliases: List[Label]
             Returns a list of aliases for a specific language code
+
+    `as_dict(self) ‑> Dict[str, Any]`
+    :   This method constructs a dictionary representation of the instance, aggregating
+        label information, descriptions, data and object properties, group identifiers,
+        and ownership metadata. It is intended for serialization or API responses.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class on which this method is called.
+        
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+        
+            * `URI_TAG`: The unique URI of the instance.
+            * `IMAGE_TAG`: The image reference associated with the instance.
+            * `LABELS_TAG`: A list of label dictionaries obtained from both the
+              `label` and `alias` collections.
+            * `DESCRIPTIONS_TAG`: A list of description dictionaries.
+            * `TYPE_TAG`: The IRI of the instance's concept type.
+            * `STATUS_FLAG_TAG`: The string value of the instance's status flag.
+            * `DATA_PROPERTIES_TAG`: A dictionary mapping data‑property IRIs to lists
+              of their value dictionaries.
+            * `OBJECT_PROPERTIES_TAG`: A dictionary mapping object‑property IRIs to
+              their value dictionary.
+            * `GROUP_IDS`: The list of group identifiers associated with the instance.
+            * `OWNER_TAG`: The owner name of the instance.
+            * `OWNER_ID_TAG`: The unique identifier of the owner.
 
     `data_property_lang(self, data_property: knowledge.base.ontology.OntologyPropertyReference, language_code: knowledge.base.language.LocaleCode) ‑> List[knowledge.base.ontology.DataProperty]`
     :   Get data property for language_code code.
@@ -1331,7 +1071,7 @@ Classes
         id: str
             Source system.
 
-    `description_lang(self, language_code: knowledge.base.language.LocaleCode) ‑> knowledge.base.entity.Description | None`
+    `description_lang(self, language_code: knowledge.base.language.LocaleCode | knowledge.base.language.LanguageCode) ‑> knowledge.base.entity.Description | None`
     :   Get description for entity.
         
         Parameters
@@ -1340,10 +1080,10 @@ Classes
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
         Returns
         -------
-        label: LocalizedContent
-            Returns the  label for a specific language_code code
+        Optional[Description]
+            Returns the description for a specific language_code code if it exists, otherwise None.
 
-    `label_lang(self, language_code: knowledge.base.language.LocaleCode) ‑> knowledge.base.entity.Label | None`
+    `label_lang(self, language_code: knowledge.base.language.LocaleCode | knowledge.base.language.LanguageCode) ‑> knowledge.base.entity.Label | None`
     :   Get label for language_code code.
         
         Parameters
@@ -1355,7 +1095,7 @@ Classes
         label: Optional[Label]
             Returns the label for a specific language code
 
-    `remove_alias(self, label: knowledge.base.entity.Label)`
+    `remove_alias(self, label: knowledge.base.entity.Label) ‑> None`
     :   Remove alias for entity if it exists for language.
         
         Parameters
@@ -1363,7 +1103,7 @@ Classes
         label: Label
             Alias label
 
-    `remove_data_property(self, data_property: knowledge.base.ontology.OntologyPropertyReference)`
+    `remove_data_property(self, data_property: knowledge.base.ontology.OntologyPropertyReference) ‑> None`
     :   Remove data property.
         
         Parameters
@@ -1371,7 +1111,7 @@ Classes
         data_property: OntologyPropertyReference
             Data property to be removed.
 
-    `remove_description(self, language_code: knowledge.base.language.LocaleCode)`
+    `remove_description(self, language_code: knowledge.base.language.LocaleCode) ‑> None`
     :   Remove description for entity if it exists for language.
         
         Parameters
@@ -1379,7 +1119,7 @@ Classes
         language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `remove_label(self, language_code: knowledge.base.language.LocaleCode)`
+    `remove_label(self, language_code: knowledge.base.language.LocaleCode) ‑> None`
     :   Remove label for entity if it exists for language.
         
         Parameters
@@ -1387,7 +1127,7 @@ Classes
         language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `update_alias(self, value: str, language_code: knowledge.base.language.LocaleCode)`
+    `update_alias(self, value: str, language_code: knowledge.base.language.LocaleCode) ‑> None`
     :   Update or creates an alias for a specific language.
         
         Parameters
@@ -1397,7 +1137,7 @@ Classes
         language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `update_description(self, value: str, language_code: knowledge.base.language.LocaleCode)`
+    `update_description(self, value: str, language_code: knowledge.base.language.LocaleCode) ‑> None`
     :   Update or creates a description for a specific language.
         
         Parameters
@@ -1407,7 +1147,7 @@ Classes
         language_code: LocaleCode
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
-    `update_label(self, value: str, language_code: knowledge.base.language.LocaleCode)`
+    `update_label(self, value: str, language_code: knowledge.base.language.LocaleCode) ‑> None`
     :   Update or creates a label for a specific language.
         
         Parameters
