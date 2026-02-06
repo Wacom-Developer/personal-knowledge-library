@@ -28,6 +28,11 @@ def __extract_abstract__(title: str, language: str = "en", max_retries: int = 5,
     -------
     abstract: str
         Abstract of the wikipedia article
+
+    Raises
+    ------
+    ExtractionException -
+        Failed to extract abstract
     """
     params: Dict[str, str] = {
         "action": "query",
@@ -51,7 +56,7 @@ def __extract_abstract__(title: str, language: str = "en", max_retries: int = 5,
                 pages = result["query"]["pages"]
                 if len(pages) == 1:
                     for v in pages.values():
-                        return v.get("extract", "")
+                        return str(v.get("extract", ""))
     raise ExtractionException(f"Abstract for article with {title} in language_code {language} cannot be extracted.")
 
 
@@ -91,13 +96,13 @@ def __extract_thumb__(title: str, language: str = "en", max_retries: int = 5, ba
         session.mount(mount_point, HTTPAdapter(max_retries=retries))
         response: Response = session.get(url, params=params)
         if response.ok:
-            result: dict = response.json()
+            result: Dict[str, Any] = response.json()
             if "query" in result:
-                pages: dict = result["query"]["pages"]
+                pages: Dict[str, Any] = result["query"]["pages"]
                 if len(pages) == 1:
                     for v in pages.values():
                         if "thumbnail" in v:
-                            return v["thumbnail"]["source"]
+                            return str(v["thumbnail"]["source"])
 
     raise ExtractionException(f"Thumbnail for article with {title} in language_code {language} cannot be extracted.")
 
