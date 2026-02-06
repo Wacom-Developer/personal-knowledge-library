@@ -73,7 +73,7 @@ class LabelSearchResult:
         """Concept type of the search result."""
         return self.__concept_type
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"LabelSearchResult(score={self.score}, entity_uri={self.entity_uri}, label={self.label}, "
             f"locale={self.locale}, concept_type={self.concept_type}, metadata={self.metadata})"
@@ -169,8 +169,8 @@ class PerformanceStats:
         Response time in milliseconds for the vector database.
     """
 
-    def __init__(self, stats: Dict[str, Any]):
-        self.__locale: LocaleCode = stats.get("locale")
+    def __init__(self, stats: Dict[str, Any]) -> None:
+        self.__locale: LocaleCode = LocaleCode(stats.get("locale")) if stats.get("locale") else LocaleCode("en_US")
         self.__model_name: str = stats.get("model-name", "unknown")
         self.__top_k: int = stats.get("top-k", 10)
         self.__loading_time: float = stats.get("loading", 0.0) * 1000
@@ -213,7 +213,7 @@ class PerformanceStats:
         """Overall time in milliseconds for the search query."""
         return self.__overall_time
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"PerformanceStats(locale_code={self.locale_code}, model_name={self.model_name}, top_k={self.top_k}, "
             f"model_loading_time={self.model_loading_time}, embedding_time={self.embedding_time}, "
@@ -292,8 +292,8 @@ class LabelSearchStats(PerformanceStats):
 
     def __init__(self, stats: Dict[str, Any]):
         super().__init__(stats)
-        self.__tokenizer: float = stats.get("tokenizer")
-        self.__number_of_tokens: int = stats.get("number-of-tokens")
+        self.__tokenizer: float = stats.get("tokenizer", 0.)
+        self.__number_of_tokens: int = stats.get("number-of-tokens", 0)
 
     @property
     def tokenizer_time(self) -> float:
@@ -453,7 +453,7 @@ class FilterVectorDocumentsResponse:
         Identifier for the tenant associated with the response.
     """
 
-    def __init__(self, results: List[VectorDocument], tenant_id: str):
+    def __init__(self, results: List[VectorDocument], tenant_id: str) -> None:
         self.__results: List[VectorDocument] = results
         self.__tenant_id: str = tenant_id
 
@@ -463,7 +463,7 @@ class FilterVectorDocumentsResponse:
         return self.__results
 
     @property
-    def tenant_id(self):
+    def tenant_id(self) -> str:
         """Tenant ID."""
         return self.__tenant_id
 
@@ -505,7 +505,7 @@ class LabelMatchingResponse:
 
     def __init__(
         self, results: List[LabelSearchResult], max_results: int = 10, stats: Optional[LabelSearchStats] = None
-    ):
+    ) -> None:
         self.__results = results
         self.__max_results = max_results
         self.__stats: Optional[LabelSearchStats] = stats
@@ -526,7 +526,7 @@ class LabelMatchingResponse:
         return self.__stats
 
     @staticmethod
-    def from_dict(data: Dict[str, Any]):
+    def from_dict(data: Dict[str, Any]) -> "LabelMatchingResponse":
         """
         Create a LabelMatchingResponse from a dictionary.
         Parameters
@@ -567,7 +567,7 @@ class VectorDBDocument:
         Additional metadata associated with the document.
     """
 
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, data: Dict[str, Any]) -> None:
         self.__id: str = data.get("id", "")
         self.__content: str = data.get("content", "")
         self.__uri: str = data.get("uri", "")
@@ -593,5 +593,5 @@ class VectorDBDocument:
         """Metadata of the document."""
         return self.__metadata
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"VectorDatabaseDocument(content={self.content}, uri={self.uri}, metadata={self.metadata})"
