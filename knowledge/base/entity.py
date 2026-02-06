@@ -107,7 +107,7 @@ class LocalizedContent(abc.ABC):
         ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
     """
 
-    def __init__(self, content: str, language_code: Union[LocaleCode, LanguageCode]):
+    def __init__(self, content: str, language_code: Union[LocaleCode, LanguageCode]) -> None:
         self.__content: str = content
         self.__language_code: Union[LocaleCode, LanguageCode] = language_code
 
@@ -117,7 +117,7 @@ class LocalizedContent(abc.ABC):
         return self.__content
 
     @content.setter
-    def content(self, value: str):
+    def content(self, value: str) -> None:
         self.__content = value
 
     @property
@@ -125,7 +125,7 @@ class LocalizedContent(abc.ABC):
         """Locale"""
         return self.__language_code
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.content}@{self.language_code}"
 
 
@@ -145,7 +145,7 @@ class Label(LocalizedContent):
         Main content
     """
 
-    def __init__(self, content: str, language_code: LocaleCode = EN_US, main: bool = False):
+    def __init__(self, content: str, language_code: LocaleCode = EN_US, main: bool = False) -> None:
         self.__main: bool = main
         super().__init__(content, language_code)
 
@@ -183,13 +183,13 @@ class Label(LocalizedContent):
         return Label(dict_label[tag_name], LocaleCode(dict_label[locale_name]))
 
     @staticmethod
-    def create_from_list(param: List[dict]) -> List[LOCALIZED_CONTENT_TAG]:
+    def create_from_list(param: List[Dict[str, Any]]) -> List["Label"]:
         """
         Create a list of labels from a list of dictionaries.
 
         Parameters
         ----------
-        param: List[dict]
+        param: List[Dict[str, Any]]
             List of dictionaries containing the label information.
 
         Returns
@@ -199,7 +199,16 @@ class Label(LocalizedContent):
         """
         return [Label.create_from_dict(p) for p in param]
 
-    def __dict__(self):
+    def as_dict(self) -> Dict[str, Any]:
+        """
+        Returns a dictionary representation of the instance.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the object's content, language code, and main flag.
+            The dictionary keys are ``CONTENT_TAG``, ``LOCALE_TAG``, and ``IS_MAIN_TAG`` respectively.
+        """
         return {CONTENT_TAG: self.content, LOCALE_TAG: self.language_code, IS_MAIN_TAG: self.main}
 
 
@@ -217,7 +226,7 @@ class Description(LocalizedContent):
         Language code of content
     """
 
-    def __init__(self, description: str, language_code: LocaleCode = EN_US):
+    def __init__(self, description: str, language_code: LocaleCode = EN_US) -> None:
         super().__init__(description, language_code)
 
     @staticmethod
@@ -261,7 +270,46 @@ class Description(LocalizedContent):
         """
         return [Description.create_from_dict(p) for p in param]
 
-    def __dict__(self):
+    def as_dict(self) -> Dict[str, Any]:
+        """
+        Creates a dictionary representation of the object containing its textual
+        content and locale information.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        dict
+            A mapping where the description tag is associated with the object's
+            content and the locale tag is associated with the object's language
+            code.
+
+        Raises
+        ------
+        None
+
+        Warns
+        -----
+        None
+
+        Notes
+        -----
+        None
+
+        Examples
+        --------
+        None
+
+        References
+        ----------
+        None
+
+        See Also
+        --------
+        None
+        """
         return {
             DESCRIPTION_TAG: self.content,
             LOCALE_TAG: self.language_code,
