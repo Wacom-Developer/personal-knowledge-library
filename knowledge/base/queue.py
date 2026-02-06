@@ -21,7 +21,7 @@ class QueueCount:
         The count of items or occurrences associated with the queue.
     """
 
-    def __init__(self, queue_name: str, count: int):
+    def __init__(self, queue_name: str, count: int) -> None:
         self._queue_name = queue_name
         self._count = count
 
@@ -65,7 +65,7 @@ class QueueNames:
         List of names representing different queues.
     """
 
-    def __init__(self, names: List[str]):
+    def __init__(self, names: List[str]) -> None:
         self._names = names
 
     @property
@@ -100,7 +100,7 @@ class MessageRate:
         The rate at which messages are sent or processed.
     """
 
-    def __init__(self, rate: float):
+    def __init__(self, rate: float) -> None:
         self._rate = rate
 
     @property
@@ -147,7 +147,7 @@ class MessageStats:
         deliver_details: Optional[MessageRate] = None,
         ack: Optional[int] = None,
         ack_details: Optional[MessageRate] = None,
-    ):
+    ) -> None:
         self._publish = publish
         self._publish_details = publish_details
         self._deliver = deliver
@@ -242,7 +242,7 @@ class QueueMonitor:
         consumers: int,
         memory: int,
         message_stats: Optional[MessageStats] = None,
-    ):
+    ) -> None:
         self._name = name
         self._vhost = vhost
         self._state = state
