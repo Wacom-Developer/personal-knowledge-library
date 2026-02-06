@@ -28,7 +28,7 @@ CWD: Path = Path(__file__).parent
 ontology_graph: Graph = Graph()
 logger = loguru.logger
 # Cache
-wikidata_cache: WikidataCache() = WikidataCache()
+wikidata_cache: WikidataCache = WikidataCache()
 
 
 def flatten(hierarchy: WikidataClass) -> Set[str]:
@@ -111,9 +111,32 @@ class WikidataClassEncoder(json.JSONEncoder):
     This class encodes a Wikidata class to JSON.
     """
 
-    def default(self, o):
+    def default(self, o) -> Dict[str, Any]:
+        """
+        Handles serialization of objects for JSON encoding.
+
+        Parameters
+        ----------
+        o : object
+            The object to be serialized. If it is an instance of
+            `WikidataClass`, the method will return its dictionary
+            representation using the `as_dict` method.
+
+        Returns
+        -------
+        dict
+            Dictionary representation of the object for JSON serialization.
+            For objects that are not instances of `WikidataClass`, the
+            behavior is delegated to the base `json.JSONEncoder.default`
+            method.
+
+        Raises
+        ------
+        TypeError
+            If the object cannot be serialized by the base encoder.
+        """
         if isinstance(o, WikidataClass):
-            return o.__dict__()
+            return o.as_dict()
         return json.JSONEncoder.default(self, o)
 
 
@@ -208,7 +231,7 @@ class PropertyConfiguration:
         return self.__iri
 
     @iri.setter
-    def iri(self, value: str):
+    def iri(self, value: str) -> None:
         self.__iri = value
 
     @property
@@ -217,7 +240,7 @@ class PropertyConfiguration:
         return self.__inverse
 
     @inverse.setter
-    def inverse(self, value: str):
+    def inverse(self, value: str) -> None:
         self.__inverse = value
 
     @property
@@ -240,7 +263,7 @@ class PropertyConfiguration:
         """List of domains."""
         return self.__domains
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"PropertyConfiguration(ontology_property={self.iri})"
 
 
@@ -252,7 +275,7 @@ class MappingConfiguration:
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.__classes: List[ClassConfiguration] = []
         self.__properties: List[PropertyConfiguration] = []
         self.__index: Dict[str, int] = {}
@@ -342,7 +365,7 @@ class MappingConfiguration:
                         properties.append(prop_conf)
         return properties
 
-    def add_class(self, class_configuration: ClassConfiguration):
+    def add_class(self, class_configuration: ClassConfiguration) -> None:
         """
         Adds a class configuration.
 
@@ -377,7 +400,7 @@ class MappingConfiguration:
         for c in class_configuration.dbpedia_classes:
             self.__index[c] = len(self.__classes) - 1
 
-    def add_property(self, property_configuration: PropertyConfiguration):
+    def add_property(self, property_configuration: PropertyConfiguration) -> None:
         """
         Adds a property configuration.
 
@@ -481,7 +504,7 @@ class MappingConfiguration:
                 return False
         return False
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Mapping Configuration(#classes={len(self.__classes)}" f", #properties={len(self.__properties)})"
 
 
@@ -544,7 +567,7 @@ def build_configuration(mapping: Dict[str, Any]) -> MappingConfiguration:
     return conf
 
 
-def register_ontology(rdf_str: str):
+def register_ontology(rdf_str: str) -> None:
     """
     Registers the ontology.
     Parameters
@@ -555,7 +578,7 @@ def register_ontology(rdf_str: str):
     ontology_graph.parse(data=rdf_str, format="xml")
 
 
-def load_configuration(configuration: Path):
+def load_configuration(configuration: Path) -> None:
     """
     Loads the configuration.
 

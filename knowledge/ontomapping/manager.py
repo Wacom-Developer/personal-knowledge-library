@@ -107,11 +107,11 @@ def convert_dict(structure: Dict[str, Any], locale: str) -> Optional[str]:
         structure_type: str = structure["type"]
         value: Any = structure["value"]
         if structure_type == "time" and isinstance(value, dict) and "iso" in value and value["iso"]:
-            return value["iso"]
+            return str(value["iso"])
         if structure_type == "time" and isinstance(value, dict):
-            return value["time"]
+            return str(value["time"])
         if structure_type == "quantity" and isinstance(value, dict):
-            return value["amount"]
+            return str(value["amount"])
         if structure_type == "wikibase-item" and isinstance(value, dict):
             qid: str = value["id"]
             if cache.qid_in_cache(qid):
@@ -121,9 +121,9 @@ def convert_dict(structure: Dict[str, Any], locale: str) -> Optional[str]:
             if locale in wikidata_data.label:
                 return wikidata_data.label[locale].content
         if structure_type == "external-id":
-            return value
+            return str(value)
         if structure_type == "string":
-            return value
+            return str(value)
         if structure_type == "monolingualtext" and isinstance(value, dict):
             if LOCALE_LANGUAGE_MAPPING.get(LocaleCode(locale)) == LanguageCode(value["language"]):
                 return value["text"]
@@ -131,7 +131,7 @@ def convert_dict(structure: Dict[str, Any], locale: str) -> Optional[str]:
         if structure_type == "globe-coordinate" and isinstance(value, dict):
             return f'{value["latitude"]},{value["longitude"]}'
         if structure_type == "url" and isinstance(value, str):
-            return value
+            return str(value)
     raise NotImplementedError()
 
 
