@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-present Wacom. All rights reserved.
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 from requests import Response
 
@@ -89,7 +89,7 @@ class WacomEntityLinkingEngine(PersonalEntityLinkingProcessor):
             url, json=payload, verify=self.verify_calls, overwrite_auth_token=auth_key
         )
         if response.ok:
-            results: dict = response.json()
+            results: Dict[str, Any] = response.json()
             for e in results:
                 entity_types: List[str] = []
                 # --------------------------- Entity content -------------------------------------------------------

@@ -128,7 +128,7 @@ class EntitySource:
         """Source of the entity."""
         return self.__source
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.uri} ({self.source})"
 
 
@@ -151,7 +151,7 @@ class NamedEntity(abc.ABC):
         Type of the entity.
     """
 
-    def __init__(self, ref_text: str, start_idx: int, end_idx: int, entity_type: EntityType):
+    def __init__(self, ref_text: str, start_idx: int, end_idx: int, entity_type: EntityType) -> None:
         self.__ref_text: str = ref_text
         self.__start_idx: int = start_idx
         self.__end_idx: int = end_idx
@@ -177,7 +177,7 @@ class NamedEntity(abc.ABC):
         """Type of the entity."""
         return self.__type
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.ref_text} [{self.start_idx}-{self.end_idx}"
 
 
@@ -226,7 +226,7 @@ class KnowledgeGraphEntity(NamedEntity):
         entity_type: EntityType = EntityType.PUBLIC_ENTITY,
         tokens: Optional[List[str]] = None,
         token_indexes: Optional[List[int]] = None,
-    ):
+    ) -> None:
         super().__init__(ref_text, start_idx, end_idx, entity_type)
         self.__source: EntitySource = source
         self.__content_link: str = content_link
@@ -255,7 +255,7 @@ class KnowledgeGraphEntity(NamedEntity):
         return self.__confidence
 
     @confidence.setter
-    def confidence(self, value: float):
+    def confidence(self, value: float) -> None:
         self.__confidence = value
 
     @property
@@ -264,7 +264,7 @@ class KnowledgeGraphEntity(NamedEntity):
         return self.__description
 
     @description.setter
-    def description(self, value: str):
+    def description(self, value: str) -> None:
         self.__description = value
 
     @property
@@ -273,7 +273,7 @@ class KnowledgeGraphEntity(NamedEntity):
         return self.__thumbnail
 
     @thumbnail.setter
-    def thumbnail(self, value: str):
+    def thumbnail(self, value: str) -> None:
         self.__thumbnail = value
 
     @property
@@ -292,7 +292,7 @@ class KnowledgeGraphEntity(NamedEntity):
         return self.__relevant_type
 
     @relevant_type.setter
-    def relevant_type(self, value: OntologyClassReference):
+    def relevant_type(self, value: OntologyClassReference) -> None:
         self.__relevant_type = value
 
     @property
@@ -305,7 +305,7 @@ class KnowledgeGraphEntity(NamedEntity):
         """List of token indexes used to identify the entity."""
         return self.__token_indexes
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.ref_text} [{self.start_idx}-{self.end_idx}] -> {self.entity_source} [{self.entity_type}]"
 
 
@@ -327,7 +327,7 @@ class BasicNamedEntity(NamedEntity):
         Type of the entity.
     """
 
-    def __init__(self, ref_text: str, start_idx: int, end_idx: int, basic_type: BasicType):
+    def __init__(self, ref_text: str, start_idx: int, end_idx: int, basic_type: BasicType) -> None:
         super().__init__(ref_text, start_idx, end_idx, EntityType.NAMED_ENTITY)
         self.__basic_type: BasicType = basic_type
 
@@ -336,7 +336,7 @@ class BasicNamedEntity(NamedEntity):
         """Basic type that is recognized."""
         return self.__basic_type
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.ref_text} [{self.start_idx}-{self.end_idx}] -> {self.basic_type}"
 
 
@@ -365,7 +365,7 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
         verify_calls: bool = True,
         max_retries: int = DEFAULT_MAX_RETRIES,
         backoff_factor: float = DEFAULT_BACKOFF_FACTOR,
-    ):
+    ) -> None:
         super().__init__(
             service_url=service_url,
             application_name=application_name,
@@ -402,7 +402,7 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
         raise NotImplementedError
 
     @property
-    def supported_language(self) -> List[str]:
+    def supported_language(self) -> List[LocaleCode]:
         """List of supported languages."""
         return self.LANGUAGES
 
@@ -421,7 +421,7 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
         """
         return language_code in self.supported_language
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Personal Entity Linking:= {self.service_url}"
 
 
@@ -435,13 +435,15 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: List[str] = None
+    supported_languages: Optional[List[str]] = None
         List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
     """
 
-    def __init__(self, service_url: str, supported_languages: List[LocaleCode] = None, verify_calls: bool = False):
+    def __init__(
+        self, service_url: str, supported_languages: Optional[List[str]] = None, verify_calls: bool = False
+    ) -> None:
         super().__init__(
             application_name="Named Entity Linking",
             service_url=service_url,
@@ -489,7 +491,7 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
         """
         return language_code in self.supported_language
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Public entity linking:= {self.__service_url}"
 
 
@@ -503,7 +505,7 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
     ----------
     service_url: str
         URL where the service has been deployed
-    supported_languages: List[str] = None
+    supported_languages: Optional[List[str]] = None
         List of supported languages
     verify_calls: bool (default:=False)
         Verifies all HTTPS calls and the associated certificate.
@@ -513,9 +515,9 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
         self,
         service_url: str,
         provider: str = "external",
-        supported_languages: List[str] = None,
+        supported_languages: Optional[List[str]] = None,
         verify_calls: bool = False,
-    ):
+    ) -> None:
         super().__init__(service_url=service_url, verify_calls=verify_calls)
         self.__provider: str = provider
         self.__supported_languages: List[str] = supported_languages if supported_languages else []
@@ -546,7 +548,7 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
 
     def is_language_supported(self, language_code: LocaleCode) -> bool:
         """
-        Is the language_code code supported by the engine.
+        Does the engine support the language_code code.
 
         Parameters
         ----------
@@ -565,5 +567,5 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
         """Provider of the service."""
         return self.__provider
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Public Entity Linking:= {self.service_url}"
