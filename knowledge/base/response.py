@@ -174,10 +174,10 @@ class JobStatus:
             Instance of JobStatus.
         """
         return cls(
-            user_id=data.get("userId"),
-            tenant_id=data.get("tenantId"),
-            internal_job_id=data.get("internalJobId"),
-            job_id=data.get("jobId"),
+            user_id=str(data.get("userId")),
+            tenant_id=str(data.get("tenantId")),
+            internal_job_id=str(data.get("internalJobId")),
+            job_id=str(data.get("jobId")),
             status=data.get("status"),
             processed_entities=data.get("processed", {}).get("entities", 0),
             processed_relations=data.get("processed", {}).get("relations", 0),
@@ -187,7 +187,7 @@ class JobStatus:
             failures=data.get("failures", 0),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"JobStatus(userId={self.user_id}, tenantId={self.tenant_id}, internalJobId={self.internal_job_id}, "
             f"jobId={self.job_id}, status={self.status}, failures={self.failures}, "
