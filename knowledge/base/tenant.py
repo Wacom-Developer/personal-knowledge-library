@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024-present Wacom. All rights reserved.
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 class TenantConfiguration:
@@ -51,7 +51,7 @@ class TenantConfiguration:
         vector_search_data_properties: List[str],
         vector_search_object_properties: List[str],
         content_data_property_name: str,
-    ):
+    ) -> None:
         # Constructor to initialize the properties
         self.__identifier: str = identifier
         self.__ontology_name: str = ontology_name
@@ -107,18 +107,18 @@ class TenantConfiguration:
         return self.__name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str) -> None:
         self.__name = value
 
     @property
-    def rights(self):
+    def rights(self) -> List[str]:
         """
         List of rights being assigned to the tenant, and will be added to the user's rights in the token.
         """
         return self.__rights
 
     @rights.setter
-    def rights(self, value):
+    def rights(self, value: List[str]) -> None:
         self.__rights = value
 
     @property
@@ -129,29 +129,29 @@ class TenantConfiguration:
         return self.__vector_search_data_properties
 
     @vector_search_data_properties.setter
-    def vector_search_data_properties(self, value):
+    def vector_search_data_properties(self, value: List[str]) -> None:
         self.__vector_search_data_properties = value
 
     @property
-    def vector_search_object_properties(self):
+    def vector_search_object_properties(self) -> List[str]:
         """
         List of vector search object properties which are used for vector search in the metadata.
         """
         return self.__vector_search_object_properties
 
     @vector_search_object_properties.setter
-    def vector_search_object_properties(self, value):
-        self.__vector_search_object_properties = value
+    def vector_search_object_properties(self, value: Optional[List[str]] = None) -> None:
+        self.__vector_search_object_properties = value if value is not None else []
 
     @property
-    def content_data_property_name(self):
+    def content_data_property_name(self) -> str:
         """
         Name of the content data property which is used for vector search to index documents.
         """
         return self.__content_data_property_name
 
     @content_data_property_name.setter
-    def content_data_property_name(self, value):
+    def content_data_property_name(self, value: str) -> None:
         self.__content_data_property_name = value
 
     @classmethod
@@ -170,18 +170,18 @@ class TenantConfiguration:
             The tenant configuration object.
         """
         return cls(
-            identifier=data_dict.get("id"),
-            ontology_name=data_dict.get("ontologyName"),
-            ontology_version=data_dict.get("ontologyVersion"),
-            is_locked=data_dict.get("isLocked"),
-            name=data_dict.get("name"),
-            rights=data_dict.get("rights"),
-            vector_search_data_properties=data_dict.get("vectorSearchDataProperties"),
-            vector_search_object_properties=data_dict.get("vectorSearchObjectProperties"),
-            content_data_property_name=data_dict.get("contentDataPropertyName"),
+            identifier=str(data_dict.get("id")),
+            ontology_name=str(data_dict.get("ontologyName")),
+            ontology_version=int(data_dict.get("ontologyVersion"), 0),
+            is_locked=bool(data_dict.get("isLocked")),
+            name=str(data_dict.get("name")),
+            rights=data_dict.get("rights", []),
+            vector_search_data_properties=data_dict.get("vectorSearchDataProperties", []),
+            vector_search_object_properties=data_dict.get("vectorSearchObjectProperties", []),
+            content_data_property_name=data_dict.get("contentDataPropertyName", []),
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"TenantConfiguration(identifier='{self.identifier}', ontology_name='{self.ontology_name}', "
             f"ontology_version={self.ontology_version}, is_locked={self.is_locked}, "
