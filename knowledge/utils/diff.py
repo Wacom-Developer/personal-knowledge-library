@@ -7,6 +7,13 @@ from knowledge.base.ontology import ThingObject
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
 from knowledge.services.graph import WacomKnowledgeService
 
+__all__ = [
+    "diff_entities",
+    "diff_entities_async",
+    "is_different",
+    "is_different_async",
+]
+
 
 def diff_entities(
     client: WacomKnowledgeService,
@@ -323,7 +330,7 @@ async def diff_entities_async(
                 "file": len(kg_thing.description),
             }
         )
-    for desc_file in file_thing.description:
+    for desc_file in file_thing.description if file_thing.description else []:
         kg_desc: Optional[Description] = kg_thing.description_lang(desc_file.language_code)
         if kg_desc is None or desc_file.content != kg_desc.content:
             differences.append(
