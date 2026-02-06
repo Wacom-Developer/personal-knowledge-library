@@ -3,8 +3,6 @@
 import urllib.parse
 from typing import List, Any, Optional, Dict, cast
 
-import orjson
-
 from knowledge.base.access import GroupAccessRight
 from knowledge.base.ontology import NAME_TAG
 from knowledge.services import (

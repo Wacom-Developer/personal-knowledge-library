@@ -3,8 +3,6 @@
 from datetime import datetime
 from typing import Any, Union, Dict, List, Tuple, Optional
 
-import orjson
-
 from knowledge import logger
 from knowledge.services import APPLICATION_JSON_HEADER, EXPIRATION_DATE_TAG
 from knowledge.services.asyncio.base import (

@@ -2,8 +2,6 @@
 # Copyright © 2024-present Wacom. All rights reserved.
 from typing import Dict, Any, Optional, List, Literal
 
-import orjson
-
 from knowledge.base.language import LocaleCode
 from knowledge.base.queue import QueueNames, QueueCount, QueueMonitor
 from knowledge.base.search import (
