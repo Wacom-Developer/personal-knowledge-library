@@ -2359,6 +2359,7 @@ class ThingObject:
         descriptions: List[Description] = []
         main_labels: Dict[str, bool] = {}
         source_reference_id: Optional[str] = entity.get(SOURCE_REFERENCE_ID_TAG)
+        source_system: Optional[str] = entity.get(SOURCE_SYSTEM_TAG)
         for label in entity[LABELS_TAG]:
             if label[LOCALE_TAG] in SUPPORTED_LOCALES:
                 if label[IS_MAIN_TAG]:
@@ -2418,6 +2419,7 @@ class ThingObject:
         if EXTERNAL_USER_ID_TAG in entity:
             thing.owner_external_user_id = entity[EXTERNAL_USER_ID_TAG]
         ref_id_found: bool = False
+        source_system_found: bool = False
         if DATA_PROPERTIES_TAG in entity:
             if isinstance(entity[DATA_PROPERTIES_TAG], dict):
                 for data_property_type_str, data_properties in entity[DATA_PROPERTIES_TAG].items():
@@ -2446,12 +2448,23 @@ class ThingObject:
                         if source_reference_id != dp_value:
                             logger.warning(f"Source reference id mismatch: {source_reference_id} != {dp_value}")
                             raise ValueError(f"Source reference id mismatch: {source_reference_id} != {dp_value}")
-
+                    if dp_property_type == SYSTEM_SOURCE_SYSTEM:
+                        value: str = dp_value
+                        source_system_found = True
+                        if source_system and source_system != value:
+                            logger.warning(f"Source system mismatch: {source_system} != {value}")
+                            raise ValueError(f"Source system mismatch: {source_system} != {value}")
+                        if source_system is None and value:
+                            logger.warning(f"Source system is None but value is {value}")
                     thing.add_data_property(DataProperty(dp_value, dp_property_type, dp_language_code))
         if not ref_id_found and source_reference_id:
             thing.add_data_property(DataProperty(source_reference_id, SYSTEM_SOURCE_REFERENCE_ID))
         elif not ref_id_found and not source_reference_id:
             logger.warning(f"No source reference id found for {thing.label[0]}")
+        if not source_system_found and source_system:
+            thing.add_data_property(DataProperty(source_system, SYSTEM_SOURCE_SYSTEM))
+        elif not source_system_found and not source_system:
+            logger.warning(f"No source system found for {thing.label[0]}")
         if OBJECT_PROPERTIES_TAG in entity:
             for object_property in entity[OBJECT_PROPERTIES_TAG]:
                 _, obj = ObjectProperty.create_from_dict(object_property)
