@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-present Wacom. All rights reserved.
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any, cast
 
 from requests import Response
 
@@ -85,7 +85,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         return self.__tenant_management_token
 
     @tenant_management_token.setter
-    def tenant_management_token(self, value: str):
+    def tenant_management_token(self, value: str) -> None:
         self.__tenant_management_token = value
 
     # ------------------------------------------ Tenants handling ------------------------------------------------------
@@ -128,8 +128,8 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{TenantManagementServiceAPI.TENANT_ENDPOINT}"
 
-        payload: dict = {"name": name, "rights": rights if rights else []}
-        params: dict = {"createAndApplyOnto": create_and_apply_onto}
+        payload: Dict[str, Any] = {"name": name, "rights": rights if rights else []}
+        params: Dict[str, Any] = {"createAndApplyOnto": create_and_apply_onto}
         response: Response = self.request_session.post(
             url,
             json=payload,
@@ -139,7 +139,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             overwrite_auth_token=self.__tenant_management_token,
         )
         if response.ok:
-            return response.json()
+            return cast(Dict[str, str], response.json())
         raise handle_error("Creation of tenant failed.", response)
 
     def listing_tenant(
@@ -184,7 +184,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         vector_search_object_properties: List[str],
         content_data_property_name: str,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Update the configuration of a tenant.
 
@@ -204,7 +204,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             Timeout for the request (default: 60 seconds)
         """
         url: str = f"{self.service_base_url}{TenantManagementServiceAPI.TENANT_ENDPOINT}/{identifier}/rights"
-        payload: dict = {
+        payload: Dict[str, Any] = {
             "vectorSearchDataProperties": vector_search_data_properties,
             "vectorSearchObjectProperties": vector_search_object_properties,
             "contentDataPropertyName": content_data_property_name,
@@ -224,7 +224,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         self,
         identifier: str,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Delete a tenant.
         Parameters

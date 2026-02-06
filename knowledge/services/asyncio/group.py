@@ -117,7 +117,7 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         )
         if not response.ok:
             raise await handle_error("Creation of group failed.", response, payload=payload)
-        group: Dict[str, Any] = response.content
+        group: Dict[str, Any] = cast(Dict[str, Any], response.content)
         return Group.parse(group)
 
     async def update_group(
@@ -294,7 +294,7 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            group: Dict[str, Any] = response.content
+            group: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return GroupInfo.parse(group)
         raise await handle_error("Getting of group information failed.", response)
 

@@ -1994,7 +1994,7 @@ class ThingObject:
         return self.__icon
 
     @image.setter
-    def image(self, value: str) -> None:
+    def image(self, value: Optional[str]) -> None:
         self.__icon = value
 
     @property

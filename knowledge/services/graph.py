@@ -876,7 +876,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 overwrite_auth_token=auth_key,
             )
             if not response.ok:
-                raise handle_error("Creation of relation failed.", response, payload=updates)
+                raise handle_error("Creation of relation failed.", response)
 
     def remove_relation(
         self,

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2025-present Wacom. All rights reserved.
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, cast
 from typing import Literal
 
 __all__ = [
@@ -188,7 +188,10 @@ class JobStatus:
             tenant_id=str(data.get("tenantId")),
             internal_job_id=str(data.get("internalJobId")),
             job_id=str(data.get("jobId")),
-            status=data.get("status"),
+            status=cast(
+                Literal["Pending", "InProgress", "Completed", "Failed", "Retrying"],
+                data.get("status", "Pending"),
+            ),
             processed_entities=data.get("processed", {}).get("entities", 0),
             processed_relations=data.get("processed", {}).get("relations", 0),
             processed_images=data.get("processed", {}).get("images", 0),

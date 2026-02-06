@@ -7,6 +7,7 @@ This library provides a set of tools to manage Wacom private knowledge graph API
 All services are wrapped in a pythonic way to make it easy to use.
 Additionally, the library provides a set of tools to utilise Wikidata.
 """
+
 import sys
 from datetime import datetime
 
@@ -38,7 +39,7 @@ if logger is None:
         def emit(self, record: logging.LogRecord) -> None:
             # Get corresponding Loguru level if it exists.
             try:
-                level: Union[str, int] = logger.level(record.levelname).name
+                level: Union[str, int] = loguru.logger.level(record.levelname).name
             except ValueError:
                 level = record.levelno
 
@@ -53,7 +54,7 @@ if logger is None:
                 frame = frame.f_back
                 depth += 1
 
-            logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+            loguru.logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
     logger = loguru.logger
     logger.remove()

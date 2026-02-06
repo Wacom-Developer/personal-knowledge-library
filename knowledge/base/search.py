@@ -183,7 +183,7 @@ class PerformanceStats:
     """
 
     def __init__(self, stats: Dict[str, Any]) -> None:
-        self.__locale: LocaleCode = LocaleCode(stats.get("locale")) if stats.get("locale") else LocaleCode("en_US")
+        self.__locale: LocaleCode = LocaleCode(str(stats.get("locale") or "en_US"))
         self.__model_name: str = stats.get("model-name", "unknown")
         self.__top_k: int = stats.get("top-k", 10)
         self.__loading_time: float = stats.get("loading", 0.0) * 1000
@@ -268,7 +268,7 @@ class DocumentSearchStats(PerformanceStats):
         """Preprocessing time in milliseconds for search query."""
         return self.__preprocessing
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"DocumentSearchStats(locale_code={self.locale_code}, model_name={self.model_name}, "
             f"top_k={self.top_k}, "
@@ -318,7 +318,7 @@ class LabelSearchStats(PerformanceStats):
         """Number of tokens in the search query."""
         return self.__number_of_tokens
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"LabelSearchStats(locale_code={self.locale_code}, model_name={self.model_name}, "
             f"top_k={self.top_k}, "

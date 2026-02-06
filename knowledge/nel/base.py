@@ -477,7 +477,9 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
             service_endpoint="graph",
             verify_calls=verify_calls,
         )
-        self.__supported_languages: List[LocaleCode] = supported_languages if supported_languages else []
+        self.__supported_languages: List[LocaleCode] = (
+            [LocaleCode(lang) for lang in supported_languages] if supported_languages else []
+        )
 
     @abc.abstractmethod
     def named_entities(self, text: str, language_code: LocaleCode = EN_US) -> List[NamedEntity]:

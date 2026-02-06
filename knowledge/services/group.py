@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-present Wacom. All rights reserved.
 import urllib.parse
-from typing import List, Any, Optional, Dict
+from typing import List, Any, Optional, Dict, Union
 
 from requests import Response
 
@@ -123,11 +123,11 @@ class Group:
         instance: Group
             The group object
         """
-        tenant_id: str = param.get("tenantId")
-        owner_id: str = param.get("ownerId")
-        join_key: str = param.get("joinKey")
-        group_id: str = param.get("id")
-        name: str = param.get("name")
+        tenant_id: str = str(param.get("tenantId") or "")
+        owner_id: str = str(param.get("ownerId") or "")
+        join_key: str = str(param.get("joinKey") or "")
+        group_id: str = str(param.get("id") or "")
+        name: str = str(param.get("name") or "")
         rights: GroupAccessRight = GroupAccessRight.parse(param.get("groupUserRights", ["Read"]))
         return Group(
             tenant_id=tenant_id,
@@ -138,7 +138,7 @@ class Group:
             rights=rights,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Group: id:={self.id}, name:={self.name}, group access right:={self.group_access_rights}]>"
 
 
@@ -185,17 +185,17 @@ class GroupInfo(Group):
         super().__init__(tenant_id, group_id, owner, name, join_key, rights)
 
     @property
-    def group_users(self) -> List:
+    def group_users(self) -> List[User]:
         """List of all users that are part of the group."""
         return self._group_users
 
     @classmethod
     def parse(cls, param: Dict[str, Any]) -> "GroupInfo":
-        tenant_id: str = param.get("tenantId")
-        owner_id: str = param.get("ownerId")
-        join_key: str = param.get("joinKey")
-        group_id: str = param.get("id")
-        name: str = param.get("name")
+        tenant_id: str = str(param.get("tenantId") or "")
+        owner_id: str = str(param.get("ownerId") or "")
+        join_key: str = str(param.get("joinKey") or "")
+        group_id: str = str(param.get("id") or "")
+        name: str = str(param.get("name") or "")
         rights: GroupAccessRight = GroupAccessRight.parse(param.get("groupUserRights", ["Read"]))
         return GroupInfo(
             tenant_id=tenant_id,
@@ -207,7 +207,7 @@ class GroupInfo(Group):
             group_users=[User.parse(u) for u in param.get("users", [])],
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<GroupInfo: id:={self.id}, name:={self.name}, group access right:={self.group_access_rights}, "
             f"number of users:={len(self.group_users)}]>"
@@ -282,7 +282,7 @@ class GroupManagementService(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}"
-        payload: Dict[str, str] = {
+        payload: Dict[str, Union[str, List[str]]] = {
             NAME_TAG: name,
             GROUP_USER_RIGHTS_TAG: rights.to_list(),
         }
@@ -301,10 +301,10 @@ class GroupManagementService(WacomServiceAPIClient):
         self,
         group_id: str,
         name: str,
-        rights: GroupAccessRight = GroupAccessRight,
+        rights: GroupAccessRight = GroupAccessRight(read=True),
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Updates a group.
 
@@ -327,7 +327,7 @@ class GroupManagementService(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}"
-        payload: Dict[str, str] = {
+        payload: Dict[str, Union[str, List[str]]] = {
             NAME_TAG: name,
             GROUP_USER_RIGHTS_TAG: rights.to_list(),
         }
@@ -347,7 +347,7 @@ class GroupManagementService(WacomServiceAPIClient):
         force: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Delete a group.
 
@@ -470,7 +470,7 @@ class GroupManagementService(WacomServiceAPIClient):
         join_key: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """User joining a group with his auth token.
 
         Parameters
@@ -507,7 +507,7 @@ class GroupManagementService(WacomServiceAPIClient):
         group_id: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """User leaving a group with his auth token.
 
         Parameters
@@ -539,7 +539,7 @@ class GroupManagementService(WacomServiceAPIClient):
         user_id: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """Adding a user to a group.
 
         Parameters
@@ -578,7 +578,7 @@ class GroupManagementService(WacomServiceAPIClient):
         force: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """Remove a user from a group.
 
         Parameters
@@ -600,7 +600,10 @@ class GroupManagementService(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{GroupManagementService.GROUP_ENDPOINT}/{group_id}/user/remove"
-        params: Dict[str, str] = {USER_TO_REMOVE_PARAM: user_id, FORCE_PARAM: force}
+        params: Dict[str, Union[str, bool]] = {
+            USER_TO_REMOVE_PARAM: user_id,
+            FORCE_PARAM: force,
+        }
         response: Response = self.request_session.post(
             url,
             params=params,
@@ -617,7 +620,7 @@ class GroupManagementService(WacomServiceAPIClient):
         entity_uri: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """Adding an entity to a group.
 
         Parameters
@@ -653,7 +656,7 @@ class GroupManagementService(WacomServiceAPIClient):
         entity_uri: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """Remove an entity from group.
 
         Parameters

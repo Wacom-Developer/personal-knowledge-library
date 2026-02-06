@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024-present Wacom. All rights reserved.
-from typing import Dict, Any, Optional, List, Literal
+from typing import Dict, Any, Optional, List, Literal, cast
 
 from knowledge.base.language import LocaleCode
 from knowledge.base.queue import QueueNames, QueueCount, QueueMonitor
@@ -98,7 +98,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in response.content]
+            content = cast(List[Dict[str, Any]], response.content)
+            docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in content]
         else:
             raise await handle_error(
                 "Failed to retrieve the document.",
@@ -147,7 +148,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in response.content]
+            content = cast(List[Dict[str, Any]], response.content)
+            docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in content]
         else:
             raise await handle_error(
                 "Failed to retrieve the document.",
@@ -194,7 +196,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(url, params=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
-            count: int = response.content.get("count", 0)
+            content = cast(Dict[str, Any], response.content)
+            count: int = int(content.get("count", 0))
         else:
             raise await handle_error("Counting documents failed.", response, parameters={"locale": locale})
         return count
@@ -239,7 +242,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            count: int = response.content.get("count", 0)
+            content = cast(Dict[str, Any], response.content)
+            count: int = int(content.get("count", 0))
         else:
             raise await handle_error(
                 "Counting documents failed.",
@@ -288,7 +292,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(url, params=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
-            count: int = response.content.get("count", 0)
+            content = cast(Dict[str, Any], response.content)
+            count: int = int(content.get("count", 0))
         else:
             raise await handle_error("Counting labels failed.", response, parameters={"locale": locale})
         return count
@@ -333,7 +338,8 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            count: int = response.content.get("count", 0)
+            content = cast(Dict[str, Any], response.content)
+            count: int = int(content.get("count", 0))
         else:
             raise await handle_error(
                 "Counting documents failed.",
@@ -398,7 +404,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
-            response_dict: Dict[str, Any] = response.content
+            response_dict: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return FilterVectorDocumentsResponse.from_dict(response_dict)
         raise await handle_error("Filter documents.", response, parameters=params)
 
@@ -453,7 +459,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
-            response_dict: Dict[str, Any] = response.content
+            response_dict: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return DocumentSearchResponse.from_dict(response_dict)
         raise await handle_error("Semantic Search failed.", response, parameters=params)
 
@@ -503,7 +509,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
-            response_dict: Dict[str, Any] = response.content
+            response_dict: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return LabelMatchingResponse.from_dict(response_dict)
         raise await handle_error("Label fuzzy matching failed.", response, parameters=params)
 
@@ -563,7 +569,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
-            response_dict: Dict[str, Any] = response.content
+            response_dict: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return FilterVectorDocumentsResponse.from_dict(response_dict)
         raise await handle_error("Filter labels failed.", response, parameters=params)
 
@@ -590,7 +596,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(url, overwrite_auth_token=auth_key)
         if response.ok:
-            queues: Dict[str, List[str]] = response.content
+            queues: Dict[str, List[str]] = cast(Dict[str, List[str]], response.content)
             return QueueNames.parse_json(queues)
         raise await handle_error("Failed to list queues.", response)
 
@@ -619,7 +625,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            queues: List[Dict[str, Any]] = response.content
+            queues: List[Dict[str, Any]] = cast(List[Dict[str, Any]], response.content)
             return [QueueMonitor.parse_json(queue) for queue in queues]
         raise await handle_error(
             "Failed to list queues.",
@@ -652,7 +658,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(url, params=params, overwrite_auth_token=auth_key)
         if response.ok:
-            is_empty: bool = response.content
+            is_empty: bool = cast(bool, response.content)
             return is_empty
         raise await handle_error("Failed to check if the queue is empty.", response)
 
@@ -686,7 +692,7 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(url, params=params, overwrite_auth_token=auth_key)
         if response.ok:
-            response_structure: Dict[str, Any] = response.content
+            response_structure: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return QueueCount.parse_json(response_structure)
         raise await handle_error("Failed to get the queue size.", response)
 
@@ -718,6 +724,6 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(url, params=params, overwrite_auth_token=auth_key)
         if response.ok:
-            response_structure: Dict[str, Any] = response.content
+            response_structure: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return QueueMonitor.parse_json(response_structure)
         raise await handle_error("Failed to get the queue monitor information.", response)

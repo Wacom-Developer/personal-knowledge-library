@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024 Wacom. All rights reserved.
 from datetime import datetime
-from typing import Any, Union, Dict, List, Tuple, Optional
+from typing import Any, Union, Dict, List, Tuple, Optional, cast
 
 from knowledge import logger
 from knowledge.services import APPLICATION_JSON_HEADER, EXPIRATION_DATE_TAG
@@ -132,12 +132,14 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             ignore_auth=True,
         )
         if response.ok:
-            results: Dict[str, Union[str, Dict[str, str], List[str]]] = response.content
+            results: Dict[str, Any] = cast(Dict[str, Any], response.content)
+            date_object: datetime
             try:
-                date_object: datetime = datetime.fromisoformat(results["token"][EXPIRATION_DATE_TAG])
+                date_object = datetime.fromisoformat(results["token"][EXPIRATION_DATE_TAG])
             except (TypeError, ValueError) as _:
-                date_object: datetime = datetime.now()
-                logger.warning(f"Parsing of expiration date failed. {results['token'][EXPIRATION_DATE_TAG]}")
+                date_object = datetime.now()
+                if logger:
+                    logger.warning(f"Parsing of expiration date failed. {results['token'][EXPIRATION_DATE_TAG]}")
             return (
                 User.parse(results["user"]),
                 results["token"]["accessToken"],
@@ -152,9 +154,9 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         internal_id: str,
         external_id: str,
         meta_data: Optional[Dict[str, str]] = None,
-        roles: List[UserRole] = None,
+        roles: Optional[List[UserRole]] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """Updates user for a tenant.
 
         Parameters
@@ -211,7 +213,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         internal_id: str,
         force: bool = False,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """Deletes user from tenant.
 
         Parameters
@@ -273,7 +275,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{AsyncUserManagementService.USER_DETAILS_ENDPOINT}"
-        headers: dict = {TENANT_API_KEY_FLAG: tenant_key}
+        headers: Dict[str, str] = {TENANT_API_KEY_FLAG: tenant_key}
         parameters: Dict[str, str] = {EXTERNAL_USER_ID_TAG: external_id}
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(
@@ -285,10 +287,10 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             ignore_auth=True,
         )
         if response.ok:
-            response_dict: Dict[str, Any] = response.content
+            response_dict: Dict[str, Any] = cast(Dict[str, Any], response.content)
         else:
             raise await handle_error("Failed to get the user.", response, headers=headers)
-        return response_dict[INTERNAL_USER_ID_TAG]
+        return str(response_dict[INTERNAL_USER_ID_TAG])
 
     async def listing_users(
         self,
@@ -329,7 +331,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             ignore_auth=True,
         )
         if response.ok:
-            users: List[Dict[str, Any]] = response.content
+            users: List[Dict[str, Any]] = cast(List[Dict[str, Any]], response.content)
             results: List[User] = []
             for u in users:
                 results.append(User.parse(u))

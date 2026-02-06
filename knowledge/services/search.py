@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024-present Wacom. All rights reserved.
-from typing import Dict, Any, Optional, List, Literal
+from typing import Dict, Any, Optional, List, Literal, cast
 
 from requests import Response
 
@@ -189,7 +189,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
             timeout=timeout,
         )
         if response.ok:
-            return response.json().get("count", 0)
+            return int(response.json().get("count", 0))
         raise handle_error("Counting documents failed.", response, parameters={"locale": locale})
 
     def count_documents_filter(
@@ -231,7 +231,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            return response.json().get("count", 0)
+            return int(response.json().get("count", 0))
         raise handle_error(
             "Counting documents failed.",
             response,
@@ -279,7 +279,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            return response.json().get("count", 0)
+            return int(response.json().get("count", 0))
         raise handle_error("Counting labels failed.", response, parameters={"locale": locale})
 
     def count_labels_filter(
@@ -320,7 +320,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
             timeout=timeout,
         )
         if response.ok:
-            return response.json().get("count", 0)
+            return int(response.json().get("count", 0))
         raise handle_error(
             "Counting labels failed.",
             response,

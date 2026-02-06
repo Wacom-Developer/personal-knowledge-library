@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-present Wacom. All rights reserved.
-from typing import Any
+from typing import Any, Union
 from typing import Dict, List, Iterator
 
 import loguru
@@ -42,7 +42,7 @@ logger = loguru.logger
 def split_updates(
     updates: Dict[OntologyPropertyReference, List[str]],
     max_operations: int = RELATIONS_BULK_LIMIT,
-) -> Iterator[Dict[str, List[str]]]:
+) -> Iterator[List[Dict[str, Union[str, List[str]]]]]:
     """
 
     Parameters
@@ -54,13 +54,16 @@ def split_updates(
 
     Yields
     -------
-    batch: List[Dict[str, List[str]]]
+    batch: List[Dict[str, Union[str, List[str]]]]
         The batch of updates to process.
     """
-    batch: List[Dict[str, List[str]]] = []
+    batch: List[Dict[str, Union[str, List[str]]]] = []
     current_batch_size: int = 0
     for predicate, targets in updates.items():
-        target_entry: Dict[str, List[str]] = {"relation": predicate.iri, "targets": []}
+        target_entry: Dict[str, Union[str, List[str]]] = {
+            "relation": predicate.iri,
+            "targets": [],
+        }
         batch.append(target_entry)
         for target in targets:
             if current_batch_size >= max_operations:
@@ -68,7 +71,9 @@ def split_updates(
                 target_entry = {"relation": predicate.iri, "targets": []}
                 batch = [target_entry]
                 current_batch_size = 0
-            target_entry["targets"].append(target)
+            targets_list = target_entry["targets"]
+            if isinstance(targets_list, list):
+                targets_list.append(target)
             current_batch_size += 1
     if current_batch_size > 0:
         yield batch
@@ -88,9 +93,9 @@ def entity_payload(entity: ThingObject) -> Dict[str, Any]:
         The payload for the entity.
     """
     # Different localized content
-    labels: List[dict] = []
-    descriptions: List[dict] = []
-    literals: List[dict] = []
+    labels: List[Dict[str, Any]] = []
+    descriptions: List[Dict[str, Any]] = []
+    literals: List[Dict[str, Any]] = []
     # Add description in different languages
     for desc in entity.description:
         if desc is None or desc.content is None:

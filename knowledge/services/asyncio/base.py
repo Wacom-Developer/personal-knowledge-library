@@ -6,7 +6,7 @@ import socket
 import ssl
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Tuple, Dict, Optional, Union, Literal, List
+from typing import Any, Tuple, Dict, Optional, Union, Literal, List, cast
 
 import aiohttp
 import certifi
@@ -51,7 +51,7 @@ dns_cache: TTLCache = TTLCache(maxsize=100, ttl=300)  # Adjust size and ttl as n
 HTTPMethodFunction = Literal["GET", "POST", "PUT", "DELETE", "PATCH"]
 
 
-async def cached_getaddrinfo(host: str, *args, **kwargs) -> Any:
+async def cached_getaddrinfo(host: str, *args: Any, **kwargs: Any) -> Any:
     """
     Cached address information.
 
@@ -72,11 +72,12 @@ async def cached_getaddrinfo(host: str, *args, **kwargs) -> Any:
     if host in dns_cache:
         return dns_cache[host]
     try:
-        addr_info = await asyncio.get_running_loop().getaddrinfo(host, port=None, *args, **kwargs)
+        addr_info = await asyncio.get_running_loop().getaddrinfo(host, None, *args, **kwargs)
         dns_cache[host] = addr_info
         return addr_info
     except (OSError, socket.gaierror) as e:
-        logger.warning(f"DNS resolution failed for {host}: {e}")
+        if logger:
+            logger.warning(f"DNS resolution failed for {host}: {e}")
         raise
 
 
@@ -112,7 +113,7 @@ class ResponseData:
     method: str
 
 
-class CachedResolver(aiohttp.resolver.AbstractResolver):
+class CachedResolver(aiohttp.resolver.AbstractResolver):  # type: ignore[misc]
     """
     CachedResolver
     ==============
@@ -122,7 +123,7 @@ class CachedResolver(aiohttp.resolver.AbstractResolver):
     async def close(self) -> None:
         pass
 
-    async def resolve(self, host: str, port: int = 0, family: int = socket.AF_INET):
+    async def resolve(self, host: str, port: int = 0, family: int = socket.AF_INET) -> List[Dict[str, Any]]:
         """
         Resolves a hostname to a list of address information. This is an asynchronous
         method that fetches the address details for the given hostname. The result
@@ -303,7 +304,7 @@ class AsyncSession:
         method: HTTPMethodFunction,
         url: str,
         headers: Optional[Dict[str, str]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> ResponseData:
         """
         Executes an HTTP request using the specified method, URL, headers, and additional options.
@@ -387,7 +388,7 @@ class AsyncSession:
         else:
             raise ValueError(f"Unsupported method: {method}")
 
-    async def get(self, url: str, **kwargs) -> ResponseData:
+    async def get(self, url: str, **kwargs: Any) -> ResponseData:
         """
         Asynchronously sends an HTTP GET request to the specified URL.
 
@@ -411,7 +412,7 @@ class AsyncSession:
         """
         return await self.request("GET", url, **kwargs)
 
-    async def post(self, url: str, **kwargs) -> ResponseData:
+    async def post(self, url: str, **kwargs: Any) -> ResponseData:
         """
         Sends an asynchronous HTTP POST request to the specified URL with the given parameters.
 
@@ -437,7 +438,7 @@ class AsyncSession:
         """
         return await self.request("POST", url, **kwargs)
 
-    async def put(self, url: str, **kwargs) -> ResponseData:
+    async def put(self, url: str, **kwargs: Any) -> ResponseData:
         """
         Asynchronously performs an HTTP PUT request.
 
@@ -458,7 +459,7 @@ class AsyncSession:
         """
         return await self.request("PUT", url, **kwargs)
 
-    async def delete(self, url: str, **kwargs) -> ResponseData:
+    async def delete(self, url: str, **kwargs: Any) -> ResponseData:
         """
         Asynchronously performs an HTTP DELETE request.
 
@@ -482,7 +483,7 @@ class AsyncSession:
         """
         return await self.request("DELETE", url, **kwargs)
 
-    async def patch(self, url: str, **kwargs) -> ResponseData:
+    async def patch(self, url: str, **kwargs: Any) -> ResponseData:
         """
         Asynchronously sends a HTTP PATCH request to the specified URL.
 
@@ -559,20 +560,22 @@ class AsyncSession:
             If an error occurs while decoding the response body as text after a JSON parsing failure.
 
         """
+        content: Union[str, bytes, Dict[str, Any], List[Any]]
         try:
             if "json" in response.headers.get("Content-Type", "not-set").lower():
                 content = await response.json(encoding="utf-8", loads=orjson.loads)
             else:
                 content = await response.read()
         except (aiohttp.ContentTypeError, orjson.JSONDecodeError) as e:
-            logger.warning(f"Failed to decode response body: {e}")
+            if logger:
+                logger.warning(f"Failed to decode response body: {e}")
             content = await response.text(encoding="utf-8", errors="ignore")
         return content
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "AsyncSession":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         await asyncio.wait_for(self.close(), timeout=self._timeout)
 
 
@@ -612,7 +615,7 @@ async def handle_error(
         payload=payload,
         headers=headers,
         status_code=response.status,
-        service_response=response.content,
+        service_response=str(response.content) if not isinstance(response.content, str) else response.content,
     )
 
 
@@ -660,7 +663,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         self._timeout: int = timeout
         super().__init__(service_url, verify_calls)
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> bool:
         """
         Handles the asynchronous exit of a context manager.
 
@@ -685,10 +688,11 @@ class AsyncServiceAPIClient(RESTAPIClient):
         except (asyncio.TimeoutError, RuntimeError) as e:
             # Log but don't raise - event loop might be closing
             if "Event loop is closed" not in str(e):
-                logger.warning(f"Cleanup warning: {e}")
+                if logger:
+                    logger.warning(f"Cleanup warning: {e}")
         return False
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "AsyncServiceAPIClient":
         """
         Handles the operations required when an asynchronous context manager is entered.
 
@@ -751,7 +755,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
             raise WacomServiceException(f"Unknown session id:= {self._current_session_id}. Please login first.")
         return session
 
-    async def use_session(self, session_id: str):
+    async def use_session(self, session_id: str) -> None:
         """Use session.
         Parameters
         ----------
@@ -763,7 +767,9 @@ class AsyncServiceAPIClient(RESTAPIClient):
         else:
             raise WacomServiceException(f"Unknown session id:= {session_id}.")
 
-    async def handle_token(self, force_refresh: bool = False, force_refresh_timeout: float = 120) -> Tuple[str, str]:
+    async def handle_token(
+        self, force_refresh: bool = False, force_refresh_timeout: float = 120
+    ) -> Tuple[str, Optional[str]]:
         """
         Handles the token and refreshes it if needed.
 
@@ -798,7 +804,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
                 self.current_session.expires_in < force_refresh_timeout or force_refresh
             ):
                 try:
-                    auth_key, refresh_token, _ = await self.refresh_token(self.current_session.refresh_token)
+                    auth_key, refresh_token, _ = await self.refresh_token(self.current_session.refresh_token or "")
                 except WacomServiceException as e:
                     if isinstance(self.current_session, PermanentSession):
                         permanent_session: PermanentSession = self.current_session
@@ -807,7 +813,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
                             permanent_session.external_user_id,
                         )
                     else:
-                        logger.error(f"Error refreshing token: {e}")
+                        if logger:
+                            logger.error(f"Error refreshing token: {e}")
                         raise e
                 self.current_session.update_session(auth_key, refresh_token)
 
@@ -861,7 +868,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
             TENANT_API_KEY: tenant_api_key,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
         }
-        payload: dict = {EXTERNAL_USER_ID: external_id}
+        payload: Dict[str, str] = {EXTERNAL_USER_ID: external_id}
         session = await self.asyncio_session()  # Await the session
 
         response = await session.post(
@@ -873,12 +880,14 @@ class AsyncServiceAPIClient(RESTAPIClient):
         )
 
         if response.ok:
-            response_token: Dict[str, str] = response.content
+            response_token: Dict[str, str] = cast(Dict[str, str], response.content)
+            date_object: datetime
             try:
-                date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
+                date_object = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
             except (TypeError, ValueError) as _:
-                date_object: datetime = datetime.now()
-                logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
+                date_object = datetime.now()
+                if logger:
+                    logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
         else:
             raise await handle_error("Login failed.", response, payload=payload, headers=headers)
         return (
@@ -928,14 +937,16 @@ class AsyncServiceAPIClient(RESTAPIClient):
             ignore_auth=True,
         )
         if response.ok:
-            response_token: Dict[str, str] = response.content
+            response_token: Dict[str, str] = cast(Dict[str, str], response.content)
             timestamp_str_truncated: str = ""
+            date_object: datetime
             try:
                 timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
-                date_object: datetime = datetime.fromisoformat(timestamp_str_truncated)
+                date_object = datetime.fromisoformat(timestamp_str_truncated)
             except (TypeError, ValueError) as _:
-                date_object: datetime = datetime.now()
-                logger.warning(f"Parsing of expiration date failed. {timestamp_str_truncated}")
+                date_object = datetime.now()
+                if logger:
+                    logger.warning(f"Parsing of expiration date failed. {timestamp_str_truncated}")
             return (
                 response_token[ACCESS_TOKEN_TAG],
                 response_token[REFRESH_TOKEN_TAG],
@@ -958,16 +969,19 @@ class AsyncServiceAPIClient(RESTAPIClient):
             calls.
         """
         auth_key, refresh_token, _ = await self.request_user_token(tenant_api_key, external_user_id)
-        session: PermanentSession = self._token_manager.add_session(
-            auth_token=auth_key,
-            refresh_token=refresh_token,
-            tenant_api_key=tenant_api_key,
-            external_user_id=external_user_id,
+        session = cast(
+            PermanentSession,
+            self._token_manager.add_session(
+                auth_token=auth_key,
+                refresh_token=refresh_token,
+                tenant_api_key=tenant_api_key,
+                external_user_id=external_user_id,
+            ),
         )
         self._current_session_id = session.id
         return session
 
-    async def logout(self):
+    async def logout(self) -> None:
         """
         Logs out the user from the current session.
 
@@ -1005,17 +1019,17 @@ class AsyncServiceAPIClient(RESTAPIClient):
         raise WacomServiceException(f"Wrong session type:= {type(session)}.")
 
     @property
-    def service_endpoint(self):
+    def service_endpoint(self) -> str:
         """Service endpoint."""
         return "" if len(self._service_endpoint) == 0 else f"{self._service_endpoint}/"
 
     @property
-    def service_base_url(self):
+    def service_base_url(self) -> str:
         """Service endpoint."""
         return f"{self.service_url}/{self.service_endpoint}"
 
     @property
-    def base_auth_url(self):
+    def base_auth_url(self) -> str:
         """Base authentication URL."""
         return self._auth_url
 
