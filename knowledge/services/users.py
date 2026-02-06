@@ -110,7 +110,7 @@ class User:
         return self.__meta_data
 
     @meta_data.setter
-    def meta_data(self, value: Dict[str, Any]):
+    def meta_data(self, value: Dict[str, Any]) -> None:
         self.__meta_data = value
 
     @property
@@ -150,7 +150,7 @@ class User:
             user_roles=user_roles,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<User: id:={self.id}, external user id:={self.external_user_id}, user roles:= {self.user_roles}]>"
 
 
@@ -236,7 +236,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         """
         url: str = f"{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}"
 
-        payload: dict = {
+        payload: Dict[str, Any] = {
             EXTERNAL_USER_ID_TAG: external_id,
             META_DATA_TAG: meta_data if meta_data is not None else {},
             ROLES_TAG: [r.value for r in roles] if roles is not None else [UserRole.USER.value],
@@ -250,12 +250,13 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             ignore_auth=True,
         )
         if response.ok:
-            results: Dict[str, Union[str, Dict[str, str], List[str]]] = response.json()
+            results: Dict[str, Any] = response.json()
             try:
                 date_object: datetime = datetime.fromisoformat(results["token"][EXPIRATION_DATE_TAG])
-            except (TypeError, ValueError) as _:
-                date_object: datetime = datetime.now()
-                logger.warning(f"Parsing of expiration date failed. {results['token'][EXPIRATION_DATE_TAG]}")
+            except (TypeError, ValueError):
+                date_object = datetime.now()
+                if logger:
+                    logger.warning(f"Parsing of expiration date failed. {results['token'][EXPIRATION_DATE_TAG]}")
             return (
                 User.parse(results["user"]),
                 results["token"]["accessToken"],
@@ -269,10 +270,10 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         tenant_key: str,
         internal_id: str,
         external_id: str,
-        meta_data: Dict[str, str] = None,
-        roles: List[UserRole] = None,
+        meta_data: Optional[Dict[str, str]] = None,
+        roles: Optional[List[UserRole]] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """Updates user for a tenant.
 
         Parameters
@@ -323,7 +324,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         internal_id: str,
         force: bool = False,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """Deletes user from tenant.
 
         Parameters
@@ -345,7 +346,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
             If the tenant service returns an error code.
         """
         url: str = f"{self.service_base_url}{UserManagementServiceAPI.USER_ENDPOINT}"
-        params: Dict[str, str] = {
+        params: Dict[str, Union[str, bool]] = {
             USER_ID_TAG: internal_id,
             EXTERNAL_USER_ID_TAG: external_id,
             FORCE_TAG: force,
@@ -400,7 +401,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         )
         if response.ok:
             response_dict: Dict[str, Any] = response.json()
-            return response_dict[INTERNAL_USER_ID_TAG]
+            return str(response_dict[INTERNAL_USER_ID_TAG])
         raise handle_error("Retrieval of user internal id failed.", response)
 
     def listing_users(
