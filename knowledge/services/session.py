@@ -413,7 +413,7 @@ class PermanentSession(RefreshableSession):
         """External user id."""
         return self.__external_user_id
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"PermanentSession(tenant_api_key={self.tenant_api_key}, external_user_id={self.external_user_id}, "
             f"auth_token={self.auth_token}, refresh_token={self.refresh_token})"
@@ -468,12 +468,13 @@ class TokenManager:
             The logged-in session.
         """
         with self.__lock:
+            session: Union[PermanentSession, RefreshableSession, TimedSession]
             if tenant_api_key is not None and external_user_id is not None:
                 session = PermanentSession(
                     tenant_api_key=tenant_api_key,
                     external_user_id=external_user_id,
                     auth_token=auth_token,
-                    refresh_token=refresh_token,
+                    refresh_token=refresh_token or "",
                 )
                 # If there is a tenant api key and an external user id, then the session is permanent
             elif refresh_token is not None:
@@ -512,7 +513,7 @@ class TokenManager:
         with self.__lock:
             return self.sessions.get(session_id)
 
-    def remove_session(self, session_id: str):
+    def remove_session(self, session_id: str) -> None:
         """
         Remove a session by its id.
 

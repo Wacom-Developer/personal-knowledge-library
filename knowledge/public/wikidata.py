@@ -537,12 +537,14 @@ class WikidataThing:
         QID for entity. For new entities the URI is None, as the knowledge graph backend assigns this.
     modified: datetime
         Last modified date
-    label: List[Label]
-        List of labels
-    description: List[Description] (optional)
-        List of descriptions
-    qid: str
-         QID for entity. For new entities the URI is None, as the knowledge graph backend assigns this.
+    label: Optional[Dict[str, Label]] (optional)
+        Mapping of language codes to labels
+    aliases: Optional[Dict[str, List[Label]]] (optional)
+        Mapping of language codes to aliases
+    description: Optional[Dict[str, Description]] (optional)
+        Mapping of language codes to descriptions
+    sync_time: datetime (optional)
+        Time of last sync. Default: now()
     """
 
     def __init__(
@@ -1000,7 +1002,7 @@ class WikidataThing:
         """Returns the list of properties of the claims."""
         return [p.pid for p in self.__claims.values()]
 
-    def add_claim(self, pid: str, claim: Claim):
+    def add_claim(self, pid: str, claim: Claim) -> None:
         """
         Adding a claim.
 
@@ -1013,21 +1015,21 @@ class WikidataThing:
         """
         self.__claims[pid] = claim
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return 0
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         # another object is equal to self, iff
         # it is an instance of MyClass
         return isinstance(other, WikidataThing) and other.qid == self.qid
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<WikidataThing [QID:={self.qid}]>"
 
     def __getstate__(self) -> Dict[str, Any]:
         return self.__dict__().copy()
 
-    def __setstate__(self, state: Dict[str, Any]):
+    def __setstate__(self, state: Dict[str, Any]) -> None:
         labels: Dict[str, Label] = {}
         aliases: Dict[str, List[Label]] = {}
         descriptions: Dict[str, Description] = {}
