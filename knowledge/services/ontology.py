@@ -2,7 +2,7 @@
 # Copyright © 2021-present Wacom. All rights reserved.
 import urllib.parse
 from http import HTTPStatus
-from typing import Any, Optional, Dict, Tuple, List
+from typing import Any, Optional, Dict, Tuple, List, cast
 
 from requests import Response
 
@@ -165,7 +165,7 @@ class OntologyService(WacomServiceAPIClient):
         context: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ) -> List[Tuple[OntologyClassReference, OntologyClassReference]]:
+    ) -> List[Tuple[OntologyClassReference, Optional[OntologyClassReference]]]:
         """Retrieve all concept classes.
 
         **Remark:**
@@ -182,7 +182,7 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        concepts: List[Tuple[OntologyClassReference, OntologyClassReference]]
+        concepts: List[Tuple[OntologyClassReference, Optional[OntologyClassReference]]]
             List of ontology classes. Tuple<Classname, Superclass>
         """
         url: str = (
@@ -196,7 +196,7 @@ class OntologyService(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            response_list: List[Tuple[OntologyClassReference, OntologyClassReference]] = []
+            response_list: List[Tuple[OntologyClassReference, Optional[OntologyClassReference]]] = []
             result = response.json()
             for struct in result:
                 response_list.append(
@@ -260,7 +260,7 @@ class OntologyService(WacomServiceAPIClient):
         context: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ) -> List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]:
+    ) -> List[Tuple[OntologyPropertyReference, Optional[OntologyPropertyReference]]]:
         """List all properties.
 
         **Remark:**
@@ -277,7 +277,7 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        contexts: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]]
+        contexts: List[Tuple[OntologyPropertyReference, Optional[OntologyPropertyReference]]]
             List of ontology contexts
         """
         context_url: str = urllib.parse.quote_plus(context)
@@ -292,7 +292,7 @@ class OntologyService(WacomServiceAPIClient):
         if response.status_code == HTTPStatus.NOT_FOUND:
             return []
         if response.ok:
-            response_list: List[Tuple[OntologyPropertyReference, OntologyPropertyReference]] = []
+            response_list: List[Tuple[OntologyPropertyReference, Optional[OntologyPropertyReference]]] = []
             for c in response.json():
                 response_list.append(
                     (
@@ -574,7 +574,7 @@ class OntologyService(WacomServiceAPIClient):
             timeout=timeout,
         )
         if response.ok:
-            return response.json()
+            return cast(Dict[str, str], response.json())
         raise handle_error("Failed to update concept", response, payload=payload)
 
     def delete_concept(
@@ -583,7 +583,7 @@ class OntologyService(WacomServiceAPIClient):
         reference: OntologyClassReference,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """Delete concept class.
 
         **Remark:**
@@ -701,7 +701,7 @@ class OntologyService(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            return response.json()
+            return cast(Dict[str, Any], response.json())
         raise handle_error("Failed to create object property", response, payload=payload)
 
     def create_data_property(
@@ -783,7 +783,7 @@ class OntologyService(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            return response.json()
+            return cast(Dict[str, Any], response.json())
         raise handle_error("Failed to create data property", response, payload=payload)
 
     def delete_property(
@@ -792,7 +792,7 @@ class OntologyService(WacomServiceAPIClient):
         reference: OntologyPropertyReference,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """Delete property.
 
         **Remark:**
@@ -832,8 +832,8 @@ class OntologyService(WacomServiceAPIClient):
         context: Optional[str] = None,
         base_uri: Optional[str] = None,
         icon: Optional[str] = None,
-        labels: List[OntologyLabel] = None,
-        comments: List[Comment] = None,
+        labels: Optional[List[OntologyLabel]] = None,
+        comments: Optional[List[Comment]] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Dict[str, Any]:
@@ -900,7 +900,7 @@ class OntologyService(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            return response.json()
+            return cast(Dict[str, Any], response.json())
         raise handle_error("Creation of context failed.", response)
 
     def remove_context(
@@ -909,7 +909,7 @@ class OntologyService(WacomServiceAPIClient):
         force: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """Remove context.
 
         Parameters
@@ -945,7 +945,7 @@ class OntologyService(WacomServiceAPIClient):
         force: bool = False,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ):
+    ) -> None:
         """
         Commit the ontology.
 
@@ -999,10 +999,11 @@ class OntologyService(WacomServiceAPIClient):
         rdf: str
             Ontology as RDFS / OWL ontology
         """
+        params: Dict[str, int]
         if version > 0:
-            params: Dict[str, int] = {"version": version}
+            params = {"version": version}
         else:
-            params: Dict[str, int] = {}
+            params = {}
         context_url: str = urllib.parse.quote_plus(context)
         url: str = f"{self.service_base_url}context/{context_url}/versions/rdf"
         response: Response = self.request_session.get(
@@ -1013,5 +1014,5 @@ class OntologyService(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            return response.text
+            return str(response.text)
         raise handle_error("RDF export failed", response)
