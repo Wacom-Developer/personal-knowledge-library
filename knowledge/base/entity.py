@@ -213,7 +213,12 @@ class Label(LocalizedContent):
         Main content
     """
 
-    def __init__(self, content: str, language_code: LocaleCode = EN_US, main: bool = False) -> None:
+    def __init__(
+        self,
+        content: str,
+        language_code: Union[LocaleCode, LanguageCode] = EN_US,
+        main: bool = False,
+    ) -> None:
         self.__main: bool = main
         super().__init__(content, language_code)
 

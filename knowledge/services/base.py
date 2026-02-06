@@ -3,7 +3,7 @@
 import threading
 from abc import ABC
 from datetime import datetime
-from typing import Any, Tuple, Dict, Optional, Union, List
+from typing import Any, Tuple, Dict, Optional, Union, List, cast
 
 import requests
 from requests import Response
@@ -193,7 +193,7 @@ class RequestsSession:
         return self._pool_connections
 
     @pool_connections.setter
-    def pool_connections(self, value: int):
+    def pool_connections(self, value: int) -> None:
         if value != self._pool_connections:
             self.close()
             self._pool_connections = value
@@ -293,7 +293,7 @@ class RequestsSession:
         url: str,
         headers: Optional[Dict[str, str]] = None,
         timeout: int = DEFAULT_TIMEOUT,
-        **kwargs,
+        **kwargs: Any,
     ) -> Response:
         """Execute a request with automatic token handling."""
         request_headers = self._prepare_headers(
@@ -305,7 +305,7 @@ class RequestsSession:
         session = self._create_session()
         return session.request(method=method, url=url, headers=request_headers, timeout=timeout, **kwargs)
 
-    def get(self, url: str, **kwargs) -> Response:
+    def get(self, url: str, **kwargs: Any) -> Response:
         """
         Execute GET request.
 
@@ -323,7 +323,7 @@ class RequestsSession:
         """
         return self.request("GET", url, **kwargs)
 
-    def post(self, url: str, **kwargs) -> Response:
+    def post(self, url: str, **kwargs: Any) -> Response:
         """
         Execute POST request.
 
@@ -341,7 +341,7 @@ class RequestsSession:
         """
         return self.request("POST", url, **kwargs)
 
-    def put(self, url: str, **kwargs) -> Response:
+    def put(self, url: str, **kwargs: Any) -> Response:
         """
         Execute a PUT request.
 
@@ -359,7 +359,7 @@ class RequestsSession:
         """
         return self.request("PUT", url, **kwargs)
 
-    def delete(self, url: str, **kwargs) -> Response:
+    def delete(self, url: str, **kwargs: Any) -> Response:
         """
         Execute a DELETE request.
 
@@ -377,7 +377,7 @@ class RequestsSession:
         """
         return self.request("DELETE", url, **kwargs)
 
-    def patch(self, url: str, **kwargs) -> Response:
+    def patch(self, url: str, **kwargs: Any) -> Response:
         """
         Execute a PATCH request.
 
@@ -404,11 +404,11 @@ class RequestsSession:
                 self._session.close()
                 self._session = None
 
-    def __enter__(self):
+    def __enter__(self) -> "RequestsSession":
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit with cleanup."""
         self.close()
 
@@ -504,12 +504,12 @@ class RESTAPIClient(ABC):
         return self.__service_url
 
     @property
-    def verify_calls(self):
+    def verify_calls(self) -> bool:
         """Certificate verification activated."""
         return self.__verify_calls
 
     @verify_calls.setter
-    def verify_calls(self, value: bool):
+    def verify_calls(self, value: bool) -> None:
         self.__verify_calls = value
 
 
@@ -613,22 +613,22 @@ class WacomServiceAPIClient(RESTAPIClient):
         )
 
     @property
-    def service_endpoint(self):
+    def service_endpoint(self) -> str:
         """Service endpoint."""
         return "" if len(self.__service_endpoint) == 0 else f"{self.__service_endpoint}/"
 
     @property
-    def service_base_url(self):
+    def service_base_url(self) -> str:
         """Service endpoint."""
         return f"{self.service_url}/{self.service_endpoint}"
 
     @property
-    def base_auth_url(self):
+    def base_auth_url(self) -> str:
         """Base authentication endpoint."""
         return self.__base_auth_url
 
     @property
-    def application_name(self):
+    def application_name(self) -> str:
         """Application name."""
         return self.__application_name
 
@@ -662,12 +662,12 @@ class WacomServiceAPIClient(RESTAPIClient):
             Exception if the service returns HTTP error code.
         """
         url: str = f"{self.auth_endpoint}"
-        headers: dict = {
+        headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             TENANT_API_KEY: tenant_api_key,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,
         }
-        payload: dict = {EXTERNAL_USER_ID: external_id}
+        payload: Dict[str, str] = {EXTERNAL_USER_ID: external_id}
         response: Response = self.request_session.post(
             url,
             headers=headers,
@@ -685,11 +685,12 @@ class WacomServiceAPIClient(RESTAPIClient):
                     timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
                     date_object: datetime = datetime.fromisoformat(timestamp_str_truncated)
                 except (TypeError, ValueError) as _:
-                    date_object: datetime = datetime.now()
-                    logger.warning(
-                        f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]} "
-                        f"-> {timestamp_str_truncated}"
-                    )
+                    date_object = datetime.now()
+                    if logger:
+                        logger.warning(
+                            f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]} "
+                            f"-> {timestamp_str_truncated}"
+                        )
                 return (
                     response_token["accessToken"],
                     response_token["refreshToken"],
@@ -714,18 +715,22 @@ class WacomServiceAPIClient(RESTAPIClient):
             calls.
         """
         auth_key, refresh_token, _ = self.request_user_token(tenant_api_key, external_user_id)
-        session: PermanentSession = self.__token_manager.add_session(
-            auth_token=auth_key,
-            refresh_token=refresh_token,
-            tenant_api_key=tenant_api_key,
-            external_user_id=external_user_id,
+        session = cast(
+            PermanentSession,
+            self.__token_manager.add_session(
+                auth_token=auth_key,
+                refresh_token=refresh_token,
+                tenant_api_key=tenant_api_key,
+                external_user_id=external_user_id,
+            ),
         )
         self.__current_session_id = session.id
         return session
 
-    def logout(self):
+    def logout(self) -> None:
         """Logout user."""
-        self.__token_manager.remove_session(self.__current_session_id)
+        if self.__current_session_id is not None:
+            self.__token_manager.remove_session(self.__current_session_id)
         self.__current_session_id = None
 
     def register_token(
@@ -751,7 +756,7 @@ class WacomServiceAPIClient(RESTAPIClient):
             return session
         raise WacomServiceException(f"Wrong session type:= {type(session)}.")
 
-    def use_session(self, session_id: str):
+    def use_session(self, session_id: str) -> None:
         """Use session.
         Parameters
         ----------
@@ -805,8 +810,9 @@ class WacomServiceAPIClient(RESTAPIClient):
             try:
                 date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
             except (TypeError, ValueError) as _:
-                date_object: datetime = datetime.now()
-                logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
+                date_object = datetime.now()
+                if logger:
+                    logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
             return (
                 response_token[ACCESS_TOKEN_TAG],
                 response_token[REFRESH_TOKEN_TAG],
@@ -832,10 +838,10 @@ class WacomServiceAPIClient(RESTAPIClient):
             The refresh token
         """
         session = self.current_session
-        expires_in: float = session.expires_in
         # The session is not set
         if session is None:
             raise WacomServiceException("Authentication key is not set. Please login first.")
+        expires_in: float = session.expires_in
 
         # The token expired and is not refreshable
         if not session.refreshable and session.expired:
@@ -848,6 +854,8 @@ class WacomServiceAPIClient(RESTAPIClient):
         # Refresh token if needed
         if session.refreshable and (expires_in < force_refresh_timeout or force_refresh):
             try:
+                if session.refresh_token is None:
+                    raise WacomServiceException("Refresh token is not set.")
                 auth_key, refresh_token, _ = self.refresh_token(session.refresh_token)
             except WacomServiceException as e:
                 if isinstance(session, PermanentSession):
@@ -857,8 +865,9 @@ class WacomServiceAPIClient(RESTAPIClient):
                         permanent_session.external_user_id,
                     )
                 else:
-                    logger.error(f"Error refreshing token: {e}")
+                    if logger:
+                        logger.error(f"Error refreshing token: {e}")
                     raise e
             session.update_session(auth_key, refresh_token)
             return auth_key, refresh_token
-        return session.auth_token, session.refresh_token
+        return session.auth_token, session.refresh_token or ""
