@@ -6,7 +6,7 @@ from multiprocessing import Pool
 from typing import Union, Any, Dict, List, Tuple, Set, Optional, Callable
 
 import requests
-from requests import Response
+from requests import Response, HTTPError
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
@@ -169,7 +169,7 @@ class WikiDataAPIClient:
                     wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
                     wikidata_classes.setdefault(superclass_qid, WikidataClass(superclass_qid, superclass_label))
                     adjacency_list.setdefault(class_qid, set()).add(superclass_qid)
-        except Exception as e:
+        except (ValueError, KeyError, HTTPError) as e:
             logger.exception(e)
             return {qid: WikidataClass(qid, f"Class {qid}")}
         queue = deque([qid])
@@ -235,7 +235,7 @@ class WikiDataAPIClient:
 
                     # subclass -> class relationship (reverse of superclass logic)
                     adjacency_list.setdefault(class_qid, set()).add(subclass_qid)
-        except Exception as e:
+        except (ValueError, KeyError, HTTPError) as e:
             logger.exception(e)
             return {qid: WikidataClass(qid, f"Class {qid}")}
 
@@ -337,7 +337,7 @@ class WikiDataAPIClient:
             # Add the thing to the cache
             wikidata_cache.cache_wikidata_object(w_thing)
             return w_thing
-        except Exception as e:
+        except (ValueError, KeyError, HTTPError) as e:
             logger.exception(e)
             raise WikiDataAPIException(e) from e
 
@@ -362,7 +362,7 @@ class WikiDataAPIClient:
                     w_thing = WikidataThing.from_wikidata(e)
                     results.append(w_thing)
             return results
-        except Exception as e:
+        except (ValueError, KeyError, HTTPError) as e:
             logger.exception(e)
             raise WikiDataAPIException(e) from e
 
@@ -460,6 +460,6 @@ class WikiDataAPIClient:
             # Add the property to the cache
             wikidata_cache.cache_property(w_property)
             return w_property
-        except Exception as e:
+        except (ValueError, KeyError, HTTPError) as e:
             logger.exception(e)
             raise WikiDataAPIException(e) from e

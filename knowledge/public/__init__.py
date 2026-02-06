@@ -25,4 +25,16 @@ from knowledge.public import relations
 from knowledge.public import cache
 
 
-__all__ = ["wikidata", "helper", "relations", "cache", "client", "INSTANCE_OF_PROPERTY", "IMAGE_PROPERTY"]
+__all__ = [
+    "wikidata",
+    "helper",
+    "relations",
+    "cache",
+    "client",
+    "INSTANCE_OF_PROPERTY",
+    "IMAGE_PROPERTY",
+    "DEFAULT_MAX_RETRIES",
+    "DEFAULT_TIMEOUT",
+    "DEFAULT_BACKOFF_FACTOR",
+    "STATUS_FORCE_LIST",
+]

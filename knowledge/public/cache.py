@@ -53,14 +53,14 @@ class WikidataCache:
 
     _instance = None  # Singleton instance
 
-    def __init__(self, max_size: int = 100000):
+    def __init__(self, max_size: int = 100000) -> None:
         self.max_size = max_size
         self.cache: OrderedDict = OrderedDict()  # Maintain insertion order for LRU eviction
         self.property_cache: OrderedDict = OrderedDict()  # Cache for properties
         self.subclass_cache: OrderedDict = OrderedDict()  # Cache for subclasses
         self.superclass_cache: OrderedDict = OrderedDict()  # Cache for superclasses
 
-    def cache_property(self, prop: WikidataProperty):
+    def cache_property(self, prop: WikidataProperty) -> None:
         """Adds a property to the property cache with LRU eviction.
 
         Parameters
@@ -92,7 +92,7 @@ class WikidataCache:
             return self.property_cache[pid]
         raise KeyError(f"Property {pid} not found in cache.")
 
-    def cache_wikidata_object(self, wikidata_object: WikidataThing):
+    def cache_wikidata_object(self, wikidata_object: WikidataThing) -> None:
         """Adds a Wikidata object to the cache with LRU eviction.
 
         Parameters
@@ -125,7 +125,7 @@ class WikidataCache:
             return self.cache[qid]
         raise KeyError(f"Wikidata object {qid} not found in cache.")
 
-    def cache_subclass(self, subclass: WikidataClass):
+    def cache_subclass(self, subclass: WikidataClass) -> None:
         """Adds a subclass to the subclass cache with LRU eviction.
 
         Parameters
@@ -158,7 +158,7 @@ class WikidataCache:
             return self.subclass_cache[qid]
         raise KeyError(f"Subclass {qid} not found in cache.")
 
-    def cache_superclass(self, superclass: WikidataClass):
+    def cache_superclass(self, superclass: WikidataClass) -> None:
         """Adds a superclass to the superclass cache with LRU eviction.
 
         Parameters
@@ -250,7 +250,7 @@ class WikidataCache:
         """
         return path / "superclass_cache.ndjson"
 
-    def save_cache(self, cache_path: Path):
+    def save_cache(self, cache_path: Path) -> None:
         """Saves the cache to a file.
 
         Parameters
@@ -278,12 +278,12 @@ class WikidataCache:
         with WikidataCache.__path__subclasses__(cache_path).open("w") as file:
             for subclass in self.subclass_cache.values():
                 subclass: WikidataClass
-                file.write(orjson.dumps(subclass.__dict__()).decode("utf-8") + "\n")
+                file.write(orjson.dumps(subclass.as_dict()).decode("utf-8") + "\n")
         # Save the subclass cache to a file
         with WikidataCache.__path__superclasses__(cache_path).open("w") as file:
             for superclass in self.superclass_cache.values():
                 superclass: WikidataClass
-                file.write(orjson.dumps(superclass.__dict__()).decode("utf-8") + "\n")
+                file.write(orjson.dumps(superclass.as_dict()).decode("utf-8") + "\n")
 
     def load_cache(self, cache_path: Path) -> None:
         """Loads the cache from a path.

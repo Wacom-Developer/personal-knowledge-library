@@ -126,7 +126,7 @@ class WikidataProperty:
                 label = entity_dict[LABELS_TAG][EN].get(LABEL_VALUE_TAG)
         return WikidataProperty(pid, label)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Property:={self.pid}]>"
 
 
@@ -191,7 +191,7 @@ class WikidataSearchResult:
         )
         description: Optional[Description] = None
         if DESCRIPTION_TAG in display:
-            description: Description = Description(
+            description = Description(
                 description=display[DESCRIPTION_TAG]["value"], language_code=display[DESCRIPTION_TAG]["language"]
             )
         aliases: List[str] = [alias["value"] for alias in display.get(ALIASES_TAG, [])]
@@ -313,7 +313,23 @@ class WikidataClass:
             SUBCLASSES_TAG: [subclass.__superclasses_hierarchy__(visited) for subclass in self.subclasses],
         }
 
-    def __dict__(self):
+    def as_dict(self) -> Dict[str, Any]:
+        """
+        Return a dictionary representation of the object's superclass hierarchy.
+
+        This method provides a convenient mapping of the object's inheritance
+        structure to a plain Python dictionary. The returned dictionary is
+        constructed by invoking the internal `__superclasses_hierarchy__`
+        method, which encodes each superclass and its attributes in a nested
+        form.
+
+        Returns
+        -------
+        dict
+            A mapping where keys are the names of the object's superclasses and
+            values are dictionaries representing the attributes of those
+            superclasses.
+        """
         return self.__superclasses_hierarchy__()
 
     def __repr__(self):
@@ -711,9 +727,9 @@ class WikidataThing:
             REVISION_TAG: self.revision,
             MODIFIED_TAG: self.modified.isoformat(),
             SYNC_TIME_TAG: self.sync_time.isoformat(),
-            LABELS_TAG: {lang: la.__dict__() for lang, la in self.label.items()},
-            DESCRIPTIONS_TAG: {lang: la.__dict__() for lang, la in self.description.items()},
-            ALIASES_TAG: {lang: [a.__dict__() for a in al] for lang, al in self.aliases.items()},
+            LABELS_TAG: {lang: la.as_dict() for lang, la in self.label.items()},
+            DESCRIPTIONS_TAG: {lang: la.as_dict() for lang, la in self.description.items()},
+            ALIASES_TAG: {lang: [a.as_dict() for a in al] for lang, al in self.aliases.items()},
             CLAIMS_TAG: {pid: cl.__dict__() for pid, cl in self.claims.items()},
             ONTOLOGY_TYPES_TAG: self.ontology_types,
             SITELINKS_TAG: {source: site.__dict__() for source, site in self.sitelinks.items()},
