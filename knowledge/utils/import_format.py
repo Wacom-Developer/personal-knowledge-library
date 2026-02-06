@@ -7,7 +7,7 @@ import re
 import uuid
 from json import JSONDecodeError
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Iterable
 
 import loguru
 
@@ -82,6 +82,45 @@ def __import_format_to_thing__(line: str) -> ThingObject:
     for prop in remove_props:
         del entity.object_properties[prop]
     return entity
+
+
+def iterate_large_import_format(file_path: Path) -> Iterable[ThingObject]:
+    """
+    Iterates over a gzip‑compressed file containing ThingObject JSON lines, yielding parsed ThingObject instances.
+
+    Parameters
+    ----------
+    file_path
+        Path to the gzip‑compressed input file.
+
+    Yields
+    ------
+    ThingObject
+        Parsed ThingObject instance for each line in the input file.
+
+    Returns
+    -------
+    Iterable[ThingObject]
+        An iterator yielding ThingObject instances.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file does not exist.
+    ValueError
+        If the file format is not supported.
+    """
+    if not file_path.exists():
+        raise FileNotFoundError(f"File {file_path} does not exist.")
+    if file_path.suffix == ".gz":
+        with gzip.open(file_path, "rt", encoding="utf-8") as f_gz:
+            for line in f_gz:
+                yield __import_format_to_thing__(line)
+    if file_path.suffix == ".ndjson":
+        with file_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                yield __import_format_to_thing__(line)
+    raise ValueError(f"Unsupported file format: {file_path.suffix}")
 
 
 def load_import_format(file_path: Path) -> List[ThingObject]:
