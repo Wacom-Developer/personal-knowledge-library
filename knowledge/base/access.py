@@ -21,7 +21,7 @@ class AccessRight:
     WRITE: str = "Write"
     DELETE: str = "Delete"
 
-    def __init__(self, read: bool, write: bool, delete: bool):
+    def __init__(self, read: bool, write: bool, delete: bool) -> None:
         self.__read: bool = read
         self.__write: bool = write
         self.__delete: bool = delete
@@ -32,7 +32,7 @@ class AccessRight:
         return self.__read
 
     @read.setter
-    def read(self, value: bool):
+    def read(self, value: bool) -> None:
         self.__read = value
 
     @property
@@ -41,7 +41,7 @@ class AccessRight:
         return self.__write
 
     @write.setter
-    def write(self, value: bool):
+    def write(self, value: bool) -> None:
         self.__write = value
 
     @property
@@ -50,10 +50,10 @@ class AccessRight:
         return self.__delete
 
     @delete.setter
-    def delete(self, value: bool):
+    def delete(self, value: bool) -> None:
         self.__delete = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         result: str = "["
         prefix: str = ""
         if self.read:
@@ -101,7 +101,7 @@ class TenantAccessRight(AccessRight):
         Delete access for entity within tenant.
     """
 
-    def __init__(self, read: bool = False, write: bool = False, delete: bool = False):
+    def __init__(self, read: bool = False, write: bool = False, delete: bool = False) -> None:
         super().__init__(read, write, delete)
 
     @classmethod
@@ -142,7 +142,7 @@ class GroupAccessRight(AccessRight):
         Delete access for entity within group.
     """
 
-    def __init__(self, read: bool = False, write: bool = False, delete: bool = False):
+    def __init__(self, read: bool = False, write: bool = False, delete: bool = False) -> None:
         super().__init__(read, write, delete)
 
     @classmethod
