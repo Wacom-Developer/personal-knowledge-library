@@ -4,7 +4,7 @@ Module knowledge.services.asyncio.base
 Functions
 ---------
 
-`cached_getaddrinfo(host: str, *args, **kwargs) ‑> Any`
+`cached_getaddrinfo(host: str, *args: Any, **kwargs: Any) ‑> Any`
 :   Cached address information.
     
     Parameters
@@ -94,7 +94,7 @@ Classes
     `auth_endpoint: str`
     :   Authentication endpoint.
 
-    `base_auth_url`
+    `base_auth_url: str`
     :   Base authentication URL.
 
     `current_session: knowledge.services.session.RefreshableSession | knowledge.services.session.TimedSession | knowledge.services.session.PermanentSession | None`
@@ -110,10 +110,10 @@ Classes
         WacomServiceException
             Exception if no session is available.
 
-    `service_base_url`
+    `service_base_url: str`
     :   Service endpoint.
 
-    `service_endpoint`
+    `service_endpoint: str`
     :   Service endpoint.
 
     `user_agent: str`
@@ -137,7 +137,7 @@ Classes
         If the session is already closed, the method will not perform any additional
         operations.
 
-    `handle_token(self, force_refresh: bool = False, force_refresh_timeout: float = 120) ‑> Tuple[str, str]`
+    `handle_token(self, force_refresh: bool = False, force_refresh_timeout: float = 120) ‑> Tuple[str, str | None]`
     :   Handles the token and refreshes it if needed.
         
         Parameters
@@ -167,7 +167,7 @@ Classes
             Session. The session is stored in the token manager, and the client is using the session id for further
             calls.
 
-    `logout(self)`
+    `logout(self) ‑> None`
     :   Logs out the user from the current session.
         
         This method handles the removal of the current session from the token manager
@@ -239,7 +239,7 @@ Classes
         WacomServiceException
             Exception if the service returns HTTP error code.
 
-    `use_session(self, session_id: str)`
+    `use_session(self, session_id: str) ‑> None`
     :   Use session.
         Parameters
         ----------
@@ -280,7 +280,7 @@ Classes
         Exception
             If an error occurs during the session closure operation.
 
-    `delete(self, url: str, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
+    `delete(self, url: str, **kwargs: Any) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Asynchronously performs an HTTP DELETE request.
         
         This method sends a DELETE request to the specified URL with additional
@@ -301,7 +301,7 @@ Classes
             The response object resulting from the DELETE request. This
             provides access to the response data, status, and headers.
 
-    `get(self, url: str, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
+    `get(self, url: str, **kwargs: Any) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Asynchronously sends an HTTP GET request to the specified URL.
         
         This method allows sending GET requests with optional additional parameters
@@ -322,7 +322,7 @@ Classes
             The response object resulting from the get-go request, containing status,
             headers, and body data.
 
-    `patch(self, url: str, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
+    `patch(self, url: str, **kwargs: Any) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Asynchronously sends a HTTP PATCH request to the specified URL.
         
         This method is a coroutine that simplifies sending PATCH requests
@@ -345,7 +345,7 @@ Classes
             methods for accessing the content, status, and headers of the HTTP
             response.
 
-    `post(self, url: str, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
+    `post(self, url: str, **kwargs: Any) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Sends an asynchronous HTTP POST request to the specified URL with the given parameters.
         
         This method uses the underlying `request` method to perform the HTTP POST
@@ -367,7 +367,7 @@ Classes
         ResponseData
             Represents the response object from the POST request.
 
-    `put(self, url: str, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
+    `put(self, url: str, **kwargs: Any) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Asynchronously performs an HTTP PUT request.
         
         The method sends an HTTP PUT request to the specified URL with the given
@@ -385,7 +385,7 @@ Classes
         ResponseData
             The response object returned after the PUT request is completed.
 
-    `request(self, method: Literal['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], url: str, headers: Dict[str, str] | None = None, **kwargs) ‑> knowledge.services.asyncio.base.ResponseData`
+    `request(self, method: Literal['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], url: str, headers: Dict[str, str] | None = None, **kwargs: Any) ‑> knowledge.services.asyncio.base.ResponseData`
     :   Executes an HTTP request using the specified method, URL, headers, and additional options.
         
         Parameters
@@ -424,7 +424,7 @@ Classes
     `close(self) ‑> None`
     :   Release resolver
 
-    `resolve(self, host: str, port: int = 0, family: int = 2)`
+    `resolve(self, host: str, port: int = 0, family: int = 2) ‑> List[Dict[str, Any]]`
     :   Resolves a hostname to a list of address information. This is an asynchronous
         method that fetches the address details for the given hostname. The result
         includes protocol, host address, port, and family information. The family

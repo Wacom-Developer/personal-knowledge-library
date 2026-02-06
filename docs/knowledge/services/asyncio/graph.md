@@ -114,7 +114,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code, and activation failed.
 
-    `add_entity_indexes(self, entity_uri: str, targets: List[Literal['NEL', 'ElasticSearch', 'VectorSearchWord', 'VectorSearchDocument']], auth_key: str | None = None, timeout: int = 60) ‑> Dict[Literal['NEL', 'ElasticSearch', 'VectorSearchWord', 'VectorSearchDocument'], Any]`
+    `add_entity_indexes(self, entity_uri: str, targets: List[Literal['NEL', 'ElasticSearch', 'VectorSearchWord', 'VectorSearchDocument']], auth_key: str | None = None, timeout: int = 60) ‑> Dict[str, Any]`
     :   Updates index targets of an entity. The index targets can be set to "NEL", "ElasticSearch", "VectorSearchWord",
         or "VectorSearchDocument".
         If the target is already set for the entity, there will be no changes.
@@ -188,7 +188,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `create_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: str | None = None)`
+    `create_relation(self, source: str, relation: knowledge.base.ontology.OntologyPropertyReference, target: str, auth_key: str | None = None) ‑> None`
     :   Creates a relation for an entity to a source entity.
         
         Parameters
@@ -207,7 +207,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `create_relations_bulk(self, source: str, relations: Dict[knowledge.base.ontology.OntologyPropertyReference, List[str]], auth_key: str | None = None, timeout: int = 60)`
+    `create_relations_bulk(self, source: str, relations: Dict[knowledge.base.ontology.OntologyPropertyReference, List[str]], auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Creates all the relations for an entity to a source entity.
         
         Parameters
@@ -229,7 +229,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `delete_entities(self, uris: List[str], force: bool = False, auth_key: str | None = None)`
+    `delete_entities(self, uris: List[str], force: bool = False, auth_key: str | None = None) ‑> None`
     :   Delete a list of entities.
         
         Parameters
@@ -248,7 +248,7 @@ Classes
         ValueError
             If more than 100 entities are given
 
-    `delete_entity(self, uri: str, force: bool = False, auth_key: str | None = None)`
+    `delete_entity(self, uri: str, force: bool = False, auth_key: str | None = None) ‑> None`
     :   Deletes an entity.
         
         Parameters
@@ -533,7 +533,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `ontology_update(self, fix: bool = False, auth_key: str | None = None)`
+    `ontology_update(self, fix: bool = False, auth_key: str | None = None) ‑> None`
     :   Update the ontology.
         
         **Remark: **
@@ -575,7 +575,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code
 
-    `remove_entity_indexes(self, entity_uri: str, targets: List[Literal['NEL', 'ElasticSearch', 'VectorSearchWord', 'VectorSearchDocument']], auth_key: str | None = None, timeout: int = 60) ‑> Dict[Literal['NEL', 'ElasticSearch', 'VectorSearchWord', 'VectorSearchDocument'], Any]`
+    `remove_entity_indexes(self, entity_uri: str, targets: List[Literal['NEL', 'ElasticSearch', 'VectorSearchWord', 'VectorSearchDocument']], auth_key: str | None = None, timeout: int = 60) ‑> Dict[str, Any]`
     :   Deletes the search index for a given entity.
         
         Parameters
@@ -850,7 +850,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `update_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: str | None = None, timeout: int = 60)`
+    `update_entity(self, entity: knowledge.base.ontology.ThingObject, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Updates entity in the graph.
         
         Parameters

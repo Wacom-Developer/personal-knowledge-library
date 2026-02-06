@@ -88,7 +88,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `delete_tenant(self, identifier: str, timeout: int = 60)`
+    `delete_tenant(self, identifier: str, timeout: int = 60) ‑> None`
     :   Delete a tenant.
         Parameters
         ----------
@@ -120,7 +120,7 @@ Classes
         WacomServiceException
             If the tenant service returns an error code.
 
-    `update_tenant_configuration(self, identifier: str, rights: List[str], vector_search_data_properties: List[str], vector_search_object_properties: List[str], content_data_property_name: str, timeout: int = 60)`
+    `update_tenant_configuration(self, identifier: str, rights: List[str], vector_search_data_properties: List[str], vector_search_object_properties: List[str], content_data_property_name: str, timeout: int = 60) ‑> None`
     :   Update the configuration of a tenant.
         
         Parameters

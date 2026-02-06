@@ -22,7 +22,7 @@ Functions
     Dict[str, Any]
         The payload for the entity.
 
-`split_updates(updates: Dict[knowledge.base.ontology.OntologyPropertyReference, List[str]], max_operations: int = 30) ‑> Iterator[Dict[str, List[str]]]`
+`split_updates(updates: Dict[knowledge.base.ontology.OntologyPropertyReference, List[str]], max_operations: int = 30) ‑> Iterator[List[Dict[str, str | List[str]]]]`
 :   Parameters
     ----------
     updates: Dict[OntologyPropertyReference, List[str]]
@@ -32,5 +32,5 @@ Functions
     
     Yields
     -------
-    batch: List[Dict[str, List[str]]]
+    batch: List[Dict[str, Union[str, List[str]]]]
         The batch of updates to process.
