@@ -270,22 +270,22 @@ class WikidataCache:
             logger.warning(f"Cache path {cache_path} is a file. Please provide a directory.")
             return
         # Save the cache to a file
-        with WikidataCache.__path__objects__(cache_path).open("w") as file:
+        with WikidataCache.__path__objects__(cache_path).open("w", encoding="utf-8") as file:
             for thing in self.cache.values():
                 thing: WikidataThing
                 file.write(orjson.dumps(thing.__dict__()).decode("utf-8") + "\n")
         # Save the property cache to a file
-        with WikidataCache.__path__properties__(cache_path).open("w") as file:
+        with WikidataCache.__path__properties__(cache_path).open("w", encoding="utf-8") as file:
             for prop in self.property_cache.values():
                 prop: WikidataProperty
                 file.write(orjson.dumps(prop.__dict__()).decode("utf-8") + "\n")
         # Save the superclass cache to a file
-        with WikidataCache.__path__subclasses__(cache_path).open("w") as file:
+        with WikidataCache.__path__subclasses__(cache_path).open("w", encoding="utf-8") as file:
             for subclass in self.subclass_cache.values():
                 subclass: WikidataClass
                 file.write(orjson.dumps(subclass.as_dict()).decode("utf-8") + "\n")
         # Save the subclass cache to a file
-        with WikidataCache.__path__superclasses__(cache_path).open("w") as file:
+        with WikidataCache.__path__superclasses__(cache_path).open("w", encoding="utf-8") as file:
             for superclass in self.superclass_cache.values():
                 superclass: WikidataClass
                 file.write(orjson.dumps(superclass.as_dict()).decode("utf-8") + "\n")
@@ -307,7 +307,7 @@ class WikidataCache:
 
         wikidata_object_path: Path = WikidataCache.__path__objects__(cache_path)
         if wikidata_object_path.exists():
-            with wikidata_object_path.open("r") as file:
+            with wikidata_object_path.open("r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         thing_data = orjson.loads(line)
@@ -317,7 +317,7 @@ class WikidataCache:
                         logger.error(f"Error loading cache: {e}. Line: {line}")
         path_property: Path = WikidataCache.__path__properties__(cache_path)
         if path_property.exists():
-            with path_property.open("r") as file:
+            with path_property.open("r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         prop_data = orjson.loads(line)
@@ -327,7 +327,7 @@ class WikidataCache:
                         logger.error(f"Error loading property cache: {e}. Line: {line}")
         subclass_path: Path = WikidataCache.__path__subclasses__(cache_path)
         if subclass_path.exists():
-            with WikidataCache.__path__subclasses__(cache_path).open("r") as file:
+            with WikidataCache.__path__subclasses__(cache_path).open("r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         subclass_data = orjson.loads(line)
@@ -337,7 +337,7 @@ class WikidataCache:
                         logger.error(f"Error loading subclass cache: {e}. Line: {line}")
         superclass_path: Path = WikidataCache.__path__superclasses__(cache_path)
         if superclass_path.exists():
-            with superclass_path.open("r") as file:
+            with superclass_path.open("r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         superclass_data = orjson.loads(line)
