@@ -232,6 +232,9 @@ def wikidata_to_thing(
                             main=False,
                         )
                     )
+    if len(labels_entity) == 0:
+        logger.warning(f"No label found for {qid}.")
+        raise ValueError(f"No label found for {qid}.")
     t2: float = time.perf_counter()
     descriptions: List[Description] = []
     if "wiki" in wikidata_thing.sitelinks and pull_wikipedia:
