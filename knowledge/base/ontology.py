@@ -81,7 +81,7 @@ logger = loguru.logger
 
 
 # ---------------------------------------------------- Ontology --------------------------------------------------------
-class PropertyType(enum.Enum):
+class PropertyType(str, enum.Enum):
     """
     PropertyType
     -----------
@@ -95,7 +95,7 @@ class PropertyType(enum.Enum):
 INVERSE_PROPERTY_TYPE: Dict[str, PropertyType] = {pt.value: pt for pt in PropertyType}
 
 
-class DataPropertyType(enum.Enum):
+class DataPropertyType(str, enum.Enum):
     """
     DataPropertyType.
     -----------------
@@ -2445,7 +2445,7 @@ class ThingObject:
                     )
                     if dp_property_type == SYSTEM_SOURCE_REFERENCE_ID:
                         ref_id_found = True
-                        if source_reference_id != dp_value:
+                        if source_reference_id != dp_value and dp_language_code == EN_US:
                             logger.warning(f"Source reference id mismatch: {source_reference_id} != {dp_value}")
                             raise ValueError(f"Source reference id mismatch: {source_reference_id} != {dp_value}")
                     if dp_property_type == SYSTEM_SOURCE_SYSTEM:
