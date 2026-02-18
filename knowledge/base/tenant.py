@@ -174,7 +174,7 @@ class TenantConfiguration:
         return cls(
             identifier=str(data_dict.get("id")),
             ontology_name=str(data_dict.get("ontologyName")),
-            ontology_version=int(data_dict.get("ontologyVersion", 0)),
+            ontology_version=data_dict.get("ontologyVersion", 0),
             is_locked=bool(data_dict.get("isLocked")),
             name=str(data_dict.get("name")),
             rights=data_dict.get("rights", []),
