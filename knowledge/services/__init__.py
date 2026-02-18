@@ -3,6 +3,7 @@
 """
 This package contains the services for the knowledge graph functionality.
 """
+
 from typing import List, Literal
 
 # ------------------------------------------------- Constants ----------------------------------------------------------
@@ -67,6 +68,7 @@ Refresh token time in seconds. 360 seconds = 6 minutes
 __all__ = [
     "base",
     "graph",
+    "ink",
     "ontology",
     "tenant",
     "users",
@@ -126,6 +128,7 @@ __all__ = [
 
 from knowledge.services import base
 from knowledge.services import graph
+from knowledge.services import ink
 from knowledge.services import ontology
 from knowledge.services import tenant
 from knowledge.services import users
