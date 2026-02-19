@@ -652,8 +652,8 @@ class TestEdgeCases:
             Label("Alias 1", EN_US, main=False),
             Label("Alias 2", EN_US, main=False),
         ]
-        main_labels = [l for l in labels if l.main]
-        alias_labels = [l for l in labels if not l.main]
+        main_labels = [lbl for lbl in labels if lbl.main]
+        alias_labels = [lbl for lbl in labels if not lbl.main]
         assert len(main_labels) == 1
         assert len(alias_labels) == 2
 

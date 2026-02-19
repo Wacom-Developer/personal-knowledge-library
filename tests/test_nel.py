@@ -6,6 +6,7 @@ import uuid
 from typing import List, Optional
 from unittest import TestCase
 
+import loguru
 import pytest
 from faker import Faker
 
@@ -18,6 +19,7 @@ from knowledge.services.graph import WacomKnowledgeService
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
 
+logger = loguru.logger
 THING_OBJECT: OntologyClassReference = OntologyClassReference("wacom", "core", "Thing")
 
 
@@ -142,7 +144,7 @@ class EntityFlow(TestCase):
         list_user_all: List[User] = self.user_management.listing_users(self.tenant_api_key, limit=EntityFlow.LIMIT)
         for u_i in list_user_all:
             if "account-type" in u_i.meta_data and u_i.meta_data.get("account-type") == "qa-test":
-                logging.info(f"Clean user {u_i.external_user_id}")
+                logger.info(f"Clean user {u_i.external_user_id}")
                 try:
                     self.user_management.delete_user(
                         self.tenant_api_key, external_id=u_i.external_user_id, internal_id=u_i.id, force=True

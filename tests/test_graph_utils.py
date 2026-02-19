@@ -7,12 +7,11 @@ These tests verify the graph utility functions using mocked clients.
 """
 
 import pytest
-from typing import List
-from unittest.mock import MagicMock, AsyncMock, PropertyMock
+from unittest.mock import MagicMock, AsyncMock
 
 from knowledge.base.entity import Label
 from knowledge.base.language import EN_US, LocaleCode
-from knowledge.base.ontology import ThingObject, THING_CLASS, OntologyClassReference
+from knowledge.base.ontology import ThingObject, THING_CLASS
 from knowledge.services.graph import Visibility
 from knowledge.utils.graph import (
     count_things,
@@ -252,7 +251,9 @@ class TestThingsIter:
         )
 
         assert len(results) == 1
-        mock_client.login.assert_called_once_with(tenant_api_key="api-key", external_user_id="user-123")
+        mock_client.login.assert_called_once_with(
+            tenant_api_key="api-key", external_user_id="user-123"
+        )
 
 
 class TestAsyncCountThings:
@@ -361,7 +362,9 @@ class TestAsyncThingsIter:
             results.append(item)
 
         assert len(results) == 1
-        mock_client.login.assert_called_once_with(tenant_api_key="api-key", external_user_id="user-123")
+        mock_client.login.assert_called_once_with(
+            tenant_api_key="api-key", external_user_id="user-123"
+        )
 
 
 class TestAsyncThingsSessionIter:
@@ -416,7 +419,9 @@ class TestAsyncThingsSessionIter:
         mock_client.handle_token.return_value = ("token", "refresh")
 
         results = []
-        async for item in async_things_session_iter(mock_client, THING_CLASS, only_own=True):
+        async for item in async_things_session_iter(
+            mock_client, THING_CLASS, only_own=True
+        ):
             results.append(item)
 
         # Should include the thing since owner=True

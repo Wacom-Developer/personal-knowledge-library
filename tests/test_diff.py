@@ -8,7 +8,7 @@ network access by mocking the WacomKnowledgeService client.
 """
 
 import pytest
-from typing import Dict, List, Any
+from typing import List
 from unittest.mock import MagicMock, AsyncMock
 
 from knowledge.base.entity import Label, Description
@@ -70,7 +70,9 @@ class TestDiffEntities:
             descriptions=[Description("A test entity", EN_US)],
         )
 
-        differences, data_prop_diff, obj_prop_diff = diff_entities(mock_client, file_thing, kg_thing)
+        differences, data_prop_diff, obj_prop_diff = diff_entities(
+            mock_client, file_thing, kg_thing
+        )
 
         assert len(differences) == 0
         assert len(data_prop_diff) == 0
@@ -86,7 +88,9 @@ class TestDiffEntities:
                 Description("Description 2", LocaleCode("de_DE")),
             ]
         )
-        kg_thing = self._create_thing(descriptions=[Description("Description 1", EN_US)])
+        kg_thing = self._create_thing(
+            descriptions=[Description("Description 1", EN_US)]
+        )
 
         differences, _, _ = diff_entities(mock_client, file_thing, kg_thing)
 
@@ -100,8 +104,12 @@ class TestDiffEntities:
         """Test detection of different description content."""
         mock_client = MagicMock()
 
-        file_thing = self._create_thing(descriptions=[Description("Original description", EN_US)])
-        kg_thing = self._create_thing(descriptions=[Description("Different description", EN_US)])
+        file_thing = self._create_thing(
+            descriptions=[Description("Original description", EN_US)]
+        )
+        kg_thing = self._create_thing(
+            descriptions=[Description("Different description", EN_US)]
+        )
 
         differences, _, _ = diff_entities(mock_client, file_thing, kg_thing)
 
@@ -114,7 +122,9 @@ class TestDiffEntities:
         """Test detection of missing description for a language."""
         mock_client = MagicMock()
 
-        file_thing = self._create_thing(descriptions=[Description("German description", LocaleCode("de_DE"))])
+        file_thing = self._create_thing(
+            descriptions=[Description("German description", LocaleCode("de_DE"))]
+        )
         kg_thing = self._create_thing(descriptions=[])
 
         differences, _, _ = diff_entities(mock_client, file_thing, kg_thing)
@@ -174,8 +184,12 @@ class TestDiffEntities:
         """Test detection of different label content."""
         mock_client = MagicMock()
 
-        file_thing = self._create_thing(labels=[Label("Original Name", EN_US, main=True)])
-        kg_thing = self._create_thing(labels=[Label("Different Name", EN_US, main=True)])
+        file_thing = self._create_thing(
+            labels=[Label("Original Name", EN_US, main=True)]
+        )
+        kg_thing = self._create_thing(
+            labels=[Label("Different Name", EN_US, main=True)]
+        )
 
         differences, _, _ = diff_entities(mock_client, file_thing, kg_thing)
 
@@ -186,7 +200,9 @@ class TestDiffEntities:
         """Test detection of missing label for a language."""
         mock_client = MagicMock()
 
-        file_thing = self._create_thing(labels=[Label("German Label", LocaleCode("de_DE"), main=True)])
+        file_thing = self._create_thing(
+            labels=[Label("German Label", LocaleCode("de_DE"), main=True)]
+        )
         kg_thing = self._create_thing(labels=[Label("English Label", EN_US, main=True)])
 
         differences, _, _ = diff_entities(mock_client, file_thing, kg_thing)
@@ -243,7 +259,9 @@ class TestDiffEntities:
         _, data_prop_diff, _ = diff_entities(mock_client, file_thing, kg_thing)
 
         # Should detect missing data property
-        missing_diffs = [d for d in data_prop_diff if d["type"] == "missing data properties"]
+        missing_diffs = [
+            d for d in data_prop_diff if d["type"] == "missing data properties"
+        ]
         assert len(missing_diffs) >= 1
 
     def test_different_data_property_values(self):
@@ -260,7 +278,9 @@ class TestDiffEntities:
 
         _, data_prop_diff, _ = diff_entities(mock_client, file_thing, kg_thing)
 
-        value_diffs = [d for d in data_prop_diff if d["type"] == "Different data property values"]
+        value_diffs = [
+            d for d in data_prop_diff if d["type"] == "Different data property values"
+        ]
         assert len(value_diffs) == 1
         assert value_diffs[0]["file"] == "value1"
 
@@ -277,7 +297,9 @@ class TestDiffEntities:
         obj_prop.outgoing_relations.append("wacom:entity:other")
         file_thing.object_properties[rel_ref] = obj_prop
 
-        _, _, obj_prop_diff = diff_entities(mock_client, file_thing, kg_thing, kg_things=None)
+        _, _, obj_prop_diff = diff_entities(
+            mock_client, file_thing, kg_thing, kg_things=None
+        )
 
         # Object properties should not be compared when kg_things is None
         assert len(obj_prop_diff) == 0
@@ -378,7 +400,9 @@ class TestDiffEntitiesAsync:
             descriptions=[Description("A test entity", EN_US)],
         )
 
-        differences, data_prop_diff, obj_prop_diff = await diff_entities_async(mock_client, file_thing, kg_thing)
+        differences, data_prop_diff, obj_prop_diff = await diff_entities_async(
+            mock_client, file_thing, kg_thing
+        )
 
         assert len(differences) == 0
         assert len(data_prop_diff) == 0

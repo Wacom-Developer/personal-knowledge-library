@@ -6,9 +6,6 @@ Unit tests for knowledge/base/access.py
 These tests verify the access rights classes.
 """
 
-import pytest
-from typing import List
-
 from knowledge.base.access import AccessRight, TenantAccessRight, GroupAccessRight
 
 
