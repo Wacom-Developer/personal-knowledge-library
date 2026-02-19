@@ -13,7 +13,6 @@ from knowledge.base.entity import (
 from knowledge.base.language import LANGUAGE_LOCALE_MAPPING, LocaleCode
 from knowledge.base.ontology import ThingObject, OntologyClassReference
 
-
 __all__ = [
     "update_language_code",
     "localized_list_description",

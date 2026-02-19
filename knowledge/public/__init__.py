@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2021-present Wacom. All rights reserved.
 """Mapping of Wikidata property ids to its string."""
+
 import json
 from pathlib import Path
 from typing import Dict, List
@@ -23,7 +24,6 @@ from knowledge.public import wikidata
 from knowledge.public import helper
 from knowledge.public import relations
 from knowledge.public import cache
-
 
 __all__ = [
     "wikidata",

@@ -7,7 +7,6 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-
 __all__ = [
     "ExtractionException",
     "get_wikipedia_summary",

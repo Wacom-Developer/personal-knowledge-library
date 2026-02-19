@@ -20,7 +20,6 @@ from knowledge.public import (
     STATUS_FORCE_LIST,
 )
 
-
 __all__ = [
     # Enums
     "Precision",

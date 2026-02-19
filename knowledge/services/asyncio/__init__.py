@@ -4,4 +4,4 @@
 This package contains the asyncio client for the knowledge graph functionality.
 """
 
-__all__ = ["base", "graph", "group", "users", "search"]
+__all__ = ["base", "graph", "group", "ink", "users", "search"]
