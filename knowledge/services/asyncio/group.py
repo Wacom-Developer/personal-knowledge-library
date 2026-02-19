@@ -28,8 +28,8 @@ from knowledge.services.users import FORCE_TAG, LIMIT_TAG, OFFSET_TAG
 
 class AsyncGroupManagementService(AsyncServiceAPIClient):
     """
-    Group Management Service API
-    -----------------------------
+    Async Group Management Service API
+    ----------------------------------
     The service is managing groups.
 
     Functionality:
@@ -44,6 +44,29 @@ class AsyncGroupManagementService(AsyncServiceAPIClient):
         URL of the service
     service_endpoint: str
         Base endpoint
+
+    Examples
+    --------
+    >>> import asyncio
+    >>> from knowledge.services.asyncio.group import AsyncGroupManagementService
+    >>> from knowledge.base.access import GroupAccessRight
+    >>>
+    >>> async def main():
+    ...     client = AsyncGroupManagementService(
+    ...         service_url="https://private-knowledge.wacom.com"
+    ...     )
+    ...     await client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
+    ...
+    ...     # Create a group with read access
+    ...     group = await client.create_group(
+    ...         name="My group",
+    ...         rights=GroupAccessRight(read=True, write=False, delete=False)
+    ...     )
+    ...
+    ...     # List all groups
+    ...     groups = await client.listing_groups()
+    >>>
+    >>> asyncio.run(main())
     """
 
     GROUP_ENDPOINT: str = "group"

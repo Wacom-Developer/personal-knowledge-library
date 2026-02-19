@@ -52,6 +52,23 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         API endpoint for tenant-related functionalities.
     USER_DETAILS_ENDPOINT : str
         API endpoint for retrieving user details.
+
+    Examples
+    --------
+    >>> from knowledge.services.tenant import TenantManagementServiceAPI
+    >>>
+    >>> # Initialize the client with tenant management token
+    >>> client = TenantManagementServiceAPI(
+    ...     tenant_token="<tenant_management_token>",
+    ...     service_url="https://private-knowledge.wacom.com"
+    ... )
+    >>>
+    >>> # Create a new tenant
+    >>> tenant = client.create_tenant(name="My Tenant")
+    >>> print(f"Tenant ID: {tenant['id']}, API Key: {tenant['apiKey']}")
+    >>>
+    >>> # List all tenants
+    >>> tenants = client.listing_tenant()
     """
 
     TENANT_ENDPOINT: str = "tenant"

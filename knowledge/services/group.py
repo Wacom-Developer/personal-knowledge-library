@@ -232,6 +232,26 @@ class GroupManagementService(WacomServiceAPIClient):
         URL of the service
     service_endpoint: str
         Base endpoint
+
+    Examples
+    --------
+    >>> from knowledge.services.group import GroupManagementService
+    >>> from knowledge.base.access import GroupAccessRight
+    >>>
+    >>> # Initialize the client
+    >>> client = GroupManagementService(
+    ...     service_url="https://private-knowledge.wacom.com"
+    ... )
+    >>> client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
+    >>>
+    >>> # Create a group with read access
+    >>> group = client.create_group(
+    ...     name="Research Team",
+    ...     rights=GroupAccessRight(read=True, write=False, delete=False)
+    ... )
+    >>>
+    >>> # List all groups
+    >>> groups = client.listing_groups()
     """
 
     GROUP_ENDPOINT: str = "group"

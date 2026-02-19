@@ -14,13 +14,6 @@ from knowledge.services import (
 )
 from knowledge.services.base import WacomServiceAPIClient, handle_error
 
-__all__ = [
-    "UserRole",
-    "User",
-    "UserManagementServiceAPI",
-    "USER_ROLE_MAPPING",
-]
-
 # -------------------------------------- Constant flags ----------------------------------------------------------------
 TENANT_ID: str = "tenantId"
 USER_ID_TAG: str = "userId"
@@ -169,6 +162,25 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         URL of the service
     service_endpoint: str
         Base endpoint
+
+    Examples
+    --------
+    >>> from knowledge.services.users import UserManagementServiceAPI, UserRole
+    >>>
+    >>> # Initialize the client
+    >>> client = UserManagementServiceAPI(
+    ...     service_url="https://private-knowledge.wacom.com"
+    ... )
+    >>>
+    >>> # Create a new user
+    >>> user, token, refresh, expiry = client.create_user(
+    ...     tenant_key="<tenant_api_key>",
+    ...     external_id="user@example.com",
+    ...     roles=[UserRole.USER]
+    ... )
+    >>>
+    >>> # List all users
+    >>> users, total = client.listing_users(tenant_key="<tenant_api_key>")
     """
 
     USER_DETAILS_ENDPOINT: str = f"{WacomServiceAPIClient.USER_ENDPOINT}/internal-id"
@@ -330,7 +342,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         Parameters
         ----------
         tenant_key: str
-            API key for tenant
+            An API key for tenant
         external_id: str
             External id of user identification service.
         internal_id: str
@@ -417,7 +429,7 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
         Parameters
         ----------
         tenant_key: str
-            API key for tenant
+            An API key for tenant
         offset: int - [optional]
             Offset value to define the starting position in a list. [DEFAULT:= 0]
         limit: int - [optional]
@@ -447,3 +459,26 @@ class UserManagementServiceAPI(WacomServiceAPIClient):
                 results.append(User.parse(u))
             return results
         raise handle_error("Listing of users failed.", response)
+
+
+__all__ = [
+    "UserRole",
+    "User",
+    "UserManagementServiceAPI",
+    "USER_ROLE_MAPPING",
+    "TENANT_ID",
+    "USER_ID_TAG",
+    "LIMIT_TAG",
+    "OFFSET_TAG",
+    "ROLES_TAG",
+    "META_DATA_TAG",
+    "INTERNAL_USER_ID_TAG",
+    "EXTERNAL_USER_ID_TAG",
+    "FORCE_TAG",
+    "CONTENT_TYPE_FLAG",
+    "TENANT_API_KEY_FLAG",
+    "USER_AGENT_TAG",
+    "DEFAULT_TIMEOUT",
+    "DEFAULT_MAX_RETRIES",
+    "DEFAULT_BACKOFF_FACTOR",
+]

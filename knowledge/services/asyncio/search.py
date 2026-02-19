@@ -25,9 +25,9 @@ __all__ = ["AsyncSemanticSearchClient"]
 
 class AsyncSemanticSearchClient(AsyncServiceAPIClient):
     """
-    Semantic Search Client
-    ======================
-    Client for searching semantically similar documents and labels.
+    Async Semantic Search Client
+    ============================
+    Async client for searching semantically similar documents and labels.
 
     Parameters
     ----------
@@ -37,6 +37,34 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
         Name of the application.
     service_endpoint: str (Default:= 'vector/v1')
         Service endpoint for the client.
+
+    Examples
+    --------
+    >>> import asyncio
+    >>> from knowledge.services.asyncio.search import AsyncSemanticSearchClient
+    >>> from knowledge.base.language import EN_US
+    >>>
+    >>> async def main():
+    ...     client = AsyncSemanticSearchClient(
+    ...         service_url="https://private-knowledge.wacom.com"
+    ...     )
+    ...     await client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
+    ...
+    ...     # Search for similar documents
+    ...     results = await client.document_search(
+    ...         query="machine learning",
+    ...         locale=EN_US,
+    ...         max_results=10
+    ...     )
+    ...
+    ...     # Search for labels
+    ...     labels = await client.labels_search(
+    ...         query="Einstein",
+    ...         locale=EN_US,
+    ...         max_results=5
+    ...     )
+    >>>
+    >>> asyncio.run(main())
     """
 
     def __init__(
@@ -727,3 +755,31 @@ class AsyncSemanticSearchClient(AsyncServiceAPIClient):
             response_structure: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return QueueMonitor.parse_json(response_structure)
         raise await handle_error("Failed to get the queue monitor information.", response)
+
+    async def index_health(self, index_mode: str, locale: LocaleCode, auth_key: Optional[str] = None):
+        """
+        Checks the health status of an index by sending an asynchronous GET request
+        to the `/index/health` endpoint of the service.  The response content is
+        printed directly to standard output.
+
+        Parameters
+        ----------
+        index_mode : str
+            Mode identifier of the index to be checked.
+        locale : LocaleCode
+            Locale code that determines language or regional settings for the query.
+        auth_key : Optional[str], optional
+            Authentication token used to override the default session token.  If not
+            supplied, the session’s default token is used.
+
+        Returns
+        -------
+        None
+            The function performs a side effect (printing) and returns no value.
+
+        """
+        url: str = f"{self.service_base_url}/management/index/health"
+        session: AsyncSession = await self.asyncio_session()
+        params: Dict[str, str] = {"index_mode": index_mode, "locale": locale}
+        response: ResponseData = await session.get(url, params=params, overwrite_auth_token=auth_key)
+        print(response.content)

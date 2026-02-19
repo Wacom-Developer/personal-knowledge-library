@@ -33,6 +33,31 @@ class SemanticSearchClient(WacomServiceAPIClient):
         Service URL for the client.
     service_endpoint: str (Default:= 'vector/v1')
         Service endpoint for the client.
+
+    Examples
+    --------
+    >>> from knowledge.services.search import SemanticSearchClient
+    >>> from knowledge.base.language import EN_US
+    >>>
+    >>> # Initialize the client
+    >>> client = SemanticSearchClient(
+    ...     service_url="https://private-knowledge.wacom.com"
+    ... )
+    >>> client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
+    >>>
+    >>> # Search for similar documents
+    >>> results = client.search_documents(
+    ...     query="machine learning",
+    ...     locale=EN_US,
+    ...     max_results=10
+    ... )
+    >>>
+    >>> # Search for labels
+    >>> labels = client.labels_search(
+    ...     query="Einstein",
+    ...     locale=EN_US,
+    ...     max_results=5
+    ... )
     """
 
     def __init__(

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024 Wacom. All rights reserved.
 from datetime import datetime
-from typing import Any, Union, Dict, List, Tuple, Optional, cast
+from typing import Any, Dict, List, Tuple, Optional, cast
 
 from knowledge import logger
 from knowledge.services import APPLICATION_JSON_HEADER, EXPIRATION_DATE_TAG
@@ -48,6 +48,29 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
         URL of the service
     service_endpoint: str
         Base endpoint
+
+    Examples
+    --------
+    >>> import asyncio
+    >>> from knowledge.services.asyncio.users import AsyncUserManagementService
+    >>> from knowledge.services.users import UserRole
+    >>>
+    >>> async def main():
+    ...     client = AsyncUserManagementService(
+    ...         service_url="https://private-knowledge.wacom.com"
+    ...     )
+    ...
+    ...     # Create a new user
+    ...     user, token, refresh, expiry = await client.create_user(
+    ...         tenant_key="<tenant_api_key>",
+    ...         external_id="user@example.com",
+    ...         roles=[UserRole.USER]
+    ...     )
+    ...
+    ...     # List all users
+    ...     users, total = await client.listing_users(tenant_key="<tenant_api_key>")
+    >>>
+    >>> asyncio.run(main())
     """
 
     USER_DETAILS_ENDPOINT: str = f"{WacomServiceAPIClient.USER_ENDPOINT}/internal-id"

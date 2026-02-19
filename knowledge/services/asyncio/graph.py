@@ -91,7 +91,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
     """
     AsyncWacomKnowledgeService
     ---------------------
-    Client for the Semantic Ink Private knowledge system.
+    Async client for the Semantic Ink Private knowledge system.
 
     Operations for entities:
         - Creation of entities
@@ -107,6 +107,28 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         URL of the service
     service_endpoint: str
         Base endpoint
+
+    Examples
+    --------
+    >>> import asyncio
+    >>> from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
+    >>> from knowledge.base.ontology import OntologyClassReference, ThingObject
+    >>>
+    >>> async def main():
+    ...     client = AsyncWacomKnowledgeService(
+    ...         service_url="https://private-knowledge.wacom.com",
+    ...         application_name="My App"
+    ...     )
+    ...     await client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
+    ...
+    ...     # Create an entity
+    ...     entity = ThingObject(concept_type=OntologyClassReference.parse("wacom:core#Person"))
+    ...     uri = await client.create_entity(entity)
+    ...
+    ...     # Retrieve an entity
+    ...     retrieved = await client.entity(uri)
+    >>>
+    >>> asyncio.run(main())
     """
 
     USER_ENDPOINT: str = "user"
