@@ -25,46 +25,27 @@ __all__ = ["AsyncQueueMonitorClient"]
 
 class AsyncQueueMonitorClient(AsyncServiceAPIClient):
     """
-    Async Queue Monitor Client
-    ============================
-    Async client for searching semantically similar documents and labels.
+    AsyncQueueMonitorClient
+    -----------------------
+
+    Handles interactions with the queue management portion of the semantic
+    search service. The client offers methods to query queue metadata,
+    such as names, sizes, and emptiness status, while delegating
+    authentication and request handling to the underlying
+    WacomServiceAPIClient base class.
 
     Parameters
     ----------
     service_url: str
-        Service URL for the client.
-    application_name: str (Default:= 'Async Semantic Search ')
-        Name of the application.
-    service_endpoint: str (Default:= 'vector/v1')
-        Service endpoint for the client.
-
-    Examples
-    --------
-    >>> import asyncio
-    >>> from knowledge.services.asyncio.queue_monitor import AsyncQueueMonitorClient
-    >>> from knowledge.base.language import EN_US
-    >>>
-    >>> async def main():
-    ...     client = AsyncQueueMonitorClient(
-    ...         service_url="https://private-knowledge.wacom.com"
-    ...     )
-    ...     await client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
-    ...
-    ...     # Search for similar documents
-    ...     results = await client.document_search(
-    ...         query="machine learning",
-    ...         locale=EN_US,
-    ...         max_results=10
-    ...     )
-    ...
-    ...     # Search for labels
-    ...     labels = await client.labels_search(
-    ...         query="Einstein",
-    ...         locale=EN_US,
-    ...         max_results=5
-    ...     )
-    >>>
-    >>> asyncio.run(main())
+        URL of the service.
+    application_name: str
+        Name of the application
+    service_endpoint: str
+        Base endpoint
+    verify_calls: bool (Default:= True)
+        Verify API calls.
+    timeout: int (Default:= 60)
+        Timeout for API calls.
     """
 
     def __init__(
@@ -127,9 +108,7 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
         )
         if response.ok:
             content = cast(List[Dict[str, Any]], response.content)
-            docs: List[VectorDBDocument] = [
-                VectorDBDocument(vec_doc) for vec_doc in content
-            ]
+            docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in content]
         else:
             raise await handle_error(
                 "Failed to retrieve the document.",
@@ -179,9 +158,7 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
         )
         if response.ok:
             content = cast(List[Dict[str, Any]], response.content)
-            docs: List[VectorDBDocument] = [
-                VectorDBDocument(vec_doc) for vec_doc in content
-            ]
+            docs: List[VectorDBDocument] = [VectorDBDocument(vec_doc) for vec_doc in content]
         else:
             raise await handle_error(
                 "Failed to retrieve the document.",
@@ -226,16 +203,12 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
         if concept_type:
             params["concept_type"] = concept_type
         session: AsyncSession = await self.asyncio_session()
-        response: ResponseData = await session.get(
-            url, params=params, timeout=timeout, overwrite_auth_token=auth_key
-        )
+        response: ResponseData = await session.get(url, params=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
             content = cast(Dict[str, Any], response.content)
             count: int = int(content.get("count", 0))
         else:
-            raise await handle_error(
-                "Counting documents failed.", response, parameters={"locale": locale}
-            )
+            raise await handle_error("Counting documents failed.", response, parameters={"locale": locale})
         return count
 
     async def count_documents_filter(
@@ -326,16 +299,12 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
         if concept_type:
             params["concept_type"] = concept_type
         session: AsyncSession = await self.asyncio_session()
-        response: ResponseData = await session.get(
-            url, params=params, timeout=timeout, overwrite_auth_token=auth_key
-        )
+        response: ResponseData = await session.get(url, params=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
             content = cast(Dict[str, Any], response.content)
             count: int = int(content.get("count", 0))
         else:
-            raise await handle_error(
-                "Counting labels failed.", response, parameters={"locale": locale}
-            )
+            raise await handle_error("Counting labels failed.", response, parameters={"locale": locale})
         return count
 
     async def count_labels_filter(
@@ -442,9 +411,7 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
         if filter_mode:
             params["filter_mode"] = filter_mode
         session: AsyncSession = await self.asyncio_session()
-        response: ResponseData = await session.post(
-            url, json=params, timeout=timeout, overwrite_auth_token=auth_key
-        )
+        response: ResponseData = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
             response_dict: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return FilterVectorDocumentsResponse.from_dict(response_dict)
@@ -499,9 +466,7 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
         if filter_mode:
             params["filter_mode"] = filter_mode
         session: AsyncSession = await self.asyncio_session()
-        response: ResponseData = await session.post(
-            url, json=params, timeout=timeout, overwrite_auth_token=auth_key
-        )
+        response: ResponseData = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
             response_dict: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return DocumentSearchResponse.from_dict(response_dict)
@@ -551,15 +516,11 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
         if filter_mode:
             params["filter_mode"] = filter_mode
         session: AsyncSession = await self.asyncio_session()
-        response: ResponseData = await session.post(
-            url, json=params, timeout=timeout, overwrite_auth_token=auth_key
-        )
+        response: ResponseData = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
             response_dict: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return LabelMatchingResponse.from_dict(response_dict)
-        raise await handle_error(
-            "Label fuzzy matching failed.", response, parameters=params
-        )
+        raise await handle_error("Label fuzzy matching failed.", response, parameters=params)
 
     async def filter_labels(
         self,
@@ -615,9 +576,7 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
         if filter_mode:
             params["filter_mode"] = filter_mode
         session: AsyncSession = await self.asyncio_session()
-        response: ResponseData = await session.post(
-            url, json=params, timeout=timeout, overwrite_auth_token=auth_key
-        )
+        response: ResponseData = await session.post(url, json=params, timeout=timeout, overwrite_auth_token=auth_key)
         if response.ok:
             response_dict: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return FilterVectorDocumentsResponse.from_dict(response_dict)
@@ -682,9 +641,7 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
             response,
         )
 
-    async def queue_is_empty(
-        self, queue_name: str, auth_key: Optional[str] = None
-    ) -> bool:
+    async def queue_is_empty(self, queue_name: str, auth_key: Optional[str] = None) -> bool:
         """
         Checks if a given queue is empty.
 
@@ -708,17 +665,13 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}queues/empty/"
         params: Dict[str, str] = {"queue_name": queue_name}
         session: AsyncSession = await self.asyncio_session()
-        response: ResponseData = await session.get(
-            url, params=params, overwrite_auth_token=auth_key
-        )
+        response: ResponseData = await session.get(url, params=params, overwrite_auth_token=auth_key)
         if response.ok:
             is_empty: bool = cast(bool, response.content)
             return is_empty
         raise await handle_error("Failed to check if the queue is empty.", response)
 
-    async def queue_size(
-        self, queue_name: str, auth_key: Optional[str] = None
-    ) -> QueueCount:
+    async def queue_size(self, queue_name: str, auth_key: Optional[str] = None) -> QueueCount:
         """
         Gets the size of a specified queue by making an asynchronous request to the service's
         queue management endpoint. The method interacts with a remote API, using prepared
@@ -746,17 +699,13 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}queues/count/"
         params: Dict[str, str] = {"queue_name": queue_name}
         session: AsyncSession = await self.asyncio_session()
-        response: ResponseData = await session.get(
-            url, params=params, overwrite_auth_token=auth_key
-        )
+        response: ResponseData = await session.get(url, params=params, overwrite_auth_token=auth_key)
         if response.ok:
             response_structure: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return QueueCount.parse_json(response_structure)
         raise await handle_error("Failed to get the queue size.", response)
 
-    async def queue_monitor_information(
-        self, queue_name: str, auth_key: Optional[str] = None
-    ) -> QueueMonitor:
+    async def queue_monitor_information(self, queue_name: str, auth_key: Optional[str] = None) -> QueueMonitor:
         """
         Gets the monitoring information for a specific queue.
 
@@ -782,44 +731,8 @@ class AsyncQueueMonitorClient(AsyncServiceAPIClient):
         url: str = f"{self.service_base_url}queues/"
         params: Dict[str, str] = {"queue_name": queue_name}
         session: AsyncSession = await self.asyncio_session()
-        response: ResponseData = await session.get(
-            url, params=params, overwrite_auth_token=auth_key
-        )
+        response: ResponseData = await session.get(url, params=params, overwrite_auth_token=auth_key)
         if response.ok:
             response_structure: Dict[str, Any] = cast(Dict[str, Any], response.content)
             return QueueMonitor.parse_json(response_structure)
-        raise await handle_error(
-            "Failed to get the queue monitor information.", response
-        )
-
-    async def index_health(
-        self, index_mode: str, locale: LocaleCode, auth_key: Optional[str] = None
-    ):
-        """
-        Checks the health status of an index by sending an asynchronous GET request
-        to the `/index/health` endpoint of the service.  The response content is
-        printed directly to standard output.
-
-        Parameters
-        ----------
-        index_mode : str
-            Mode identifier of the index to be checked.
-        locale : LocaleCode
-            Locale code that determines language or regional settings for the query.
-        auth_key : Optional[str], optional
-            Authentication token used to override the default session token.  If not
-            supplied, the session’s default token is used.
-
-        Returns
-        -------
-        None
-            The function performs a side effect (printing) and returns no value.
-
-        """
-        url: str = f"{self.service_base_url}/management/index/health"
-        session: AsyncSession = await self.asyncio_session()
-        params: Dict[str, str] = {"index_mode": index_mode, "locale": locale}
-        response: ResponseData = await session.get(
-            url, params=params, overwrite_auth_token=auth_key
-        )
-        print(response.content)
+        raise await handle_error("Failed to get the queue monitor information.", response)
