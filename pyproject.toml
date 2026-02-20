@@ -1,6 +1,6 @@
 [project]
 name = "personal_knowledge_library"
-version = "4.1.0"
+version = "4.2.0"
 description = "Library to access Wacom's Personal Knowledge graph."
 authors = [{ name = "Markus Weber", email = "markus.weber@wacom.com" }]
 license = "Apache-2.0"
@@ -44,7 +44,8 @@ dev = [
     "mypy>=1.8.0",          # Type checking
     "black>=24.2.0",        # Formatting
     "tox>=4.0.0",
-    "pdoc3"
+    "pdoc3",
+    "universal-ink-library"
 ]
 
 [tool.poetry]

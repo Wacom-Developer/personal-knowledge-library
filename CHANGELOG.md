@@ -1,3 +1,12 @@
+2026/02/20 - RELEASE 4.2.0
+==========================
+- Refactoring, move the functions for queue management to dedicated QueueClient
+- Adding QueueManagementClient for managing the queues, e.g., listing queues, getting queue details, etc.
+- Adding IndexManagementClient for managing the indexes of the Vector Search service
+- Adding InkServicseClient for using the conversion services or ink to text, ink to math, services
+- Adding additional samples
+
+
 2026/02/06 - RELEASE 4.1.0
 ==========================
 - Added type annotations and return types - Added -> None, -> str, -> Dict[str, Any], etc. to functions missing return type annotations, and added proper type parameters to generic types like Dict, List, and Tuple
