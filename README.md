@@ -15,6 +15,91 @@
 The required tenant API key is only available for selected partner companies.
 Please contact your Wacom representative for more information.
 
+---
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Introduction](#introduction)
+- [Technology Stack](#technology-stack)
+  - [Domain Knowledge](#domain-knowledge)
+  - [Knowledge Graph](#knowledge-graph)
+  - [Semantic Technology](#semantic-technology)
+- [Functionality](#functionality)
+  - [Import Format](#import-format)
+  - [Access API](#access-api)
+  - [Entity API](#entity-api)
+- [Samples](#samples)
+  - [Entity Handling](#entity-handling)
+  - [Named Entity Linking](#named-entity-linking)
+  - [Access Management](#access-management)
+  - [Ontology Creation](#ontology-creation)
+  - [Asynchronous Client](#asynchronous-client)
+  - [Semantic Search](#semantic-search)
+- [Development](#development)
+  - [Requirements](#requirements)
+  - [Setting Up Development Environment](#setting-up-development-environment)
+  - [Running Tests](#running-tests)
+  - [Code Quality](#code-quality)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Installation
+
+Install the library using pip:
+
+```bash
+pip install personal-knowledge-library
+```
+
+### Python Version
+
+This library requires **Python 3.10 or higher** (supports Python 3.10, 3.11, 3.12, and 3.13).
+
+### Optional Development Dependencies
+
+To install development dependencies for testing and code quality tools:
+
+```bash
+pip install personal-knowledge-library[dev]
+```
+
+---
+
+## Quick Start
+
+Here's a minimal example to get you started with the Wacom Knowledge Service:
+
+```python
+from knowledge.services.graph import WacomKnowledgeService
+from knowledge.base.ontology import OntologyClassReference, ThingObject
+from knowledge.base.entity import Label
+from knowledge.base.language import EN_US
+
+# Initialize the client
+client = WacomKnowledgeService(
+    service_url="https://private-knowledge.wacom.com",
+    application_name="My Application"
+)
+
+# Login with your credentials
+client.login(tenant_api_key="<your-tenant-key>", external_user_id="<your-user-id>")
+
+# Search for entities
+results, _ = client.search_labels(search_term="Leonardo da Vinci", language_code=EN_US)
+
+for entity in results:
+    print(f"{entity.uri}: {[l.content for l in entity.label]}")
+```
+
+> **Note:** You need a valid tenant API key from Wacom to use this library.
+
+---
+
 ## Introduction
 
 In knowledge management there is a distinction between data, information, and knowledge.
@@ -60,11 +145,6 @@ It contains:
 - Add groups, modify groups, delete groups
 - Add users and entities to groups
 
-**Ontology service:**
-
-- List all Ontology structures
-- Modify Ontology structures
-
 **Named Entity Linking service:**
 
 - Linking words to knowledge entities from the graph in a given text (Ontology-based Named Entity Linking)
@@ -74,7 +154,9 @@ It contains:
 - Import entities from Wikidata
 - Mapping Wikidata entities to WPK entities
 
-# Technology stack
+---
+
+# Technology Stack
 
 ## Domain Knowledge
 
@@ -100,6 +182,8 @@ An ontology defines (specifies) the concepts, relationships, and other distincti
 - Linking words to knowledge entities from the graph in a given text (Ontology-based Named Entity Linking)
 - Enables a smart search functionality which understands the context and finds related documents (Semantic Search)
 
+
+---
 
 # Functionality
 
@@ -1113,10 +1197,114 @@ if __name__ == '__main__':
     print("=" * 120)
 ```
 
+---
+
+# Development
+
+## Requirements
+
+### Core Dependencies
+
+| Package | Version | Description |
+|---------|---------|-------------|
+| `aiohttp` | Latest | Async HTTP client/server |
+| `requests` | >=2.32.0, <3.0.0 | HTTP library |
+| `PyJWT` | >=2.10.1, <3.0.0 | JSON Web Token |
+| `rdflib` | >=7.1.0 | RDF library |
+| `orjson` | >=3.10.0 | Fast JSON library |
+| `cachetools` | >=5.3.0 | Caching utilities |
+| `loguru` | 0.7.3 | Logging |
+| `tqdm` | >=4.65.0 | Progress bars |
+
+### Development Dependencies
+
+Install with: `pip install personal-knowledge-library[dev]`
+
+| Package | Purpose |
+|---------|---------|
+| `pytest` | Testing framework |
+| `pytest-asyncio` | Async test support |
+| `pytest-cov` | Coverage reporting |
+| `mypy` | Type checking |
+| `pylint` | Code analysis |
+| `black` | Code formatting |
+| `flake8` | Linting |
+
+## Setting Up Development Environment
+
+1. **Clone the repository:**
+
+```bash
+git clone https://github.com/Wacom-Developer/personal-knowledge-library.git
+cd personal-knowledge-library
+```
+
+2. **Create and activate a virtual environment:**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
+
+3. **Install the package with development dependencies:**
+
+```bash
+pip install -e ".[dev]"
+```
+
+## Running Tests
+
+Run the full test suite:
+
+```bash
+pytest
+```
+
+Run tests with coverage report:
+
+```bash
+pytest --cov=knowledge --cov-report=term-missing
+```
+
+Run specific test files:
+
+```bash
+pytest tests/test_ontology_unit.py -v
+```
+
+## Code Quality
+
+### Type Checking with mypy
+
+```bash
+mypy knowledge --ignore-missing-imports
+```
+
+### Linting with pylint
+
+```bash
+pylint knowledge
+```
+
+### Code Formatting with black
+
+```bash
+black knowledge tests
+```
+
+### Linting with flake8
+
+```bash
+flake8 knowledge
+```
+
+---
+
 # Documentation
 
-You can find more detailed technical documentation, [here](https://developer-docs.wacom.com/preview/semantic-ink/).
-API documentation is available [here](./docs/).
+You can find more detailed technical documentation [here](https://developer-docs.wacom.com/preview/semantic-ink/).
+
+API documentation is available in the [docs/knowledge](./docs/knowledge) directory.
 
 ## Contributing
 Contribution guidelines are still a work in progress.

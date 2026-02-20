@@ -94,14 +94,10 @@ if __name__ == "__main__":
         application_name="Named Entities Linking Knowledge access",
     )
     #  Wacom Named Entities Linking
-    nel_client: WacomEntityLinkingEngine = WacomEntityLinkingEngine(
-        service_url=args.instance
-    )
+    nel_client: WacomEntityLinkingEngine = WacomEntityLinkingEngine(service_url=args.instance)
     # Use special tenant for testing: Unit-test tenant
     user_token, refresh_token, expiration_time = nel_client.request_user_token(TENANT_KEY, EXTERNAL_USER_ID)
-    entities: List[KnowledgeGraphEntity] = nel_client.link_personal_entities(
-        text=TEXT, auth_key=user_token
-    )
+    entities: List[KnowledgeGraphEntity] = nel_client.link_personal_entities(text=TEXT, auth_key=user_token)
     idx: int = 1
     print("-----------------------------------------------------------------------------------------------------------")
     print(f'Text: "{TEXT}"@{EN_US}')
