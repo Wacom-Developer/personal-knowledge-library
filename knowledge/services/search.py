@@ -5,7 +5,6 @@ from typing import Dict, Any, Optional, List, Literal
 from requests import Response
 
 from knowledge.base.language import LocaleCode
-from knowledge.base.queue import QueueMonitor, QueueCount, QueueNames
 from knowledge.base.search import (
     DocumentSearchResponse,
     LabelMatchingResponse,
