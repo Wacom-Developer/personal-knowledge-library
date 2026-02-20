@@ -19,7 +19,7 @@ import pytest
 import pytest_asyncio
 
 from knowledge.base.queue import QueueNames, QueueCount, QueueMonitor
-from knowledge.services.asyncio.queue_monitor import AsyncQueueMonitorClient
+from knowledge.services.asyncio.queue_management import AsyncQueueMonitorClient
 from knowledge.services.asyncio.users import AsyncUserManagementService
 from knowledge.services.queue_management import QueueManagementClient
 from knowledge.services.users import UserManagementServiceAPI, UserRole
