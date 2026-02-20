@@ -14,7 +14,29 @@ __all__ = ["QueueManagementClient"]
 
 class QueueManagementClient(WacomServiceAPIClient):
     """
+    QueueManagementClient
+    ---------------------
 
+    Handles interactions with the queue management portion of the semantic
+    search service. The client offers methods to query queue metadata,
+    such as names, sizes, and emptiness status, while delegating
+    authentication and request handling to the underlying
+    WacomServiceAPIClient base class.
+
+    Parameters
+    ----------
+    service_url: str
+        URL of the service.
+    application_name: str
+        Name of the application
+    service_endpoint: str
+        Base endpoint
+    verify_calls: bool (Default:= True)
+        Verify API calls.
+    max_retries: int (Default:= 3)
+        Maximum number of retries for failed requests.
+    backoff_factor: float (Default:= 0.3)
+        Backoff factor between retries.
     """
 
     def __init__(
