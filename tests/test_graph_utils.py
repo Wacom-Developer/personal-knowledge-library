@@ -251,9 +251,7 @@ class TestThingsIter:
         )
 
         assert len(results) == 1
-        mock_client.login.assert_called_once_with(
-            tenant_api_key="api-key", external_user_id="user-123"
-        )
+        mock_client.login.assert_called_once_with(tenant_api_key="api-key", external_user_id="user-123")
 
 
 class TestAsyncCountThings:
@@ -362,9 +360,7 @@ class TestAsyncThingsIter:
             results.append(item)
 
         assert len(results) == 1
-        mock_client.login.assert_called_once_with(
-            tenant_api_key="api-key", external_user_id="user-123"
-        )
+        mock_client.login.assert_called_once_with(tenant_api_key="api-key", external_user_id="user-123")
 
 
 class TestAsyncThingsSessionIter:
@@ -419,9 +415,7 @@ class TestAsyncThingsSessionIter:
         mock_client.handle_token.return_value = ("token", "refresh")
 
         results = []
-        async for item in async_things_session_iter(
-            mock_client, THING_CLASS, only_own=True
-        ):
+        async for item in async_things_session_iter(mock_client, THING_CLASS, only_own=True):
             results.append(item)
 
         # Should include the thing since owner=True

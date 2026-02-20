@@ -94,15 +94,15 @@ class ResponseData:
 
     Attributes
     ----------
-    ok
+    ok: bool
         Boolean flag indicating success of the request.
-    status
+    status: str
         Numeric status code returned by the server.
-    content
+    content: Union[str, bytes, bool, Dict[str, Any], List[Any]]
         Raw payload returned in the response body.
-    url
+    url: str
         URL of the request.
-    method:
+    method: str
         Request method.
     """
 
@@ -239,7 +239,7 @@ class AsyncSession:
                 self._session._loop = loop
                 return self._session
 
-            # Case 2: session invalid or closed
+            # Case 2: session invalids or closed
             if self._session.closed or self._session._loop is not loop or loop.is_closed():
                 try:
                     if not self._session.closed:
@@ -338,7 +338,7 @@ class AsyncSession:
             ignore_content_type=kwargs.pop("ignore_content_type", False),
         )
         session: aiohttp.ClientSession = await self._create_session()
-        # Use provided timeout or fall back to session default
+        # Use the provided timeout or fall back to session default
 
         if method == "GET":
             async with session.get(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
@@ -485,7 +485,7 @@ class AsyncSession:
 
     async def patch(self, url: str, **kwargs: Any) -> ResponseData:
         """
-        Asynchronously sends a HTTP PATCH request to the specified URL.
+        Asynchronously sends an HTTP PATCH request to the specified URL.
 
         This method is a coroutine that simplifies sending PATCH requests
         using the underlying `request` method. It allows adding additional
@@ -790,7 +790,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
             raise WacomServiceException("Authentication key is not set. Please login first.")
 
         async with self._token_refresh_lock:
-            # Re-check session state after acquiring lock
+            # Re-check the session state after acquiring a lock
             if not self.current_session.refreshable and self.current_session.expired:
                 raise WacomServiceException(
                     "Authentication key is expired and cannot be refreshed. Please login again."

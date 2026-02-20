@@ -148,9 +148,7 @@ logger = loguru.logger
 
 # Paths for test files
 UIM_PATH: Path = Path(root_dir / "uims" / "text" / "en_US")
-OUTPUT_PATH: Path = Path(
-    root_dir / "test-runs" / "output" / datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-)
+OUTPUT_PATH: Path = Path(root_dir / "test-runs" / "output" / datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
 LIMIT: int = 100
 
 
@@ -237,14 +235,9 @@ async def export_service():
 
     # Delete all qa-test users
     try:
-        list_user_all: List[User] = await user_management.listing_users(
-            tenant_api_key, limit=LIMIT
-        )
+        list_user_all: List[User] = await user_management.listing_users(tenant_api_key, limit=LIMIT)
         for u_i in list_user_all:
-            if (
-                "account-type" in u_i.meta_data
-                and u_i.meta_data.get("account-type") == "qa-test"
-            ):
+            if "account-type" in u_i.meta_data and u_i.meta_data.get("account-type") == "qa-test":
                 logger.info(f"Deleting test user: {u_i.external_user_id}")
                 try:
                     await user_management.delete_user(
@@ -294,16 +287,12 @@ class TestExportFlow:
             with file.open("rb") as f:
                 content: bytes = f.read()
                 # No auth_key needed - service uses its session
-                results: bytes = await export_service.convert_to(
-                    content, ExportFormat.PNG
-                )
+                results: bytes = await export_service.convert_to(content, ExportFormat.PNG)
                 output_file = test_output_path / f"{file.name}.png"
                 with output_file.open("wb") as fp:
                     fp.write(results)
                 assert output_file.exists(), f"Output file not created: {output_file}"
-                assert output_file.stat().st_size > 0, (
-                    f"Output file is empty: {output_file}"
-                )
+                assert output_file.stat().st_size > 0, f"Output file is empty: {output_file}"
                 # Validate PNG format
                 is_valid, error_msg = is_valid_png(results)
                 assert is_valid, f"Invalid PNG format for {file.name}: {error_msg}"
@@ -323,18 +312,12 @@ class TestExportFlow:
             with file.open("rb") as f:
                 content: bytes = f.read()
                 try:
-                    results: bytes = await export_service.convert_to(
-                        content, ExportFormat.JPG
-                    )
+                    results: bytes = await export_service.convert_to(content, ExportFormat.JPG)
                     output_file = test_output_path / f"{file.name}.jpg"
                     with output_file.open("wb") as fp:
                         fp.write(results)
-                    assert output_file.exists(), (
-                        f"Output file not created: {output_file}"
-                    )
-                    assert output_file.stat().st_size > 0, (
-                        f"Output file is empty: {output_file}"
-                    )
+                    assert output_file.exists(), f"Output file not created: {output_file}"
+                    assert output_file.stat().st_size > 0, f"Output file is empty: {output_file}"
                     # Validate JPEG format
                     is_valid, error_msg = is_valid_jpeg(results)
                     assert is_valid, f"Invalid JPEG format for {file.name}: {error_msg}"
@@ -356,18 +339,12 @@ class TestExportFlow:
             with file.open("rb") as f:
                 content: bytes = f.read()
                 try:
-                    results: bytes = await export_service.convert_to(
-                        content, ExportFormat.SVG
-                    )
+                    results: bytes = await export_service.convert_to(content, ExportFormat.SVG)
                     output_file = test_output_path / f"{file.name}.svg"
                     with output_file.open("wb") as fp:
                         fp.write(results)
-                    assert output_file.exists(), (
-                        f"Output file not created: {output_file}"
-                    )
-                    assert output_file.stat().st_size > 0, (
-                        f"Output file is empty: {output_file}"
-                    )
+                    assert output_file.exists(), f"Output file not created: {output_file}"
+                    assert output_file.stat().st_size > 0, f"Output file is empty: {output_file}"
                     # Validate SVG format
                     is_valid, error_msg = is_valid_svg(results)
                     assert is_valid, f"Invalid SVG format for {file.name}: {error_msg}"
@@ -389,18 +366,12 @@ class TestExportFlow:
             with file.open("rb") as f:
                 content: bytes = f.read()
                 try:
-                    results: bytes = await export_service.convert_to_pdf(
-                        content, PDFType.VECTOR
-                    )
+                    results: bytes = await export_service.convert_to_pdf(content, PDFType.VECTOR)
                     output_file = test_output_path / f"{file.name}.pdf"
                     with output_file.open("wb") as fp:
                         fp.write(results)
-                    assert output_file.exists(), (
-                        f"Output file not created: {output_file}"
-                    )
-                    assert output_file.stat().st_size > 0, (
-                        f"Output file is empty: {output_file}"
-                    )
+                    assert output_file.exists(), f"Output file not created: {output_file}"
+                    assert output_file.stat().st_size > 0, f"Output file is empty: {output_file}"
                     # Validate PDF format
                     is_valid, error_msg = is_valid_pdf(results)
                     assert is_valid, f"Invalid PDF format for {file.name}: {error_msg}"
@@ -422,18 +393,12 @@ class TestExportFlow:
             with file.open("rb") as f:
                 content: bytes = f.read()
                 try:
-                    results: bytes = await export_service.convert_to_pdf(
-                        content, PDFType.RASTER
-                    )
+                    results: bytes = await export_service.convert_to_pdf(content, PDFType.RASTER)
                     output_file = test_output_path / f"{file.name}.pdf"
                     with output_file.open("wb") as fp:
                         fp.write(results)
-                    assert output_file.exists(), (
-                        f"Output file not created: {output_file}"
-                    )
-                    assert output_file.stat().st_size > 0, (
-                        f"Output file is empty: {output_file}"
-                    )
+                    assert output_file.exists(), f"Output file not created: {output_file}"
+                    assert output_file.stat().st_size > 0, f"Output file is empty: {output_file}"
                     # Validate PDF format
                     is_valid, error_msg = is_valid_pdf(results)
                     assert is_valid, f"Invalid PDF format for {file.name}: {error_msg}"
@@ -441,15 +406,13 @@ class TestExportFlow:
                     pytest.fail(format_exception(e))
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(
-        not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)"
-    )
-    async def test_hwr_text_en_US_myscript(
+    @pytest.mark.skipif(not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)")
+    async def test_hwr_text_en_us_myscript(
         self,
         export_service: AsyncInkServices,
     ):
         """Test handwriting recognition for English text using MyScript provider."""
-        text_en_path = root_dir / "uims" / "text" / "en_US"
+        text_en_path: Path = root_dir / "uims" / "text" / "en_US"
         uim_files = [
             "1) Value of Ink.uim",
             "2) Digital Ink is processable.uim",
@@ -470,9 +433,7 @@ class TestExportFlow:
 
                 assert len(before.strokes) > 1, f"Expected strokes in {uim}"
                 assert not before.has_tree("hwr"), f"HWR tree should not exist in {uim}"
-                assert len(before.knowledge_graph.statements) == 0, (
-                    f"Knowledge graph should be empty in {uim}"
-                )
+                assert len(before.knowledge_graph.statements) == 0, f"Knowledge graph should be empty in {uim}"
 
                 try:
                     hwr_result: bytes = await export_service.perform_ink_to_text(
@@ -481,20 +442,14 @@ class TestExportFlow:
                         provider=Provider.MYSCRIPT,
                     )
                     after: InkModel = UIMParser().parse(hwr_result)
-                    assert after.has_tree("hwr"), (
-                        f"HWR tree should exist after recognition in {uim}"
-                    )
-                    assert len(after.knowledge_graph.statements) > 1, (
-                        f"Knowledge graph should have statements in {uim}"
-                    )
+                    assert after.has_tree("hwr"), f"HWR tree should exist after recognition in {uim}"
+                    assert len(after.knowledge_graph.statements) > 1, f"Knowledge graph should have statements in {uim}"
                     logger.info(f"HWR en_US MyScript passed for {uim}")
                 except WacomServiceException as e:
                     pytest.fail(format_exception(e))
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(
-        not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)"
-    )
+    @pytest.mark.skipif(not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)")
     async def test_hwr_text_ja_JP_ilabo(
         self,
         export_service: AsyncInkServices,
@@ -524,17 +479,13 @@ class TestExportFlow:
                 )
                 after: InkModel = UIMParser().parse(hwr_result)
                 assert after.has_tree("hwr"), "HWR tree should exist after recognition"
-                assert len(after.knowledge_graph.statements) > 1, (
-                    "Knowledge graph should have statements"
-                )
+                assert len(after.knowledge_graph.statements) > 1, "Knowledge graph should have statements"
                 logger.info("HWR ja_JP iLabo passed")
             except WacomServiceException as e:
                 pytest.fail(format_exception(e))
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(
-        not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)"
-    )
+    @pytest.mark.skipif(not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)")
     async def test_math_recognition_myscript(
         self,
         export_service: AsyncInkServices,
@@ -556,9 +507,7 @@ class TestExportFlow:
 
                 assert len(before.strokes) > 1, f"Expected strokes in {uim}"
                 assert not before.has_tree("hwr"), f"HWR tree should not exist in {uim}"
-                assert len(before.knowledge_graph.statements) == 0, (
-                    f"Knowledge graph should be empty in {uim}"
-                )
+                assert len(before.knowledge_graph.statements) == 0, f"Knowledge graph should be empty in {uim}"
 
                 try:
                     math_result: bytes = await export_service.perform_ink_to_math(
@@ -567,20 +516,14 @@ class TestExportFlow:
                         provider=Provider.MYSCRIPT,
                     )
                     after: InkModel = UIMParser().parse(math_result)
-                    assert after.has_tree("hwr"), (
-                        f"HWR tree should exist after math recognition in {uim}"
-                    )
-                    assert len(after.knowledge_graph.statements) > 1, (
-                        f"Knowledge graph should have statements in {uim}"
-                    )
+                    assert after.has_tree("hwr"), f"HWR tree should exist after math recognition in {uim}"
+                    assert len(after.knowledge_graph.statements) > 1, f"Knowledge graph should have statements in {uim}"
                     logger.info(f"Math recognition MyScript passed for {uim}")
                 except WacomServiceException as e:
                     pytest.fail(format_exception(e))
 
     @pytest.mark.asyncio
-    @pytest.mark.skipif(
-        not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)"
-    )
+    @pytest.mark.skipif(not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)")
     async def test_math_recognition_ilabo(
         self,
         export_service: AsyncInkServices,
@@ -602,9 +545,7 @@ class TestExportFlow:
 
                 assert len(before.strokes) > 1, f"Expected strokes in {uim}"
                 assert not before.has_tree("hwr"), f"HWR tree should not exist in {uim}"
-                assert len(before.knowledge_graph.statements) == 0, (
-                    f"Knowledge graph should be empty in {uim}"
-                )
+                assert len(before.knowledge_graph.statements) == 0, f"Knowledge graph should be empty in {uim}"
 
                 try:
                     math_result: bytes = await export_service.perform_ink_to_math(
@@ -614,12 +555,8 @@ class TestExportFlow:
                         timeout=120,
                     )
                     after: InkModel = UIMParser().parse(math_result)
-                    assert after.has_tree("hwr"), (
-                        f"HWR tree should exist after math recognition in {uim}"
-                    )
-                    assert len(after.knowledge_graph.statements) > 1, (
-                        f"Knowledge graph should have statements in {uim}"
-                    )
+                    assert after.has_tree("hwr"), f"HWR tree should exist after math recognition in {uim}"
+                    assert len(after.knowledge_graph.statements) > 1, f"Knowledge graph should have statements in {uim}"
                     logger.info(f"Math recognition iLabo passed for {uim}")
                 except WacomServiceException as e:
                     pytest.fail(format_exception(e))

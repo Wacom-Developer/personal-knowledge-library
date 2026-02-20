@@ -43,12 +43,7 @@ logger = loguru.logger
 
 # Paths for test files
 UIM_PATH: Path = Path(root_dir / "uims" / "text" / "en_US")
-OUTPUT_PATH: Path = Path(
-    root_dir
-    / "test-runs"
-    / "output-sync"
-    / datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-)
+OUTPUT_PATH: Path = Path(root_dir / "test-runs" / "output-sync" / datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
 LIMIT: int = 100
 
 
@@ -180,14 +175,9 @@ def ink_service():
     logger.info("Starting cleanup...")
 
     try:
-        list_user_all: List[User] = user_management.listing_users(
-            tenant_api_key, limit=LIMIT
-        )
+        list_user_all: List[User] = user_management.listing_users(tenant_api_key, limit=LIMIT)
         for u_i in list_user_all:
-            if (
-                "account-type" in u_i.meta_data
-                and u_i.meta_data.get("account-type") == "qa-test-sync"
-            ):
+            if "account-type" in u_i.meta_data and u_i.meta_data.get("account-type") == "qa-test-sync":
                 logger.info(f"Deleting test user: {u_i.external_user_id}")
                 try:
                     user_management.delete_user(
@@ -246,9 +236,7 @@ class TestInkServicesSync:
                     fp.write(results)
 
                 assert output_file.exists(), f"Output file not created: {output_file}"
-                assert output_file.stat().st_size > 0, (
-                    f"Output file is empty: {output_file}"
-                )
+                assert output_file.stat().st_size > 0, f"Output file is empty: {output_file}"
 
                 # Validate PNG format
                 is_valid, error_msg = is_valid_png(results)
@@ -273,12 +261,8 @@ class TestInkServicesSync:
                     with output_file.open("wb") as fp:
                         fp.write(results)
 
-                    assert output_file.exists(), (
-                        f"Output file not created: {output_file}"
-                    )
-                    assert output_file.stat().st_size > 0, (
-                        f"Output file is empty: {output_file}"
-                    )
+                    assert output_file.exists(), f"Output file not created: {output_file}"
+                    assert output_file.stat().st_size > 0, f"Output file is empty: {output_file}"
 
                     # Validate JPEG format
                     is_valid, error_msg = is_valid_jpeg(results)
@@ -305,12 +289,8 @@ class TestInkServicesSync:
                     with output_file.open("wb") as fp:
                         fp.write(results)
 
-                    assert output_file.exists(), (
-                        f"Output file not created: {output_file}"
-                    )
-                    assert output_file.stat().st_size > 0, (
-                        f"Output file is empty: {output_file}"
-                    )
+                    assert output_file.exists(), f"Output file not created: {output_file}"
+                    assert output_file.stat().st_size > 0, f"Output file is empty: {output_file}"
 
                     # Validate SVG format
                     is_valid, error_msg = is_valid_svg(results)
@@ -337,12 +317,8 @@ class TestInkServicesSync:
                     with output_file.open("wb") as fp:
                         fp.write(results)
 
-                    assert output_file.exists(), (
-                        f"Output file not created: {output_file}"
-                    )
-                    assert output_file.stat().st_size > 0, (
-                        f"Output file is empty: {output_file}"
-                    )
+                    assert output_file.exists(), f"Output file not created: {output_file}"
+                    assert output_file.stat().st_size > 0, f"Output file is empty: {output_file}"
 
                     # Validate PDF format
                     is_valid, error_msg = is_valid_pdf(results)
@@ -369,12 +345,8 @@ class TestInkServicesSync:
                     with output_file.open("wb") as fp:
                         fp.write(results)
 
-                    assert output_file.exists(), (
-                        f"Output file not created: {output_file}"
-                    )
-                    assert output_file.stat().st_size > 0, (
-                        f"Output file is empty: {output_file}"
-                    )
+                    assert output_file.exists(), f"Output file not created: {output_file}"
+                    assert output_file.stat().st_size > 0, f"Output file is empty: {output_file}"
 
                     # Validate PDF format
                     is_valid, error_msg = is_valid_pdf(results)
@@ -382,9 +354,7 @@ class TestInkServicesSync:
                 except WacomServiceException as e:
                     pytest.fail(format_exception(e))
 
-    @pytest.mark.skipif(
-        not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)"
-    )
+    @pytest.mark.skipif(not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)")
     def test_hwr_text_en_US_myscript(
         self,
         ink_service: InkServices,
@@ -411,9 +381,7 @@ class TestInkServicesSync:
 
                 assert len(before.strokes) > 1, f"Expected strokes in {uim}"
                 assert not before.has_tree("hwr"), f"HWR tree should not exist in {uim}"
-                assert len(before.knowledge_graph.statements) == 0, (
-                    f"Knowledge graph should be empty in {uim}"
-                )
+                assert len(before.knowledge_graph.statements) == 0, f"Knowledge graph should be empty in {uim}"
 
                 try:
                     hwr_result: bytes = ink_service.perform_ink_to_text(
@@ -422,19 +390,13 @@ class TestInkServicesSync:
                         provider=Provider.MYSCRIPT,
                     )
                     after: InkModel = UIMParser().parse(hwr_result)
-                    assert after.has_tree("hwr"), (
-                        f"HWR tree should exist after recognition in {uim}"
-                    )
-                    assert len(after.knowledge_graph.statements) > 1, (
-                        f"Knowledge graph should have statements in {uim}"
-                    )
+                    assert after.has_tree("hwr"), f"HWR tree should exist after recognition in {uim}"
+                    assert len(after.knowledge_graph.statements) > 1, f"Knowledge graph should have statements in {uim}"
                     logger.info(f"HWR en_US MyScript passed for {uim}")
                 except WacomServiceException as e:
                     pytest.fail(format_exception(e))
 
-    @pytest.mark.skipif(
-        not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)"
-    )
+    @pytest.mark.skipif(not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)")
     def test_hwr_text_ja_JP_ilabo(
         self,
         ink_service: InkServices,
@@ -464,16 +426,12 @@ class TestInkServicesSync:
                 )
                 after: InkModel = UIMParser().parse(hwr_result)
                 assert after.has_tree("hwr"), "HWR tree should exist after recognition"
-                assert len(after.knowledge_graph.statements) > 1, (
-                    "Knowledge graph should have statements"
-                )
+                assert len(after.knowledge_graph.statements) > 1, "Knowledge graph should have statements"
                 logger.info("HWR ja_JP iLabo passed")
             except WacomServiceException as e:
                 pytest.fail(format_exception(e))
 
-    @pytest.mark.skipif(
-        not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)"
-    )
+    @pytest.mark.skipif(not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)")
     def test_math_recognition_myscript(
         self,
         ink_service: InkServices,
@@ -495,9 +453,7 @@ class TestInkServicesSync:
 
                 assert len(before.strokes) > 1, f"Expected strokes in {uim}"
                 assert not before.has_tree("hwr"), f"HWR tree should not exist in {uim}"
-                assert len(before.knowledge_graph.statements) == 0, (
-                    f"Knowledge graph should be empty in {uim}"
-                )
+                assert len(before.knowledge_graph.statements) == 0, f"Knowledge graph should be empty in {uim}"
 
                 try:
                     math_result: bytes = ink_service.perform_ink_to_math(
@@ -506,19 +462,13 @@ class TestInkServicesSync:
                         provider=Provider.MYSCRIPT,
                     )
                     after: InkModel = UIMParser().parse(math_result)
-                    assert after.has_tree("hwr"), (
-                        f"HWR tree should exist after math recognition in {uim}"
-                    )
-                    assert len(after.knowledge_graph.statements) > 1, (
-                        f"Knowledge graph should have statements in {uim}"
-                    )
+                    assert after.has_tree("hwr"), f"HWR tree should exist after math recognition in {uim}"
+                    assert len(after.knowledge_graph.statements) > 1, f"Knowledge graph should have statements in {uim}"
                     logger.info(f"Math recognition MyScript passed for {uim}")
                 except WacomServiceException as e:
                     pytest.fail(format_exception(e))
 
-    @pytest.mark.skipif(
-        not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)"
-    )
+    @pytest.mark.skipif(not HAS_UIM, reason="UIM package not available (Python 3.13+ compatibility)")
     def test_math_recognition_ilabo(
         self,
         ink_service: InkServices,
@@ -540,9 +490,7 @@ class TestInkServicesSync:
 
                 assert len(before.strokes) > 1, f"Expected strokes in {uim}"
                 assert not before.has_tree("hwr"), f"HWR tree should not exist in {uim}"
-                assert len(before.knowledge_graph.statements) == 0, (
-                    f"Knowledge graph should be empty in {uim}"
-                )
+                assert len(before.knowledge_graph.statements) == 0, f"Knowledge graph should be empty in {uim}"
 
                 try:
                     math_result: bytes = ink_service.perform_ink_to_math(
@@ -552,12 +500,8 @@ class TestInkServicesSync:
                         timeout=120,
                     )
                     after: InkModel = UIMParser().parse(math_result)
-                    assert after.has_tree("hwr"), (
-                        f"HWR tree should exist after math recognition in {uim}"
-                    )
-                    assert len(after.knowledge_graph.statements) > 1, (
-                        f"Knowledge graph should have statements in {uim}"
-                    )
+                    assert after.has_tree("hwr"), f"HWR tree should exist after math recognition in {uim}"
+                    assert len(after.knowledge_graph.statements) > 1, f"Knowledge graph should have statements in {uim}"
                     logger.info(f"Math recognition iLabo passed for {uim}")
                 except WacomServiceException as e:
                     pytest.fail(format_exception(e))

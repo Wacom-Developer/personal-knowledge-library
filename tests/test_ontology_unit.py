@@ -66,28 +66,19 @@ class TestDataPropertyType:
 
     def test_string_type(self):
         """Test STRING data type."""
-        assert (
-            DataPropertyType.STRING.value == "http://www.w3.org/2001/XMLSchema#string"
-        )
+        assert DataPropertyType.STRING.value == "http://www.w3.org/2001/XMLSchema#string"
 
     def test_boolean_type(self):
         """Test BOOLEAN data type."""
-        assert (
-            DataPropertyType.BOOLEAN.value == "http://www.w3.org/2001/XMLSchema#boolean"
-        )
+        assert DataPropertyType.BOOLEAN.value == "http://www.w3.org/2001/XMLSchema#boolean"
 
     def test_integer_type(self):
         """Test INTEGER data type."""
-        assert (
-            DataPropertyType.INTEGER.value == "http://www.w3.org/2001/XMLSchema#integer"
-        )
+        assert DataPropertyType.INTEGER.value == "http://www.w3.org/2001/XMLSchema#integer"
 
     def test_datetime_type(self):
         """Test DATE_TIME data type."""
-        assert (
-            DataPropertyType.DATE_TIME.value
-            == "http://www.w3.org/2001/XMLSchema#dateTime"
-        )
+        assert DataPropertyType.DATE_TIME.value == "http://www.w3.org/2001/XMLSchema#dateTime"
 
     def test_inverse_mapping(self):
         """Test that inverse mapping works correctly."""
@@ -303,9 +294,7 @@ class TestObjectProperty:
     def test_create_with_incoming_relations(self):
         """Test creating object property with incoming relations."""
         rel_ref = OntologyPropertyReference.parse("wacom:core#relatedTo")
-        op = ObjectProperty(
-            relation=rel_ref, incoming=["wacom:entity:1", "wacom:entity:2"]
-        )
+        op = ObjectProperty(relation=rel_ref, incoming=["wacom:entity:1", "wacom:entity:2"])
 
         assert len(op.incoming_relations) == 2
         assert "wacom:entity:1" in op.incoming_relations
@@ -314,9 +303,7 @@ class TestObjectProperty:
     def test_create_with_outgoing_relations(self):
         """Test creating object property with outgoing relations."""
         rel_ref = OntologyPropertyReference.parse("wacom:core#relatedTo")
-        op = ObjectProperty(
-            relation=rel_ref, outgoing=["wacom:entity:3", "wacom:entity:4"]
-        )
+        op = ObjectProperty(relation=rel_ref, outgoing=["wacom:entity:3", "wacom:entity:4"])
 
         assert len(op.outgoing_relations) == 2
         assert "wacom:entity:3" in op.outgoing_relations
@@ -646,9 +633,7 @@ class TestInflectionSetting:
 
     def test_create_inflection_setting(self):
         """Test creating an inflection setting."""
-        setting = InflectionSetting(
-            concept="wacom:core#Person", inflection="singular", case_sensitive=True
-        )
+        setting = InflectionSetting(concept="wacom:core#Person", inflection="singular", case_sensitive=True)
 
         assert setting.concept.iri == "wacom:core#Person"
         assert setting.inflection == "singular"
@@ -705,9 +690,7 @@ class TestThingEncoder:
 
     def test_encode_thing_object(self):
         """Test encoding a ThingObject to JSON."""
-        thing = ThingObject(
-            uri="wacom:entity:test", label=[Label("Test", EN_US, main=True)]
-        )
+        thing = ThingObject(uri="wacom:entity:test", label=[Label("Test", EN_US, main=True)])
 
         # ThingEncoder should handle ThingObject
         result = json.dumps(thing, cls=ThingEncoder)
