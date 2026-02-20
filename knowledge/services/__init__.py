@@ -68,8 +68,10 @@ Refresh token time in seconds. 360 seconds = 6 minutes
 __all__ = [
     "base",
     "graph",
+    "index_management",
     "ink",
     "ontology",
+    "queue_management",
     "tenant",
     "users",
     "search",
@@ -128,7 +130,9 @@ __all__ = [
 
 from knowledge.services import base
 from knowledge.services import graph
+from knowledge.services import index_management
 from knowledge.services import ink
 from knowledge.services import ontology
+from knowledge.services import queue_management
 from knowledge.services import tenant
 from knowledge.services import users
