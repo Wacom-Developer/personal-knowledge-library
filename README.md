@@ -37,6 +37,9 @@ Please contact your Wacom representative for more information.
   - [Ontology Creation](#ontology-creation)
   - [Asynchronous Client](#asynchronous-client)
   - [Semantic Search](#semantic-search)
+  - [Ink Services](#ink-services)
+  - [Index Management](#index-management)
+  - [Queue Management](#queue-management)
 - [Development](#development)
   - [Requirements](#requirements)
   - [Setting Up Development Environment](#setting-up-development-environment)
@@ -112,7 +115,7 @@ In the domain of digital ink this means:
 The following illustration shows the different layers of knowledge:
 ![Levels of ink knowledge layers](https://github.com/Wacom-Developer/personal-knowledge-library/blob/main/assets/knowledge-levels.png)
 
-For handling semantics, Wacom introduced the Wacom Private Knowledge (WPK) cloud service to manage personal ontologies and its associated personal knowledge graph.
+For handling semantics, Wacom introduced the Wacom Private Knowledge System (PKS) cloud service to manage personal ontologies and its associated personal knowledge graph.
 
 This library provides simplified access to Wacom's personal knowledge cloud service.
 It contains:
@@ -1195,6 +1198,255 @@ if __name__ == '__main__':
     print("=" * 120)
     print(f"Time: {(t3 - t2) * 1000:.2f} ms")
     print("=" * 120)
+```
+
+### Ink Services
+
+The `InkServices` client provides access to Wacom's ink processing pipeline, covering handwriting recognition (HWR),
+math recognition, Named Entity Linking on ink content, and format conversion.
+All operations accept a Universal Ink Model (UIM) binary file as input.
+
+#### Handwriting Recognition
+
+`perform_ink_to_text` enriches the UIM with recognition results embedded in the model itself.
+`perform_ink_to_text_plain` is a convenience wrapper that returns only the recognized plain text string.
+
+```python
+from pathlib import Path
+from knowledge.base.ink import HWRMode, Priority, Provider, Schema
+from knowledge.base.language import EN_US
+from knowledge.services.ink import InkServices
+
+client: InkServices = InkServices(service_url="https://private-knowledge.wacom.com")
+client.login(tenant_api_key="<tenant-key>", external_user_id="<user-id>")
+
+uim_content: bytes = Path("uims/text/en_US/text.uim").read_bytes()
+
+# Enriched UIM with recognition results
+enriched_uim: bytes = client.perform_ink_to_text(
+    content=uim_content,
+    locale=EN_US,
+    hwr_mode=HWRMode.TEXT_MODE,
+    priority=Priority.LOWEST,
+    provider=Provider.MYSCRIPT,
+    schema=Schema.SEGMENTATION_V03,
+)
+
+# Plain recognized text
+text: str = client.perform_ink_to_text_plain(
+    content=uim_content,
+    locale=EN_US,
+    hwr_mode=HWRMode.TEXT_MODE,
+    priority=Priority.LOWEST,
+    provider=Provider.MYSCRIPT,
+    schema=Schema.SEGMENTATION_V03,
+)
+print(f"Recognized text: {text!r}")
+```
+
+#### Math Recognition
+
+`perform_ink_to_math` runs math recognition on a UIM containing handwritten mathematical expressions
+and returns an enriched UIM with the recognition results.
+
+```python
+from pathlib import Path
+from knowledge.base.ink import Priority, Provider, Schema
+from knowledge.services.ink import InkServices
+
+client: InkServices = InkServices(service_url="https://private-knowledge.wacom.com")
+client.login(tenant_api_key="<tenant-key>", external_user_id="<user-id>")
+
+math_uim: bytes = Path("uims/math/en_US/math.uim").read_bytes()
+
+math_enriched: bytes = client.perform_ink_to_math(
+    content=math_uim,
+    schema=Schema.MATH_V06,
+    provider=Provider.MYSCRIPT,
+    priority=Priority.LOWEST,
+)
+print(f"Math-enriched UIM: {len(math_enriched):,} bytes")
+```
+
+#### Named Entity Linking on Ink
+
+`perform_named_entity_linking` links recognized text spans in an already HWR-enriched UIM to entities
+in the personal knowledge graph.
+Pass the output of `perform_ink_to_text` as input.
+
+```python
+from knowledge.base.language import EN_US
+from knowledge.services.ink import InkServices
+
+client: InkServices = InkServices(service_url="https://private-knowledge.wacom.com")
+client.login(tenant_api_key="<tenant-key>", external_user_id="<user-id>")
+
+nel_uim: bytes = client.perform_named_entity_linking(content=enriched_uim, locale=EN_US)
+print(f"NEL-enriched UIM: {len(nel_uim):,} bytes")
+```
+
+#### Format Conversion
+
+`convert_to` exports a UIM to PNG, JPG, or SVG. `convert_to_pdf` exports to PDF in either vector
+or raster mode.
+
+```python
+from pathlib import Path
+from knowledge.base.ink import ExportFormat, PDFType
+from knowledge.services.ink import InkServices
+
+client: InkServices = InkServices(service_url="https://private-knowledge.wacom.com")
+client.login(tenant_api_key="<tenant-key>", external_user_id="<user-id>")
+
+uim_content: bytes = Path("uims/text/en_US/text.uim").read_bytes()
+
+# Raster formats
+png_bytes: bytes = client.convert_to(uim_content, ExportFormat.PNG)
+jpg_bytes: bytes = client.convert_to(uim_content, ExportFormat.JPG)
+
+# Vector format
+svg_bytes: bytes = client.convert_to(uim_content, ExportFormat.SVG)
+
+# PDF — vector or raster rendering
+pdf_vector: bytes = client.convert_to_pdf(uim_content, PDFType.VECTOR)
+pdf_raster: bytes = client.convert_to_pdf(uim_content, PDFType.RASTER)
+
+Path("output.png").write_bytes(png_bytes)
+Path("output.svg").write_bytes(svg_bytes)
+Path("output.pdf").write_bytes(pdf_vector)
+```
+
+Run the full ink services sample:
+
+```bash
+python samples/ink_services.py --user <user-id> --tenant <tenant-key>
+```
+
+---
+
+### Index Management
+
+The `IndexManagementClient` extends `SemanticSearchClient` with administrative operations for the
+vector search index. It allows operators to inspect index health, stream all indexed documents,
+refresh or optimize the index, and delete individual documents by ID.
+
+#### Index health
+
+```python
+from knowledge.base.index import HealthResponse
+from knowledge.base.language import EN_US
+from knowledge.services.index_management import IndexManagementClient
+
+client: IndexManagementClient = IndexManagementClient(service_url="https://private-knowledge.wacom.com")
+client.login(tenant_api_key="<tenant-key>", external_user_id="<user-id>")
+
+health: HealthResponse = client.index_health(index_mode="document", locale=EN_US)
+print(f"Healthy: {health.healthy}")
+print(f"Cluster status: {health.condition.cluster.status} | Nodes: {health.condition.cluster.number_of_nodes}")
+for shard in health.condition.shards:
+    print(f"  Shard [{shard.shard_id}] state={shard.shard_state} docs={shard.num_docs} size={shard.store_size}")
+```
+
+#### Streaming documents
+
+`iterate_documents` streams all indexed documents as NDJSON without loading everything into memory,
+making it suitable for large indices.
+
+```python
+from knowledge.base.index import IndexDocument
+from knowledge.base.language import EN_US
+from knowledge.services.index_management import IndexManagementClient
+
+client: IndexManagementClient = IndexManagementClient(service_url="https://private-knowledge.wacom.com")
+client.login(tenant_api_key="<tenant-key>", external_user_id="<user-id>")
+
+for doc in client.iterate_documents(index_mode="document", locale=EN_US):
+    doc: IndexDocument
+    print(f"ID: {doc.id} | URI: {doc.content_uri} | Locale: {doc.meta.locale}")
+    print(f"  Created: {doc.meta.creation} | Chunk: {doc.meta.chunk_index}")
+    print(f"  Preview: {doc.content[:100].strip()}...")
+```
+
+#### Refresh, force-merge, and delete
+
+```python
+from knowledge.base.language import EN_US
+from knowledge.services.index_management import IndexManagementClient
+
+client: IndexManagementClient = IndexManagementClient(service_url="https://private-knowledge.wacom.com")
+client.login(tenant_api_key="<tenant-key>", external_user_id="<user-id>")
+
+# Make recent writes searchable immediately
+client.refresh_index(index_mode="document", locale=EN_US)
+
+# Remove a specific document from the index
+client.delete_document_by_id(index_mode="document", locale=EN_US, document_ids=["<doc-id>"])
+
+# Optimise storage after bulk deletions
+client.force_merge_index(index_mode="document", locale=EN_US)
+```
+
+Run the full index management sample:
+
+```bash
+python samples/index_management.py --user <user-id> --tenant <tenant-key>
+```
+
+---
+
+### Queue Management
+
+The `QueueManagementClient` exposes monitoring information for the message queues that back the
+asynchronous processing pipeline of the semantic search service.
+It is a read-only observability client — it does not enqueue or dequeue messages.
+
+#### List queues
+
+```python
+from typing import List
+from knowledge.base.queue import QueueMonitor, QueueNames
+from knowledge.services.queue_management import QueueManagementClient
+
+client: QueueManagementClient = QueueManagementClient(service_url="https://private-knowledge.wacom.com")
+client.login(tenant_api_key="<tenant-key>", external_user_id="<user-id>")
+
+# Names only
+queue_names: QueueNames = client.list_queue_names()
+print(queue_names.names)
+
+# Full monitoring information for every queue
+queues: List[QueueMonitor] = client.list_queues()
+for queue in queues:
+    print(f"{queue.name} | state={queue.state} | messages={queue.messages} | consumers={queue.consumers}")
+```
+
+#### Per-queue details
+
+```python
+from knowledge.base.queue import QueueCount, QueueMonitor
+from knowledge.services.queue_management import QueueManagementClient
+
+client: QueueManagementClient = QueueManagementClient(service_url="https://private-knowledge.wacom.com")
+client.login(tenant_api_key="<tenant-key>", external_user_id="<user-id>")
+
+queue_name: str = "my-queue"
+
+is_empty: bool = client.queue_is_empty(queue_name)
+size: QueueCount = client.queue_size(queue_name)
+monitor: QueueMonitor = client.queue_monitor_information(queue_name)
+
+print(f"Empty: {is_empty}")
+print(f"Size : {size.count} messages")
+print(f"State: {monitor.state} | Ready: {monitor.messages_ready} | Unacknowledged: {monitor.messages_unacknowledged}")
+if monitor.message_stats:
+    print(f"Stats: publish={monitor.message_stats.publish} deliver={monitor.message_stats.deliver} "
+          f"ack={monitor.message_stats.ack}")
+```
+
+Run the full queue management sample:
+
+```bash
+python samples/queue_management.py --user <user-id> --tenant <tenant-key>
 ```
 
 ---
