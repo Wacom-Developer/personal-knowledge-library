@@ -257,7 +257,7 @@ class AsyncInkServices(AsyncServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            return await response.content
+            return response.content
         raise await handle_error(
             f"Ink to text fails with status code:= {response.status}.",
             response,
