@@ -2917,4 +2917,8 @@ __all__ = [
     "ThingObject",
     "ThingEncoder",
     "NAME_TAG",
+    "THING_CLASS",
+    "LAST_UPDATE_DATE",
+    "SYSTEM_SOURCE_SYSTEM",
+    "SYSTEM_SOURCE_REFERENCE_ID",
 ]

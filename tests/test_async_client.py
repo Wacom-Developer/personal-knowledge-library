@@ -10,7 +10,16 @@ from typing import List, Optional, Dict
 from faker import Faker
 
 from knowledge.base.entity import Label
-from knowledge.base.language import JA_JP, EN_US, DE_DE, BG_BG, FR_FR, IT_IT, ES_ES, SUPPORTED_LOCALES
+from knowledge.base.language import (
+    JA_JP,
+    EN_US,
+    DE_DE,
+    BG_BG,
+    FR_FR,
+    IT_IT,
+    ES_ES,
+    SUPPORTED_LOCALES,
+)
 from knowledge.base.ontology import (
     ThingObject,
     OntologyClassReference,
@@ -27,13 +36,18 @@ from knowledge.base.search import LabelMatchingResponse
 from knowledge.nel.base import KnowledgeGraphEntity
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
 from knowledge.services.asyncio.group import AsyncGroupManagementService
+from knowledge.services.asyncio.queue_management import AsyncQueueMonitorClient
 from knowledge.services.asyncio.search import AsyncSemanticSearchClient
 from knowledge.services.asyncio.users import AsyncUserManagementService
 from knowledge.services.base import WacomServiceException
 from knowledge.services.graph import Visibility, SearchPattern
 from knowledge.services.group import Group, GroupInfo
 from knowledge.services.users import User, UserRole
-from knowledge.utils.graph import async_things_iter, async_count_things, async_things_session_iter
+from knowledge.utils.graph import (
+    async_things_iter,
+    async_count_things,
+    async_things_session_iter,
+)
 
 THING_OBJECT: OntologyClassReference = OntologyClassReference("wacom", "core", "Thing")
 LEONARDO_DA_VINCI: str = "Leonardo da Vinci"
@@ -70,17 +84,33 @@ def create_thing(concept_type: OntologyClassReference) -> ThingObject:
         names: List[str] = name.split()
         if len(names) == 2:
             thing.add_data_property(
-                DataProperty(names[0], OntologyPropertyReference.parse("wacom:core#firstName"), language_code=lang_inst)
+                DataProperty(
+                    names[0],
+                    OntologyPropertyReference.parse("wacom:core#firstName"),
+                    language_code=lang_inst,
+                )
             )
             thing.add_data_property(
-                DataProperty(names[1], OntologyPropertyReference.parse("wacom:core#lastName"), language_code=lang_inst)
+                DataProperty(
+                    names[1],
+                    OntologyPropertyReference.parse("wacom:core#lastName"),
+                    language_code=lang_inst,
+                )
             )
         elif len(names) == 3:
             thing.add_data_property(
-                DataProperty(names[1], OntologyPropertyReference.parse("wacom:core#firstName"), language_code=lang_inst)
+                DataProperty(
+                    names[1],
+                    OntologyPropertyReference.parse("wacom:core#firstName"),
+                    language_code=lang_inst,
+                )
             )
             thing.add_data_property(
-                DataProperty(names[2], OntologyPropertyReference.parse("wacom:core#lastName"), language_code=lang_inst)
+                DataProperty(
+                    names[2],
+                    OntologyPropertyReference.parse("wacom:core#lastName"),
+                    language_code=lang_inst,
+                )
             )
     return thing
 
@@ -145,6 +175,10 @@ vector_search: AsyncSemanticSearchClient = AsyncSemanticSearchClient(
     service_url=instance,
     application_name="Async client test",
 )
+queue_monitor: AsyncQueueMonitorClient = AsyncQueueMonitorClient(
+    service_url=instance,
+    application_name="Async client test",
+)
 # ----------------------------------------------------------------------------------------------------------------------
 
 
@@ -175,7 +209,10 @@ async def test_01_handle_user():
             raise AssertionError("User already exists")
     # Create user
     _, token, refresh, expire = await user_management.create_user(
-        tenant_api_key, external_id=external_id, meta_data={"account-type": "qa-test"}, roles=[UserRole.CONTENT_MANAGER]
+        tenant_api_key,
+        external_id=external_id,
+        meta_data={"account-type": "qa-test"},
+        roles=[UserRole.CONTENT_MANAGER],
     )
     assert token is not None
     assert refresh is not None
@@ -487,7 +524,9 @@ async def test_09_search_labels():
             for label in e.label:
                 try:
                     res_entities, next_search_page = await async_client.search_labels(
-                        search_term=label.content, language_code=label.language_code, limit=10
+                        search_term=label.content,
+                        language_code=label.language_code,
+                        limit=10,
                     )
                     assert len(res_entities) > 1
                     successful[label.language_code] = True
@@ -576,7 +615,10 @@ async def test_11_search_relations():
     try:
         # Only one parameter is allowed: either subject_uri or object_uri
         r, _ = await async_client.search_relation(
-            subject_uri=art_style.uri, relation=HAS_ART_STYLE, object_uri=art_style.uri, language_code=EN_US
+            subject_uri=art_style.uri,
+            relation=HAS_ART_STYLE,
+            object_uri=art_style.uri,
+            language_code=EN_US,
         )
         raise AssertionError("Exception not raised")
     except WacomServiceException as e:
@@ -585,7 +627,10 @@ async def test_11_search_relations():
     try:
         # at least one parameter is allowed: either subject_uri or object_uri
         r, _ = await async_client.search_relation(
-            subject_uri=None, relation=HAS_ART_STYLE, object_uri=None, language_code=EN_US
+            subject_uri=None,
+            relation=HAS_ART_STYLE,
+            object_uri=None,
+            language_code=EN_US,
         )
         raise AssertionError("Exception not raised")
     except WacomServiceException as e:
@@ -612,7 +657,10 @@ async def test_12_search_literals():
     """
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
     res_entities, next_search_page = await async_client.search_literal(
-        search_term=LEONARDO_QID, pattern=SearchPattern.REGEX, literal=SYSTEM_SOURCE_REFERENCE_ID, language_code=EN_US
+        search_term=LEONARDO_QID,
+        pattern=SearchPattern.REGEX,
+        literal=SYSTEM_SOURCE_REFERENCE_ID,
+        language_code=EN_US,
     )
     assert len(res_entities) >= 1
 
@@ -697,7 +745,10 @@ async def test_15_create_group_users():
         If the returned token, refresh token, or expiration timestamp is null.
     """
     info, token, refresh, expire = await user_management.create_user(
-        tenant_api_key, external_id=external_id_2, meta_data={"account-type": "qa-test"}, roles=[UserRole.USER]
+        tenant_api_key,
+        external_id=external_id_2,
+        meta_data={"account-type": "qa-test"},
+        roles=[UserRole.USER],
     )
     assert token is not None
     assert refresh is not None
@@ -764,7 +815,10 @@ async def test_16_group_flows():
     # Add user to group
     external_id_3 = str(uuid.uuid4())
     info, token, _, _ = await user_management.create_user(
-        tenant_api_key, external_id=external_id_3, meta_data={"account-type": "qa-test"}, roles=[UserRole.USER]
+        tenant_api_key,
+        external_id=external_id_3,
+        meta_data={"account-type": "qa-test"},
+        roles=[UserRole.USER],
     )
     await group_management.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     groups: List[Group] = await group_management.listing_groups()
@@ -779,7 +833,11 @@ async def test_16_group_flows():
     groups: List[Group] = await group_management.listing_groups()
     thing_uri: Optional[str] = None
     async for entity, user_token, refresh_token in async_things_iter(
-        async_client, concept_type=THING_OBJECT, user_token=user_token, refresh_token=refresh_token, only_own=True
+        async_client,
+        concept_type=THING_OBJECT,
+        user_token=user_token,
+        refresh_token=refresh_token,
+        only_own=True,
     ):
         thing_uri = entity.uri
         break
@@ -813,7 +871,7 @@ async def test_16_group_flows():
     group_info: GroupInfo = await group_management.group(new_group.id)
     assert group_info.id == new_group.id
     assert group_info.name == new_group.name
-    assert group_info.join_key is None
+    assert not group_info.join_key  # API may return None or empty string for non-owners
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id_2)
     # Now user 2 has access again
     await async_client.entity(thing_uri)
@@ -852,7 +910,11 @@ async def test_17_public_entity():
         tenant_api_key=tenant_api_key, external_id=external_id
     )
     async for entity, user_token, refresh_token in async_things_iter(
-        async_client, concept_type=THING_OBJECT, user_token=user_token, refresh_token=refresh_token, only_own=True
+        async_client,
+        concept_type=THING_OBJECT,
+        user_token=user_token,
+        refresh_token=refresh_token,
+        only_own=True,
     ):
         thing = entity
         break
@@ -898,7 +960,9 @@ async def test_18_import_test():
     """
     await async_client.login(tenant_api_key=tenant_api_key, external_user_id=external_id)
     entity: ThingObject = ThingObject(
-        label=[Label(content="Test", language_code=EN_US, main=True)], concept_type=THING_OBJECT, use_for_nel=True
+        label=[Label(content="Test", language_code=EN_US, main=True)],
+        concept_type=THING_OBJECT,
+        use_for_nel=True,
     )
     uri_thing: str = await async_client.create_entity(entity)
     things: List[ThingObject] = [create_random_thing(f"ref-{i}", uri_thing) for i in range(10)]
@@ -944,7 +1008,10 @@ async def test_19_delete_users():
         if "account-type" in u_i.meta_data and u_i.meta_data.get("account-type") == "qa-test":
             logging.info(f"Clean user {u_i.external_user_id}")
             await user_management.delete_user(
-                tenant_api_key, external_id=u_i.external_user_id, internal_id=u_i.id, force=True
+                tenant_api_key,
+                external_id=u_i.external_user_id,
+                internal_id=u_i.id,
+                force=True,
             )
 
 
@@ -962,23 +1029,30 @@ async def test_20_queue_test():
         If any of the assertions fail during testing.
     """
     if external_id_admin:
-        await vector_search.login(tenant_api_key, external_id_admin)
-        queue_names: QueueNames = await vector_search.list_queue_names()
+        await queue_monitor.login(tenant_api_key, external_id_admin)
+        queue_names: QueueNames = await queue_monitor.list_queue_names()
         for queue_name in queue_names.names:
-            empty = await vector_search.queue_is_empty(queue_name)
+            empty = await queue_monitor.queue_is_empty(queue_name)
             assert empty is not None
-            queue_structure: QueueMonitor = await vector_search.queue_monitor_information(queue_name)
+            queue_structure: QueueMonitor = await queue_monitor.queue_monitor_information(queue_name)
             assert queue_structure is not None
-            size: QueueCount = await vector_search.queue_size(queue_name)
+            size: QueueCount = await queue_monitor.queue_size(queue_name)
             assert size.count >= 0
 
-        queue: List[QueueMonitor] = await vector_search.list_queues()
+        queue: List[QueueMonitor] = await queue_monitor.list_queues()
         for q in queue:
             assert q.name is not None
+    await vector_search.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
     results: LabelMatchingResponse = await vector_search.labels_search(query=LEONARDO_DA_VINCI, locale=EN_US)
     assert len(results.results) > 0
     for res in results.results:
         entries = await vector_search.retrieve_labels(EN_US, res.entity_uri)
+        assert len(entries) > 0
+
+    document_results = await vector_search.document_search(query=LEONARDO_DA_VINCI, locale=EN_US)
+    assert len(document_results.results) > 0
+    for d in document_results.results:
+        entries = await vector_search.retrieve_document_chunks(EN_US, d.content_uri)
         assert len(entries) > 0
 
     document_results = await vector_search.document_search(query=LEONARDO_DA_VINCI, locale=EN_US)
