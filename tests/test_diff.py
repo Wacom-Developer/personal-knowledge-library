@@ -12,7 +12,7 @@ from typing import List
 from unittest.mock import MagicMock, AsyncMock
 
 from knowledge.base.entity import Label, Description
-from knowledge.base.language import EN_US, LocaleCode
+from knowledge.base.language import EN_US, LocaleCode, DE_DE
 from knowledge.base.ontology import (
     ThingObject,
     OntologyClassReference,
@@ -83,7 +83,7 @@ class TestDiffEntities:
         file_thing = self._create_thing(
             descriptions=[
                 Description("Description 1", EN_US),
-                Description("Description 2", LocaleCode("de_DE")),
+                Description("Beschreibung 2", DE_DE),
             ]
         )
         kg_thing = self._create_thing(descriptions=[Description("Description 1", EN_US)])
@@ -93,8 +93,8 @@ class TestDiffEntities:
         # Should detect description count difference
         desc_diffs = [d for d in differences if d["type"] == "description"]
         assert len(desc_diffs) == 1
-        assert desc_diffs[0]["kg"] == 2  # file_thing has 2 descriptions
-        assert desc_diffs[0]["file"] == 1  # kg_thing has 1 description
+        assert desc_diffs[0]["file"] == 2  # file_thing has 2 descriptions
+        assert desc_diffs[0]["kg"] == 1  # kg_thing has 1 description
 
     def test_different_description_content(self):
         """Test detection of different description content."""
