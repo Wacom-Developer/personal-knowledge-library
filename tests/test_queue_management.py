@@ -110,6 +110,10 @@ async def async_queue_client():
 
     yield client
 
+    # Teardown: close async HTTP clients to prevent unclosed connector warnings
+    await client.close()
+    await user_management.close()
+
 
 # ================================================================================================
 # Sync tests

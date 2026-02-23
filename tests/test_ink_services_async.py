@@ -251,6 +251,10 @@ async def export_service():
     except Exception as e:
         logger.error(f"Error during user cleanup: {e}")
 
+    # Close async HTTP clients to prevent unclosed connector warnings
+    await export_svc.close()
+    await user_management.close()
+
 
 @pytest.fixture(scope="module")
 def output_path() -> Path:

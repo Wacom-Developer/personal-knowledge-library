@@ -181,6 +181,10 @@ async def async_index_client():
                 )
     except Exception as e:
         logger.error(f"Async cleanup error: {e}")
+    finally:
+        # Close async HTTP clients to prevent unclosed connector warnings
+        await client.close()
+        await user_management.close()
 
 
 # ================================================================================================
