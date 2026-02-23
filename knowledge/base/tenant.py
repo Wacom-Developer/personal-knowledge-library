@@ -180,7 +180,7 @@ class TenantConfiguration:
             rights=data_dict.get("rights", []),
             vector_search_data_properties=data_dict.get("vectorSearchDataProperties", []),
             vector_search_object_properties=data_dict.get("vectorSearchObjectProperties", []),
-            content_data_property_name=data_dict.get("contentDataPropertyName", []),
+            content_data_property_name=data_dict.get("contentDataPropertyName", ""),
         )
 
     def __repr__(self) -> str:
