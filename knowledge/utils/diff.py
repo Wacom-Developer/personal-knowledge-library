@@ -54,8 +54,8 @@ def diff_entities(
                 "type": "description",
                 "resource_id": kg_thing.default_source_reference_id(),
                 "uri": kg_thing.uri,
-                "kg": len(file_thing.description),
-                "file": len(kg_thing.description),
+                "kg": len(kg_thing.description),
+                "file": len(file_thing.description),
             }
         )
     for desc_file in file_thing.description:
@@ -119,7 +119,7 @@ def diff_entities(
                     "resource_id": kg_thing.default_source_reference_id(),
                     "uri": kg_thing.uri,
                     "kg": label_kg_lang.content if label_kg_lang else "",
-                    "file": kg_thing.label[0].content,
+                    "file": label_file.content,
                 }
             )
     # Different number of aliases
@@ -130,8 +130,8 @@ def diff_entities(
                 "type": "Number of aliases",
                 "resource_id": kg_thing.default_source_reference_id(),
                 "uri": kg_thing.uri,
-                "kg": len(file_thing.alias),
-                "file": len(kg_thing.alias),
+                "kg": len(kg_thing.alias),
+                "file": len(file_thing.alias),
             }
         )
     # Check if the aliases are different
@@ -157,8 +157,8 @@ def diff_entities(
                 "type": "data properties",
                 "resource_id": kg_thing.default_source_reference_id(),
                 "uri": kg_thing.uri,
-                "kg": len(file_thing.data_properties),
-                "file": len(kg_thing.data_properties),
+                "kg": len(kg_thing.data_properties),
+                "file": len(file_thing.data_properties),
             }
         )
 
@@ -187,18 +187,7 @@ def diff_entities(
                 }
             )
         for dp in data_properties:
-            if prop not in kg_thing.data_properties:
-                difference_data_properties.append(
-                    {
-                        "concept_type": file_thing.concept_type.name,
-                        "type": "Missing data properties",
-                        "resource_id": kg_thing.default_source_reference_id(),
-                        "uri": kg_thing.uri,
-                        "kg": "",
-                        "file": dp.value,
-                    }
-                )
-            elif dp.value not in [d.value for d in kg_thing.data_properties.get(prop)]:
+            if dp.value not in [d.value for d in kg_thing.data_properties.get(prop)]:
                 difference_data_properties.append(
                     {
                         "concept_type": file_thing.concept_type.name,
@@ -326,8 +315,8 @@ async def diff_entities_async(
                 "type": "description",
                 "resource_id": kg_thing.default_source_reference_id(),
                 "uri": kg_thing.uri,
-                "kg": len(file_thing.description),
-                "file": len(kg_thing.description),
+                "kg": len(kg_thing.description),
+                "file": len(file_thing.description),
             }
         )
     for desc_file in file_thing.description if file_thing.description else []:
@@ -391,7 +380,7 @@ async def diff_entities_async(
                     "resource_id": kg_thing.default_source_reference_id(),
                     "uri": kg_thing.uri,
                     "kg": label_kg_lang.content if label_kg_lang else "",
-                    "file": kg_thing.label[0].content,
+                    "file": label_file.content,
                 }
             )
     # Different number of aliases
@@ -402,8 +391,8 @@ async def diff_entities_async(
                 "type": "Number of aliases",
                 "resource_id": kg_thing.default_source_reference_id(),
                 "uri": kg_thing.uri,
-                "kg": len(file_thing.alias),
-                "file": len(kg_thing.alias),
+                "kg": len(kg_thing.alias),
+                "file": len(file_thing.alias),
             }
         )
     # Check if the aliases are different
@@ -429,8 +418,8 @@ async def diff_entities_async(
                 "type": "data properties",
                 "resource_id": kg_thing.default_source_reference_id(),
                 "uri": kg_thing.uri,
-                "kg": len(file_thing.data_properties),
-                "file": len(kg_thing.data_properties),
+                "kg": len(kg_thing.data_properties),
+                "file": len(file_thing.data_properties),
             }
         )
 
@@ -459,18 +448,7 @@ async def diff_entities_async(
                 }
             )
         for dp in data_properties:
-            if prop not in kg_thing.data_properties:
-                difference_data_properties.append(
-                    {
-                        "concept_type": file_thing.concept_type.name,
-                        "type": "Missing data properties",
-                        "resource_id": kg_thing.default_source_reference_id(),
-                        "uri": kg_thing.uri,
-                        "kg": "",
-                        "file": dp.value,
-                    }
-                )
-            elif dp.value not in [d.value for d in kg_thing.data_properties.get(prop)]:
+            if dp.value not in [d.value for d in kg_thing.data_properties.get(prop)]:
                 difference_data_properties.append(
                     {
                         "concept_type": file_thing.concept_type.name,
