@@ -2,7 +2,6 @@
 # Copyright © 2024-present Wacom. All rights reserved.
 import gzip
 import json
-import logging
 import re
 import uuid
 from json import JSONDecodeError
@@ -91,8 +90,7 @@ def __import_format_to_thing__(line: str, raise_on_error: bool = False) -> Thing
             else:
                 if raise_on_error:
                     raise ValueError(f"Image path {path} does not exist.")
-                else:
-                    logger.error(f"Image path {path} does not exist. Setting to None.")
+                logger.error(f"Image path {path} does not exist. Setting to None.")
                 entity.image = None
     remove_props: List[OntologyPropertyReference] = []
     # Remove empty properties
@@ -100,9 +98,8 @@ def __import_format_to_thing__(line: str, raise_on_error: bool = False) -> Thing
         if len(value.incoming_relations) == 0 and len(value.outgoing_relations) == 0:
             if raise_on_error:
                 raise ValueError(f"Property {obj_prop} has no incoming or outgoing relations.")
-            else:
-                logger.warning(f"Property {obj_prop} has no incoming or outgoing relations. Removing.")
-                remove_props.append(obj_prop)
+            logger.warning(f"Property {obj_prop} has no incoming or outgoing relations. Removing.")
+            remove_props.append(obj_prop)
     for prop in remove_props:
         del entity.object_properties[prop]
     return entity
@@ -142,11 +139,12 @@ def iterate_large_import_format(file_path: Path, raise_on_error: bool = False) -
         with gzip.open(file_path, "rt", encoding="utf-8") as f_gz:
             for line in f_gz:
                 yield __import_format_to_thing__(line, raise_on_error=raise_on_error)
-    if file_path.suffix.lower() == ".ndjson":
+    elif file_path.suffix.lower() == ".ndjson":
         with file_path.open("r", encoding="utf-8") as f:
             for line in f:
                 yield __import_format_to_thing__(line, raise_on_error=raise_on_error)
-    raise ValueError(f"Unsupported file format: {file_path.suffix}")
+    else:
+        raise ValueError(f"Unsupported file format: {file_path.suffix}")
 
 
 def load_import_format(file_path: Path, raise_on_error: bool = True) -> List[ThingObject]:
@@ -181,7 +179,7 @@ def load_import_format(file_path: Path, raise_on_error: bool = True) -> List[Thi
         logger.error(f"Path {file_path} is not a file.")
         raise FileNotFoundError(f"Path {file_path} is not a file.")
     cached_entities: List[ThingObject] = []
-    if file_path.suffix == ".gz":
+    if file_path.suffix.lower() == ".gz":
         with gzip.open(file_path, "rt", encoding="utf-8") as f_gz:
             for line_number, line in enumerate(f_gz):
                 stripped_line: str = line.strip()
@@ -193,20 +191,19 @@ def load_import_format(file_path: Path, raise_on_error: bool = True) -> List[Thi
                 try:
                     cached_entities.append(__import_format_to_thing__(line, raise_on_error=raise_on_error))
                 except JSONDecodeError as e:
-                    logging.error(f"[line:={line_number}] Error decoding JSON: {e}.")
+                    logger.error(f"[line:={line_number}] Error decoding JSON: {e}.")
                 except Exception as e:
-                    logging.error(f"[line:={line_number}] Error loading entity: {e}.")
+                    logger.error(f"[line:={line_number}] Error loading entity: {e}.")
 
     else:
         with file_path.open(encoding="utf8") as f:
-            # Skip the first line
-            for line_number, line in enumerate(f.readlines()):
+            for line_number, line in enumerate(f):
                 try:
-                    cached_entities.append(__import_format_to_thing__(line))
+                    cached_entities.append(__import_format_to_thing__(line, raise_on_error=raise_on_error))
                 except JSONDecodeError as e:
-                    logging.error(f"[line:={line_number}] Error decoding JSON: {e}.")
+                    logger.error(f"[line:={line_number}] Error decoding JSON: {e}.")
                 except Exception as e:
-                    logging.error(f"[line:={line_number}] - Error parsing import format {e}.")
+                    logger.error(f"[line:={line_number}] - Error parsing import format {e}.")
     return cached_entities
 
 
@@ -231,7 +228,7 @@ def save_import_format(
     """
     # Create the directory if it does not exist
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    if file_path.suffix == ".gz":
+    if file_path.suffix.lower() == ".gz":
         with gzip.open(file_path, "wt", encoding="utf-8") as fp_thing:
             for entity in entities:
                 if generate_missing_ref_ids and entity.default_source_reference_id() is None:

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024-present Wacom. All rights reserved.
 from typing import NewType, List, Dict
+
 #  ---------------------------------------- Type definitions -----------------------------------------------------------
 LanguageCode = NewType("LanguageCode", str)
 LocaleCode = NewType("LocaleCode", str)
