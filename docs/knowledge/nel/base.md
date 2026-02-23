@@ -62,25 +62,25 @@ Classes
     ### Class variables
 
     `DATE`
-    :
+    :   The type of the None singleton.
 
     `MONEY`
-    :
+    :   The type of the None singleton.
 
     `NUMBER`
-    :
+    :   The type of the None singleton.
 
     `PERSON`
-    :
+    :   The type of the None singleton.
 
     `PLACE`
-    :
+    :   The type of the None singleton.
 
     `TIME`
-    :
+    :   The type of the None singleton.
 
     `UNKNOWN`
-    :
+    :   The type of the None singleton.
 
 `EntitySource(uri: str, source: knowledge.nel.base.KnowledgeSource)`
 :   EntitySource
@@ -302,7 +302,7 @@ Classes
     ### Methods
 
     `is_language_supported(self, language_code: knowledge.base.language.LocaleCode) ‑> bool`
-    :   Is the language_code code supported by the engine.
+    :   Does the engine support the language_code code?
         
         Parameters
         ----------
@@ -354,7 +354,7 @@ Classes
     ### Class variables
 
     `LANGUAGES: List[knowledge.base.language.LocaleCode]`
-    :
+    :   The type of the None singleton.
 
     ### Instance variables
 
@@ -364,7 +364,7 @@ Classes
     ### Methods
 
     `is_language_supported(self, language_code: knowledge.base.language.LocaleCode) ‑> bool`
-    :   Is the language_code code supported by the engine.
+    :   Does the engine support the language code?
         
         Parameters
         -----------
@@ -425,7 +425,7 @@ Classes
     ### Methods
 
     `is_language_supported(self, language_code: knowledge.base.language.LocaleCode) ‑> bool`
-    :   Does the engine support the language_code code.
+    :   Does the engine support the language code?
         
         Parameters
         ----------

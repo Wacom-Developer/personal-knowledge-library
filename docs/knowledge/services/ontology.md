@@ -24,6 +24,27 @@ Classes
         Maximum number of retries for failed requests.
     backoff_factor: float
         Backoff factor between retries.
+    
+    Examples
+    --------
+    >>> from knowledge.services.ontology import OntologyService
+    >>>
+    >>> # Initialize the client
+    >>> client = OntologyService(
+    ...     service_url="https://private-knowledge.wacom.com"
+    ... )
+    >>> client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
+    >>>
+    >>> # Get ontology context
+    >>> context = client.context()
+    >>>
+    >>> # List all concepts (classes)
+    >>> concepts = client.concepts()
+    >>> for concept in concepts:
+    ...     print(f"Class: {concept.iri}")
+    >>>
+    >>> # List all properties
+    >>> properties = client.properties()
 
     ### Ancestors (in MRO)
 
@@ -34,19 +55,19 @@ Classes
     ### Class variables
 
     `CONCEPTS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `CONTEXT_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `PROPERTIES_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `PROPERTY_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `RDF_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     ### Methods
 

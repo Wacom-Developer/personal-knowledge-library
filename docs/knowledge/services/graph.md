@@ -76,6 +76,28 @@ Classes
         URL of the service
     service_endpoint: str
         Base endpoint
+    
+    Examples
+    --------
+    >>> from knowledge.services.graph import WacomKnowledgeService
+    >>> from knowledge.base.ontology import OntologyClassReference, ThingObject, Label
+    >>>
+    >>> # Initialize the client
+    >>> client = WacomKnowledgeService(
+    ...     service_url="https://private-knowledge.wacom.com",
+    ...     application_name="My App"
+    ... )
+    >>> client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
+    >>>
+    >>> # Create an entity
+    >>> entity = ThingObject(concept_type=OntologyClassReference.parse("wacom:core#Person"))
+    >>> entity.add_label("Albert Einstein", EN_US)
+    >>> uri = client.create_entity(entity)
+    >>>
+    >>> # Retrieve and update an entity
+    >>> retrieved = client.entity(uri)
+    >>> retrieved.add_label("Einstein", EN_US)
+    >>> client.update_entity(retrieved)
 
     ### Ancestors (in MRO)
 
@@ -86,58 +108,55 @@ Classes
     ### Class variables
 
     `ACTIVATIONS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `ENTITY_BULK_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `ENTITY_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `ENTITY_IMAGE_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `IMPORT_ENTITIES_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `IMPORT_ERROR_LOG_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `LISTING_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `ONTOLOGY_UPDATE_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `REBUILD_NEL_INDEX: str`
-    :
+    :   The type of the None singleton.
 
     `REBUILD_VECTOR_SEARCH_INDEX: str`
-    :
+    :   The type of the None singleton.
 
     `RELATIONS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `RELATION_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `SEARCH_DESCRIPTION_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `SEARCH_LABELS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `SEARCH_LITERALS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `SEARCH_RELATION_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `SEARCH_TYPES_ENDPOINT: str`
-    :
-
-    `USER_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     ### Methods
 
@@ -377,7 +396,7 @@ Classes
             If the graph service returns an error code or the entity is not found in the knowledge graph
 
     `exists(self, uri: str, auth_key: str | None = None, timeout: int = 60) ‑> bool`
-    :   Check if entity exists in knowledge graph.
+    :   Check if an entity exists in the knowledge graph.
         
         Parameters
         ----------
@@ -415,7 +434,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `import_entities_from_file(self, file_path: pathlib.Path, auth_key: str | None = None, timeout: int = 60) ‑> str`
+    `import_entities_from_file(self, file_path: pathlib._local.Path, auth_key: str | None = None, timeout: int = 60) ‑> str`
     :   Import entities from a file to the graph.
         
         Parameters
@@ -600,7 +619,7 @@ Classes
         Raises
         ------
         WacomServiceException
-            If the graph service returns an error code and commit failed.
+            If the graph service returns an error code and the commit failed.
 
     `rebuild_nel_index(self, nel_index: Literal['Western', 'Japanese'], prune: bool = False, auth_key: str | None = None, timeout: int = 60) ‑> None`
     :   Rebuild the named entity linking index.
@@ -898,7 +917,7 @@ Classes
         WacomServiceException
            If the graph service returns an error code.
 
-    `set_entity_image_local(self, entity_uri: str, path: pathlib.Path, auth_key: str | None = None, timeout: int = 60) ‑> str`
+    `set_entity_image_local(self, entity_uri: str, path: pathlib._local.Path, auth_key: str | None = None, timeout: int = 60) ‑> str`
     :   Setting the image of the entity.
         The image is stored locally.
         
@@ -930,7 +949,7 @@ Classes
         Parameters
         ----------
         auth_key: str
-            Auth key from user
+            The auth key from user
         entity_uri: str
             URI of the entity.
         image_url: str
@@ -967,5 +986,7 @@ Classes
         
         Raises
         ------
+        ValueError
+            If the entity has no URI.
         WacomServiceException
             If the graph service returns an error code

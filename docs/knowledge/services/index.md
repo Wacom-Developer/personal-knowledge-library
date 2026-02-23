@@ -9,7 +9,10 @@ Sub-modules
 * knowledge.services.graph
 * knowledge.services.group
 * knowledge.services.helper
+* knowledge.services.index_management
+* knowledge.services.ink
 * knowledge.services.ontology
+* knowledge.services.queue_management
 * knowledge.services.search
 * knowledge.services.session
 * knowledge.services.tenant

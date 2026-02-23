@@ -111,7 +111,7 @@ Classes
         WikidataThing
             The Wikidata object associated with the given QID.
 
-    `load_cache(self, cache_path: pathlib.Path) ‑> None`
+    `load_cache(self, cache_path: pathlib._local.Path) ‑> None`
     :   Loads the cache from a path.
         
         Parameters
@@ -177,7 +177,7 @@ Classes
         bool
             True if the QID is in the cache, False otherwise.
 
-    `save_cache(self, cache_path: pathlib.Path) ‑> None`
+    `save_cache(self, cache_path: pathlib._local.Path) ‑> None`
     :   Saves the cache to a file.
         
         Parameters

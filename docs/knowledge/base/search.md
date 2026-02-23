@@ -103,7 +103,7 @@ Classes
     vector_db_response_time: float
         Response time in milliseconds for the vector database.
     preprocessing_time: float
-        Preprocessing time in milliseconds for search query.
+        Preprocessing time in milliseconds for a search query.
 
     ### Ancestors (in MRO)
 
@@ -112,7 +112,7 @@ Classes
     ### Instance variables
 
     `preprocessing_time: float`
-    :   Preprocessing time in milliseconds for search query.
+    :   Preprocessing time in milliseconds for a search query.
 
 `FilterVectorDocumentsResponse(results: List[knowledge.base.search.VectorDocument], tenant_id: str)`
 :   Representation of a response containing filtered documents.
@@ -251,7 +251,7 @@ Classes
     vector_db_response_time: float
         Response time in milliseconds for the vector database.
     tokenizer_time: float
-        Tokenizer time in milliseconds for search query.
+        Tokenizer time in milliseconds for a search query.
     number_of_tokens: int
         Number of tokens in the search query.
 
@@ -265,7 +265,7 @@ Classes
     :   Number of tokens in the search query.
 
     `tokenizer_time: float`
-    :   Tokenizer time in milliseconds for search query.
+    :   Tokenizer time in milliseconds for a search query.
 
 `PerformanceStats(stats: Dict[str, Any])`
 :   PerformanceStats

@@ -78,9 +78,6 @@ Classes
     `refresh_token: str`
     :   Refresh token for the session.
 
-    `refreshable: bool`
-    :   Is the session refreshable?
-
     ### Methods
 
     `update_session(self, auth_token: str, refresh_token: str) ‑> None`
@@ -107,7 +104,7 @@ Classes
     id : str
         Unique session id, which will be the same for the same external user id, tenant, and instance of the service.
     auth_token : str
-        Authentication key used to identify an external user within private knowledge.
+        Authentication key is used to identify an external user within private knowledge.
     tenant_id : str
         Tenant id.
     refresh_token : Optional[str]
@@ -133,10 +130,10 @@ Classes
     :   Authentication key. The authentication key is used to identify an external user within private knowledge.
 
     `expired: bool`
-    :   Is the session expired.
+    :   Is the session expired?
 
     `expires_in: float`
-    :   Seconds until token is expired in seconds.
+    :   Seconds until the token is expired in seconds.
 
     `id: str`
     :   Unique session id, which will be the same for the same external user id, tenant,
@@ -146,7 +143,7 @@ Classes
     :   Refresh token. The refresh token is used to refresh the session.
 
     `refreshable: bool`
-    :   Is the session refreshable.
+    :   Is the session refreshable?
 
     `tenant_id: str`
     :   Tenant id.
@@ -258,7 +255,7 @@ Classes
     Manages sessions for authentication and authorization.
     
     The `TokenManager` class provides functionality to handle different types of
-    sessions including permanent, refreshable, and timed sessions. It ensures thread-safe
+     sessions, including permanent, refreshable, and timed sessions. It ensures thread-safe
     operations for adding, retrieving, removing, and maintaining sessions. It also
     includes utilities for cleaning up expired sessions.
     
@@ -280,11 +277,11 @@ Classes
         ----------
         auth_token: str
             The authentication token.
-        refresh_token: Optional[str] [default := None]
+        refresh_token: Optional[str] [default: = None]
             The refresh token.
-        tenant_api_key: Optional[str] [default := None]
+        tenant_api_key: Optional[str] [default: = None]
             The tenant api key.
-        external_user_id: Optional[str] [default := None]
+        external_user_id: Optional[str] [default: = None]
             The external user id.
         
         Returns

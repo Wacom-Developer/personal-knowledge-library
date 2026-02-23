@@ -192,7 +192,7 @@ Functions
         The refresh token
 
 `things_session_iter(wacom_client: knowledge.services.graph.WacomKnowledgeService, concept_type: knowledge.base.ontology.OntologyClassReference, visibility: knowledge.services.graph.Visibility | None = None, locale: knowledge.base.language.LocaleCode | None = None, only_own: bool = False, include_relations: bool | None = None, fetch_size: int = 100, force_refresh_timeout: int = 360) ‑> Iterator[knowledge.base.ontology.ThingObject]`
-:   Iterates over all things using the current session configured for client.
+:   Iterates over all things using the current session configured for a client.
     
     Parameters
     ----------
@@ -221,4 +221,4 @@ Functions
     Raises
     ------
     ValueError
-        If no session is configured for client
+        If no session is configured for a client

@@ -72,19 +72,21 @@ Classes
 
     * knowledge.services.asyncio.graph.AsyncWacomKnowledgeService
     * knowledge.services.asyncio.group.AsyncGroupManagementService
+    * knowledge.services.asyncio.ink.AsyncInkServices
+    * knowledge.services.asyncio.queue_management.AsyncQueueMonitorClient
     * knowledge.services.asyncio.search.AsyncSemanticSearchClient
     * knowledge.services.asyncio.users.AsyncUserManagementService
 
     ### Class variables
 
     `USER_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `USER_LOGIN_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `USER_REFRESH_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     ### Instance variables
 
@@ -323,7 +325,7 @@ Classes
             headers, and body data.
 
     `patch(self, url: str, **kwargs: Any) ‑> knowledge.services.asyncio.base.ResponseData`
-    :   Asynchronously sends a HTTP PATCH request to the specified URL.
+    :   Asynchronously sends an HTTP PATCH request to the specified URL.
         
         This method is a coroutine that simplifies sending PATCH requests
         using the underlying `request` method. It allows adding additional
@@ -461,30 +463,30 @@ Classes
     
     Attributes
     ----------
-    ok
+    ok: bool
         Boolean flag indicating success of the request.
-    status
+    status: str
         Numeric status code returned by the server.
-    content
+    content: Union[str, bytes, bool, Dict[str, Any], List[Any]]
         Raw payload returned in the response body.
-    url
+    url: str
         URL of the request.
-    method:
+    method: str
         Request method.
 
     ### Instance variables
 
     `content: str | bytes | bool | Dict[str, Any] | List[Any]`
-    :
+    :   The type of the None singleton.
 
     `method: str`
-    :
+    :   The type of the None singleton.
 
     `ok: bool`
-    :
+    :   The type of the None singleton.
 
     `status: int`
-    :
+    :   The type of the None singleton.
 
     `url: str`
-    :
+    :   The type of the None singleton.

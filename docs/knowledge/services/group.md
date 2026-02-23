@@ -6,7 +6,7 @@ Classes
 
 `Group(tenant_id: str, group_id: str, owner: str, name: str, join_key: str, rights: knowledge.base.access.GroupAccessRight)`
 :   Entities and users can be assigned to groups.
-    If the entity is assigned to a group the users have access to the entity with the rights defined in the group.
+    If the entity is assigned to a group, the users have access to the entity with the rights defined in the group.
     
     Parameters
     ----------
@@ -19,9 +19,9 @@ Classes
     name: str
         Name of the group.
     join_key: str
-        Key which is required to join the group
+        Key, which is required to join the group
     rights: GroupAccessRight
-        Access right for group.
+        Access right for a group.
     
     Attributes
     ----------
@@ -60,7 +60,7 @@ Classes
     ### Instance variables
 
     `group_access_rights: knowledge.base.access.GroupAccessRight`
-    :   Rights for group.
+    :   Rights for a group.
 
     `id: str`
     :   Group id.
@@ -89,9 +89,9 @@ Classes
     owner : str
         Owner id of the group.
     name : str
-        Display name of the group.
+        Display the name of the group.
     join_key : str
-        Key required to join the group.
+         Key is required to join the group.
     rights : GroupAccessRight
         Access rights associated with the group.
     group_users : List[User]
@@ -118,9 +118,9 @@ Classes
     
     Functionality:
         - List all groups
-        - Create group
-        - Assign users to group
-        - Share entities with group
+        - Create a group
+        - Assign users to a group
+        - Share entities with a group
     
     Parameters
     ----------
@@ -128,6 +128,26 @@ Classes
         URL of the service
     service_endpoint: str
         Base endpoint
+    
+    Examples
+    --------
+    >>> from knowledge.services.group import GroupManagementService
+    >>> from knowledge.base.access import GroupAccessRight
+    >>>
+    >>> # Initialize the client
+    >>> client = GroupManagementService(
+    ...     service_url="https://private-knowledge.wacom.com"
+    ... )
+    >>> client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
+    >>>
+    >>> # Create a group with read access
+    >>> group = client.create_group(
+    ...     name="Research Team",
+    ...     rights=GroupAccessRight(read=True, write=False, delete=False)
+    ... )
+    >>>
+    >>> # List all groups
+    >>> groups = client.listing_groups()
 
     ### Ancestors (in MRO)
 
@@ -249,7 +269,7 @@ Classes
         group_id: str
             Group ID
         join_key: str
-            Key which is used to join the group.
+            Key, which is used to join the group.
         auth_key: Optional[str]
             If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
@@ -282,7 +302,7 @@ Classes
         ----------
         admin: bool (default:= False)
             Uses admin privilege to show all groups of the tenants.
-            Requires user to have the role: TenantAdmin
+            Requires a user to have the role: TenantAdmin
         limit: int (default:= 20)
             Maximum number of groups to return.
         offset: int (default:= 0)
@@ -297,7 +317,7 @@ Classes
             List of groups.
 
     `remove_entity_to_group(self, group_id: str, entity_uri: str, auth_key: str | None = None, timeout: int = 60) ‑> None`
-    :   Remove an entity from group.
+    :   Remove an entity from a group.
         
         Parameters
         ----------

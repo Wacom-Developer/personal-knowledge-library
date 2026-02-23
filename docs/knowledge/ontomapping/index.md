@@ -53,7 +53,7 @@ Functions
     is_iso_date: bool
         True if the date string is an ISO date, otherwise False.
 
-`load_configuration(configuration: pathlib.Path) ‑> None`
+`load_configuration(configuration: pathlib._local.Path) ‑> None`
 :   Loads the configuration.
     
     Raises
@@ -269,10 +269,10 @@ Classes
     ### Class variables
 
     `DATA_PROPERTY`
-    :
+    :   The type of the None singleton.
 
     `OBJECT_PROPERTY`
-    :
+    :   The type of the None singleton.
 
 `WikidataClassEncoder(*, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True, sort_keys=False, indent=None, separators=None, default=None)`
 :   Wikidata Class encoder
@@ -282,8 +282,8 @@ Classes
     Constructor for JSONEncoder, with sensible defaults.
     
     If skipkeys is false, then it is a TypeError to attempt
-    encoding of keys that are not str, int, float or None.  If
-    skipkeys is True, such items are simply skipped.
+    encoding of keys that are not str, int, float, bool or None.
+    If skipkeys is True, such items are simply skipped.
     
     If ensure_ascii is true, the output is guaranteed to be str
     objects with all incoming non-ASCII characters escaped.  If

@@ -3,7 +3,7 @@ Module knowledge.base
 Base structures.
 ----------------
 This module provides the base structures for the knowledge graph.
-Such as the ontology, entities and access.
+Such as the ontology, entities, and access.
 
 The classes in this module are used by the knowledge graph service.
 For instance, the ontology structure is used to create the structure knowledge graph.
@@ -18,6 +18,8 @@ Sub-modules
 -----------
 * knowledge.base.access
 * knowledge.base.entity
+* knowledge.base.index
+* knowledge.base.ink
 * knowledge.base.language
 * knowledge.base.ontology
 * knowledge.base.queue

@@ -59,10 +59,6 @@ Classes
     :   Creates a dictionary representation of the object containing its textual
         content and locale information.
         
-        Parameters
-        ----------
-        None
-        
         Returns
         -------
         dict
@@ -178,7 +174,7 @@ Classes
     ### Instance variables
 
     `main: bool`
-    :   Flag if the content is the  main content or an alias.
+    :   Flag if the content is the main content or an alias.
 
     ### Methods
 

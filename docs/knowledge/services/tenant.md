@@ -37,6 +37,23 @@ Classes
         API endpoint for tenant-related functionalities.
     USER_DETAILS_ENDPOINT : str
         API endpoint for retrieving user details.
+    
+    Examples
+    --------
+    >>> from knowledge.services.tenant import TenantManagementServiceAPI
+    >>>
+    >>> # Initialize the client with tenant management token
+    >>> client = TenantManagementServiceAPI(
+    ...     tenant_token="<tenant_management_token>",
+    ...     service_url="https://private-knowledge.wacom.com"
+    ... )
+    >>>
+    >>> # Create a new tenant
+    >>> tenant = client.create_tenant(name="My Tenant")
+    >>> print(f"Tenant ID: {tenant['id']}, API Key: {tenant['apiKey']}")
+    >>>
+    >>> # List all tenants
+    >>> tenants = client.listing_tenant()
 
     ### Ancestors (in MRO)
 
@@ -47,10 +64,10 @@ Classes
     ### Class variables
 
     `TENANT_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `USER_DETAILS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     ### Instance variables
 
@@ -134,6 +151,6 @@ Classes
         vector_search_object_properties: List[str]
             List of object properties that are automatically added to meta-data of the vector search index documents.
         content_data_property_name: str
-            The data property that is used to indexing its content to the document index.
+            The data property used to index its content to the document index.
         timeout: int
             Timeout for the request (default: 60 seconds)

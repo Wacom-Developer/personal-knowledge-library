@@ -7,7 +7,7 @@ Classes
 `AsyncWacomKnowledgeService(service_url: str, application_name: str, base_auth_url: str | None = None, service_endpoint: str = 'graph/v1', verify_calls: bool = True, timeout: int = 60)`
 :   AsyncWacomKnowledgeService
     ---------------------
-    Client for the Semantic Ink Private knowledge system.
+    Async client for the Semantic Ink Private knowledge system.
     
     Operations for entities:
         - Creation of entities
@@ -23,6 +23,28 @@ Classes
         URL of the service
     service_endpoint: str
         Base endpoint
+    
+    Examples
+    --------
+    >>> import asyncio
+    >>> from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
+    >>> from knowledge.base.ontology import OntologyClassReference, ThingObject
+    >>>
+    >>> async def main():
+    ...     client = AsyncWacomKnowledgeService(
+    ...         service_url="https://private-knowledge.wacom.com",
+    ...         application_name="My App"
+    ...     )
+    ...     await client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
+    ...
+    ...     # Create an entity
+    ...     entity = ThingObject(concept_type=OntologyClassReference.parse("wacom:core#Person"))
+    ...     uri = await client.create_entity(entity)
+    ...
+    ...     # Retrieve an entity
+    ...     retrieved = await client.entity(uri)
+    >>>
+    >>> asyncio.run(main())
 
     ### Ancestors (in MRO)
 
@@ -33,58 +55,55 @@ Classes
     ### Class variables
 
     `ACTIVATIONS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `ENTITY_BULK_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `ENTITY_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `ENTITY_IMAGE_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `IMPORT_ENTITIES_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `IMPORT_ERROR_LOG_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `LISTING_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `MAX_NUMBER_URIS: int`
-    :
+    :   The type of the None singleton.
 
     `NAMED_ENTITY_LINKING_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `ONTOLOGY_UPDATE_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `RELATIONS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `RELATION_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `SEARCH_DESCRIPTION_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `SEARCH_LABELS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `SEARCH_LITERALS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `SEARCH_RELATION_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `SEARCH_TYPES_ENDPOINT: str`
-    :
-
-    `USER_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     ### Methods
 
@@ -126,7 +145,7 @@ Classes
         targets: List[IndexType]
             List of indexing targets
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -176,7 +195,7 @@ Classes
         ignore_images: bool
             Do not automatically upload images
         auth_key: Optional[str]
-            If auth key is not set, the client auth key will be used.
+            If the auth key is not set, the client auth key will be used.
         
         Returns
         -------
@@ -314,7 +333,7 @@ Classes
             If the graph service returns an error code or the entity is not found in the knowledge graph
 
     `exists(self, uri: str) ‑> bool`
-    :   Check if entity exists in knowledge graph.
+    :   Check if an entity exists in the knowledge graph.
         
         Parameters
         ----------
@@ -348,7 +367,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `import_entities_from_file(self, file_path: pathlib.Path, auth_key: str | None = None, timeout: int = 60) ‑> str`
+    `import_entities_from_file(self, file_path: pathlib._local.Path, auth_key: str | None = None, timeout: int = 60) ‑> str`
     :   Import entities from a file to the graph.
         
         Parameters
@@ -549,7 +568,7 @@ Classes
         Raises
         ------
         WacomServiceException
-            If the graph service returns an error code and commit failed.
+            If the graph service returns an error code and the commit failed.
 
     `relations(self, uri: str, auth_key: str | None = None, timeout: int = 60) ‑> Dict[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.ObjectProperty]`
     :   Retrieve the relations (object properties) of an entity.
@@ -585,7 +604,7 @@ Classes
         targets: List[IndexType]
             List of indexing targets
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
         
@@ -593,7 +612,7 @@ Classes
         -------
         update_status: Dict[str, Any]
             Status per target (depending on the targets of entity and the ones set in the request), e.g.,
-            response will only contain {"NEL: "DELETE"}, if NEL is the only target in the request.
+            response will only contain {"NEL": "DELETE"}, if NEL is the only target in the request.
         
         Raises
         ------
@@ -798,7 +817,7 @@ Classes
         WacomServiceException
             If the graph service returns an error code.
 
-    `set_entity_image_local(self, entity_uri: str, path: pathlib.Path, auth_key: str | None = None) ‑> str`
+    `set_entity_image_local(self, entity_uri: str, path: pathlib._local.Path, auth_key: str | None = None) ‑> str`
     :   Setting the image of the entity.
         The image is stored locally.
         
@@ -828,7 +847,7 @@ Classes
         Parameters
         ----------
         auth_key: str
-            Auth key from user
+            The auth key from user
         entity_uri: str
             URI of the entity.
         image_url: str

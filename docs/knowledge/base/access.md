@@ -9,11 +9,11 @@ Classes
     
     Parameters
     ----------
-    read: bool (default := False)
+    read: bool (default: = False)
         Read access for entity within tenant.
-    write: bool (default := False)
-        Write access for entity within tenant.
-    delete: bool (default := False)
+    write: bool (default:= False)
+        Write access for entity within a tenant.
+    delete: bool (default:= False)
         Delete access for entity within tenant.
 
     ### Descendants
@@ -24,13 +24,13 @@ Classes
     ### Class variables
 
     `DELETE: str`
-    :
+    :   The type of the None singleton.
 
     `READ: str`
-    :
+    :   The type of the None singleton.
 
     `WRITE: str`
-    :
+    :   The type of the None singleton.
 
     ### Instance variables
 
@@ -46,7 +46,7 @@ Classes
     ### Methods
 
     `to_list(self) ‑> List[str]`
-    :   Converts the access to list of properties.
+    :   Converts the access to a list of properties.
         
         Returns
         -------
@@ -60,12 +60,12 @@ Classes
     
     Parameters
     ----------
-    read: bool (default := False)
-        Read access for entity within group.
-    write: bool (default := False)
-        Write access for entity within group.
-    delete: bool (default := False)
-        Delete access for entity within group.
+    read: bool (default:= False)
+        Read access for entity within a group.
+    write: bool (default:= False)
+        Write access for entity within a group.
+    delete: bool (default:= False)
+        Delete access for entity within a group.
 
     ### Ancestors (in MRO)
 
@@ -74,7 +74,7 @@ Classes
     ### Static methods
 
     `parse(param: List[str]) ‑> knowledge.base.access.GroupAccessRight`
-    :   Converts the access to list of properties.
+    :   Converts the access to a list of properties.
         
         Parameters
         ----------
@@ -93,11 +93,11 @@ Classes
     
     Parameters
     ----------
-    read: bool (default := False)
+    read: bool (default:= False)
         Read access for entity within tenant.
-    write: bool (default := False)
-        Write access for entity within tenant.
-    delete: bool (default := False)
+    write: bool (default:= False)
+        Write access for entity within a tenant.
+    delete: bool (default:= False)
         Delete access for entity within tenant.
 
     ### Ancestors (in MRO)
@@ -107,7 +107,7 @@ Classes
     ### Static methods
 
     `parse(param: List[str]) ‑> knowledge.base.access.TenantAccessRight`
-    :   Converts the access to list of properties.
+    :   Converts the access to a list of properties.
         
         Parameters
         ----------

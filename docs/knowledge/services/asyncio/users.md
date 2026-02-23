@@ -19,6 +19,29 @@ Classes
         URL of the service
     service_endpoint: str
         Base endpoint
+    
+    Examples
+    --------
+    >>> import asyncio
+    >>> from knowledge.services.asyncio.users import AsyncUserManagementService
+    >>> from knowledge.services.users import UserRole
+    >>>
+    >>> async def main():
+    ...     client = AsyncUserManagementService(
+    ...         service_url="https://private-knowledge.wacom.com"
+    ...     )
+    ...
+    ...     # Create a new user
+    ...     user, token, refresh, expiry = await client.create_user(
+    ...         tenant_key="<tenant_api_key>",
+    ...         external_id="user@example.com",
+    ...         roles=[UserRole.USER]
+    ...     )
+    ...
+    ...     # List all users
+    ...     users, total = await client.listing_users(tenant_key="<tenant_api_key>")
+    >>>
+    >>> asyncio.run(main())
 
     ### Ancestors (in MRO)
 
@@ -29,7 +52,7 @@ Classes
     ### Class variables
 
     `USER_DETAILS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     ### Methods
 

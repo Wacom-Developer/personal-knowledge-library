@@ -52,10 +52,6 @@ Classes
     `as_dict(self) ‑> Dict[str, Any]`
     :   Return a dictionary representation of the object.
         
-        Parameters
-        ----------
-        None
-        
         Returns
         -------
         dict
@@ -87,7 +83,7 @@ Classes
     ### Static methods
 
     `create_from_dict(data_property_struct: Dict[str, Any]) ‑> knowledge.base.ontology.DataProperty`
-    :   Create data property from dictionary.
+    :   Create a data property from a dictionary.
         
         Parameters
         ----------
@@ -100,7 +96,7 @@ Classes
             Data property instance.
 
     `create_from_list(param: List[Dict[str, Any]]) ‑> List[knowledge.base.ontology.DataProperty]`
-    :   Create data property list from dictionary list.
+    :   Create a data property list from a dictionary list.
         
         Parameters
         ----------
@@ -150,6 +146,7 @@ Classes
 
     ### Ancestors (in MRO)
 
+    * builtins.str
     * enum.Enum
 
     ### Class variables
@@ -271,6 +268,44 @@ Classes
     `YEAR_MONTH_DURATION`
     :   Duration of time (months and years only)
 
+`InflectionSetting(concept: str, inflection: str, case_sensitive: bool)`
+:   Inflection settings
+    --------------------
+    
+    Parameters
+    ----------
+    concept: str
+        Concept class
+    inflection: str
+        Inflection setting
+    case_sensitive: bool
+        Entity labels of the class treated case-sensitive
+
+    ### Static methods
+
+    `from_dict(entity: Dict[str, Any]) ‑> knowledge.base.ontology.InflectionSetting`
+    :   Create an inflection setting from the dictionary.
+        Parameters
+        ----------
+        entity: Dict[str, Any]
+            Entity dictionary
+        
+        Returns
+        -------
+        instance: InflectionSetting
+            Inflection setting instance
+
+    ### Instance variables
+
+    `case_sensitive: bool`
+    :   Are entity labels of the class treated as case-sensitive?
+
+    `concept: knowledge.base.ontology.OntologyClassReference`
+    :   Concept class.
+
+    `inflection: str`
+    :   Inflection setting
+
 `ObjectProperty(relation: knowledge.base.ontology.OntologyPropertyReference, incoming: List[str | ForwardRef('ThingObject')] | None = None, outgoing: List[str | ForwardRef('ThingObject')] | None = None)`
 :   Object Property
     ---------------
@@ -293,7 +328,7 @@ Classes
     ### Static methods
 
     `create_from_dict(relation_struct: Dict[str, Any]) ‑> Tuple[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.ObjectProperty]`
-    :   Create object property from dictionary.
+    :   Create object property from a dictionary.
         
         Parameters
         ----------
@@ -306,7 +341,7 @@ Classes
             The OntologyPropertyReference type
 
     `create_from_list(param: List[Dict[str, Any]]) ‑> Dict[knowledge.base.ontology.OntologyPropertyReference, knowledge.base.ontology.ObjectProperty]`
-    :   Create object property list from dictionary list.
+    :   Create an object property list from a dictionary list.
         Parameters
         ----------
         param: List[Dict[str, Any]]
@@ -373,7 +408,7 @@ Classes
     ### Static methods
 
     `from_dict(concept_dict: Dict[str, Any]) ‑> knowledge.base.ontology.OntologyClass`
-    :   Create OntologyClass from dictionary.
+    :   Create OntologyClass from a dictionary.
         
         Parameters
         ----------
@@ -386,7 +421,7 @@ Classes
             Instance of OntologyClass object.
 
     `new() ‑> knowledge.base.ontology.OntologyClass`
-    :   Create new ontology class.
+    :   Create a new ontology class.
         
         Returns
         -------
@@ -404,7 +439,7 @@ Classes
 `OntologyClassReference(scheme: str, context: str, class_name: str)`
 :   Ontology class type
     -------------------
-    Associated to an ontology class.
+    Associated with an ontology class.
     
     Parameters
     ----------
@@ -567,12 +602,12 @@ Classes
     ### Instance variables
 
     `main: bool`
-    :   Flag if the content is the  main content or an alias.
+    :   Flag if the content is the main content or an alias.
 
     ### Methods
 
     `as_dict(self) ‑> Dict[str, Any]`
-    :   Returns a dictionary mapping tag constants to the object's content, language code, and main status.
+    :   Returns a dictionary mapping tag constant to the object's content, language code, and main status.
         
         Returns
         -------
@@ -627,7 +662,7 @@ Classes
     ### Static methods
 
     `from_dict(property_dict: Dict[str, Any]) ‑> knowledge.base.ontology.OntologyProperty`
-    :   Create ontology property from dictionary.
+    :   Create ontology property from a dictionary.
         Parameters
         ----------
         property_dict: Dict[str, Any]
@@ -639,7 +674,7 @@ Classes
             Ontology property instance.
 
     `new(kind: knowledge.base.ontology.PropertyType) ‑> knowledge.base.ontology.OntologyProperty`
-    :   Create new ontology property.
+    :   Create a new ontology property.
         Parameters
         ----------
         kind: PropertyType
@@ -659,12 +694,12 @@ Classes
     :   Reference to the inverse property
 
     `is_data_property: bool`
-    :   Check if property is data property.
+    :   Check if a property is a data property.
         
         Returns
         -------
         is_data_property: bool
-            True if property is data property, False otherwise.
+            True if a property is a data property, False otherwise.
 
     `kind: knowledge.base.ontology.PropertyType`
     :   Kind of the property.
@@ -681,7 +716,7 @@ Classes
 `OntologyPropertyReference(scheme: str, context: str, property_name: str)`
 :   Property reference
     ------------------
-    Associated to an ontology property.
+    Associated with an ontology property.
     
     Parameters
     ----------
@@ -717,6 +752,24 @@ Classes
     `property_name: str`
     :   Property name.
 
+`PropertyType(*args, **kwds)`
+:   PropertyType
+    -----------
+    Within the ontology two different property types are defined. A data- and an object property.
+
+    ### Ancestors (in MRO)
+
+    * builtins.str
+    * enum.Enum
+
+    ### Class variables
+
+    `DATA_PROPERTY`
+    :   The type of the None singleton.
+
+    `OBJECT_PROPERTY`
+    :   The type of the None singleton.
+
 `ThingEncoder(*, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True, sort_keys=False, indent=None, separators=None, default=None)`
 :   Thing encoder
     -------------
@@ -725,8 +778,8 @@ Classes
     Constructor for JSONEncoder, with sensible defaults.
     
     If skipkeys is false, then it is a TypeError to attempt
-    encoding of keys that are not str, int, float or None.  If
-    skipkeys is True, such items are simply skipped.
+    encoding of keys that are not str, int, float, bool or None.
+    If skipkeys is True, such items are simply skipped.
     
     If ensure_ascii is true, the output is guaranteed to be str
     objects with all incoming non-ASCII characters escaped.  If
@@ -820,7 +873,7 @@ Classes
     use_vector_index: bool (default:= False)
         Use vector index for labels
     use_vector_index_document: bool (default:= False)
-        Use vector index for document
+        Use vector index for a document
     use_full_text_index: bool (default:= True)
         Use full text index for entity
 
@@ -839,18 +892,28 @@ Classes
         instance: ThingObject
             The ThingObject that is created from the dict
 
-    `from_import_dict(entity: Dict[str, Any]) ‑> knowledge.base.ontology.ThingObject`
+    `from_import_dict(entity: Dict[str, Any], raise_on_error: bool = False) ‑> knowledge.base.ontology.ThingObject`
     :   Creates a ThingObject from a dict.
         
         Parameters
         ----------
         entity: Dict[str, Any]
             Dictionary that contains the data of the entity
+        raise_on_error: bool (default:= False)
+            Whether to raise an error if the dict contains unsupported locales or if there is a mismatch in source
+            reference id or source system. If False, the errors will be logged as warnings. The entity will still
+            be created, but the unsupported locales will be ignored, and in case of a mismatch in source reference
+            id or source system, the value from the dict will be used.
         
         Returns
         -------
         instance: ThingObject
             The ThingObject that is created from the dict
+        
+        Raises
+        ------
+        ValueError:
+            If the dict contains unsupported locales, or if there is a mismatch in source reference id or source system.
 
     ### Instance variables
 
@@ -882,7 +945,7 @@ Classes
     :   Ontology types. For public entities.
 
     `owner: bool`
-    :   Is current user the owner of the entity.
+    :   Is the current user the owner of the entity?
 
     `owner_external_user_id: str | None`
     :   External user id of the owner.
@@ -906,7 +969,7 @@ Classes
     :   Access rights for tenant.
 
     `uri: str | None`
-    :   Unique identifier for entity. If the entity not yet imported into the knowledge graph, the URI is None.
+    :   Unique identifier for entity. If the entity is not yet imported into the knowledge graph, the URI is None.
 
     `use_for_nel: bool`
     :   Use the entity for named entity linking.
@@ -926,7 +989,7 @@ Classes
     ### Methods
 
     `add_alias(self, alias: str, language_code: knowledge.base.language.LocaleCode) ‑> None`
-    :   Adding an alias for entity.
+    :   Adding an alias for an entity.
         
         Parameters
         ----------
@@ -954,7 +1017,7 @@ Classes
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
     `add_label(self, label: str, language_code: knowledge.base.language.LocaleCode) ‑> None`
-    :   Adding a label for entity.
+    :   Adding a label for an entity.
         
         Parameters
         ----------
@@ -981,7 +1044,7 @@ Classes
             **Remark:** The data property must have the property type 'wacom:core#sourceReferenceId'.
 
     `add_source_system(self, value: knowledge.base.ontology.DataProperty) ‑> None`
-    :   Adding the source system  of the entity.
+    :   Adding the source system of the entity.
         
         Parameters
         -----------
@@ -1084,7 +1147,7 @@ Classes
             Returns the description for a specific language_code code if it exists, otherwise None.
 
     `label_lang(self, language_code: knowledge.base.language.LocaleCode | knowledge.base.language.LanguageCode) ‑> knowledge.base.entity.Label | None`
-    :   Get label for language_code code.
+    :   Get a label for language_code code.
         
         Parameters
         ----------
@@ -1096,7 +1159,7 @@ Classes
             Returns the label for a specific language code
 
     `remove_alias(self, label: knowledge.base.entity.Label) ‑> None`
-    :   Remove alias for entity if it exists for language.
+    :   Remove alias for an entity if it exists for language.
         
         Parameters
         ----------
@@ -1112,7 +1175,7 @@ Classes
             Data property to be removed.
 
     `remove_description(self, language_code: knowledge.base.language.LocaleCode) ‑> None`
-    :   Remove description for entity if it exists for language.
+    :   Remove description for an entity if it exists for language.
         
         Parameters
         ----------
@@ -1120,7 +1183,7 @@ Classes
             ISO-3166 Country Codes and ISO-639 Language Codes in the format '<language_code>_<country>', e.g., 'en_US'.
 
     `remove_label(self, language_code: knowledge.base.language.LocaleCode) ‑> None`
-    :   Remove label for entity if it exists for language.
+    :   Remove the label for an entity if it exists for language.
         
         Parameters
         ----------

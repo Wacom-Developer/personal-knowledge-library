@@ -5,15 +5,15 @@ Classes
 -------
 
 `AsyncGroupManagementService(service_url: str, application_name: str = 'Group Management Service', base_auth_url: str | None = None, service_endpoint: str = 'graph/v1', verify_calls: bool = True, timeout: int = 60)`
-:   Group Management Service API
-    -----------------------------
+:   Async Group Management Service API
+    ----------------------------------
     The service is managing groups.
     
     Functionality:
         - List all groups
-        - Create group
+        - Create a group
         - Assign users to group
-        - Share entities with group
+        - Share entities with a group
     
     Parameters
     ----------
@@ -21,6 +21,29 @@ Classes
         URL of the service
     service_endpoint: str
         Base endpoint
+    
+    Examples
+    --------
+    >>> import asyncio
+    >>> from knowledge.services.asyncio.group import AsyncGroupManagementService
+    >>> from knowledge.base.access import GroupAccessRight
+    >>>
+    >>> async def main():
+    ...     client = AsyncGroupManagementService(
+    ...         service_url="https://private-knowledge.wacom.com"
+    ...     )
+    ...     await client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
+    ...
+    ...     # Create a group with read access
+    ...     group = await client.create_group(
+    ...         name="My group",
+    ...         rights=GroupAccessRight(read=True, write=False, delete=False)
+    ...     )
+    ...
+    ...     # List all groups
+    ...     groups = await client.listing_groups()
+    >>>
+    >>> asyncio.run(main())
 
     ### Ancestors (in MRO)
 
@@ -45,7 +68,7 @@ Classes
         entity_uri: str
             Entities URI
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (in seconds). Default: 60 seconds.
         Raises
@@ -63,7 +86,7 @@ Classes
         user_id: str
             User who is added to the group
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (in seconds). Default: 60 seconds.
         
@@ -84,7 +107,7 @@ Classes
         rights: GroupAccessRight
             Access rights
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (in seconds). Default: 60 seconds.
         
@@ -125,7 +148,7 @@ Classes
         group_id: str
             Group ID
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (in seconds). Default: 60 seconds.
         
@@ -147,7 +170,7 @@ Classes
         group_id: str
             Group ID
         join_key: str
-            Key which is used to join the group.
+            Key, which is used to join the group.
         auth_key: Optional[str]
             If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
@@ -165,7 +188,7 @@ Classes
         group_id: str
             Group ID
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (in seconds). Default: 60 seconds.
         
@@ -180,14 +203,14 @@ Classes
         Parameters
         ----------
         admin: bool (default:= False)
-            Uses admin privilege to show all groups of the tenant.
-            Requires user to have the role: TenantAdmin
+            Uses admin privilege to show all groups of the tenants.
+            Requires a user to have the role: TenantAdmin
         limit: int (default:= 20)
             Maximum number of groups to return.
         offset: int (default:= 0)
             Offset of the first group to return.
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (in seconds). Default: 60 seconds.
         
@@ -228,9 +251,9 @@ Classes
         group_id: str
             Group ID
         user_id: str
-            User who is remove from the group
+            User who is removed from the group
         force: bool
-            If true remove user and entities owned by the user if any
+            If true, remove user and entities owned by the user if any
         auth_key: Optional[str]
             If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
@@ -254,7 +277,7 @@ Classes
         rights: GroupAccessRight
             Access rights
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Default timeout for the request (in seconds). Default: 60 seconds.
         Raises

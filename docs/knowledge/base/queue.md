@@ -30,7 +30,7 @@ Classes
 `MessageStats(publish: int | None = None, publish_details: knowledge.base.queue.MessageRate | None = None, deliver: int | None = None, deliver_details: knowledge.base.queue.MessageRate | None = None, ack: int | None = None, ack_details: knowledge.base.queue.MessageRate | None = None)`
 :   Represents statistics related to message publishing, delivery, and acknowledgments.
     
-    This class is used to store statistics about messages such as their publish count,
+    This class is used to store statistics about messages such as their publication count,
     delivery count, acknowledgment count, and the corresponding details about rates.
     It serves as a structured model for handling message statistics data.
     
@@ -78,7 +78,7 @@ Classes
 :   Represents a model for maintaining a queue's name and its count.
     
     This class is primarily designed to encapsulate the queue name and the
-    count of items or occurrences associated with it. It can be utilized
+    count of items or occurrences associated with it. It can be used
     in various queue-related workflows or systems where such data is required.
     
     Attributes
@@ -176,7 +176,7 @@ Classes
     :   Number of messages delivered to consumers but not yet acknowledged.
 
     `name: str`
-    :   Name of the queue being monitored.
+    :   The name of the queue being monitored.
 
     `state: str`
     :   Current state of the queue (e.g., running, idle).

@@ -212,7 +212,9 @@ Classes
     * knowledge.nel.base.PersonalEntityLinkingProcessor
     * knowledge.services.graph.WacomKnowledgeService
     * knowledge.services.group.GroupManagementService
+    * knowledge.services.ink.InkServices
     * knowledge.services.ontology.OntologyService
+    * knowledge.services.queue_management.QueueManagementClient
     * knowledge.services.search.SemanticSearchClient
     * knowledge.services.tenant.TenantManagementServiceAPI
     * knowledge.services.users.UserManagementServiceAPI
@@ -220,13 +222,13 @@ Classes
     ### Class variables
 
     `USER_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `USER_LOGIN_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     `USER_REFRESH_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     ### Instance variables
 

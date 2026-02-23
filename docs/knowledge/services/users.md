@@ -67,6 +67,25 @@ Classes
         URL of the service
     service_endpoint: str
         Base endpoint
+    
+    Examples
+    --------
+    >>> from knowledge.services.users import UserManagementServiceAPI, UserRole
+    >>>
+    >>> # Initialize the client
+    >>> client = UserManagementServiceAPI(
+    ...     service_url="https://private-knowledge.wacom.com"
+    ... )
+    >>>
+    >>> # Create a new user
+    >>> user, token, refresh, expiry = client.create_user(
+    ...     tenant_key="<tenant_api_key>",
+    ...     external_id="user@example.com",
+    ...     roles=[UserRole.USER]
+    ... )
+    >>>
+    >>> # List all users
+    >>> users, total = client.listing_users(tenant_key="<tenant_api_key>")
 
     ### Ancestors (in MRO)
 
@@ -77,7 +96,7 @@ Classes
     ### Class variables
 
     `USER_DETAILS_ENDPOINT: str`
-    :
+    :   The type of the None singleton.
 
     ### Methods
 
@@ -118,7 +137,7 @@ Classes
         Parameters
         ----------
         tenant_key: str
-            API key for tenant
+            An API key for tenant
         external_id: str
             External id of user identification service.
         internal_id: str
@@ -139,7 +158,7 @@ Classes
         Parameters
         ----------
         tenant_key: str
-            API key for tenant
+            An API key for tenant
         offset: int - [optional]
             Offset value to define the starting position in a list. [DEFAULT:= 0]
         limit: int - [optional]
