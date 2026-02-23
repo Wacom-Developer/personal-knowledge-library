@@ -1,3 +1,7 @@
+2026/02/20 - RELEASE 4.2.1
+==========================
+- Introduce a raise_on_error parameter to import parsing paths to control error handling.
+
 2026/02/20 - RELEASE 4.2.0
 ==========================
 - Refactoring, move the functions for queue management to dedicated QueueClient
