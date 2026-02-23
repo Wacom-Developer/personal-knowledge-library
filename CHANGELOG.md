@@ -1,3 +1,9 @@
+2026/02/20 - RELEASE 4.2.2
+==========================
+- Add additional checks for unsupported locales in the description 
+- Fix grammar in API documentation
+- Re-generate API documentation
+
 2026/02/20 - RELEASE 4.2.1
 ==========================
 - Introduce a raise_on_error parameter to import parsing paths to control error handling.
