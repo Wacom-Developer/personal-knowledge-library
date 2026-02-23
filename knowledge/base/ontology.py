@@ -213,7 +213,7 @@ class OntologyLabel(LocalizedContent):
 
     @property
     def main(self) -> bool:
-        """Flag if the content is the  main content or an alias."""
+        """Flag if the content is the main content or an alias."""
         return self.__main
 
     @staticmethod
@@ -269,7 +269,7 @@ class OntologyLabel(LocalizedContent):
 
     def as_dict(self) -> Dict[str, Any]:
         """
-        Returns a dictionary mapping tag constants to the object's content, language code, and main status.
+        Returns a dictionary mapping tag constant to the object's content, language code, and main status.
 
         Returns
         -------
@@ -297,7 +297,7 @@ class OntologyObjectReference(abc.ABC):
     """
     Ontology class type
     ------------------
-    Associated to an entity to link the type of the entity.
+    Associated with an entity to link the type of the entity.
 
     Parameters
     ----------
@@ -367,7 +367,7 @@ class OntologyClassReference(OntologyObjectReference):
     """
     Ontology class type
     -------------------
-    Associated to an ontology class.
+    Associated with an ontology class.
 
     Parameters
     ----------
@@ -417,7 +417,7 @@ class OntologyPropertyReference(OntologyObjectReference):
     """
     Property reference
     ------------------
-    Associated to an ontology property.
+    Associated with an ontology property.
 
     Parameters
     ----------
@@ -527,10 +527,6 @@ class Comment(LocalizedContent):
         """
         Return a dictionary representation of the object.
 
-        Parameters
-        ----------
-        None
-
         Returns
         -------
         dict
@@ -608,7 +604,7 @@ class OntologyObject(abc.ABC):
 
     @property
     def labels(self) -> List[OntologyLabel]:
-        """Labels related to ontology object."""
+        """Labels related to an ontology object."""
         return self.__labels if self.__labels is not None else []
 
     def label_for_lang(self, language_code: LanguageCode) -> Optional[OntologyLabel]:
@@ -631,7 +627,7 @@ class OntologyObject(abc.ABC):
 
     @property
     def comments(self) -> List[Comment]:
-        """Comment related to ontology object."""
+        """Comment related to an ontology object."""
         return self.__comments if self.__comments is not None else []
 
     def comment_for_lang(self, language_code: LanguageCode) -> Optional[Comment]:
@@ -657,8 +653,8 @@ class OntologyContextSettings:
     """
     OntologyContextSettings
     -----------------------
-    Describes the settings of the context, such as:
-    - prefixes for RDF, RDFS and OWL
+    Describes the settings of the context, such as
+    - prefixes for RDF, RDFS, and OWL
     - Base literal URI
     - Base class URI
     - Description literal name
@@ -922,7 +918,7 @@ class OntologyClass(OntologyObject):
 
     @classmethod
     def from_dict(cls, concept_dict: Dict[str, Any]) -> "OntologyClass":
-        """Create OntologyClass from dictionary.
+        """Create OntologyClass from a dictionary.
 
         Parameters
         ----------
@@ -963,7 +959,7 @@ class OntologyClass(OntologyObject):
     @classmethod
     def new(cls) -> "OntologyClass":
         """
-        Create new ontology class.
+        Create a new ontology class.
 
         Returns
         -------
@@ -1029,12 +1025,12 @@ class OntologyProperty(OntologyObject):
 
     @property
     def is_data_property(self) -> bool:
-        """Check if property is data property.
+        """Check if a property is a data property.
 
         Returns
         -------
         is_data_property: bool
-            True if property is data property, False otherwise.
+            True if a property is a data property, False otherwise.
         """
         return self.kind != PropertyType.OBJECT_PROPERTY
 
@@ -1077,7 +1073,7 @@ class OntologyProperty(OntologyObject):
     @classmethod
     def from_dict(cls, property_dict: Dict[str, Any]) -> "OntologyProperty":
         """
-        Create ontology property from dictionary.
+        Create ontology property from a dictionary.
         Parameters
         ----------
         property_dict: Dict[str, Any]
@@ -1123,7 +1119,7 @@ class OntologyProperty(OntologyObject):
     @classmethod
     def new(cls, kind: PropertyType) -> "OntologyProperty":
         """
-        Create new ontology property.
+        Create a new ontology property.
         Parameters
         ----------
         kind: PropertyType
@@ -1203,7 +1199,7 @@ class DataProperty(EntityProperty):
     @staticmethod
     def create_from_dict(data_property_struct: Dict[str, Any]) -> "DataProperty":
         """
-        Create data property from dictionary.
+        Create a data property from a dictionary.
 
         Parameters
         ----------
@@ -1263,7 +1259,7 @@ class DataProperty(EntityProperty):
     @staticmethod
     def create_from_list(param: List[Dict[str, Any]]) -> List["DataProperty"]:
         """
-        Create data property list from dictionary list.
+        Create a data property list from a dictionary list.
 
         Parameters
         ----------
@@ -1324,7 +1320,7 @@ class ObjectProperty(EntityProperty):
         relation_struct: Dict[str, Any],
     ) -> Tuple[OntologyPropertyReference, "ObjectProperty"]:
         """
-        Create object property from dictionary.
+        Create object property from a dictionary.
 
         Parameters
         ----------
@@ -1399,7 +1395,7 @@ class ObjectProperty(EntityProperty):
         param: List[Dict[str, Any]],
     ) -> Dict[OntologyPropertyReference, "ObjectProperty"]:
         """
-        Create object property list from dictionary list.
+        Create an object property list from a dictionary list.
         Parameters
         ----------
         param: List[Dict[str, Any]]
@@ -1427,7 +1423,7 @@ class Ontology:
 
     def add_class(self, class_obj: OntologyClass) -> None:
         """
-        Adding class object.
+        Adding a class object.
 
         Parameters
         ----------
@@ -1466,7 +1462,7 @@ class Ontology:
 
     def __check_hierarchy__(self, clz: OntologyClassReference, domain: OntologyClassReference) -> bool:
         """
-        Check if class is in domain.
+        Check if a class is in the domain.
         Parameters
         ----------
         clz: OntologyClassReference
@@ -1477,7 +1473,7 @@ class Ontology:
         Returns
         -------
         result: bool
-            True if class is in domain.
+            True if the class is in domain.
         """
         current_clz: Optional[OntologyClass] = self.get_class(clz)
         while current_clz is not None:
@@ -1490,7 +1486,7 @@ class Ontology:
 
     def get_class(self, class_reference: OntologyClassReference) -> Optional[OntologyClass]:
         """
-        Get class instance by reference.
+        Get a class instance by reference.
 
         Parameters
         ----------
@@ -1506,7 +1502,7 @@ class Ontology:
 
     def get_object_properties(self, property_reference: OntologyPropertyReference) -> Optional[OntologyProperty]:
         """
-        Get object property instance by reference.
+        Get an object property instance by reference.
 
         Parameters
         ----------
@@ -1522,7 +1518,7 @@ class Ontology:
 
     def get_data_properties(self, property_reference: OntologyPropertyReference) -> Optional[OntologyProperty]:
         """
-        Get object property instance by reference.
+        Get an object property instance by reference.
 
         Parameters
         ----------
@@ -1623,7 +1619,7 @@ class ThingObject:
     use_vector_index: bool (default:= False)
         Use vector index for labels
     use_vector_index_document: bool (default:= False)
-        Use vector index for document
+        Use vector index for a document
     use_full_text_index: bool (default:= True)
         Use full text index for entity
     """
@@ -1665,7 +1661,7 @@ class ThingObject:
 
     @property
     def uri(self) -> Optional[str]:
-        """Unique identifier for entity. If the entity not yet imported into the knowledge graph, the URI is None."""
+        """Unique identifier for entity. If the entity is not yet imported into the knowledge graph, the URI is None."""
         return self.__uri
 
     @uri.setter
@@ -1719,7 +1715,7 @@ class ThingObject:
 
     @property
     def owner(self) -> bool:
-        """Is current user the owner of the entity."""
+        """Is the current user the owner of the entity?"""
         return self.__owner
 
     @property
@@ -1768,7 +1764,7 @@ class ThingObject:
         self.__label = value
 
     def add_label(self, label: str, language_code: LocaleCode) -> None:
-        """Adding a label for entity.
+        """Adding a label for an entity.
 
         Parameters
         ----------
@@ -1798,7 +1794,7 @@ class ThingObject:
 
     def remove_label(self, language_code: LocaleCode) -> None:
         """
-        Remove label for entity if it exists for language.
+        Remove the label for an entity if it exists for language.
 
         Parameters
         ----------
@@ -1812,7 +1808,7 @@ class ThingObject:
 
     def remove_alias(self, label: Label) -> None:
         """
-        Remove alias for entity if it exists for language.
+        Remove alias for an entity if it exists for language.
 
         Parameters
         ----------
@@ -1826,7 +1822,7 @@ class ThingObject:
 
     def label_lang(self, language_code: Union[LocaleCode, LanguageCode]) -> Optional[Label]:
         """
-        Get label for language_code code.
+        Get a label for language_code code.
 
         Parameters
         ----------
@@ -1844,7 +1840,7 @@ class ThingObject:
 
     def add_source_system(self, value: DataProperty) -> None:
         """
-        Adding the source system  of the entity.
+        Adding the source system of the entity.
 
         Parameters
         -----------
@@ -2055,7 +2051,7 @@ class ThingObject:
 
     def remove_description(self, language_code: LocaleCode) -> None:
         """
-        Remove description for entity if it exists for language.
+        Remove description for an entity if it exists for language.
 
         Parameters
         ----------
@@ -2205,7 +2201,7 @@ class ThingObject:
         self.__data_properties[data_property.data_property_type].append(data_property)
 
     def add_alias(self, alias: str, language_code: LocaleCode) -> None:
-        """Adding an alias for entity.
+        """Adding an alias for an entity.
 
         Parameters
         ----------
@@ -2370,6 +2366,7 @@ class ThingObject:
         main_labels: Dict[str, bool] = {}
         source_reference_id: Optional[str] = entity.get(SOURCE_REFERENCE_ID_TAG)
         source_system: Optional[str] = entity.get(SOURCE_SYSTEM_TAG)
+        reference_id_or_uri: str = entity.get(URI_TAG) or source_reference_id or "Unknown URI or reference id"
         for label in entity[LABELS_TAG]:
             if label[LOCALE_TAG] in SUPPORTED_LOCALES:
                 if label[IS_MAIN_TAG]:
@@ -2383,9 +2380,8 @@ class ThingObject:
                     alias.append(alias_label)
             else:
                 if raise_on_error:
-                    raise ValueError(f"Unsupported locale {label[LOCALE_TAG]} for entity {entity[URI_TAG]}")
-                else:
-                    logger.error(f"Unsupported locale {label[LOCALE_TAG]} for entity {entity[URI_TAG]}")
+                    raise ValueError(f"Unsupported locale {label[LOCALE_TAG]} for entity {reference_id_or_uri}")
+                logger.error(f"Unsupported locale {label[LOCALE_TAG]} for entity {reference_id_or_uri}")
 
         for lang_code, is_main in main_labels.items():
             if not is_main:
@@ -2397,9 +2393,10 @@ class ThingObject:
                         labels.append(Label(al.content, al.language_code, main=True))
                         del alias[la_idx]
                         if raise_on_error:
-                            raise ValueError(f"Missing main label for locale {lang_code} for entity {entity[URI_TAG]}")
-                        else:
-                            logger.error(f"Missing main label for locale {lang_code} for entity {entity[URI_TAG]}")
+                            raise ValueError(
+                                f"Missing main label for locale {lang_code} for entity {reference_id_or_uri}"
+                            )
+                        logger.error(f"Missing main label for locale {lang_code} for entity {reference_id_or_uri}")
                     else:
                         la_idx += 1
 
@@ -2408,8 +2405,7 @@ class ThingObject:
                 if desc[DESCRIPTION_TAG] is None:
                     if raise_on_error:
                         raise ValueError(f"Description is None for {desc}")
-                    else:
-                        logger.error(f"Description is None for {desc}")
+                    logger.error(f"Description is None for {desc}")
                 else:
                     descriptions.append(Description.create_from_dict(desc))
         # Backwards-compatibility
@@ -2458,8 +2454,7 @@ class ThingObject:
                         if source_reference_id != value:
                             if raise_on_error:
                                 raise ValueError(f"Source reference id mismatch: {source_reference_id} != {value}")
-                            else:
-                                logger.error(f"Source reference id mismatch: {source_reference_id} != {value}")
+                            logger.error(f"Source reference id mismatch: {source_reference_id} != {value}")
                         thing.add_data_property(DataProperty(value, data_property_type, language_code))
             elif isinstance(entity[DATA_PROPERTIES_TAG], list):
                 for data_property in entity[DATA_PROPERTIES_TAG]:
@@ -2473,8 +2468,7 @@ class ThingObject:
                         if source_reference_id != dp_value and dp_language_code == EN_US:
                             if raise_on_error:
                                 raise ValueError(f"Source reference id mismatch: {source_reference_id} != {dp_value}")
-                            else:
-                                logger.error(f"Source reference id mismatch: {source_reference_id} != {dp_value}")
+                            logger.error(f"Source reference id mismatch: {source_reference_id} != {dp_value}")
 
                     if dp_property_type == SYSTEM_SOURCE_SYSTEM:
                         value: str = dp_value
@@ -2482,8 +2476,7 @@ class ThingObject:
                         if source_system and source_system != value:
                             if raise_on_error:
                                 raise ValueError(f"Source system mismatch: {source_system} != {value}")
-                            else:
-                                logger.error(f"Source system mismatch: {source_system} != {value}")
+                            logger.error(f"Source system mismatch: {source_system} != {value}")
                         if source_system is None and value:
                             logger.warning(f"Source system is None but value is {value}")
                     thing.add_data_property(DataProperty(dp_value, dp_property_type, dp_language_code))
@@ -2557,7 +2550,7 @@ class ThingObject:
             label=labels,
             icon=entity[IMAGE_TAG],
             description=descriptions,
-            uri=entity[URI_TAG],
+            uri=entity.get(URI_TAG),
             concept_type=OntologyClassReference.parse(entity[TYPE_TAG]),
             owner=entity.get(OWNER_TAG, True),
             use_for_nel=use_nel,
@@ -2769,13 +2762,13 @@ class InflectionSetting:
 
     @property
     def case_sensitive(self) -> bool:
-        """Are entity labels of the class treated case-sensitive."""
+        """Are entity labels of the class treated as case-sensitive?"""
         return self.__case_sensitive
 
     @staticmethod
     def from_dict(entity: Dict[str, Any]) -> "InflectionSetting":
         """
-        Create inflection setting from dictionary.
+        Create an inflection setting from the dictionary.
         Parameters
         ----------
         entity: Dict[str, Any]
@@ -2817,7 +2810,7 @@ class ThingEncoder(JSONEncoder):
 
 
 def ontology_import(rdf_content: str, tenant_id: str = "", context: str = "") -> Ontology:
-    """Import Ontology from RDF ontology file.
+    """Import Ontology from an RDF ontology file.
 
     Parameters
     ----------
