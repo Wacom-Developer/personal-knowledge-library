@@ -7,6 +7,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict
 
+import pytest
+import pytest_asyncio
+
 from faker import Faker
 
 from knowledge.base.entity import Label
@@ -180,6 +183,17 @@ queue_monitor: AsyncQueueMonitorClient = AsyncQueueMonitorClient(
     application_name="Async client test",
 )
 # ----------------------------------------------------------------------------------------------------------------------
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True, loop_scope="session")
+async def close_async_clients():
+    """Ensure all module-level aiohttp clients are closed after the test session."""
+    yield
+    await async_client.close()
+    await group_management.close()
+    await user_management.close()
+    await vector_search.close()
+    await queue_monitor.close()
 
 
 async def test_01_handle_user():
