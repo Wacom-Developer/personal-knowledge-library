@@ -165,12 +165,12 @@ class WacomKnowledgeService(WacomServiceAPIClient):
     >>>
     >>> # Create an entity
     >>> entity = ThingObject(concept_type=OntologyClassReference.parse("wacom:core#Person"))
-    >>> entity.add_label("Albert Einstein", "en_US")
+    >>> entity.add_label("Albert Einstein", EN_US)
     >>> uri = client.create_entity(entity)
     >>>
     >>> # Retrieve and update an entity
     >>> retrieved = client.entity(uri)
-    >>> retrieved.add_label("Einstein", "en_US")
+    >>> retrieved.add_label("Einstein", EN_US)
     >>> client.update_entity(retrieved)
     """
 
@@ -398,7 +398,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         timeout: int = DEFAULT_TIMEOUT,
     ) -> bool:
         """
-        Check if entity exists in knowledge graph.
+        Check if an entity exists in the knowledge graph.
 
         Parameters
         ----------
@@ -582,6 +582,8 @@ class WacomKnowledgeService(WacomServiceAPIClient):
 
         Raises
         ------
+        ValueError
+            If the entity has no URI.
         WacomServiceException
             If the graph service returns an error code
         """
@@ -1482,7 +1484,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         Parameters
         ----------
         auth_key: str
-            Auth key from user
+            The auth key from user
         entity_uri: str
             URI of the entity.
         image_url: str
@@ -1898,7 +1900,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         Raises
         ------
         WacomServiceException
-            If the graph service returns an error code and commit failed.
+            If the graph service returns an error code and the commit failed.
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}{'/fix' if fix else ''}"
         response: Response = self.request_session.patch(
