@@ -258,7 +258,7 @@ class HealthResponse:
     healthy : bool
         Whether the index is healthy.
     condition : Condition
-        Detailed condition information about the health check.
+        Detailed information about the health check.
     """
 
     healthy: bool

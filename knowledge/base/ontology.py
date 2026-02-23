@@ -2408,6 +2408,10 @@ class ThingObject:
                     logger.error(f"Description is None for {desc}")
                 else:
                     descriptions.append(Description.create_from_dict(desc))
+            else:
+                if raise_on_error:
+                    raise ValueError(f"Unsupported locale {desc[LOCALE_TAG]} for entity {reference_id_or_uri}")
+                logger.error(f"Unsupported locale {desc[LOCALE_TAG]} for entity {reference_id_or_uri}")
         # Backwards-compatibility
         use_nel: bool = entity.get(USE_NEL_TAG, False)
         use_vector_index: bool = entity.get(USE_VECTOR_INDEX_TAG, False)
@@ -2928,6 +2932,7 @@ def ontology_import(rdf_content: str, tenant_id: str = "", context: str = "") ->
 __all__ = [
     "EN_US",
     "DataPropertyType",
+    "InflectionSetting",
     "OntologyPropertyReference",
     "OntologyClassReference",
     "DataProperty",
@@ -2937,9 +2942,11 @@ __all__ = [
     "OntologyClass",
     "OntologyProperty",
     "OntologyContext",
+    "PropertyType",
     "ThingObject",
     "ThingEncoder",
     "NAME_TAG",
+    "RESOURCE",
     "THING_CLASS",
     "LAST_UPDATE_DATE",
     "SYSTEM_SOURCE_SYSTEM",

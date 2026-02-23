@@ -121,7 +121,7 @@ class IndexManagementClient(SemanticSearchClient):
         )
 
         if response.ok:
-            # Process NDJSON stream line by line
+            # Process NDJSON-stream line by line
             for line in response.iter_lines():
                 if line:
                     try:

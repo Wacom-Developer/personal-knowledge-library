@@ -80,6 +80,8 @@ __all__ = [
     "image_url",
     "parse_date",
     "wikidate",
+    "__waiting_request__",
+    "__waiting_multi_request__",
 ]
 
 

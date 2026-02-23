@@ -216,7 +216,7 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
         vector_search_object_properties: List[str]
             List of object properties that are automatically added to meta-data of the vector search index documents.
         content_data_property_name: str
-            The data property that is used to indexing its content to the document index.
+            The data property used to index its content to the document index.
         timeout: int
             Timeout for the request (default: 60 seconds)
         """

@@ -12,7 +12,7 @@ class QueueCount:
     Represents a model for maintaining a queue's name and its count.
 
     This class is primarily designed to encapsulate the queue name and the
-    count of items or occurrences associated with it. It can be utilized
+    count of items or occurrences associated with it. It can be used
     in various queue-related workflows or systems where such data is required.
 
     Attributes
@@ -121,7 +121,7 @@ class MessageStats:
     """
     Represents statistics related to message publishing, delivery, and acknowledgments.
 
-    This class is used to store statistics about messages such as their publish count,
+    This class is used to store statistics about messages such as their publication count,
     delivery count, acknowledgment count, and the corresponding details about rates.
     It serves as a structured model for handling message statistics data.
 
@@ -257,7 +257,7 @@ class QueueMonitor:
 
     @property
     def name(self) -> str:
-        """Name of the queue being monitored."""
+        """The name of the queue being monitored."""
         return self._name
 
     @property

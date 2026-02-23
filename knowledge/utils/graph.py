@@ -117,7 +117,7 @@ def things_session_iter(
     force_refresh_timeout: int = 360,
 ) -> Iterator[ThingObject]:
     """
-    Iterates over all things using the current session configured for client.
+    Iterates over all things using the current session configured for a client.
 
     Parameters
     ----------
@@ -146,7 +146,7 @@ def things_session_iter(
     Raises
     ------
     ValueError
-        If no session is configured for client
+        If no session is configured for a client
     """
     next_page_id: Optional[str] = None
     if wacom_client.current_session is None:

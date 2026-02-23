@@ -45,7 +45,7 @@ class SemanticSearchClient(WacomServiceAPIClient):
     >>> client.login(tenant_api_key="<tenant_key>", external_user_id="<user_id>")
     >>>
     >>> # Search for similar documents
-    >>> results = client.search_documents(
+    >>> results = client.document_search(
     ...     query="machine learning",
     ...     locale=EN_US,
     ...     max_results=10

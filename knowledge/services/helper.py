@@ -105,7 +105,7 @@ def entity_payload(entity: ThingObject) -> Dict[str, Any]:
         if len(desc.content) > 0 and not desc.content == " ":
             descriptions.append({DESCRIPTION_TAG: desc.content, LOCALE_TAG: desc.language_code})
 
-    # Labels are tagged as main label
+    # Labels are tagged as the main label
     for label in entity.label:
         if label is not None and label.content is not None and len(label.content) > 0 and label.content != " ":
             labels.append(
@@ -115,7 +115,7 @@ def entity_payload(entity: ThingObject) -> Dict[str, Any]:
                     IS_MAIN_TAG: True,
                 }
             )
-    # Alias are no main labels
+    # Aliases are no main labels
     for label in entity.alias:
         if label is not None and len(label.content) > 0 and label.content != " ":
             labels.append(
@@ -125,7 +125,7 @@ def entity_payload(entity: ThingObject) -> Dict[str, Any]:
                     IS_MAIN_TAG: False,
                 }
             )
-    # Labels are tagged as main label
+    # Labels are tagged as the main label
     for _, list_literals in entity.data_properties.items():
         for li in list_literals:
             if li.data_property_type:

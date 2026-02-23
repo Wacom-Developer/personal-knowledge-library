@@ -76,7 +76,7 @@ def create_thing(concept_type: OntologyClassReference) -> ThingObject:
         Thing object with random data.
     """
     thing: ThingObject = ThingObject(concept_type=concept_type)
-    for lang_inst in [JA_JP, EN_US, DE_DE, BG_BG, FR_FR, IT_IT, ES_ES]:
+    for lang_inst in SUPPORTED_LOCALES:
         fake: Faker = Faker(lang_inst)
         name: str = fake.name()
         thing.add_label(name, lang_inst)

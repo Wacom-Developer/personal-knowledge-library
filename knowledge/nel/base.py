@@ -431,7 +431,7 @@ class PersonalEntityLinkingProcessor(WacomServiceAPIClient):
         return self.LANGUAGES
 
     def is_language_supported(self, language_code: LocaleCode) -> bool:
-        """Is the language_code code supported by the engine.
+        """Does the engine support the language code?
 
         Parameters
         -----------
@@ -506,7 +506,7 @@ class NamedEntityRecognitionProcessor(WacomServiceAPIClient):
         return self.__supported_languages
 
     def is_language_supported(self, language_code: LocaleCode) -> bool:
-        """Is the language_code code supported by the engine.
+        """Does the engine support the language_code code?
 
         Parameters
         ----------
@@ -577,7 +577,7 @@ class PublicEntityLinkingProcessor(RESTAPIClient):
 
     def is_language_supported(self, language_code: LocaleCode) -> bool:
         """
-        Does the engine support the language_code code.
+        Does the engine support the language code?
 
         Parameters
         ----------

@@ -3,7 +3,7 @@
 """
 Ink Services Client
 -------------------
-Synchronous client for Wacom Ink Services including:
+Synchronous client for Wacom Ink Services including
 - Named Entity Linking (NEL)
 - Handwriting Recognition (HWR)
 - Math Recognition

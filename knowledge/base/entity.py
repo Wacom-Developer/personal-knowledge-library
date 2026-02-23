@@ -224,7 +224,7 @@ class Label(LocalizedContent):
 
     @property
     def main(self) -> bool:
-        """Flag if the content is the  main content or an alias."""
+        """Flag if the content is the main content or an alias."""
         return self.__main
 
     @staticmethod
@@ -359,10 +359,6 @@ class Description(LocalizedContent):
         """
         Creates a dictionary representation of the object containing its textual
         content and locale information.
-
-        Parameters
-        ----------
-        None
 
         Returns
         -------

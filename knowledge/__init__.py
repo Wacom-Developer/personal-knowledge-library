@@ -5,7 +5,7 @@ Personal knowledge Library
 --------------------------
 This library provides a set of tools to manage Wacom private knowledge graph API.
 All services are wrapped in a pythonic way to make it easy to use.
-Additionally, the library provides a set of tools to utilise Wikidata.
+Additionally, the library provides a set of tools to utilize Wikidata.
 """
 
 import sys
@@ -37,13 +37,13 @@ if logger is None:
         """
 
         def emit(self, record: logging.LogRecord) -> None:
-            # Get corresponding Loguru level if it exists.
+            # Get the corresponding Loguru level if it exists.
             try:
                 level: Union[str, int] = loguru.logger.level(record.levelname).name
             except ValueError:
                 level = record.levelno
 
-            # Find caller from where originated the logged message.
+            # Find the caller from where originated the logged message.
             frame, depth = inspect.currentframe(), 0
             while frame:
                 filename = frame.f_code.co_filename

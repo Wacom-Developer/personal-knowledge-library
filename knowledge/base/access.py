@@ -11,11 +11,11 @@ class AccessRight:
 
     Parameters
     ----------
-    read: bool (default := False)
+    read: bool (default: = False)
         Read access for entity within tenant.
-    write: bool (default := False)
-        Write access for entity within tenant.
-    delete: bool (default := False)
+    write: bool (default:= False)
+        Write access for entity within a tenant.
+    delete: bool (default:= False)
         Delete access for entity within tenant.
     """
 
@@ -70,7 +70,7 @@ class AccessRight:
 
     def to_list(self) -> List[str]:
         """
-        Converts the access to list of properties.
+        Converts the access to a list of properties.
 
         Returns
         -------
@@ -95,11 +95,11 @@ class TenantAccessRight(AccessRight):
 
     Parameters
     ----------
-    read: bool (default := False)
+    read: bool (default:= False)
         Read access for entity within tenant.
-    write: bool (default := False)
-        Write access for entity within tenant.
-    delete: bool (default := False)
+    write: bool (default:= False)
+        Write access for entity within a tenant.
+    delete: bool (default:= False)
         Delete access for entity within tenant.
     """
 
@@ -109,7 +109,7 @@ class TenantAccessRight(AccessRight):
     @classmethod
     def parse(cls, param: List[str]) -> "TenantAccessRight":
         """
-        Converts the access to list of properties.
+        Converts the access to a list of properties.
 
         Parameters
         ----------
@@ -136,12 +136,12 @@ class GroupAccessRight(AccessRight):
 
     Parameters
     ----------
-    read: bool (default := False)
-        Read access for entity within group.
-    write: bool (default := False)
-        Write access for entity within group.
-    delete: bool (default := False)
-        Delete access for entity within group.
+    read: bool (default:= False)
+        Read access for entity within a group.
+    write: bool (default:= False)
+        Write access for entity within a group.
+    delete: bool (default:= False)
+        Delete access for entity within a group.
     """
 
     def __init__(self, read: bool = False, write: bool = False, delete: bool = False) -> None:
@@ -150,7 +150,7 @@ class GroupAccessRight(AccessRight):
     @classmethod
     def parse(cls, param: List[str]) -> "GroupAccessRight":
         """
-        Converts the access to list of properties.
+        Converts the access to a list of properties.
 
         Parameters
         ----------

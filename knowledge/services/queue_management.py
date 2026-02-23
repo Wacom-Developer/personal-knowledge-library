@@ -158,7 +158,7 @@ class QueueManagementClient(WacomServiceAPIClient):
     def queue_size(self, queue_name: str, auth_key: Optional[str] = None) -> QueueCount:
         """
         Gets the size of a specified queue by making an asynchronous request to the service's
-        queue management endpoint. The method interacts with a remote API, utilizing prepared
+        queue management endpoint. The method interacts with a remote API, using prepared
         headers and query parameters, and parses the returned data into the appropriate
         response structure upon a successful response.
 

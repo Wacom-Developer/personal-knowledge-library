@@ -2,9 +2,8 @@
 # Copyright © 2021-present Wacom. All rights reserved.
 """Mapping of Wikidata property ids to its string."""
 
-import json
 from pathlib import Path
-from typing import Dict, List
+from typing import List
 
 # OntologyPropertyReference constants
 INSTANCE_OF_PROPERTY: str = "P31"

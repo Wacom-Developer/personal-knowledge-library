@@ -255,7 +255,7 @@ class DocumentSearchStats(PerformanceStats):
     vector_db_response_time: float
         Response time in milliseconds for the vector database.
     preprocessing_time: float
-        Preprocessing time in milliseconds for search query.
+        Preprocessing time in milliseconds for a search query.
 
     """
 
@@ -265,7 +265,7 @@ class DocumentSearchStats(PerformanceStats):
 
     @property
     def preprocessing_time(self) -> float:
-        """Preprocessing time in milliseconds for search query."""
+        """Preprocessing time in milliseconds for a search query."""
         return self.__preprocessing
 
     def __repr__(self) -> str:
@@ -298,7 +298,7 @@ class LabelSearchStats(PerformanceStats):
     vector_db_response_time: float
         Response time in milliseconds for the vector database.
     tokenizer_time: float
-        Tokenizer time in milliseconds for search query.
+        Tokenizer time in milliseconds for a search query.
     number_of_tokens: int
         Number of tokens in the search query.
     """
@@ -310,7 +310,7 @@ class LabelSearchStats(PerformanceStats):
 
     @property
     def tokenizer_time(self) -> float:
-        """Tokenizer time in milliseconds for search query."""
+        """Tokenizer time in milliseconds for a search query."""
         return self.__tokenizer
 
     @property

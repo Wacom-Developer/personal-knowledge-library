@@ -30,7 +30,7 @@ from knowledge.services.users import User, FORCE_TAG, LIMIT_TAG, OFFSET_TAG
 class Group:
     """
     Entities and users can be assigned to groups.
-    If the entity is assigned to a group the users have access to the entity with the rights defined in the group.
+    If the entity is assigned to a group, the users have access to the entity with the rights defined in the group.
 
     Parameters
     ----------
@@ -43,9 +43,9 @@ class Group:
     name: str
         Name of the group.
     join_key: str
-        Key which is required to join the group
+        Key, which is required to join the group
     rights: GroupAccessRight
-        Access right for group.
+        Access right for a group.
 
     Attributes
     ----------
@@ -106,7 +106,7 @@ class Group:
 
     @property
     def group_access_rights(self) -> GroupAccessRight:
-        """Rights for group."""
+        """Rights for a group."""
         return self.__rights
 
     @classmethod
@@ -155,9 +155,9 @@ class GroupInfo(Group):
     owner : str
         Owner id of the group.
     name : str
-        Display name of the group.
+        Display the name of the group.
     join_key : str
-        Key required to join the group.
+         Key is required to join the group.
     rights : GroupAccessRight
         Access rights associated with the group.
     group_users : List[User]
@@ -222,9 +222,9 @@ class GroupManagementService(WacomServiceAPIClient):
 
     Functionality:
         - List all groups
-        - Create group
-        - Assign users to group
-        - Share entities with group
+        - Create a group
+        - Assign users to a group
+        - Share entities with a group
 
     Parameters
     ----------
@@ -414,7 +414,7 @@ class GroupManagementService(WacomServiceAPIClient):
         ----------
         admin: bool (default:= False)
             Uses admin privilege to show all groups of the tenants.
-            Requires user to have the role: TenantAdmin
+            Requires a user to have the role: TenantAdmin
         limit: int (default:= 20)
             Maximum number of groups to return.
         offset: int (default:= 0)
@@ -498,7 +498,7 @@ class GroupManagementService(WacomServiceAPIClient):
         group_id: str
             Group ID
         join_key: str
-            Key which is used to join the group.
+            Key, which is used to join the group.
         auth_key: Optional[str]
             If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
@@ -677,7 +677,7 @@ class GroupManagementService(WacomServiceAPIClient):
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> None:
-        """Remove an entity from group.
+        """Remove an entity from a group.
 
         Parameters
         ----------

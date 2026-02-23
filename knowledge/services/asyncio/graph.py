@@ -315,7 +315,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         Parameters
         ----------
         auth_key: str
-            Auth key from user
+            The auth key from user
         entity_uri: str
             URI of the entity.
         image_url: str
@@ -481,7 +481,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
 
     async def exists(self, uri: str) -> bool:
         """
-        Check if entity exists in knowledge graph.
+        Check if an entity exists in the knowledge graph.
 
         Parameters
         ----------
@@ -535,7 +535,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         ignore_images: bool
             Do not automatically upload images
         auth_key: Optional[str]
-            If auth key is not set, the client auth key will be used.
+            If the auth key is not set, the client auth key will be used.
 
         Returns
         -------
@@ -920,7 +920,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         targets: List[IndexType]
             List of indexing targets
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -973,7 +973,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         targets: List[IndexType]
             List of indexing targets
         auth_key: Optional[str]
-            If the auth key is set the logged-in user (if any) will be ignored and the auth key will be used.
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
 
@@ -981,7 +981,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         -------
         update_status: Dict[str, Any]
             Status per target (depending on the targets of entity and the ones set in the request), e.g.,
-            response will only contain {"NEL: "DELETE"}, if NEL is the only target in the request.
+            response will only contain {"NEL": "DELETE"}, if NEL is the only target in the request.
 
         Raises
         ------
@@ -1439,7 +1439,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         Raises
         ------
         WacomServiceException
-            If the graph service returns an error code and commit failed.
+            If the graph service returns an error code and the commit failed.
         """
         url: str = (
             f"{self.service_base_url}{AsyncWacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}" f"{'/fix' if fix else ''}"

@@ -285,7 +285,7 @@ class InkToXSettings:
         performing segmentation.
     batch_size: int
         An optional parameter for the size of batches when using the optimized predictions when performing segmentation.
-        Use with caution! It can lead to out of memory exceptions. The default value is 32.
+        Use with caution! It can lead to out-of-memory exceptions. The default value is 32.
     """
 
     def __init__(
@@ -391,7 +391,7 @@ class InkToXSettings:
     def batch_size(self) -> Optional[int]:
         """
         An optional parameter for the size of batches when using the optimized predictions when performing segmentation.
-        Use with caution! It can lead to out of memory exceptions. The default value is 32.
+        Use with caution! It can lead to out-of-memory exceptions. The default value is 32.
         """
         return self.__batch_size
 

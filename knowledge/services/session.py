@@ -49,7 +49,7 @@ class Session(ABC):
     id : str
         Unique session id, which will be the same for the same external user id, tenant, and instance of the service.
     auth_token : str
-        Authentication key used to identify an external user within private knowledge.
+        Authentication key is used to identify an external user within private knowledge.
     tenant_id : str
         Tenant id.
     refresh_token : Optional[str]
@@ -89,19 +89,19 @@ class Session(ABC):
     @property
     @abstractmethod
     def refreshable(self) -> bool:
-        """Is the session refreshable."""
+        """Is the session refreshable?"""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def expired(self) -> bool:
-        """Is the session expired."""
+        """Is the session expired?"""
         raise NotImplementedError
 
     @property
     @abstractmethod
     def expires_in(self) -> float:
-        """Seconds until token is expired in seconds."""
+        """Seconds until the token is expired in seconds."""
         raise NotImplementedError
 
     @abstractmethod
@@ -267,18 +267,18 @@ class TimedSession(Session):
 
     @property
     def expires_in(self) -> float:
-        """Seconds until token is expired in seconds."""
+        """Seconds until the token is expired in seconds."""
         timestamp: datetime = datetime.now(tz=timezone.utc)
         return self.expiration.timestamp() - timestamp.timestamp()
 
     @property
     def expired(self) -> bool:
-        """Is the session expired."""
+        """Is the session expired?"""
         return self.expires_in <= 0.0
 
     @property
     def refreshable(self) -> bool:
-        """Is the session refreshable."""
+        """Is the session refreshable?"""
         return False
 
     def update_session(self, auth_token: str, refresh_token: str) -> None:
@@ -428,7 +428,7 @@ class TokenManager:
     Manages sessions for authentication and authorization.
 
     The `TokenManager` class provides functionality to handle different types of
-    sessions including permanent, refreshable, and timed sessions. It ensures thread-safe
+     sessions, including permanent, refreshable, and timed sessions. It ensures thread-safe
     operations for adding, retrieving, removing, and maintaining sessions. It also
     includes utilities for cleaning up expired sessions.
 
@@ -455,11 +455,11 @@ class TokenManager:
         ----------
         auth_token: str
             The authentication token.
-        refresh_token: Optional[str] [default := None]
+        refresh_token: Optional[str] [default: = None]
             The refresh token.
-        tenant_api_key: Optional[str] [default := None]
+        tenant_api_key: Optional[str] [default: = None]
             The tenant api key.
-        external_user_id: Optional[str] [default := None]
+        external_user_id: Optional[str] [default: = None]
             The external user id.
 
         Returns
