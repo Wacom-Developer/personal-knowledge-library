@@ -2341,18 +2341,28 @@ class ThingObject:
         return dict_object
 
     @staticmethod
-    def from_import_dict(entity: Dict[str, Any]) -> "ThingObject":
+    def from_import_dict(entity: Dict[str, Any], raise_on_error: bool = False) -> "ThingObject":
         """Creates a ThingObject from a dict.
 
         Parameters
         ----------
         entity: Dict[str, Any]
             Dictionary that contains the data of the entity
+        raise_on_error: bool (default:= False)
+            Whether to raise an error if the dict contains unsupported locales or if there is a mismatch in source
+            reference id or source system. If False, the errors will be logged as warnings. The entity will still
+            be created, but the unsupported locales will be ignored, and in case of a mismatch in source reference
+            id or source system, the value from the dict will be used.
 
         Returns
         -------
         instance: ThingObject
             The ThingObject that is created from the dict
+
+        Raises
+        ------
+        ValueError:
+            If the dict contains unsupported locales, or if there is a mismatch in source reference id or source system.
         """
         labels: List[Label] = []
         alias: List[Label] = []
@@ -2371,6 +2381,12 @@ class ThingObject:
                     if alias_label.language_code not in main_labels:
                         main_labels[alias_label.language_code] = False
                     alias.append(alias_label)
+            else:
+                if raise_on_error:
+                    raise ValueError(f"Unsupported locale {label[LOCALE_TAG]} for entity {entity[URI_TAG]}")
+                else:
+                    logger.error(f"Unsupported locale {label[LOCALE_TAG]} for entity {entity[URI_TAG]}")
+
         for lang_code, is_main in main_labels.items():
             if not is_main:
                 la_idx: int = 0
@@ -2380,13 +2396,20 @@ class ThingObject:
                         al: Label = alias[la_idx]
                         labels.append(Label(al.content, al.language_code, main=True))
                         del alias[la_idx]
+                        if raise_on_error:
+                            raise ValueError(f"Missing main label for locale {lang_code} for entity {entity[URI_TAG]}")
+                        else:
+                            logger.error(f"Missing main label for locale {lang_code} for entity {entity[URI_TAG]}")
                     else:
                         la_idx += 1
 
         for desc in entity[DESCRIPTIONS_TAG]:
             if desc[LOCALE_TAG] in SUPPORTED_LOCALES:
                 if desc[DESCRIPTION_TAG] is None:
-                    logger.warning(f"Description is None for {desc}")
+                    if raise_on_error:
+                        raise ValueError(f"Description is None for {desc}")
+                    else:
+                        logger.error(f"Description is None for {desc}")
                 else:
                     descriptions.append(Description.create_from_dict(desc))
         # Backwards-compatibility
@@ -2433,8 +2456,10 @@ class ThingObject:
                         language_code: LocaleCode = LocaleCode(data_property[LOCALE_TAG])
                         value: str = data_property[VALUE_TAG]
                         if source_reference_id != value:
-                            logger.warning(f"Source reference id mismatch: {source_reference_id} != {value}")
-                            raise ValueError(f"Source reference id mismatch: {source_reference_id} != {value}")
+                            if raise_on_error:
+                                raise ValueError(f"Source reference id mismatch: {source_reference_id} != {value}")
+                            else:
+                                logger.error(f"Source reference id mismatch: {source_reference_id} != {value}")
                         thing.add_data_property(DataProperty(value, data_property_type, language_code))
             elif isinstance(entity[DATA_PROPERTIES_TAG], list):
                 for data_property in entity[DATA_PROPERTIES_TAG]:
@@ -2446,14 +2471,19 @@ class ThingObject:
                     if dp_property_type == SYSTEM_SOURCE_REFERENCE_ID:
                         ref_id_found = True
                         if source_reference_id != dp_value and dp_language_code == EN_US:
-                            logger.warning(f"Source reference id mismatch: {source_reference_id} != {dp_value}")
-                            raise ValueError(f"Source reference id mismatch: {source_reference_id} != {dp_value}")
+                            if raise_on_error:
+                                raise ValueError(f"Source reference id mismatch: {source_reference_id} != {dp_value}")
+                            else:
+                                logger.error(f"Source reference id mismatch: {source_reference_id} != {dp_value}")
+
                     if dp_property_type == SYSTEM_SOURCE_SYSTEM:
                         value: str = dp_value
                         source_system_found = True
                         if source_system and source_system != value:
-                            logger.warning(f"Source system mismatch: {source_system} != {value}")
-                            raise ValueError(f"Source system mismatch: {source_system} != {value}")
+                            if raise_on_error:
+                                raise ValueError(f"Source system mismatch: {source_system} != {value}")
+                            else:
+                                logger.error(f"Source system mismatch: {source_system} != {value}")
                         if source_system is None and value:
                             logger.warning(f"Source system is None but value is {value}")
                     thing.add_data_property(DataProperty(dp_value, dp_property_type, dp_language_code))

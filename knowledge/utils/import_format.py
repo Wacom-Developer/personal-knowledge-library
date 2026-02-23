@@ -55,13 +55,18 @@ def is_local_url(url: str) -> bool:
     return bool(re.match(r"^(file://|/|\.{1,2}/)", url, re.IGNORECASE))
 
 
-def __import_format_to_thing__(line: str) -> ThingObject:
+def __import_format_to_thing__(line: str, raise_on_error: bool = False) -> ThingObject:
     """
     Convert a line of JSON to a ThingObject.
     Parameters
     ----------
     line: str
         The line of JSON to convert.
+    raise_on_error: bool (default:= False)
+            Whether to raise an error if the dict contains unsupported locales or if there is a mismatch in source
+            reference id or source system. If False, the errors will be logged as warnings. The entity will still
+            be created, but the unsupported locales will be ignored, and in case of a mismatch in source reference
+            id or source system, the value from the dict will be used.
 
     Returns
     -------
@@ -72,28 +77,38 @@ def __import_format_to_thing__(line: str) -> ThingObject:
     ------
     JSONDecodeError
         If the line is not valid JSON.
+    ValueError
+        Raised if the line contains unsupported locales or if there is a mismatch in source reference id or
+        source system.
     """
     thing_dict: Dict[str, Any] = json.loads(line)
-    entity: ThingObject = ThingObject.from_import_dict(thing_dict)
+    entity: ThingObject = ThingObject.from_import_dict(thing_dict, raise_on_error=raise_on_error)
     if entity.image:
         if not is_local_url(entity.image) and not is_http_url(entity.image):
             path: Path = Path(entity.image)
             if not path.exists():
                 entity.image = path.absolute().as_uri()
             else:
-                logger.warning(f"Image path {path} does not exist. Setting to None.")
+                if raise_on_error:
+                    raise ValueError(f"Image path {path} does not exist.")
+                else:
+                    logger.error(f"Image path {path} does not exist. Setting to None.")
                 entity.image = None
     remove_props: List[OntologyPropertyReference] = []
     # Remove empty properties
     for obj_prop, value in entity.object_properties.items():
         if len(value.incoming_relations) == 0 and len(value.outgoing_relations) == 0:
-            remove_props.append(obj_prop)
+            if raise_on_error:
+                raise ValueError(f"Property {obj_prop} has no incoming or outgoing relations.")
+            else:
+                logger.warning(f"Property {obj_prop} has no incoming or outgoing relations. Removing.")
+                remove_props.append(obj_prop)
     for prop in remove_props:
         del entity.object_properties[prop]
     return entity
 
 
-def iterate_large_import_format(file_path: Path) -> Iterable[ThingObject]:
+def iterate_large_import_format(file_path: Path, raise_on_error: bool = False) -> Iterable[ThingObject]:
     """
     Iterates over a gzip‑compressed file containing ThingObject JSON lines, yielding parsed ThingObject instances.
 
@@ -101,6 +116,8 @@ def iterate_large_import_format(file_path: Path) -> Iterable[ThingObject]:
     ----------
     file_path
         Path to the gzip‑compressed input file.
+    raise_on_error: bool (default:= False)
+        Whether to raise an error if the dict contains unsupported locales or if there is a mismatch in source.
 
     Yields
     ------
@@ -121,24 +138,29 @@ def iterate_large_import_format(file_path: Path) -> Iterable[ThingObject]:
     """
     if not file_path.exists():
         raise FileNotFoundError(f"File {file_path} does not exist.")
-    if file_path.suffix == ".gz":
+    if file_path.suffix.lower() == ".gz":
         with gzip.open(file_path, "rt", encoding="utf-8") as f_gz:
             for line in f_gz:
-                yield __import_format_to_thing__(line)
-    if file_path.suffix == ".ndjson":
+                yield __import_format_to_thing__(line, raise_on_error=raise_on_error)
+    if file_path.suffix.lower() == ".ndjson":
         with file_path.open("r", encoding="utf-8") as f:
             for line in f:
-                yield __import_format_to_thing__(line)
+                yield __import_format_to_thing__(line, raise_on_error=raise_on_error)
     raise ValueError(f"Unsupported file format: {file_path.suffix}")
 
 
-def load_import_format(file_path: Path) -> List[ThingObject]:
+def load_import_format(file_path: Path, raise_on_error: bool = True) -> List[ThingObject]:
     """
     Load the import format file.
     Parameters
     ----------
     file_path:  Path
         The path to the file.
+    raise_on_error: bool (default:= False)
+        Whether to raise an error if the dict contains unsupported locales or if there is a mismatch in source
+        reference id or source system. If False, the errors will be logged as warnings. The entity will still
+        be created, but the unsupported locales will be ignored, and in case of a mismatch in source reference
+        id or source system, the value from the dict will be used.
 
     Returns
     -------
@@ -149,6 +171,8 @@ def load_import_format(file_path: Path) -> List[ThingObject]:
     ------
     FileNotFoundError
         If the file does not exist or is not a file.
+    ValueError
+        If a line does not contain a valid ThingObject JSON.
     """
     if not file_path.exists():
         logger.error(f"File {file_path} does not exist.")
@@ -167,7 +191,7 @@ def load_import_format(file_path: Path) -> List[ThingObject]:
                     # Skip the first line (header)
                     continue
                 try:
-                    cached_entities.append(__import_format_to_thing__(line))
+                    cached_entities.append(__import_format_to_thing__(line, raise_on_error=raise_on_error))
                 except JSONDecodeError as e:
                     logging.error(f"[line:={line_number}] Error decoding JSON: {e}.")
                 except Exception as e:
