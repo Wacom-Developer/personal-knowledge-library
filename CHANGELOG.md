@@ -1,3 +1,7 @@
+2026/04/07 - RELEASE 4.3.0
+==========================
+- Adding clients for the Content API of graph service
+
 2026/02/20 - RELEASE 4.2.2
 ==========================
 - Add additional checks for unsupported locales in the description 
