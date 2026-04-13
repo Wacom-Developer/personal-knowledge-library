@@ -1,6 +1,7 @@
-2026/04/07 - RELEASE 4.3.0
+2026/04/13 - RELEASE 4.3.0
 ==========================
 - Adding clients for the Content API of graph service
+- Optimize code for wikidata handling with caching
 
 2026/02/20 - RELEASE 4.2.2
 ==========================
