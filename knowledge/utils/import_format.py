@@ -85,7 +85,7 @@ def __import_format_to_thing__(line: str, raise_on_error: bool = False) -> Thing
     if entity.image:
         if not is_local_url(entity.image) and not is_http_url(entity.image):
             path: Path = Path(entity.image)
-            if not path.exists():
+            if path.exists():
                 entity.image = path.absolute().as_uri()
             else:
                 if raise_on_error:
