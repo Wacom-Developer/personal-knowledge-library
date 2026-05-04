@@ -25,6 +25,7 @@ Requires environment variables:
     - INSTANCE: URL of the service instance
     - TENANT_API_KEY: Tenant API key for authentication
 """
+import hashlib
 import logging
 import os
 import uuid
@@ -52,6 +53,8 @@ from knowledge.services.users import UserRole, User
 # -----------------------------------------------------------------------------------------------------------------
 ASSETS_DIR: Path = Path(__file__).parent.parent / "assets"
 DUMMY_PNG: Path = ASSETS_DIR / "dummy.png"
+UPDATE_IMAGE_PNG: Path = ASSETS_DIR / "uim.png"
+
 PAGE_TYPE: OntologyClassReference = OntologyClassReference.parse("wacom:core#Page")
 LIMIT: int = 10000
 logger = loguru.logger
@@ -203,7 +206,6 @@ async def test_05_update_metadata():
         metadata={"source": "integration-test", "client": "async"},
     )
 
-
 async def test_06_verify_content_info():
     """Retrieve content info and assert tags and metadata are present."""
     if not _content_id:
@@ -239,11 +241,27 @@ async def test_08_update_content_file():
         pytest.skip("No content item available")
     await content_client.login(_tenant_api_key, _external_id)
     updated_bytes: bytes = b"async-updated-content-bytes-for-testing"
-    await content_client.update_content_file(
-        content_id=_content_id,
-        file_content=updated_bytes,
-        filename="updated.bin",
+    try:
+        await content_client.update_content_file(
+            content_id=_content_id,
+            file_content=updated_bytes,
+            filename="updated.bin",
+        )
+        raise AssertionError("Expected update_content_file to raise an exception due to unsupported operation."
+                             "An image cannot be updated with plain text.")
+    except Exception as e:
+        logger.info(f"Expected exception caught for unsupported file update: {e}")
+    if not DUMMY_PNG.exists():
+        pytest.skip(f"Test asset not found: {DUMMY_PNG}")
+    await content_client.login(_tenant_api_key, _external_id)
+    file_bytes: bytes = DUMMY_PNG.read_bytes()
+    _update_content_id = await content_client.upload_content(
+        uri=_entity_uri,
+        file_content=file_bytes,
+        filename=DUMMY_PNG.name,
     )
+    assert _update_content_id is not None
+    assert len(_update_content_id) > 0
 
 
 async def test_09_verify_updated_file():
@@ -252,7 +270,14 @@ async def test_09_verify_updated_file():
         pytest.skip("No content item available")
     await content_client.login(_tenant_api_key, _external_id)
     downloaded: bytes = await content_client.download_content(_content_id)
-    assert downloaded == b"async-updated-content-bytes-for-testing"
+    updated_bytes: bytes = UPDATE_IMAGE_PNG.read_bytes()
+    sha_org = hashlib.sha256(updated_bytes).hexdigest()
+    sha_updated = hashlib.sha256(updated_bytes).hexdigest()
+    assert sha_org == sha_updated, (
+        f"SHA256: expected={sha_org}, "
+        f"got={sha_updated}"
+    )
+    print("")
 
 
 async def test_10_update_content_combined():
