@@ -18,7 +18,7 @@ import logging
 import threading
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Union, Optional, Dict, Any
+from typing import Union, Optional, Dict, Any, Tuple
 
 import jwt
 
@@ -31,6 +31,21 @@ __all__ = [
 ]
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+_REQUIRED_CLAIMS: Tuple[str, ...] = ("tenant", "roles", "exp", "iss", "ext-sub")
+
+
+def _decode_and_validate_token(auth_token: str) -> Dict[str, Any]:
+    """Decode a PKS JWT and verify it carries the required claims.
+
+    Signature verification is intentionally skipped: tokens always reach this
+    code over a TLS-verified PKS API response (login or refresh), so the
+    decode is for claim extraction, not authentication.
+    """
+    structures: Dict[str, Any] = jwt.decode(auth_token, options={"verify_signature": False})
+    if not all(claim in structures for claim in _REQUIRED_CLAIMS):
+        raise ValueError("Invalid authentication token.")
+    return structures
 
 
 class Session(ABC):
@@ -166,15 +181,7 @@ class TimedSession(Session):
         auth_token: str
             Authentication token
         """
-        structures: Dict[str, Any] = jwt.decode(auth_token, options={"verify_signature": False})
-        if (
-            "tenant" not in structures
-            or "roles" not in structures
-            or "exp" not in structures
-            or "iss" not in structures
-            or "ext-sub" not in structures
-        ):
-            raise ValueError("Invalid authentication token.")
+        structures: Dict[str, Any] = _decode_and_validate_token(auth_token)
         self.__tenant_id: str = structures["tenant"]
         self.__roles: str = structures["roles"]
         self.__timestamp: datetime = datetime.fromtimestamp(structures["exp"], tz=timezone.utc)
@@ -218,9 +225,7 @@ class TimedSession(Session):
         session_id: str
             Session id.
         """
-        structures: Dict[str, Any] = jwt.decode(auth_key, options={"verify_signature": False})
-        if "ext-sub" not in structures:
-            raise ValueError("Invalid authentication key.")
+        structures: Dict[str, Any] = _decode_and_validate_token(auth_key)
         service_url: str = structures["iss"]
         tenant_id: str = structures["tenant"]
         external_user_id: str = structures["ext-sub"]
@@ -314,22 +319,24 @@ class RefreshableSession(TimedSession):
     ----------
     auth_token : str
         The authentication token required for session authentication.
-    refresh_token : str
-        The refresh token used to renew the session.
+    refresh_token : Optional[str]
+        The refresh token used to renew the session, or ``None`` if the session
+        was created without one (only valid for ``PermanentSession``, which can
+        re-login via the tenant API key).
     """
 
-    def __init__(self, auth_token: str, refresh_token: str) -> None:
+    def __init__(self, auth_token: str, refresh_token: Optional[str]) -> None:
         super().__init__(auth_token)
-        self.__refresh_token: str = refresh_token
+        self.__refresh_token: Optional[str] = refresh_token
         self.__lock: threading.Lock = threading.Lock()
 
     @property
-    def refresh_token(self) -> str:
+    def refresh_token(self) -> Optional[str]:
         """Refresh token for the session."""
         return self.__refresh_token
 
     @refresh_token.setter
-    def refresh_token(self, value: str) -> None:
+    def refresh_token(self, value: Optional[str]) -> None:
         self.__refresh_token = value
 
     def update_session(self, auth_token: str, refresh_token: str) -> None:
@@ -343,15 +350,9 @@ class RefreshableSession(TimedSession):
             The refreshed refresh token.
         """
         with self.__lock:
-            structures = jwt.decode(auth_token, options={"verify_signature": False})
-            if (
-                "tenant" not in structures
-                or "roles" not in structures
-                or "exp" not in structures
-                or "iss" not in structures
-                or "ext-sub" not in structures
-            ):
-                raise ValueError("Invalid authentication token.")
+            if not isinstance(refresh_token, str) or not refresh_token:
+                raise ValueError("Refresh token must be a non-empty string.")
+            structures = _decode_and_validate_token(auth_token)
             if (
                 self.tenant_id != structures["tenant"]
                 or self.external_user_id != structures["ext-sub"]
@@ -397,21 +398,17 @@ class PermanentSession(RefreshableSession):
         tenant_api_key: str,
         external_user_id: str,
         auth_token: str,
-        refresh_token: str,
+        refresh_token: Optional[str],
     ) -> None:
         super().__init__(auth_token, refresh_token)
+        if self.external_user_id != external_user_id:
+            raise ValueError("external_user_id does not match the JWT's ext-sub claim.")
         self.__tenant_api_key: str = tenant_api_key
-        self.__external_user_id: str = external_user_id
 
     @property
     def tenant_api_key(self) -> str:
         """Tenant api key."""
         return self.__tenant_api_key
-
-    @property
-    def external_user_id(self) -> str:
-        """External user id."""
-        return self.__external_user_id
 
     def __str__(self) -> str:
         return (
@@ -474,7 +471,7 @@ class TokenManager:
                     tenant_api_key=tenant_api_key,
                     external_user_id=external_user_id,
                     auth_token=auth_token,
-                    refresh_token=refresh_token or "",
+                    refresh_token=refresh_token,
                 )
                 # If there is a tenant api key and an external user id, then the session is permanent
             elif refresh_token is not None:
