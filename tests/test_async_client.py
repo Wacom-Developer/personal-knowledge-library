@@ -717,6 +717,10 @@ async def test_14_activations():
     login into the asynchronous test client, searches for a specific entity, retrieves its URI,
     and validates the activation structure and relations associated with that entity.
 
+    Both the bulk activation endpoint (``activations``, ``GET /entity/activations``) and the
+    single-entity activation endpoint (``activation``, ``GET /entity/{uri}/activation``) are
+    exercised against the same URI so the two responses can be compared.
+
     Raises
     ------
     No explicit exceptions are raised but may propagate exceptions from underlying API functionalities.
@@ -727,6 +731,7 @@ async def test_14_activations():
     - Performs search for a predefined entity and retrieves its unique URI.
     - Fetches interconnected entities and their relations to validate activation data.
     - Verifies non-empty results for the specified entity relationship queries.
+    - Asserts the single-entity activation returns the same set of related URIs as the bulk call.
     """
     await vector_search.login(tenant_api_key=tenant_api_key, external_user_id=content_user_id)
     leo_uri: Optional[str] = None
@@ -742,6 +747,12 @@ async def test_14_activations():
     things, relations = await async_client.activations([leo_uri], depth=2)
     assert len(things) > 0
     assert len(relations) > 0
+
+    single_things, single_relations = await async_client.activation(leo_uri, depth=2)
+    assert len(single_things) > 0
+    assert len(single_relations) > 0
+    assert leo_uri in single_things
+    assert set(single_things.keys()) == set(things.keys())
 
 
 async def test_15_create_group_users():

@@ -1324,6 +1324,66 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
 
         raise await handle_error(f"Activation failed. URIS:={uris}.", response, parameters=params)
 
+    async def activation(
+        self,
+        uri: str,
+        depth: int,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> Tuple[Dict[str, ThingObject], List[Tuple[str, OntologyPropertyReference, str]]]:
+        """
+        Spreading activation for a single entity, retrieving its related entities up to the given depth.
+
+        Parameters
+        ----------
+        uri: str
+            URI of the entity to activate.
+        depth: int
+            Depth of activation.
+        auth_key: Optional[str] [default:=None]
+            Use a different auth key than the one from the client.
+        timeout: int
+            Request timeout in seconds (default: 60 seconds).
+
+        Returns
+        -------
+        entity_map: Dict[str, ThingObject]
+            Map with entity and its URI as a key.
+        relations: List[Tuple[str, OntologyPropertyReference, str]]
+            List of relations as (subject URI, predicate property, object URI) tuples.
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code, and activation failed.
+        """
+        url: str = (
+            f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/"
+            f"{urllib.parse.quote(uri)}/activation"
+        )
+        params: Dict[str, Any] = {ACTIVATION_TAG: depth}
+
+        session: AsyncSession = await self.asyncio_session()
+        response: ResponseData = await session.get(
+            url,
+            params=params,
+            verify_ssl=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            entities: Dict[str, Any] = cast(Dict[str, Any], response.content)
+            things: Dict[str, ThingObject] = {e[URI_TAG]: ThingObject.from_dict(e) for e in entities[ENTITIES_TAG]}
+            relations: List[Tuple[str, OntologyPropertyReference, str]] = []
+            for r in entities[RELATIONS_TAG]:
+                relation: OntologyPropertyReference = OntologyPropertyReference.parse(r[PREDICATE])
+                relations.append((r[SUBJECT], relation, r[OBJECT]))
+                if r[SUBJECT] in things:
+                    things[r[SUBJECT]].add_relation(ObjectProperty(relation, outgoing=[r[OBJECT]]))
+            return things, relations
+
+        raise await handle_error(f"Activation failed. URI:={uri}.", response, parameters=params)
+
     async def listing(
         self,
         filter_type: OntologyClassReference,
