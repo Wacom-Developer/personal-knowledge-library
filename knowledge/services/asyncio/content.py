@@ -145,6 +145,7 @@ class AsyncContentClient(AsyncServiceAPIClient):
     async def list_content(
         self,
         uri: str,
+        show_deleted: Optional[bool] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> List[ContentObject]:
@@ -155,6 +156,8 @@ class AsyncContentClient(AsyncServiceAPIClient):
         ----------
         uri: str
             URI of the entity whose content should be retrieved.
+        show_deleted: Optional[bool] = (Default:= None)
+            If set, also include soft-deleted content in the response.
         auth_key: Optional[str] = (Default:= None)
             Use a different auth key than the one from the client.
         timeout: int
@@ -171,7 +174,9 @@ class AsyncContentClient(AsyncServiceAPIClient):
             If the service returns an error.
         """
         url: str = self._content_url()
-        params: Dict[str, str] = {"uri": uri}
+        params: Dict[str, Any] = {"uri": uri}
+        if show_deleted is not None:
+            params["showDeleted"] = str(show_deleted).lower()
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(
             url,
@@ -189,6 +194,7 @@ class AsyncContentClient(AsyncServiceAPIClient):
     async def download_content(
         self,
         content_id: str,
+        show_deleted: Optional[bool] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> bytes:
@@ -199,6 +205,8 @@ class AsyncContentClient(AsyncServiceAPIClient):
         ----------
         content_id: str
             Unique identifier of the content.
+        show_deleted: Optional[bool] = (Default:= None)
+            If set, also retrieve soft-deleted content. Honored only for tenant admins.
         auth_key: Optional[str] = (Default:= None)
             Use a different auth key than the one from the client.
         timeout: int
@@ -215,20 +223,25 @@ class AsyncContentClient(AsyncServiceAPIClient):
             If the service returns an error.
         """
         url: str = self._content_url(content_id)
+        params: Dict[str, Any] = {}
+        if show_deleted is not None:
+            params["showDeleted"] = str(show_deleted).lower()
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(
             url,
+            params=params,
             timeout=timeout,
             overwrite_auth_token=auth_key,
         )
         if response.status == HTTPStatus.OK:
             content = response.content
             return content if isinstance(content, bytes) else str(content).encode()
-        raise await handle_error("Downloading content failed.", response)
+        raise await handle_error("Downloading content failed.", response, parameters=params)
 
     async def get_content_info(
         self,
         content_id: str,
+        show_deleted: Optional[bool] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> ContentObject:
@@ -239,6 +252,8 @@ class AsyncContentClient(AsyncServiceAPIClient):
         ----------
         content_id: str
             Unique identifier of the content.
+        show_deleted: Optional[bool] = (Default:= None)
+            If set, also retrieve metadata for soft-deleted content.
         auth_key: Optional[str] = (Default:= None)
             Use a different auth key than the one from the client.
         timeout: int
@@ -255,15 +270,19 @@ class AsyncContentClient(AsyncServiceAPIClient):
             If the service returns an error.
         """
         url: str = self._content_url(f"{content_id}/info")
+        params: Dict[str, Any] = {}
+        if show_deleted is not None:
+            params["showDeleted"] = str(show_deleted).lower()
         session: AsyncSession = await self.asyncio_session()
         response: ResponseData = await session.get(
             url,
+            params=params,
             timeout=timeout,
             overwrite_auth_token=auth_key,
         )
         if response.status == HTTPStatus.OK:
             return ContentObject.from_dict(response.content)  # type: ignore[arg-type]
-        raise await handle_error("Retrieving content info failed.", response)
+        raise await handle_error("Retrieving content info failed.", response, parameters=params)
 
     # ------------------------------------------ Update ----------------------------------------------------------------
 

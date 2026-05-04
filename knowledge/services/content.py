@@ -9,6 +9,7 @@ Synchronous client for the Wacom Content API providing operations for:
 - Updating content files, metadata, and tags
 - Deleting content items
 """
+
 from http import HTTPStatus
 from typing import Any, Dict, List, Optional
 
@@ -146,6 +147,7 @@ class ContentClient(WacomServiceAPIClient):
     def list_content(
         self,
         uri: str,
+        show_deleted: Optional[bool] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> List[ContentObject]:
@@ -156,6 +158,8 @@ class ContentClient(WacomServiceAPIClient):
         ----------
         uri: str
             URI of the entity whose content should be retrieved.
+        show_deleted: Optional[bool] = (Default:= None)
+            If set, also include soft-deleted content in the response.
         auth_key: Optional[str] = (Default:= None)
             If set, uses this auth key instead of the logged-in user's token.
         timeout: int
@@ -172,7 +176,9 @@ class ContentClient(WacomServiceAPIClient):
             If the service returns an error.
         """
         url: str = self._content_url()
-        params: Dict[str, str] = {"uri": uri}
+        params: Dict[str, Any] = {"uri": uri}
+        if show_deleted is not None:
+            params["showDeleted"] = str(show_deleted).lower()
         response: Response = self.request_session.get(
             url,
             params=params,
@@ -187,6 +193,7 @@ class ContentClient(WacomServiceAPIClient):
     def download_content(
         self,
         content_id: str,
+        show_deleted: Optional[bool] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> bytes:
@@ -197,6 +204,8 @@ class ContentClient(WacomServiceAPIClient):
         ----------
         content_id: str
             Unique identifier of the content.
+        show_deleted: Optional[bool] = (Default:= None)
+            If set, also retrieve soft-deleted content. Honored only for tenant admins.
         auth_key: Optional[str] = (Default:= None)
             If set, uses this auth key instead of the logged-in user's token.
         timeout: int
@@ -213,19 +222,24 @@ class ContentClient(WacomServiceAPIClient):
             If the service returns an error.
         """
         url: str = self._content_url(content_id)
+        params: Dict[str, Any] = {}
+        if show_deleted is not None:
+            params["showDeleted"] = str(show_deleted).lower()
         response: Response = self.request_session.get(
             url,
+            params=params,
             timeout=timeout,
             verify=self.verify_calls,
             overwrite_auth_token=auth_key,
         )
         if response.status_code == HTTPStatus.OK:
             return response.content
-        raise handle_error("Downloading content failed.", response)
+        raise handle_error("Downloading content failed.", response, parameters=params)
 
     def get_content_info(
         self,
         content_id: str,
+        show_deleted: Optional[bool] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> ContentObject:
@@ -236,6 +250,8 @@ class ContentClient(WacomServiceAPIClient):
         ----------
         content_id: str
             Unique identifier of the content.
+        show_deleted: Optional[bool] = (Default:= None)
+            If set, also retrieve metadata for soft-deleted content.
         auth_key: Optional[str] = (Default:= None)
             If set, uses this auth key instead of the logged-in user's token.
         timeout: int
@@ -252,15 +268,19 @@ class ContentClient(WacomServiceAPIClient):
             If the service returns an error.
         """
         url: str = self._content_url(f"{content_id}/info")
+        params: Dict[str, Any] = {}
+        if show_deleted is not None:
+            params["showDeleted"] = str(show_deleted).lower()
         response: Response = self.request_session.get(
             url,
+            params=params,
             timeout=timeout,
             verify=self.verify_calls,
             overwrite_auth_token=auth_key,
         )
         if response.status_code == HTTPStatus.OK:
             return ContentObject.from_dict(response.json())
-        raise handle_error("Retrieving content info failed.", response)
+        raise handle_error("Retrieving content info failed.", response, parameters=params)
 
     # ------------------------------------------ Update ----------------------------------------------------------------
 
