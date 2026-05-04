@@ -1,3 +1,14 @@
+2026/05/04 - RELEASE 4.3.1
+==========================
+- Token handling hardening in `knowledge/services/session.py`:
+  - `TokenManager.add_session` no longer coerces a missing refresh token to an empty string. A `PermanentSession` constructed without a starter refresh token now correctly reports `refreshable == False` and avoids a doomed POST to `/refresh` on the first refresh cycle (the SDK falls back to `request_user_token` directly).
+  - `PermanentSession` now raises `ValueError` if the constructor's `external_user_id` does not match the JWT's `ext-sub` claim, eliminating a class of silent identity divergence (BREAKING — previously accepted; the duplicate `__external_user_id` override has been removed and the value is sourced from the inherited `TimedSession` property).
+  - `RefreshableSession.update_session` now rejects empty / non-string refresh tokens with `ValueError` instead of silently overwriting a working refresh token.
+  - `TimedSession.extract_session_id` now raises `ValueError("Invalid authentication token.")` for JWTs missing any required claim (`tenant`, `roles`, `exp`, `iss`, `ext-sub`); previously a missing claim leaked a `KeyError`. JWT-claim validation is consolidated in a single `_decode_and_validate_token` helper used by `_auth_token_details_`, `extract_session_id`, and `update_session`.
+- New unit tests in `tests/test_session_unit.py` covering the four behaviours above (no PKS stage required).
+- Adding single activation function
+- Add missing showDeleted parameter for listing entities
+
 2026/04/13 - RELEASE 4.3.0
 ==========================
 - Adding clients for the Content API of graph service
