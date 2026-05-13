@@ -413,9 +413,29 @@ class RequestsSession:
         self.close()
 
 
+# Header names whose values must not be written to logs / formatted error output.
+# Compared case-insensitively. Add new names here as new auth schemes are introduced.
+_SENSITIVE_HEADER_KEYS = {"authorization"}
+
+
+def _redact_sensitive_headers(headers: Optional[Dict[str, str]]) -> Optional[Dict[str, str]]:
+    """
+    Return a copy of `headers` with values for `_SENSITIVE_HEADER_KEYS` masked.
+
+    Used by `format_exception` so bearer tokens are never serialized into log
+    output. Returns the input unchanged when `headers` is None or empty.
+    """
+    if not headers:
+        return headers
+    return {k: ("***REDACTED***" if k.lower() in _SENSITIVE_HEADER_KEYS else v) for k, v in headers.items()}
+
+
 def format_exception(exception: WacomServiceException) -> str:
     """
     Formats the exception.
+
+    The ``Authorization`` header (and other entries in `_SENSITIVE_HEADER_KEYS`) is
+    redacted before formatting so that bearer tokens cannot leak into logs.
 
     Parameters
     ----------
@@ -434,7 +454,7 @@ def format_exception(exception: WacomServiceException) -> str:
         f"method:= {exception.method},\n"
         f"parameters:= {exception.params},\n"
         f"payload:= {exception.payload},\n"
-        f"headers:= {exception.headers},\n"
+        f"headers:= {_redact_sensitive_headers(exception.headers)},\n"
         f"status code=: {exception.status_code},\n"
         f"service response:= {exception.service_response}"
     )
