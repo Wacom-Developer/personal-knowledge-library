@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2024-present Wacom. All rights reserved.
+"""
+Deprecated Wikidata helpers.
+
+This module is deprecated and scheduled for removal in v5.0. None of its
+exports are consumed inside the SDK, and the actively maintained Wikidata
+access surface lives in :mod:`knowledge.public.wikidata`. If you depend on a
+helper here, migrate to ``knowledge.public.wikidata`` or vendor the function
+into your own code before upgrading past v4.x.
+
+Importing this module emits a :class:`DeprecationWarning` so that downstream
+consumers see a one-time signal in their logs / test output.
+"""
+import warnings
 from typing import Any, Dict, List
 
 from knowledge import logger
@@ -12,6 +25,14 @@ from knowledge.base.entity import (
 )
 from knowledge.base.language import LANGUAGE_LOCALE_MAPPING, LocaleCode
 from knowledge.base.ontology import ThingObject, OntologyClassReference
+
+warnings.warn(
+    "knowledge.utils.wikidata is deprecated and will be removed in v5.0. "
+    "The helpers in this module have no callers inside the SDK; migrate to "
+    "knowledge.public.wikidata or vendor the functions you need.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 __all__ = [
     "update_language_code",
