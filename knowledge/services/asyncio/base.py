@@ -625,6 +625,18 @@ class AsyncServiceAPIClient(RESTAPIClient):
     ------------------------------
     Abstract class for Wacom service APIs.
 
+    Notes
+    -----
+    Unlike the sync client (which installs a ``urllib3.Retry`` on 502/503/504
+    via :class:`knowledge.services.base.RequestsSession`), this async client
+    intentionally does **not** apply any transport-level retry policy. Retry
+    is the caller's responsibility — backend services that embed this client
+    typically need to coordinate retries with their own circuit breakers,
+    idempotency keys, request budgets, and back-pressure signals, and a
+    library-level retry that fights those policies is worse than no retry at
+    all. Do not add a retry/backoff layer here without a deliberate design
+    discussion.
+
     Parameters
     ----------
     service_url: str
@@ -711,11 +723,13 @@ class AsyncServiceAPIClient(RESTAPIClient):
         This method ensures that the session is closed in a thread-safe manner. It acquires
         a session lock to prevent concurrent access during the session closure process.
         If the session is already closed, the method will not perform any additional
-        operations.
+        operations. After closing, the client's session reference is cleared so a
+        subsequent call attempt will fail fast rather than dispatch on a closed session.
         """
         async with self._session_lock:
             if self._session:
                 await self._session.close()
+                self._session = None
 
     @property
     def application_name(self) -> str:
