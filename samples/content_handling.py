@@ -104,6 +104,8 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--user", required=True, help="External user ID within the knowledge service.")
     parser.add_argument("-t", "--tenant", required=True, help="Tenant API key.")
     parser.add_argument("-f", "--file", required=True, help="Path to a file to upload as content.")
+    parser.add_argument("-s", "--update-file", required=True,
+                        help="Path to a file to replace the original content (PUT).")
     parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="Service instance URL.")
     args = parser.parse_args()
 
@@ -207,11 +209,11 @@ if __name__ == "__main__":
         # ── Step 8: Replace the stored file ───────────────────────────────────
         print("\nStep 8 — Replace stored file (PUT)")
         print("=" * 80)
-        replacement_bytes: bytes = b"This is replacement content for the sample."
+        replacement_bytes: bytes = Path(args.update_file).read_bytes()
         content_client.update_content_file(
             content_id=content_id,
             file_content=replacement_bytes,
-            filename="replacement.txt",
+            filename=Path(args.update_file).name,
         )
         replaced: bytes = content_client.download_content(content_id)
         print(f"    Replacement : {len(replacement_bytes):,} bytes")
