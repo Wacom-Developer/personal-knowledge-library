@@ -231,7 +231,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         auth_key: Optional[str]
             Use a different auth key than the one from the client
         timeout: int
-            Timeout in seconds. Default: 10 seconds.
+            Timeout in seconds. Default: 60 seconds.
 
         Returns
         -------
@@ -871,7 +871,7 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         auth_key: Optional[str]
             Use a different auth key than the one from the client
         timeout: int
-            Timeout in seconds. Default: 10 seconds.
+            Timeout in seconds. Default: 60 seconds.
 
         Raises
         ------
