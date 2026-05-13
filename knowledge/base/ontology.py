@@ -1614,7 +1614,7 @@ class ThingObject:
         Rights for tenants
     owner: bool (default:= False)
         Is the logged-in user the owner of the entity
-    use_for_nel: bool (default:= Ture)
+    use_for_nel: bool (default:= True)
         Use the entity for named entity linking
     use_vector_index: bool (default:= False)
         Use vector index for labels
