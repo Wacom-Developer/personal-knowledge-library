@@ -30,6 +30,7 @@ Please contact your Wacom representative for more information.
   - [Import Format](#import-format)
   - [Access API](#access-api)
   - [Entity API](#entity-api)
+- [Choosing Between Sync and Async Clients](#choosing-between-sync-and-async-clients)
 - [Samples](#samples)
   - [Entity Handling](#entity-handling)
   - [Named Entity Linking](#named-entity-linking)
@@ -38,6 +39,8 @@ Please contact your Wacom representative for more information.
   - [Asynchronous Client](#asynchronous-client)
   - [Semantic Search](#semantic-search)
   - [Ink Services](#ink-services)
+  - [Content API](#content-api)
+    - [Business Logic Recommendations](#content-api--business-logic-recommendations)
   - [Index Management](#index-management)
   - [Queue Management](#queue-management)
 - [Development](#development)
@@ -192,7 +195,7 @@ An ontology defines (specifies) the concepts, relationships, and other distincti
 
 ## Import Format
 
-For importing entities into the knowledge graph, the tools/import_entities.py script can be used.
+For importing entities into the knowledge graph, the samples/import_entities.py script can be used.
 
 The ThingObject supports a NDJSON-based import format, where the individual JSON files can contain the following structure.
 
@@ -287,6 +290,91 @@ There is always a main label, which refers to the most common or official name o
 Another example would be Wacom, where _Wacom Co., Ltd._ is the official name while _Wacom_ is commonly used and be considered as an alias.
 
 >  :pushpin: For the language code the **ISO 639-1:2002**, codes for the representation language names —Part 1: Alpha-2 code. Read more, [here](https://www.iso.org/standard/22109.html)
+
+---
+
+## Choosing Between Sync and Async Clients
+
+Every user-facing service client ships in two flavours: the synchronous client in `knowledge.services.*` and the async counterpart in `knowledge.services.asyncio.*`.
+Both expose the same methods with the same parameters and return types — switching only changes the call style.
+
+### When to use the sync client
+
+- **Scripts, CLIs, one-off tools, and notebooks.** No event loop required, easier to reason about, and `pdb` works as expected. All samples in this repository use the sync client.
+- **Single-shot calls embedded in otherwise synchronous code.** Mixing `asyncio.run(...)` into a sync codebase just to make one request is rarely worth it.
+- **Callers that want transparent recovery from transient failures.** Sync clients install a `urllib3.Retry(total=3, backoff_factor=0.1, status_forcelist=[502, 503, 504])` at the transport layer, so 5xx blips are retried for you.
+
+### When to use the async client
+
+- **Backend services that hold many concurrent connections** — FastAPI, aiohttp, Starlette, etc. Mixing blocking I/O into an async event loop blocks every other request; use the async client to keep the loop free.
+- **High-throughput batch jobs** that benefit from issuing many requests in parallel via `asyncio.gather(...)`.
+- **Callers that already own a retry / circuit-breaker / idempotency layer.** The async clients deliberately ship **no transport-level retry** — backend callers typically have their own policies (back-pressure, circuit breakers, idempotency keys), and a hidden retry layer would interfere with them.
+
+> :pushpin: The retry asymmetry between the sync and async clients is intentional. If your async caller does not already implement retries, wrap the failing call yourself rather than asking for retries inside the SDK.
+
+### Mixed availability
+
+Most service clients exist in both forms, with one exception:
+
+| Client                       | Sync | Async |
+|------------------------------|:----:|:-----:|
+| `WacomKnowledgeService`      |  ✅  |   ✅  |
+| `OntologyService`            |  ✅  |   ❌  |
+| `UserManagementServiceAPI`   |  ✅  |   ✅  |
+| `GroupManagementService`     |  ✅  |   ✅  |
+| `SemanticSearchClient`       |  ✅  |   ✅  |
+| `IndexManagementClient`      |  ✅  |   ✅  |
+| `QueueManagementClient`      |  ✅  |   ✅  |
+| `InkServices`                |  ✅  |   ✅  |
+| `ContentClient`              |  ✅  |   ✅  |
+| `WacomEntityLinkingEngine`   |  ✅  |   ✅  |
+
+Ontology management is sync-only; everything else is available as both `Foo` and `AsyncFoo`.
+The infrastructure modules `session.py`, `tenant.py`, and `helper.py` are also sync-only by design — they are not service clients.
+
+### Reusing a token across clients
+
+Each client owns its own `TokenManager`; there is no global session registry, and `use_session(session_id)` only resolves IDs that live in **that** client's manager.
+A session created by `knowledge_client.login(...)` is therefore **not** visible to `content_client` — calling `content_client.use_session(session.id)` raises `WacomServiceException("Unknown session id:= …")`.
+
+To avoid a second login round-trip when multiple clients work against the same user, use one of these two patterns instead.
+
+**Pattern 1 — per-call `auth_key=` override.** Most service methods accept an optional `auth_key=` parameter that bypasses the bound session for a single call:
+
+```python
+session = knowledge_client.login(tenant_api_key, external_user_id)
+# Use the same token in another client without registering a session there
+items = content_client.list_content(uri=entity_uri, auth_key=session.auth_token)
+```
+
+**Pattern 2 — `register_token()` on the second client.** Reuse the auth token (and refresh token, if any) obtained from the first login to register a `RefreshableSession` in the second client's token manager. No second network call to `/user/login` is made:
+
+```python
+session = knowledge_client.login(tenant_api_key, external_user_id)
+content_client.register_token(
+    auth_key=session.auth_token,
+    refresh_token=session.refresh_token,
+)
+# content_client now uses that session for subsequent calls
+content_client.list_content(uri=entity_uri)
+```
+
+> :pushpin: `register_token` produces a `RefreshableSession`, not a `PermanentSession`. The two clients refresh independently after this point — refreshing on one does not propagate the new token to the other. If long-lived auto re-login (the `PermanentSession` behavior) is required on the second client too, call `client.login(tenant_api_key, external_user_id)` on it directly.
+
+### Closing async clients
+
+Async clients hold an `aiohttp.ClientSession`. Always close it before the program exits:
+
+```python
+async_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(...)
+await async_client.login(tenant_api_key, external_user_id)
+try:
+    ...
+finally:
+    await async_client.close_all_sessions()
+```
+
+---
 
 ## Samples
 
@@ -1321,6 +1409,226 @@ Run the full ink services sample:
 ```bash
 python samples/ink_services.py --user <user-id> --tenant <tenant-key>
 ```
+
+---
+
+### Content API
+
+The `ContentClient` (sync, in `knowledge.services.content`) and `AsyncContentClient` (async, in `knowledge.services.asyncio.content`) provide access to the Wacom Content API.
+Content items are binary blobs — images, PDFs, ink files, audio, and so on — attached to an entity in the knowledge graph by its URI.
+The Content API enforces only the mechanical rules (access rights on the owning entity, MIME-type integrity on file replacement, and soft/hard delete primitives); tenant- and product-specific policy belongs in the business layer above (see [Business Logic Recommendations](#content-api--business-logic-recommendations)).
+
+#### Upload, list, download
+
+```python
+from pathlib import Path
+from knowledge.services.content import ContentClient
+
+client: ContentClient = ContentClient(service_url="https://private-knowledge.wacom.com")
+client.login(tenant_api_key="<tenant-key>", external_user_id="<user-id>")
+
+file_bytes: bytes = Path("report.pdf").read_bytes()
+
+content_id: str = client.upload_content(
+    uri="wacom:entity:abc-123",
+    file_content=file_bytes,
+    filename="report.pdf",
+    mimetype="application/pdf",
+)
+
+# All content items attached to an entity
+items = client.list_content(uri="wacom:entity:abc-123")
+for item in items:
+    print(f"{item.id} ({item.mime_type}) tags={item.tags} deleted={item.is_deleted}")
+
+# Download the raw file
+file_bytes_back: bytes = client.download_content(content_id)
+
+# Metadata only (no blob)
+info = client.get_content_info(content_id)
+print(info.date_added, info.date_modified, info.metadata)
+```
+
+#### Update tags, metadata, or the file itself
+
+```python
+# Patch tags and metadata in a single call
+client.update_content(
+    content_id=content_id,
+    tags=["report", "Q4-2026"],
+    metadata={"author": "ada.lovelace", "status": "reviewed"},
+)
+
+# Replace just the metadata
+client.update_content_metadata(content_id, metadata={"status": "archived"})
+
+# Replace just the tags
+client.update_content_tags(content_id, tags=["report", "archived"])
+
+# Replace the stored file. The replacement must have the same MIME type;
+# otherwise the service returns 409 Conflict.
+client.update_content_file(
+    content_id=content_id,
+    file_content=Path("report-v2.pdf").read_bytes(),
+    filename="report-v2.pdf",
+)
+```
+
+#### Delete
+
+`force=False` (the default) performs a **soft delete**: the item is flagged with `isDeleted=true` but the blob and metadata are kept.
+`force=True` performs a **hard delete**, removing the blob from premium storage irreversibly.
+Soft-deleted items are returned by `list_content(..., show_deleted=True)` only when called by a tenant admin.
+
+```python
+# Soft delete (reversible)
+client.delete_content(content_id)
+
+# Hard delete (irreversible; gate this in the business layer — see below)
+client.delete_content(content_id, force=True)
+
+# Cascade: delete every content item attached to an entity
+client.delete_all_content(uri="wacom:entity:abc-123")
+```
+
+#### Async equivalent
+
+```python
+import asyncio
+from pathlib import Path
+from knowledge.services.asyncio.content import AsyncContentClient
+
+async def main() -> None:
+    client: AsyncContentClient = AsyncContentClient(
+        service_url="https://private-knowledge.wacom.com",
+    )
+    await client.login(tenant_api_key="<tenant-key>", external_user_id="<user-id>")
+    try:
+        content_id: str = await client.upload_content(
+            uri="wacom:entity:abc-123",
+            file_content=Path("report.pdf").read_bytes(),
+            filename="report.pdf",
+        )
+        items = await client.list_content(uri="wacom:entity:abc-123")
+        for item in items:
+            print(item.id, item.mime_type)
+    finally:
+        await client.close_all_sessions()
+
+asyncio.run(main())
+```
+
+#### `ContentObject` fields
+
+`list_content`, `get_content_info`, and `update_content` return `ContentObject` instances (`knowledge.base.content`):
+
+| Field           | Type             | Description                                                          |
+|-----------------|------------------|----------------------------------------------------------------------|
+| `id`            | `str`            | Unique identifier returned at upload time.                           |
+| `mime_type`     | `str`            | MIME type of the stored file.                                        |
+| `tags`          | `List[str]`      | Tags attached to the content item.                                   |
+| `metadata`      | `Dict[str, str]` | Key-value metadata.                                                  |
+| `date_added`    | `datetime`       | UTC creation timestamp.                                              |
+| `date_modified` | `datetime`       | UTC last-modified timestamp.                                         |
+| `is_deleted`    | `bool`           | `True` for soft-deleted items returned via `show_deleted=True`.      |
+
+Run the full content API sample:
+
+```bash
+python samples/content_handling.py \
+    --tenant <TENANT_API_KEY> \
+    --user   <EXTERNAL_USER_ID> \
+    --file   /path/to/original.png \
+    --update-file /path/to/replacement.png
+```
+
+#### Content API — Business Logic Recommendations
+
+This section captures guidance for the business-level REST API that sits on top of the Content API.
+The Content API deliberately exposes broad primitives (Read / Write / Delete rights, `force`, `showDeleted`, MIME-type integrity) so that tenant- and product-specific policy can be implemented once, in the business layer, without changing the core.
+
+The recommendations below are **non-normative defaults**. A given deployment may choose a stricter or looser policy; the Content API will honor whatever the business layer forwards.
+
+##### Why the split
+
+The two layers have different jobs:
+
+| Layer                          | Responsibility                                                                                                                                                                                                   |
+|--------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Content API** (this SDK)     | Mechanical correctness: storage, rights enforcement on the owning entity, soft/hard delete primitives, MIME-type integrity, audit timestamps.                                                                    |
+| **Business REST API** (upstream) | Product and tenant policy: who may hard-delete, restore flow, trash UX, retention windows, GDPR erasure, quotas, rate limits, virus scanning, derivative generation (thumbnails, text extraction), notifications. |
+
+Keeping policy out of the Content API means a tenant can change its rules (for example, "Delete right means soft delete only, hard delete is admin-only") by changing the business layer without touching the data plane.
+
+##### Gating hard delete
+
+The Content API grants `force=true` to any caller holding the Delete right on the owning entity.
+The business API should typically **not** expose this directly.
+
+Recommended default:
+
+| Caller                                                  | Soft delete (`force=false`) | Hard delete (`force=true`)        |
+|---------------------------------------------------------|:---------------------------:|:---------------------------------:|
+| Content uploader                                        |             ✅              |                ✅                 |
+| Entity owner                                            |             ✅              |                ✅                 |
+| Group member with Delete right on a `Shared` entity     |             ✅              | ❌ (defer to owner/admin)         |
+| Tenant user with Delete right on a `Public` entity      |             ✅              | ❌ (defer to owner/admin)         |
+| TenantAdmin                                             |             ✅              |                ✅                 |
+
+**Rationale:** soft delete is reversible and its blast radius is bounded; hard delete destroys the blob and its history.
+A careless or hostile collaborator should not be able to permanently erase someone else's uploaded work.
+The business layer should therefore translate an ordinary "Delete" action into `DELETE /content/{id}` (no `force`), and only forward `force=true` when the caller is the uploader, the entity owner, or a TenantAdmin.
+
+##### Offering a trash / restore experience
+
+`showDeleted=true` is honored only for **TenantAdmins** at the core. To build a self-service "Trash" feature, the business layer should:
+
+1. Call `GET /content?uri=…&showDeleted=true` with an admin or service token.
+2. Filter the result to items whose uploader (or entity owner) matches the calling user.
+3. Return that filtered list as the user's trash.
+4. Offer a **Restore** action that flips `isDeleted` back to `false`. A dedicated `POST /content/{id}/restore` primitive in the Content API is recommended; until it exists, the business layer has no lossless way to restore a soft-deleted item.
+5. Offer a **Delete permanently** action that issues `DELETE /content/{id}?force=true`, subject to the gating above.
+
+##### Retention and scheduled hard-delete
+
+Soft-deleted items still occupy premium blob storage.
+The business layer should enforce a retention policy — for example, automatically hard-deleting soft-deleted items after N days — by running a scheduled job that:
+
+1. Lists soft-deleted items per tenant via `GET /content?…&showDeleted=true`.
+2. Selects items whose `dateModified` is older than the retention window.
+3. Issues `DELETE /content/{id}?force=true` for each.
+
+**Recommended defaults:** 30 days for user-initiated soft deletes, 7 days for cascaded deletes originating from an entity removal.
+
+##### GDPR / right-to-erasure
+
+When a user exercises a right-to-erasure request, soft delete is insufficient — the content must actually leave premium storage. The business layer should:
+
+1. Enumerate all entities owned by the subject.
+2. For each entity, call `DELETE /content?uri={entityUri}` (cascading to every attached content item).
+3. Follow up with `DELETE /content/{id}?force=true` on any remaining items returned under `showDeleted=true` to guarantee hard deletion.
+4. Record the operation in an auditable log kept outside the knowledge graph.
+
+##### MIME-type integrity on file replacement
+
+`PUT /content/{id}/file` returns **409 Conflict** when the replacement file's MIME type differs from the stored one.
+The business layer should surface this to the user as "upload a file of the same type, or create a new content item instead" rather than retrying blindly.
+If a true type change is intended, the correct pattern is: upload a new content item via `POST /content/{uri}`, copy over the tags and metadata, then delete the old item.
+
+##### Quotas, rate limits, and scanning
+
+The Content API does **not** enforce per-tenant storage quotas, upload rate limits, virus scanning, or content-type whitelists.
+These belong to the business layer and should run **before** the request is forwarded to the Content API, so that rejected uploads never touch premium storage.
+
+##### Derived artefacts
+
+Thumbnails, extracted text for full-text search, embeddings for vector search, and similar derivatives should be produced by the business layer (or a downstream worker triggered by it) rather than being stored as first-class content items — unless they are themselves user-facing.
+When derivatives are stored via this API, tag them (e.g. `derivative:thumbnail`) so that lifecycle operations can cascade cleanly.
+
+##### Audit trail
+
+`dateAdded`, `dateModified`, and `isDeleted` provide a minimal audit surface.
+For a full audit trail (who uploaded, who deleted, who restored, from which IP, under which business action), the business layer should emit audit events to a separate store at the moment it calls the Content API, rather than relying on the core timestamps alone.
 
 ---
 
