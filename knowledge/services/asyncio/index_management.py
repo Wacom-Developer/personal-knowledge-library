@@ -293,6 +293,10 @@ class AsyncIndexManagementClient(AsyncSemanticSearchClient):
                         status_code=response.status,
                         service_response=error_text,
                     )
+        except WacomServiceException:
+            # Preserve the structured status_code / service_response from the
+            # inner WacomServiceException raised above instead of re-wrapping it.
+            raise
         except Exception as e:
             raise WacomServiceException(
                 f"Error during document streaming: {str(e)}",
