@@ -118,8 +118,7 @@ def subclasses_of(iri: str) -> tuple[str, ...]:
         Subclasses of the ontology class (cached).
     """
     sub_classes: tuple[str, ...] = tuple(
-        str(s)
-        for s, p, o in ontology_graph.triples((None, RDFS.subClassOf, URIRef(iri)))
+        str(s) for s, p, o in ontology_graph.triples((None, RDFS.subClassOf, URIRef(iri)))
     )
     result: tuple[str, ...] = sub_classes
     for sub_class in sub_classes:
@@ -270,9 +269,7 @@ class PropertyConfiguration:
         The list of property PIDs.
     """
 
-    def __init__(
-        self, iri: str, property_type: PropertyType, pids: Optional[List[str]] = None
-    ):
+    def __init__(self, iri: str, property_type: PropertyType, pids: Optional[List[str]] = None):
         self.__iri: str = iri
         self.__pids: List[str] = pids if pids else []
         self.__property: PropertyType = property_type
@@ -414,7 +411,7 @@ class MappingConfiguration:
         for prop_conf in self.properties:
             for d in prop_conf.domains:
                 if d not in domain_subclasses:
-                    domain_subclasses[d] = [d] + subclasses_of(d)
+                    domain_subclasses[d] = [d] + list(subclasses_of(d))
                 if class_ref.iri in domain_subclasses[d]:
                     if property_type is None or prop_conf.type == property_type:
                         properties.append(prop_conf)
@@ -433,17 +430,13 @@ class MappingConfiguration:
         class_idx: int = len(self.__classes) - 1
         number_of_classes: int = len(class_configuration.wikidata_classes)
         if number_of_classes > 0:
-            logger.debug(
-                f"Adding {number_of_classes} classes for {class_configuration.concept_type.iri}"
-            )
+            logger.debug(f"Adding {number_of_classes} classes for {class_configuration.concept_type.iri}")
         for _, c in enumerate(class_configuration.wikidata_classes):
             if wikidata_cache.subclass_in_cache(c):
                 for subclass in wikidata_cache.get_subclass(c).subclasses:
                     if subclass in self.__index:
                         logger.warning(f"Class {subclass} already exists in the index.")
-                        class_config: ClassConfiguration = self.__classes[
-                            self.__index[subclass]
-                        ]
+                        class_config: ClassConfiguration = self.__classes[self.__index[subclass]]
                         logger.warning(
                             f"Class {class_config.concept_type} "
                             f"is conflicting with {class_configuration.concept_type}."
@@ -499,9 +492,7 @@ class MappingConfiguration:
             raise ValueError(f"Property {property_iri} not found.")
         return self.__properties[self.__index_iri[property_iri]]
 
-    def check_data_property_range(
-        self, property_type: OntologyPropertyReference, content: Optional[Any]
-    ) -> bool:
+    def check_data_property_range(self, property_type: OntologyPropertyReference, content: Optional[Any]) -> bool:
         """
         Checks if the content is in the range of the property.
 
@@ -519,9 +510,7 @@ class MappingConfiguration:
         """
         if content is None:
             return False
-        prop_config: Optional[PropertyConfiguration] = self.property_for_iri(
-            property_type.iri
-        )
+        prop_config: Optional[PropertyConfiguration] = self.property_for_iri(property_type.iri)
         if prop_config:
             for r in prop_config.ranges:
                 if r == DataPropertyType.STRING.value:
@@ -533,11 +522,7 @@ class MappingConfiguration:
                 if r == DataPropertyType.BOOLEAN.value:
                     return content is not None and isinstance(content, bool)
                 if r in {DataPropertyType.DATE.value, DataPropertyType.DATE_TIME.value}:
-                    return (
-                        content is not None
-                        and isinstance(content, str)
-                        and is_iso_date(content)
-                    )
+                    return content is not None and isinstance(content, str) and is_iso_date(content)
                 return True
         return False
 
@@ -563,24 +548,16 @@ class MappingConfiguration:
         valid: bool
             True if the target is in the range, False otherwise.
         """
-        prop_config: Optional[PropertyConfiguration] = self.property_for_iri(
-            property_type.iri
-        )
+        prop_config: Optional[PropertyConfiguration] = self.property_for_iri(property_type.iri)
         if prop_config:
             if prop_config.type == PropertyType.OBJECT_PROPERTY:
-                if (
-                    source_type.iri in prop_config.domains
-                    and target_type.iri in prop_config.ranges
-                ):
+                if source_type.iri in prop_config.domains and target_type.iri in prop_config.ranges:
                     return True
                 return False
         return False
 
     def __str__(self) -> str:
-        return (
-            f"Mapping Configuration(#classes={len(self.__classes)}"
-            f", #properties={len(self.__properties)})"
-        )
+        return f"Mapping Configuration(#classes={len(self.__classes)}" f", #properties={len(self.__properties)})"
 
 
 mapping_configuration: Optional[MappingConfiguration] = None
@@ -608,9 +585,7 @@ def build_configuration(mapping: Dict[str, Any]) -> MappingConfiguration:
         class_config.wikidata_classes = c_conf[WIKIDATA_TYPES]
         conf.add_class(class_config)
     dataproperty_count: int = len(mapping["data_properties"])
-    logger.debug(
-        f"Adding {dataproperty_count} data properties to the mapping configuration"
-    )
+    logger.debug(f"Adding {dataproperty_count} data properties to the mapping configuration")
     for p, p_conf in tqdm(mapping["data_properties"].items(), desc="Data properties mapping"):
         property_config: PropertyConfiguration = PropertyConfiguration(
             p, PropertyType.DATA_PROPERTY, p_conf["wikidata_types"]
@@ -625,9 +600,7 @@ def build_configuration(mapping: Dict[str, Any]) -> MappingConfiguration:
                 property_config.domains.extend(subclasses_of(do))
         conf.add_property(property_config)
     object_property_count: int = len(mapping["object_properties"])
-    logger.debug(
-        f"Adding {object_property_count} object properties to the mapping configuration"
-    )
+    logger.debug(f"Adding {object_property_count} object properties to the mapping configuration")
     for p, p_conf in tqdm(mapping["object_properties"].items(), desc="Object properties mapping"):
         property_config: PropertyConfiguration = PropertyConfiguration(
             p, PropertyType.OBJECT_PROPERTY, p_conf["wikidata_types"]
