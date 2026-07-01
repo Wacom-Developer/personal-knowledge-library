@@ -1,3 +1,8 @@
+2026/07/01 - RELEASE 4.3.2
+==========
+- **Deprecated** `knowledge.utils.wikidata` — the module has no internal callers and is scheduled for removal in v5.0. Importing it now emits a `DeprecationWarning`. Migrate to `knowledge.public.wikidata` or vendor the helpers you need.
+- Fixing issue with ontology mapping 
+
 2026/05/04 - RELEASE 4.3.1
 ==========================
 - Token handling hardening in `knowledge/services/session.py`:
