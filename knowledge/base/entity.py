@@ -71,6 +71,7 @@ __all__ = [
     "EntityStatus",
     "LocalizedContent",
     "Label",
+    "LanguageCode",
     "Description",
 ]
 
