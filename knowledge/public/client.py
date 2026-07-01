@@ -158,8 +158,7 @@ class WikiDataAPIClient:
             if response.ok:
                 return response.json()
             raise WikiDataAPIException(
-                f"Failed to query entities. "
-                f"Response code:={response.status_code}, Exception:= {response.content}."
+                f"Failed to query entities. " f"Response code:={response.status_code}, Exception:= {response.content}."
             )
         except requests.exceptions.JSONDecodeError as e:
             logger.warning(f"SPARQL query returned malformed JSON, retrying: {e}")
@@ -202,12 +201,8 @@ class WikiDataAPIClient:
                     class_qid = b["class"]["value"].rsplit("/", 1)[-1]
                     superclass_label = b["superclassLabel"]["value"]
                     class_label = b["classLabel"]["value"]
-                    wikidata_classes.setdefault(
-                        class_qid, WikidataClass(class_qid, class_label)
-                    )
-                    wikidata_classes.setdefault(
-                        superclass_qid, WikidataClass(superclass_qid, superclass_label)
-                    )
+                    wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
+                    wikidata_classes.setdefault(superclass_qid, WikidataClass(superclass_qid, superclass_label))
                     adjacency_list.setdefault(class_qid, set()).add(superclass_qid)
         except (ValueError, KeyError, HTTPError) as e:
             logger.exception(e)
@@ -224,9 +219,7 @@ class WikiDataAPIClient:
             if current_qid in adjacency_list:
                 for superclass_qid in adjacency_list[current_qid]:
                     if (current_qid, superclass_qid) not in cycle_detector:
-                        wikidata_classes[current_qid].superclasses.append(
-                            wikidata_classes[superclass_qid]
-                        )
+                        wikidata_classes[current_qid].superclasses.append(wikidata_classes[superclass_qid])
                         queue.append(superclass_qid)
                         cycle_detector.add((current_qid, superclass_qid))
 
@@ -255,12 +248,8 @@ class WikiDataAPIClient:
             adjacency_list: Dict[str, Set[str]] = {}
 
             for class_qid, subclass_qid, class_label, subclass_label in results:
-                wikidata_classes.setdefault(
-                    class_qid, WikidataClass(class_qid, class_label)
-                )
-                wikidata_classes.setdefault(
-                    subclass_qid, WikidataClass(subclass_qid, subclass_label)
-                )
+                wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
+                wikidata_classes.setdefault(subclass_qid, WikidataClass(subclass_qid, subclass_label))
                 adjacency_list.setdefault(class_qid, set()).add(subclass_qid)
         except (ValueError, KeyError, HTTPError) as e:
             logger.exception(e)
@@ -277,16 +266,12 @@ class WikiDataAPIClient:
 
             # Ensure the starting QID is in the dictionary
             if current_qid not in wikidata_classes:
-                wikidata_classes[current_qid] = WikidataClass(
-                    current_qid, f"Class {current_qid}"
-                )
+                wikidata_classes[current_qid] = WikidataClass(current_qid, f"Class {current_qid}")
 
             if current_qid in adjacency_list:
                 for subclass_qid in adjacency_list[current_qid]:
                     if (current_qid, subclass_qid) not in cycle_detector:
-                        wikidata_classes[current_qid].subclasses.append(
-                            wikidata_classes[subclass_qid]
-                        )
+                        wikidata_classes[current_qid].subclasses.append(wikidata_classes[subclass_qid])
                         queue.append(subclass_qid)
                         cycle_detector.add((current_qid, subclass_qid))
 
@@ -317,9 +302,7 @@ class WikiDataAPIClient:
                     class_qid = b["class"]["value"].rsplit("/", 1)[-1]
                     superclass_label = b["superclassLabel"]["value"]
                     class_label = b["classLabel"]["value"]
-                    results.append(
-                        (class_qid, superclass_qid, class_label, superclass_label)
-                    )
+                    results.append((class_qid, superclass_qid, class_label, superclass_label))
             return tuple(results)
         except Exception as e:
             logger.warning(f"Failed to fetch superclasses for {qid}: {e}")
@@ -351,9 +334,7 @@ class WikiDataAPIClient:
                     class_qid = b["class"]["value"].rsplit("/", 1)[-1]
                     subclass_label = b["subclassLabel"]["value"]
                     class_label = b["classLabel"]["value"]
-                    results.append(
-                        (class_qid, subclass_qid, class_label, subclass_label)
-                    )
+                    results.append((class_qid, subclass_qid, class_label, subclass_label))
             return tuple(results)
         except Exception as e:
             logger.warning(f"Failed to fetch subclasses for {qid}: {e}")
@@ -381,12 +362,8 @@ class WikiDataAPIClient:
             adjacency_list: Dict[str, Set[str]] = {}
 
             for class_qid, superclass_qid, class_label, superclass_label in results:
-                wikidata_classes.setdefault(
-                    class_qid, WikidataClass(class_qid, class_label)
-                )
-                wikidata_classes.setdefault(
-                    superclass_qid, WikidataClass(superclass_qid, superclass_label)
-                )
+                wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
+                wikidata_classes.setdefault(superclass_qid, WikidataClass(superclass_qid, superclass_label))
                 adjacency_list.setdefault(class_qid, set()).add(superclass_qid)
         except (ValueError, KeyError, HTTPError) as e:
             logger.exception(e)
@@ -403,9 +380,7 @@ class WikiDataAPIClient:
             if current_qid in adjacency_list:
                 for superclass_qid in adjacency_list[current_qid]:
                     if (current_qid, superclass_qid) not in cycle_detector:
-                        wikidata_classes[current_qid].superclasses.append(
-                            wikidata_classes[superclass_qid]
-                        )
+                        wikidata_classes[current_qid].superclasses.append(wikidata_classes[superclass_qid])
                         queue.append(superclass_qid)
                         cycle_detector.add((current_qid, superclass_qid))
 
@@ -445,21 +420,16 @@ class WikiDataAPIClient:
             "language": language,
             "search": search_term,
         }
-        response: Response = _wikidata_session.get(
-            url, params=params, timeout=timeout, headers=headers
-        )
+        response: Response = _wikidata_session.get(url, params=params, timeout=timeout, headers=headers)
 
         # Check the response status code
         if not response.ok:
             raise WikiDataAPIException(
-                f"Search request failed with status code : {response.status_code}. "
-                f"URL:= {url}"
+                f"Search request failed with status code : {response.status_code}. " f"URL:= {url}"
             )
         search_result_dict_full: Dict[str, Any] = response.json()
         for search_result_dict in search_result_dict_full["search"]:
-            search_results_dict.append(
-                WikidataSearchResult.from_dict(search_result_dict)
-            )
+            search_results_dict.append(WikidataSearchResult.from_dict(search_result_dict))
             return search_results_dict
 
     @staticmethod

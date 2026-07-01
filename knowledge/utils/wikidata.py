@@ -12,6 +12,7 @@ into your own code before upgrading past v4.x.
 Importing this module emits a :class:`DeprecationWarning` so that downstream
 consumers see a one-time signal in their logs / test output.
 """
+
 import warnings
 from typing import Any, Dict, List
 
