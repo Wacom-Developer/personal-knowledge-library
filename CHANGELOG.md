@@ -1,5 +1,9 @@
+2026/07/10 - RELEASE 4.3.3
+==========================
+- Fix `AsyncContentClient.download_content` corrupting file bodies whose stored MIME type is `application/json`. The async transport (`AsyncSession._request_content`) deserialized any `application/json` response into a `dict`, so `download_content` returned a re-`str()`-ified dict (invalid JSON) instead of the exact uploaded bytes. The download path now requests raw bytes via a new `raw_content` transport flag; other endpoints are unchanged. Regression guard in `tests/test_content_download_raw.py` (no PKS stage required).
+
 2026/07/01 - RELEASE 4.3.2
-==========
+==========================
 - **Deprecated** `knowledge.utils.wikidata` — the module has no internal callers and is scheduled for removal in v5.0. Importing it now emits a `DeprecationWarning`. Migrate to `knowledge.public.wikidata` or vendor the helpers you need.
 - Fixing issue with ontology mapping 
 
