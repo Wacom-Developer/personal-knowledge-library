@@ -232,6 +232,7 @@ class AsyncContentClient(AsyncServiceAPIClient):
             params=params,
             timeout=timeout,
             overwrite_auth_token=auth_key,
+            raw_content=True,  # never JSON-decode a file body (e.g. application/json content)
         )
         if response.status == HTTPStatus.OK:
             content = response.content

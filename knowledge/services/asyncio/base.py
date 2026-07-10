@@ -331,6 +331,7 @@ class AsyncSession:
             If the specified HTTP method is unsupported.
         """
         request_timeout: int = kwargs.pop("timeout", self._timeout)
+        raw_content: bool = kwargs.pop("raw_content", False)
         request_headers = await self._prepare_headers(
             headers,
             overwrite_auth_token=kwargs.pop("overwrite_auth_token", None),
@@ -344,7 +345,7 @@ class AsyncSession:
             async with session.get(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
                 return ResponseData(
                     ok=response.ok,
-                    content=await AsyncSession._request_content(response),
+                    content=await AsyncSession._request_content(response, raw=raw_content),
                     status=response.status,
                     url=response.url.human_repr(),
                     method=response.method,
@@ -353,7 +354,7 @@ class AsyncSession:
             async with session.post(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
                 return ResponseData(
                     ok=response.ok,
-                    content=await AsyncSession._request_content(response),
+                    content=await AsyncSession._request_content(response, raw=raw_content),
                     status=response.status,
                     url=response.url.human_repr(),
                     method=response.method,
@@ -362,7 +363,7 @@ class AsyncSession:
             async with session.put(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
                 return ResponseData(
                     ok=response.ok,
-                    content=await AsyncSession._request_content(response),
+                    content=await AsyncSession._request_content(response, raw=raw_content),
                     status=response.status,
                     url=response.url.human_repr(),
                     method=response.method,
@@ -371,7 +372,7 @@ class AsyncSession:
             async with session.delete(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
                 return ResponseData(
                     ok=response.ok,
-                    content=await AsyncSession._request_content(response),
+                    content=await AsyncSession._request_content(response, raw=raw_content),
                     status=response.status,
                     url=response.url.human_repr(),
                     method=response.method,
@@ -380,7 +381,7 @@ class AsyncSession:
             async with session.patch(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
                 return ResponseData(
                     ok=response.ok,
-                    content=await AsyncSession._request_content(response),
+                    content=await AsyncSession._request_content(response, raw=raw_content),
                     status=response.status,
                     url=response.url.human_repr(),
                     method=response.method,
@@ -536,6 +537,7 @@ class AsyncSession:
     @staticmethod
     async def _request_content(
         response: aiohttp.ClientResponse,
+        raw: bool = False,
     ) -> Union[str, bytes, Dict[str, Any], List[Any]]:
         """
         Retrieve and decode the body of an aiohttp response.
@@ -544,6 +546,11 @@ class AsyncSession:
         ----------
         response
             The aiohttp.ClientResponse instance whose body should be decoded.
+        raw
+            If ``True``, always return the untouched response bytes and skip
+            JSON decoding. Used for binary/file downloads (e.g. content whose
+            stored MIME type is ``application/json``) where deserializing the
+            body into a ``dict`` would corrupt it.
 
         Returns
         -------
@@ -560,6 +567,8 @@ class AsyncSession:
             If an error occurs while decoding the response body as text after a JSON parsing failure.
 
         """
+        if raw:
+            return await response.read()
         content: Union[str, bytes, Dict[str, Any], List[Any]]
         try:
             if "json" in response.headers.get("Content-Type", "not-set").lower():
