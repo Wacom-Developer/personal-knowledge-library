@@ -38,7 +38,7 @@ class ContentObject:
         metadata: Dict[str, str],
         date_added: datetime,
         date_modified: datetime,
-        is_deleted: bool
+        is_deleted: bool,
     ):
         self._id: str = content_id
         self._mime_type: str = mime_type
