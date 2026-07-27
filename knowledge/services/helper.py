@@ -140,10 +140,11 @@ def entity_payload(entity: ThingObject) -> Dict[str, Any]:
                 )
     payload: Dict[str, Any] = {
         TYPE_TAG: entity.concept_type.iri,
-        DESCRIPTIONS_TAG: descriptions,
         LABELS_TAG: labels,
         DATA_PROPERTIES_TAG: literals,
     }
+    if len(descriptions) > 0:
+        payload[DESCRIPTIONS_TAG] = descriptions
     targets: List[str] = []
     if entity.use_vector_index:
         targets.append(INDEXING_VECTOR_SEARCH_TARGET)
