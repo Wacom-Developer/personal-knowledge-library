@@ -1,3 +1,8 @@
+2026/07/27 - RELEASE 4.3.4
+==========================
+- Fix that description of an entity cannot be deleted. 
+- Improve data-property comparison in both sync and async `diff_entities`
+
 2026/07/10 - RELEASE 4.3.3
 ==========================
 - Fix `AsyncContentClient.download_content` corrupting file bodies whose stored MIME type is `application/json`. The async transport (`AsyncSession._request_content`) deserialized any `application/json` response into a `dict`, so `download_content` returned a re-`str()`-ified dict (invalid JSON) instead of the exact uploaded bytes. The download path now requests raw bytes via a new `raw_content` transport flag; other endpoints are unchanged. Regression guard in `tests/test_content_download_raw.py` (no PKS stage required).
