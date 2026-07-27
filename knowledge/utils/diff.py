@@ -187,15 +187,29 @@ def diff_entities(
                 }
             )
         for dp in data_properties:
-            if dp.value not in [d.value for d in kg_thing.data_properties.get(prop)]:
+            kg_data_properties = kg_thing.data_properties.get(prop, [])
+            matching_values = [d for d in kg_data_properties if d.value == dp.value]
+            if not matching_values:
                 difference_data_properties.append(
                     {
                         "concept_type": file_thing.concept_type.name,
                         "type": "Different data property values",
                         "resource_id": kg_thing.default_source_reference_id(),
                         "uri": kg_thing.uri,
-                        "kg": ", ".join([d.value for d in kg_thing.data_properties.get(prop)]),
+                        "kg": ", ".join([d.value for d in kg_data_properties]),
                         "file": dp.value,
+                    }
+                )
+                continue
+            if not any(match.language_code == dp.language_code for match in matching_values):
+                difference_data_properties.append(
+                    {
+                        "concept_type": file_thing.concept_type.name,
+                        "type": "Different data property locales",
+                        "resource_id": kg_thing.default_source_reference_id(),
+                        "uri": kg_thing.uri,
+                        "kg": ", ".join([str(match.language_code) for match in matching_values]),
+                        "file": str(dp.language_code),
                     }
                 )
     difference_object_properties: List[Dict[str, Any]] = []
@@ -448,15 +462,29 @@ async def diff_entities_async(
                 }
             )
         for dp in data_properties:
-            if dp.value not in [d.value for d in kg_thing.data_properties.get(prop)]:
+            kg_data_properties = kg_thing.data_properties.get(prop, [])
+            matching_values = [d for d in kg_data_properties if d.value == dp.value]
+            if not matching_values:
                 difference_data_properties.append(
                     {
                         "concept_type": file_thing.concept_type.name,
                         "type": "Different data property values",
                         "resource_id": kg_thing.default_source_reference_id(),
                         "uri": kg_thing.uri,
-                        "kg": ", ".join([d.value for d in kg_thing.data_properties.get(prop)]),
+                        "kg": ", ".join([d.value for d in kg_data_properties]),
                         "file": dp.value,
+                    }
+                )
+                continue
+            if not any(match.language_code == dp.language_code for match in matching_values):
+                difference_data_properties.append(
+                    {
+                        "concept_type": file_thing.concept_type.name,
+                        "type": "Different data property locales",
+                        "resource_id": kg_thing.default_source_reference_id(),
+                        "uri": kg_thing.uri,
+                        "kg": ", ".join([str(match.language_code) for match in matching_values]),
+                        "file": str(dp.language_code),
                     }
                 )
     difference_object_properties: List[Dict[str, Any]] = []
