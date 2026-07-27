@@ -264,6 +264,24 @@ class TestDiffEntities:
         assert len(value_diffs) == 1
         assert value_diffs[0]["file"] == "value1"
 
+    def test_different_data_property_locale(self):
+        """Test detection of different data property locale."""
+        mock_client = MagicMock()
+
+        prop_ref = OntologyPropertyReference.parse("wacom:core#customProp")
+
+        file_thing = self._create_thing()
+        file_thing.data_properties[prop_ref] = [DataProperty("locale_value_sync", prop_ref, EN_US)]
+
+        kg_thing = self._create_thing()
+        kg_thing.data_properties[prop_ref] = [DataProperty("locale_value_sync", prop_ref, DE_DE)]
+
+        _, data_prop_diff, _ = diff_entities(mock_client, file_thing, kg_thing)
+
+        locale_diffs = [d for d in data_prop_diff if d["type"] == "Different data property locales"]
+        assert len(locale_diffs) == 1
+        assert locale_diffs[0]["file"] == EN_US
+
     def test_no_object_properties_diff_without_kg_things(self):
         """Test that object properties are not compared when kg_things is None."""
         mock_client = MagicMock()
@@ -409,6 +427,25 @@ class TestDiffEntitiesAsync:
 
         nel_diffs = [d for d in differences if d["type"] == "NEL index"]
         assert len(nel_diffs) == 1
+
+    @pytest.mark.asyncio
+    async def test_async_different_data_property_locale(self):
+        """Test detection of different data property locale (async)."""
+        mock_client = AsyncMock()
+
+        prop_ref = OntologyPropertyReference.parse("wacom:core#customProp")
+
+        file_thing = self._create_thing()
+        file_thing.data_properties[prop_ref] = [DataProperty("locale_value_async", prop_ref, EN_US)]
+
+        kg_thing = self._create_thing()
+        kg_thing.data_properties[prop_ref] = [DataProperty("locale_value_async", prop_ref, DE_DE)]
+
+        _, data_prop_diff, _ = await diff_entities_async(mock_client, file_thing, kg_thing)
+
+        locale_diffs = [d for d in data_prop_diff if d["type"] == "Different data property locales"]
+        assert len(locale_diffs) == 1
+        assert locale_diffs[0]["file"] == EN_US
 
 
 class TestIsDifferentAsync:
