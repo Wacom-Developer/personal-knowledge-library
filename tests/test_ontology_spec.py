@@ -246,3 +246,56 @@ def test_rename_property_posts_to_rename_route() -> None:
     method, url, _ = service.stub.last
     assert method == "POST"
     assert url == f"{BASE_URL}/context/{CONTEXT}/properties/{CREATED_QUOTED}/rename/{PRODUCED_QUOTED}"
+
+
+def test_add_property_domains_sends_bare_array() -> None:
+    service = _StubOntologyService()
+
+    service.add_property_domains(CONTEXT, CREATED, [ARTIST])
+
+    method, url, kwargs = service.stub.last
+    assert method == "PATCH"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/properties/{CREATED_QUOTED}/domains/add"
+    assert kwargs["json"] == ["demo:creative#Artist"]
+
+
+def test_remove_property_domains_targets_remove_route() -> None:
+    service = _StubOntologyService()
+
+    service.remove_property_domains(CONTEXT, CREATED, [ARTIST])
+
+    method, url, kwargs = service.stub.last
+    assert method == "PATCH"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/properties/{CREATED_QUOTED}/domains/remove"
+    assert kwargs["json"] == ["demo:creative#Artist"]
+
+
+def test_add_property_ranges_resolves_class_references() -> None:
+    service = _StubOntologyService()
+
+    service.add_property_ranges(CONTEXT, CREATED, [ARTIST])
+
+    method, url, kwargs = service.stub.last
+    assert method == "PATCH"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/properties/{CREATED_QUOTED}/ranges/add"
+    assert kwargs["json"] == ["demo:creative#Artist"]
+
+
+def test_add_property_ranges_resolves_data_property_types() -> None:
+    service = _StubOntologyService()
+
+    service.add_property_ranges(CONTEXT, CREATED, [DataPropertyType.INTEGER])
+
+    _, _, kwargs = service.stub.last
+    assert kwargs["json"] == ["http://www.w3.org/2001/XMLSchema#integer"]
+
+
+def test_remove_property_ranges_targets_remove_route() -> None:
+    service = _StubOntologyService()
+
+    service.remove_property_ranges(CONTEXT, CREATED, [DataPropertyType.STRING])
+
+    method, url, kwargs = service.stub.last
+    assert method == "PATCH"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/properties/{CREATED_QUOTED}/ranges/remove"
+    assert kwargs["json"] == ["http://www.w3.org/2001/XMLSchema#string"]

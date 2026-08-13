@@ -2,7 +2,7 @@
 # Copyright © 2021-present Wacom. All rights reserved.
 import urllib.parse
 from http import HTTPStatus
-from typing import Any, Optional, Dict, Tuple, List, cast
+from typing import Any, Optional, Dict, Tuple, List, Union, cast
 
 from requests import Response
 
@@ -51,6 +51,26 @@ LISTING_MODE_PARAM: str = "listingMode"
 VERSION_PARAM: str = "version"
 TEXT_TAG: str = "value"
 DEFAULT_TIMEOUT: int = 30
+
+
+def _resolve_range_iri(range_value: Union[OntologyClassReference, DataPropertyType]) -> str:
+    """Resolve a property range entry to its IRI string.
+
+    Object-property ranges are ontology classes; data-property ranges are XSD data types.
+
+    Parameters
+    ----------
+    range_value: Union[OntologyClassReference, DataPropertyType]
+        Range entry to resolve.
+
+    Returns
+    -------
+    iri: str
+        IRI of the range entry.
+    """
+    if isinstance(range_value, DataPropertyType):
+        return str(range_value.value)
+    return range_value.iri
 
 
 class OntologyService(WacomServiceAPIClient):
@@ -971,6 +991,227 @@ class OntologyService(WacomServiceAPIClient):
         )
         if not response.ok:
             raise handle_error("Failed to rename property", response)
+
+    def _patch_property_collection(
+        self,
+        context: str,
+        reference: OntologyPropertyReference,
+        collection: str,
+        operation: str,
+        iris: List[str],
+        error_message: str,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> None:
+        """Send a PATCH to a property's domain or range collection.
+
+        Parameters
+        ----------
+        context: str
+            Context of ontology
+        reference: OntologyPropertyReference
+            Reference of the property
+        collection: str
+            Either 'domains' or 'ranges'
+        operation: str
+            Either 'add' or 'remove'
+        iris: List[str]
+            IRIs to add or remove
+        error_message: str
+            Message used when the service reports an error
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        context_url: str = urllib.parse.quote_plus(context)
+        property_url: str = urllib.parse.quote_plus(reference.iri)
+        url: str = (
+            f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/"
+            f"{OntologyService.PROPERTIES_ENDPOINT}/{property_url}/{collection}/{operation}"
+        )
+        response: Response = self.request_session.patch(
+            url,
+            overwrite_auth_token=auth_key,
+            json=iris,
+            verify=self.verify_calls,
+            timeout=timeout,
+        )
+        if not response.ok:
+            raise handle_error(error_message, response)
+
+    def add_property_domains(
+        self,
+        context: str,
+        reference: OntologyPropertyReference,
+        domains: List[OntologyClassReference],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> None:
+        """Add domains to a property.
+
+        **Remark:**
+        Only works for users with the role 'TenantAdmin'.
+
+        Parameters
+        ----------
+        context: str
+            Context of ontology
+        reference: OntologyPropertyReference
+            Reference of the property
+        domains: List[OntologyClassReference]
+            Classes to add to the property's domain
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        self._patch_property_collection(
+            context,
+            reference,
+            "domains",
+            "add",
+            [d.iri for d in domains],
+            "Failed to add property domains",
+            auth_key=auth_key,
+            timeout=timeout,
+        )
+
+    def remove_property_domains(
+        self,
+        context: str,
+        reference: OntologyPropertyReference,
+        domains: List[OntologyClassReference],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> None:
+        """Remove domains from a property.
+
+        **Remark:**
+        Only works for users with the role 'TenantAdmin'.
+
+        Parameters
+        ----------
+        context: str
+            Context of ontology
+        reference: OntologyPropertyReference
+            Reference of the property
+        domains: List[OntologyClassReference]
+            Classes to remove from the property's domain
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        self._patch_property_collection(
+            context,
+            reference,
+            "domains",
+            "remove",
+            [d.iri for d in domains],
+            "Failed to remove property domains",
+            auth_key=auth_key,
+            timeout=timeout,
+        )
+
+    def add_property_ranges(
+        self,
+        context: str,
+        reference: OntologyPropertyReference,
+        ranges: List[Union[OntologyClassReference, DataPropertyType]],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> None:
+        """Add ranges to a property.
+
+        **Remark:**
+        Only works for users with the role 'TenantAdmin'.
+
+        Parameters
+        ----------
+        context: str
+            Context of ontology
+        reference: OntologyPropertyReference
+            Reference of the property
+        ranges: List[Union[OntologyClassReference, DataPropertyType]]
+            Classes (object properties) or data types (data properties) to add
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        self._patch_property_collection(
+            context,
+            reference,
+            "ranges",
+            "add",
+            [_resolve_range_iri(r) for r in ranges],
+            "Failed to add property ranges",
+            auth_key=auth_key,
+            timeout=timeout,
+        )
+
+    def remove_property_ranges(
+        self,
+        context: str,
+        reference: OntologyPropertyReference,
+        ranges: List[Union[OntologyClassReference, DataPropertyType]],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> None:
+        """Remove ranges from a property.
+
+        **Remark:**
+        Only works for users with the role 'TenantAdmin'.
+
+        Parameters
+        ----------
+        context: str
+            Context of ontology
+        reference: OntologyPropertyReference
+            Reference of the property
+        ranges: List[Union[OntologyClassReference, DataPropertyType]]
+            Classes (object properties) or data types (data properties) to remove
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        self._patch_property_collection(
+            context,
+            reference,
+            "ranges",
+            "remove",
+            [_resolve_range_iri(r) for r in ranges],
+            "Failed to remove property ranges",
+            auth_key=auth_key,
+            timeout=timeout,
+        )
 
     def delete_property(
         self,
