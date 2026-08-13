@@ -1,3 +1,22 @@
+2026/08/13 - RELEASE 4.4.0
+==========================
+- Align `OntologyService` with the Wacom OntologyManager API v1 OpenAPI specification. Twelve operations that had no client method are now available.
+- **BREAKING** — `OntologyService.update_concept` now issues `PATCH /context/{context}/concepts/{uri}` instead of `PUT` against the collection URL, which the service does not implement. The signature changed accordingly: the `name: str` and `subclass_of: Optional[str]` parameters are replaced by a single `reference: OntologyClassReference`, and the method returns `None` rather than a dict. The API accepts only labels, comments and the icon; a concept's superclass cannot be changed through it.
+
+  ```python
+  # before (did not work against the service)
+  client.update_concept(context, "demo:creative#Artist", "wacom:core#Person", icon="i.png")
+  # after
+  client.update_concept(context, OntologyClassReference.parse("demo:creative#Artist"), icon="i.png")
+  ```
+- New concept operation: `set_concept_metadata` (`PUT .../concepts/{uri}/metadata`) sets the Named Entity Linking inflection level and case sensitivity of a concept class. Adds an `InflectionLevel` enum (`LOW`, `MID`, `HIGH`) to `knowledge.base.ontology`.
+- New context operations: `update_context` (`PUT /context/{name}`), `reset_context` (`POST /context/{name}/reset`) and `context_diff` (`GET /context/{name}/diff`).
+- New property operations: `update_property`, `rename_property`, `add_property_domains`, `remove_property_domains`, `add_property_ranges` and `remove_property_ranges`.
+- New version operations: `versions`, `pending_version` and `rdf_import` (multipart RDF upload), the last returning a typed `ImportResponse`. Adds `ImportResponse`, `ImportValidation`, `ImportedResource` and `FailedImportResource` to `knowledge.base.ontology`.
+- `context_metadata` accepts an optional `version` parameter to read the metadata of a specific context version. Existing calls are unaffected.
+- `versions`, `pending_version` and `context_diff` return the parsed JSON payload (`Dict[str, Any]` / `List[Dict[str, Any]]`) because the OpenAPI specification defines no response schema for those three operations.
+- New offline tests in `tests/test_ontology_spec.py` and `tests/test_ontology_models.py` (no PKS stage required).
+
 2026/07/27 - RELEASE 4.3.4
 ==========================
 - Fix that description of an entity cannot be deleted. 
