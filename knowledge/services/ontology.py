@@ -981,6 +981,151 @@ class OntologyService(WacomServiceAPIClient):
             return cast(Dict[str, Any], response.json())
         raise handle_error("Creation of context failed.", response)
 
+    def update_context(
+        self,
+        name: str,
+        context: Optional[str] = None,
+        base_uri: Optional[str] = None,
+        icon: Optional[str] = None,
+        labels: Optional[List[OntologyLabel]] = None,
+        comments: Optional[List[Comment]] = None,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> None:
+        """Update a context.
+
+        **Remark:**
+        Only works for users with the role 'TenantAdmin'.
+
+        Parameters
+        ----------
+        name: str
+            Name of the context.
+        context: Optional[str] [default:= None]
+            Context of ontology
+        base_uri: Optional[str] [default:= None]
+            Base URI. If None, 'wacom:<name>#' is used.
+        icon: Optional[str] (default:= None)
+            Icon representing the context
+        labels: Optional[List[OntologyLabel]] (default:= None)
+            Labels for the context
+        comments: Optional[List[Comment]] (default:= None)
+            Comments for the context
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        if base_uri is None:
+            base_uri = f"wacom:{name}#"
+        if not base_uri.endswith("#"):
+            base_uri += "#"
+
+        payload: Dict[str, Any] = {
+            BASE_URI_TAG: base_uri,
+            NAME_TAG: name,
+            LABELS_TAG: [{TEXT_TAG: la.content, LANGUAGE_CODE: la.language_code} for la in labels or []],
+            COMMENTS_TAG: [{TEXT_TAG: co.content, LANGUAGE_CODE: co.language_code} for co in comments or []],
+            ICON_TAG: icon,
+        }
+        if context is not None:
+            payload[CONTEXT_TAG] = context
+        context_url: str = urllib.parse.quote_plus(name)
+        url: str = f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}"
+        response: Response = self.request_session.put(
+            url,
+            json=payload,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Update of context failed.", response, payload=payload)
+
+    def reset_context(
+        self,
+        name: str,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> None:
+        """Reset a context, discarding its uncommitted changes.
+
+        **Remark:**
+        Only works for users with the role 'TenantAdmin'.
+
+        Parameters
+        ----------
+        name: str
+            Name of the context.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        context_url: str = urllib.parse.quote_plus(name)
+        url: str = f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/reset"
+        response: Response = self.request_session.post(
+            url,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Reset of context failed.", response)
+
+    def context_diff(
+        self,
+        name: str,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> Dict[str, Any]:
+        """Retrieve the difference between the committed and the working state of a context.
+
+        **Remark:**
+        The OpenAPI specification of the ontology service does not define a response schema
+        for this operation, so the parsed JSON payload is returned unmodified.
+
+        Parameters
+        ----------
+        name: str
+            Name of the context.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Returns
+        -------
+        diff: Dict[str, Any]
+            Difference report as returned by the service.
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        context_url: str = urllib.parse.quote_plus(name)
+        url: str = f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/diff"
+        response: Response = self.request_session.get(
+            url,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            return cast(Dict[str, Any], response.json())
+        raise handle_error("Retrieving the context diff failed.", response)
+
     def remove_context(
         self,
         name: str,

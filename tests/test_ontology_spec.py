@@ -158,3 +158,59 @@ def test_context_metadata_sends_version_when_given() -> None:
 
     _, _, kwargs = service.stub.last
     assert kwargs["params"] == {"version": 3}
+
+
+def test_update_context_puts_to_named_context() -> None:
+    service = _StubOntologyService()
+
+    service.update_context(CONTEXT, base_uri="wacom:demo", icon="ctx.png")
+
+    method, url, kwargs = service.stub.last
+    assert method == "PUT"
+    assert url == f"{BASE_URL}/context/{CONTEXT}"
+    assert kwargs["json"]["baseUri"] == "wacom:demo#"
+    assert kwargs["json"]["name"] == CONTEXT
+    assert kwargs["json"]["icon"] == "ctx.png"
+    assert kwargs["json"]["labels"] == []
+    assert kwargs["json"]["comments"] == []
+
+
+def test_update_context_includes_context_only_when_given() -> None:
+    service = _StubOntologyService()
+    service.update_context(CONTEXT)
+    _, _, kwargs = service.stub.last
+    assert "context" not in kwargs["json"]
+
+    service = _StubOntologyService()
+    service.update_context(CONTEXT, context="other")
+    _, _, kwargs = service.stub.last
+    assert kwargs["json"]["context"] == "other"
+
+
+def test_reset_context_posts_to_reset() -> None:
+    service = _StubOntologyService()
+
+    service.reset_context(CONTEXT)
+
+    method, url, _ = service.stub.last
+    assert method == "POST"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/reset"
+
+
+def test_context_diff_returns_payload() -> None:
+    payload = {"added": ["demo:creative#Artist"], "removed": []}
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=payload))
+
+    result = service.context_diff(CONTEXT)
+
+    method, url, _ = service.stub.last
+    assert method == "GET"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/diff"
+    assert result == payload
+
+
+def test_context_diff_raises_on_error_response() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=404, text="no such context"))
+
+    with pytest.raises(WacomServiceException):
+        service.context_diff(CONTEXT)
