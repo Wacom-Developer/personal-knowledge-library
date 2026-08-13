@@ -529,27 +529,27 @@ class OntologyService(WacomServiceAPIClient):
     def update_concept(
         self,
         context: str,
-        name: str,
-        subclass_of: Optional[str],
+        reference: OntologyClassReference,
         icon: Optional[str] = None,
         labels: Optional[List[OntologyLabel]] = None,
         comments: Optional[List[Comment]] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ) -> Dict[str, str]:
-        """Update concept class.
+    ) -> None:
+        """Update the labels, comments and icon of a concept class.
 
         **Remark:**
         Only works for users with the role 'TenantAdmin'.
+
+        The superclass of a concept cannot be changed through this API; the service accepts
+        only labels, comments and the icon.
 
         Parameters
         ----------
         context: str
             Context of ontology
-        name: str
-            Name of the concept
-        subclass_of: Optional[str]
-            Super class of the concept
+        reference: OntologyClassReference
+            Reference of the concept to update
         icon: Optional[str] (default:= None)
             Icon representing the concept
         labels: Optional[List[OntologyLabel]] (default:= None)
@@ -559,12 +559,7 @@ class OntologyService(WacomServiceAPIClient):
         auth_key: Optional[str] [default:= None]
             If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
-            Timeout for the request (default: 60 seconds)
-
-        Returns
-        -------
-        response: Dict[str, str]
-            Response from service
+            Timeout for the request (default: 30 seconds)
 
         Raises
         ------
@@ -572,31 +567,25 @@ class OntologyService(WacomServiceAPIClient):
             If the ontology service returns an error code, an exception is thrown.
         """
         payload: Dict[str, Any] = {
-            SUB_CLASS_OF_TAG: subclass_of,
-            NAME_TAG: name,
-            LABELS_TAG: [],
-            COMMENTS_TAG: [],
+            LABELS_TAG: [{TEXT_TAG: la.content, LANGUAGE_CODE: la.language_code} for la in labels or []],
+            COMMENTS_TAG: [{TEXT_TAG: co.content, LANGUAGE_CODE: co.language_code} for co in comments or []],
             ICON_TAG: icon,
         }
-        for label in labels if labels is not None else []:
-            payload[LABELS_TAG].append({TEXT_TAG: label.content, LANGUAGE_CODE: label.language_code})
-        for comment in comments if comments is not None else []:
-            payload[COMMENTS_TAG].append({TEXT_TAG: comment.content, LANGUAGE_CODE: comment.language_code})
+        context_url: str = urllib.parse.quote_plus(context)
+        concept_url: str = urllib.parse.quote_plus(reference.iri)
         url: str = (
-            f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}/"
-            f"{OntologyService.CONCEPTS_ENDPOINT}"
+            f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/"
+            f"{OntologyService.CONCEPTS_ENDPOINT}/{concept_url}"
         )
-
-        response: Response = self.request_session.put(
+        response: Response = self.request_session.patch(
             url,
             overwrite_auth_token=auth_key,
             json=payload,
             verify=self.verify_calls,
             timeout=timeout,
         )
-        if response.ok:
-            return cast(Dict[str, str], response.json())
-        raise handle_error("Failed to update concept", response, payload=payload)
+        if not response.ok:
+            raise handle_error("Failed to update concept", response, payload=payload)
 
     def delete_concept(
         self,
