@@ -2733,6 +2733,23 @@ class ThingObject:
         )
 
 
+# --------------------------------------------- Inflection level -------------------------------------------------------
+class InflectionLevel(str, enum.Enum):
+    """
+    InflectionLevel
+    ---------------
+    Level of inflection handling applied by the Named Entity Linking service to the entity
+    labels of a concept class.
+    """
+
+    LOW = "LOW"
+    """Minimal inflection handling."""
+    MID = "MID"
+    """Moderate inflection handling."""
+    HIGH = "HIGH"
+    """Extensive inflection handling."""
+
+
 # --------------------------------------------- Inflection setting -----------------------------------------------------
 class InflectionSetting:
     """
@@ -2797,6 +2814,230 @@ class InflectionSetting:
             inflection=inflection_setting,
             case_sensitive=case_sensitive,
         )
+
+
+# ------------------------------------------- RDF import result constants ----------------------------------------------
+ERROR_TAG: str = "error"
+IMPORTED_TAG: str = "imported"
+FAILED_TAG: str = "failed"
+CONCEPTS_TAG: str = "concepts"
+PROPERTIES_TAG: str = "properties"
+
+
+# --------------------------------------------- RDF import results -----------------------------------------------------
+class ImportedResource:
+    """
+    ImportedResource
+    ----------------
+    Ontology resource that was imported successfully from an RDF file.
+
+    Parameters
+    ----------
+    name: str
+        Name (IRI) of the imported resource.
+    resource_type: str
+        Type of the imported resource as reported by the service.
+    """
+
+    def __init__(self, name: str, resource_type: str) -> None:
+        self.__name: str = name
+        self.__resource_type: str = resource_type
+
+    @property
+    def name(self) -> str:
+        """Name (IRI) of the imported resource."""
+        return self.__name
+
+    @property
+    def resource_type(self) -> str:
+        """Type of the imported resource."""
+        return self.__resource_type
+
+    @staticmethod
+    def from_dict(entity: Dict[str, Any]) -> "ImportedResource":
+        """
+        Create an imported resource from a dictionary.
+
+        Parameters
+        ----------
+        entity: Dict[str, Any]
+            Dictionary containing the imported resource.
+
+        Returns
+        -------
+        instance: ImportedResource
+            Imported resource instance.
+        """
+        return ImportedResource(
+            name=entity.get(NAME_TAG) or "",
+            resource_type=entity.get(TYPE_TAG) or "",
+        )
+
+    def __repr__(self) -> str:
+        return f"<ImportedResource> - [name:={self.name}, type:={self.resource_type}]"
+
+
+class FailedImportResource:
+    """
+    FailedImportResource
+    --------------------
+    Ontology resource that could not be imported from an RDF file.
+
+    Parameters
+    ----------
+    name: str
+        Name (IRI) of the resource that failed to import.
+    error: str
+        Error reported by the service.
+    """
+
+    def __init__(self, name: str, error: str) -> None:
+        self.__name: str = name
+        self.__error: str = error
+
+    @property
+    def name(self) -> str:
+        """Name (IRI) of the resource that failed to import."""
+        return self.__name
+
+    @property
+    def error(self) -> str:
+        """Error reported by the service."""
+        return self.__error
+
+    @staticmethod
+    def from_dict(entity: Dict[str, Any]) -> "FailedImportResource":
+        """
+        Create a failed import resource from a dictionary.
+
+        Parameters
+        ----------
+        entity: Dict[str, Any]
+            Dictionary containing the failed resource.
+
+        Returns
+        -------
+        instance: FailedImportResource
+            Failed import resource instance.
+        """
+        return FailedImportResource(
+            name=entity.get(NAME_TAG) or "",
+            error=entity.get(ERROR_TAG) or "",
+        )
+
+    def __repr__(self) -> str:
+        return f"<FailedImportResource> - [name:={self.name}, error:={self.error}]"
+
+
+class ImportValidation:
+    """
+    ImportValidation
+    ----------------
+    Outcome of importing one category of ontology resources from an RDF file.
+
+    Parameters
+    ----------
+    imported: List[ImportedResource]
+        Resources that were imported successfully.
+    failed: List[FailedImportResource]
+        Resources that could not be imported.
+    """
+
+    def __init__(
+        self,
+        imported: List[ImportedResource],
+        failed: List[FailedImportResource],
+    ) -> None:
+        self.__imported: List[ImportedResource] = imported
+        self.__failed: List[FailedImportResource] = failed
+
+    @property
+    def imported(self) -> List[ImportedResource]:
+        """Resources that were imported successfully."""
+        return self.__imported
+
+    @property
+    def failed(self) -> List[FailedImportResource]:
+        """Resources that could not be imported."""
+        return self.__failed
+
+    @staticmethod
+    def from_dict(entity: Dict[str, Any]) -> "ImportValidation":
+        """
+        Create an import validation from a dictionary.
+
+        Both lists are optional and nullable in the service response; a missing or null
+        list is normalized to an empty list.
+
+        Parameters
+        ----------
+        entity: Dict[str, Any]
+            Dictionary containing the import validation.
+
+        Returns
+        -------
+        instance: ImportValidation
+            Import validation instance.
+        """
+        return ImportValidation(
+            imported=[ImportedResource.from_dict(i) for i in entity.get(IMPORTED_TAG) or []],
+            failed=[FailedImportResource.from_dict(f) for f in entity.get(FAILED_TAG) or []],
+        )
+
+    def __repr__(self) -> str:
+        return f"<ImportValidation> - [imported:={len(self.imported)}, failed:={len(self.failed)}]"
+
+
+class ImportResponse:
+    """
+    ImportResponse
+    --------------
+    Result of importing an RDF ontology file into a context.
+
+    Parameters
+    ----------
+    concepts: ImportValidation
+        Import outcome for concept classes.
+    properties: ImportValidation
+        Import outcome for properties.
+    """
+
+    def __init__(self, concepts: ImportValidation, properties: ImportValidation) -> None:
+        self.__concepts: ImportValidation = concepts
+        self.__properties: ImportValidation = properties
+
+    @property
+    def concepts(self) -> ImportValidation:
+        """Import outcome for concept classes."""
+        return self.__concepts
+
+    @property
+    def properties(self) -> ImportValidation:
+        """Import outcome for properties."""
+        return self.__properties
+
+    @staticmethod
+    def from_dict(entity: Dict[str, Any]) -> "ImportResponse":
+        """
+        Create an import response from a dictionary.
+
+        Parameters
+        ----------
+        entity: Dict[str, Any]
+            Dictionary containing the import response.
+
+        Returns
+        -------
+        instance: ImportResponse
+            Import response instance.
+        """
+        return ImportResponse(
+            concepts=ImportValidation.from_dict(entity.get(CONCEPTS_TAG) or {}),
+            properties=ImportValidation.from_dict(entity.get(PROPERTIES_TAG) or {}),
+        )
+
+    def __repr__(self) -> str:
+        return f"<ImportResponse> - [concepts:={self.concepts}, properties:={self.properties}]"
 
 
 # -------------------------------------------------- Encoder -----------------------------------------------------------
