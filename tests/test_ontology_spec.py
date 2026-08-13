@@ -299,3 +299,45 @@ def test_remove_property_ranges_targets_remove_route() -> None:
     assert method == "PATCH"
     assert url == f"{BASE_URL}/context/{CONTEXT}/properties/{CREATED_QUOTED}/ranges/remove"
     assert kwargs["json"] == ["http://www.w3.org/2001/XMLSchema#string"]
+
+
+def test_versions_omits_range_params_when_not_given() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=[]))
+
+    result = service.versions(CONTEXT)
+
+    method, url, kwargs = service.stub.last
+    assert method == "GET"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/versions"
+    assert kwargs["params"] == {}
+    assert result == []
+
+
+def test_versions_sends_start_and_end() -> None:
+    payload = [{"version": 1}, {"version": 2}]
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=payload))
+
+    result = service.versions(CONTEXT, start_at=1, end_at=2)
+
+    _, _, kwargs = service.stub.last
+    assert kwargs["params"] == {"startAt": 1, "endAt": 2}
+    assert result == payload
+
+
+def test_pending_version_returns_payload() -> None:
+    payload = {"version": 7, "pending": True}
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=payload))
+
+    result = service.pending_version(CONTEXT)
+
+    method, url, _ = service.stub.last
+    assert method == "GET"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/versions/pending"
+    assert result == payload
+
+
+def test_pending_version_raises_on_error_response() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=500, text="boom"))
+
+    with pytest.raises(WacomServiceException):
+        service.pending_version(CONTEXT)

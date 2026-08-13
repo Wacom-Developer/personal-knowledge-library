@@ -49,6 +49,8 @@ SUB_CLASS_OF_TAG: str = "subClassOf"
 SUB_PROPERTY_OF_TAG: str = "subPropertyOf"
 LISTING_MODE_PARAM: str = "listingMode"
 VERSION_PARAM: str = "version"
+START_AT_PARAM: str = "startAt"
+END_AT_PARAM: str = "endAt"
 TEXT_TAG: str = "value"
 DEFAULT_TIMEOUT: int = 30
 
@@ -1544,6 +1546,104 @@ class OntologyService(WacomServiceAPIClient):
         )
         if not response.ok:
             raise handle_error("Commit of ontology failed.", response)
+
+    def versions(
+        self,
+        context: str,
+        start_at: Optional[int] = None,
+        end_at: Optional[int] = None,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> List[Dict[str, Any]]:
+        """List the versions of a context.
+
+        **Remark:**
+        The OpenAPI specification of the ontology service does not define a response schema
+        for this operation, so the parsed JSON payload is returned unmodified.
+
+        Parameters
+        ----------
+        context: str
+            Name of the context.
+        start_at: Optional[int] [default:= None]
+            First version to list. If None, the service default is used.
+        end_at: Optional[int] [default:= None]
+            Last version to list. If None, the service default is used.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Returns
+        -------
+        versions: List[Dict[str, Any]]
+            Versions as returned by the service.
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        params: Dict[str, int] = {}
+        if start_at is not None:
+            params[START_AT_PARAM] = start_at
+        if end_at is not None:
+            params[END_AT_PARAM] = end_at
+        context_url: str = urllib.parse.quote_plus(context)
+        url: str = f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/versions"
+        response: Response = self.request_session.get(
+            url,
+            params=params,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            return cast(List[Dict[str, Any]], response.json())
+        raise handle_error("Failed to retrieve versions", response)
+
+    def pending_version(
+        self,
+        context: str,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> Dict[str, Any]:
+        """Retrieve the pending, uncommitted version of a context.
+
+        **Remark:**
+        The OpenAPI specification of the ontology service does not define a response schema
+        for this operation, so the parsed JSON payload is returned unmodified.
+
+        Parameters
+        ----------
+        context: str
+            Name of the context.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Returns
+        -------
+        pending: Dict[str, Any]
+            Pending version as returned by the service.
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        context_url: str = urllib.parse.quote_plus(context)
+        url: str = f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/versions/pending"
+        response: Response = self.request_session.get(
+            url,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            return cast(Dict[str, Any], response.json())
+        raise handle_error("Failed to retrieve the pending version", response)
 
     def rdf_export(
         self,
