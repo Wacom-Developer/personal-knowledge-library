@@ -75,6 +75,8 @@ SUB_CLASS_OF_TAG: str = "subClassOf"
 TENANT_ID: str = "tenantId"
 NAME_TAG: str = "name"
 SEND_TO_NEL: str = "sendToNEL"
+DATA_TAG: str = "data"
+CONTEXT_TAG: str = "context"
 # ---------------------------------------------------- RDFLib ----------------------------------------------------------
 PREFERRED_LABEL: URIRef = URIRef("wacom:core#prefLabel")
 logger = loguru.logger
@@ -817,17 +819,37 @@ class OntologyContext(OntologyObject):
         """
         Create OntologyContext from a dictionary.
 
+        The service wraps the context payload in an envelope of the form
+        ``{"version": <int>, "data": {...}}``. Older deployments used ``"context"`` as the
+        envelope key instead of ``"data"``; both are accepted.
+
+        **Remark:**
+        The envelope carries no ``concepts`` or ``properties`` lists, so those attributes are
+        empty unless the caller supplies them. Use `OntologyService.concepts` and
+        `OntologyService.properties` to list them.
+
         Parameters
         ----------
         context_dict: Dict[str, Any]
-            Dictionary containing the context data.
+            Envelope containing the context data.
 
         Returns
         -------
         instance: OntologyContext
             Instance of OntologyContext object.
+
+        Raises
+        ------
+        ValueError
+            If the envelope contains neither a 'data' nor a 'context' payload.
         """
-        context_data: Dict[str, Any] = context_dict["context"]
+        payload: Any = context_dict.get(DATA_TAG, context_dict.get(CONTEXT_TAG))
+        if not isinstance(payload, dict):
+            raise ValueError(
+                "Context envelope must contain a 'data' (or legacy 'context') object; "
+                f"received keys: {sorted(context_dict.keys())}"
+            )
+        context_data: Dict[str, Any] = payload
         labels: List[OntologyLabel] = (
             []
             if context_data["labels"] is None

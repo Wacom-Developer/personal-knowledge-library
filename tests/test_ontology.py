@@ -50,10 +50,11 @@ class OntologyFlow(TestCase):
         self.assertIsNotNone(context.iri)
         self.assertIsNotNone(context.labels)
         self.assertEqual(len(context.labels), 0)
-        self.assertIsNotNone(context.concepts)
-        self.assertGreater(len(context.concepts), 1)
-        self.assertIsNotNone(context.properties)
-        self.assertGreater(len(context.properties), 1)
+        # The service returns a list of contexts; context() yields the first of them.
+        self.assertGreater(len(self.ontology.contexts()), 0)
+        # The context envelope carries no concepts or properties, so list them explicitly.
+        self.assertGreater(len(self.ontology.concepts(context.context)), 1)
+        self.assertGreater(len(self.ontology.properties(context.context)), 1)
 
     def test_2_ontology_export(self):
         """

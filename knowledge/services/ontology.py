@@ -29,7 +29,7 @@ from knowledge.base.ontology import (
     RESOURCE,
 )
 from knowledge.services import DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
-from knowledge.services.base import WacomServiceAPIClient, handle_error
+from knowledge.services.base import WacomServiceAPIClient, WacomServiceException, handle_error
 
 __all__ = ["OntologyService"]
 
@@ -164,15 +164,50 @@ class OntologyService(WacomServiceAPIClient):
         context_description: Optional[OntologyContext]
             Context of the Ontology
         """
-        response = self.request_session.get(
+        try:
+            contexts: List[OntologyContext] = self.contexts(auth_key=auth_key, timeout=timeout)
+        except WacomServiceException:
+            # Preserves the historic contract of this method: None rather than an exception.
+            return None
+        return contexts[0] if contexts else None
+
+    def contexts(
+        self,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> List[OntologyContext]:
+        """
+        List all ontology contexts of the tenant.
+
+        Parameters
+        ----------
+        auth_key: Optional[str] = None
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Returns
+        -------
+        contexts: List[OntologyContext]
+            Contexts of the ontology. Empty if the tenant has none.
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        response: Response = self.request_session.get(
             f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}",
             timeout=timeout,
             verify=self.verify_calls,
             overwrite_auth_token=auth_key,
         )
-        if response.ok:
-            return OntologyContext.from_dict(response.json())
-        return None
+        if not response.ok:
+            raise handle_error("Failed to retrieve the contexts", response)
+        payload: Any = response.json()
+        # The service returns a list of context envelopes; older deployments returned a single one.
+        envelopes: List[Dict[str, Any]] = payload if isinstance(payload, list) else [payload]
+        return [OntologyContext.from_dict(envelope) for envelope in envelopes]
 
     def context_metadata(
         self,

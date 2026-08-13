@@ -16,6 +16,9 @@
 - `context_metadata` accepts an optional `version` parameter to read the metadata of a specific context version. Existing calls are unaffected.
 - `versions`, `pending_version` and `context_diff` return the parsed JSON payload (`Dict[str, Any]` / `List[Dict[str, Any]]`) because the OpenAPI specification defines no response schema for those three operations.
 - New offline tests in `tests/test_ontology_spec.py` and `tests/test_ontology_models.py` (no PKS stage required).
+- Fix `OntologyContext.from_dict` against the current service response. `GET /context` returns a **list** of envelopes shaped `{"version": <int>, "data": {...}}`, but the parser indexed the response with `["context"]`, so every call to `OntologyService.context()` raised `TypeError: list indices must be integers or slices, not str`. This broke the entry point of every ontology workflow and cascaded into the Wikidata flows. The parser now reads the `data` payload, still accepts the legacy `context` envelope key, and raises a descriptive `ValueError` naming the received keys when neither is present.
+- New `OntologyService.contexts()` returns every context of the tenant; `context()` delegates to it and returns the first, keeping its previous `Optional` / `None`-on-error contract.
+- **Note:** the context envelope no longer carries `concepts` or `properties`, so `OntologyContext.concepts` and `.properties` are empty. Use `OntologyService.concepts(context)` and `OntologyService.properties(context)` instead; `tests/test_ontology.py` was updated accordingly.
 
 2026/07/27 - RELEASE 4.3.4
 ==========================

@@ -15,6 +15,7 @@ from knowledge.base.ontology import (
     DataPropertyType,
     InflectionLevel,
     OntologyClassReference,
+    OntologyContext,
     OntologyLabel,
     OntologyPropertyReference,
 )
@@ -92,6 +93,90 @@ class _StubOntologyService(OntologyService):
     @property
     def request_session(self) -> Any:
         return self.stub
+
+
+CONTEXT_LIST_PAYLOAD: List[Dict[str, Any]] = [
+    {
+        "version": 1,
+        "data": {
+            "namespaceMap": None,
+            "baseURI": "wacom:core#",
+            "isLocked": False,
+            "lockedAt": None,
+            "id": "67d5c7c86021ceab94db4baa",
+            "tenantId": "67d5c7c86c458fc47bc4f06b",
+            "labels": [],
+            "comments": [],
+            "name": "core",
+            "icon": None,
+            "dateAdded": "2025-03-15T18:32:40.92Z",
+            "dateModified": "0001-01-01T00:00:00Z",
+            "context": "core",
+            "orphaned": False,
+        },
+    }
+]
+
+
+def test_contexts_parses_the_list_envelope() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=CONTEXT_LIST_PAYLOAD))
+
+    contexts = service.contexts()
+
+    method, url, _ = service.stub.last
+    assert method == "GET"
+    assert url == f"{BASE_URL}/context"
+    assert len(contexts) == 1
+    assert contexts[0].context == "core"
+    assert contexts[0].base_uri == "wacom:core#"
+    assert contexts[0].id == "67d5c7c86021ceab94db4baa"
+    assert contexts[0].tenant_id == "67d5c7c86c458fc47bc4f06b"
+    assert contexts[0].version == 1
+    assert contexts[0].orphaned is False
+
+
+def test_context_returns_first_entry_of_the_list() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=CONTEXT_LIST_PAYLOAD))
+
+    context = service.context()
+
+    assert context is not None
+    assert context.context == "core"
+
+
+def test_context_returns_none_when_no_contexts_exist() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=[]))
+
+    assert service.context() is None
+
+
+def test_context_returns_none_on_error_response() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=500, text="boom"))
+
+    assert service.context() is None
+
+
+def test_contexts_raises_on_error_response() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=500, text="boom"))
+
+    with pytest.raises(WacomServiceException):
+        service.contexts()
+
+
+def test_context_accepts_legacy_single_envelope() -> None:
+    legacy = {"version": 3, "context": CONTEXT_LIST_PAYLOAD[0]["data"]}
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=legacy))
+
+    context = service.context()
+
+    assert context is not None
+    assert context.context == "core"
+    assert context.version == 3
+
+
+def test_ontology_context_from_dict_rejects_envelope_without_payload() -> None:
+    with pytest.raises(ValueError, match="data"):
+        OntologyContext.from_dict({"version": 1})
 
 
 def test_update_concept_patches_the_concept_uri() -> None:
