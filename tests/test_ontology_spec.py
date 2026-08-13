@@ -12,9 +12,11 @@ import pytest
 
 from knowledge.base.ontology import (
     Comment,
+    DataPropertyType,
     InflectionLevel,
     OntologyClassReference,
     OntologyLabel,
+    OntologyPropertyReference,
 )
 from knowledge.services.base import WacomServiceException
 from knowledge.services.ontology import OntologyService
@@ -25,6 +27,11 @@ CONTEXT: str = "demo"
 
 ARTIST: OntologyClassReference = OntologyClassReference("demo", "creative", "Artist")
 ARTIST_QUOTED: str = "demo%3Acreative%23Artist"
+
+CREATED: OntologyPropertyReference = OntologyPropertyReference("demo", "creative", "created")
+CREATED_QUOTED: str = "demo%3Acreative%23created"
+PRODUCED: OntologyPropertyReference = OntologyPropertyReference("demo", "creative", "produced")
+PRODUCED_QUOTED: str = "demo%3Acreative%23produced"
 
 
 class _FakeResponse:
@@ -214,3 +221,28 @@ def test_context_diff_raises_on_error_response() -> None:
 
     with pytest.raises(WacomServiceException):
         service.context_diff(CONTEXT)
+
+
+def test_update_property_patches_the_property_uri() -> None:
+    service = _StubOntologyService()
+
+    service.update_property(CONTEXT, CREATED, icon="rel.png", labels=[OntologyLabel("created", "en")])
+
+    method, url, kwargs = service.stub.last
+    assert method == "PATCH"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/properties/{CREATED_QUOTED}"
+    assert kwargs["json"] == {
+        "labels": [{"value": "created", "lang": "en"}],
+        "comments": [],
+        "icon": "rel.png",
+    }
+
+
+def test_rename_property_posts_to_rename_route() -> None:
+    service = _StubOntologyService()
+
+    service.rename_property(CONTEXT, CREATED, PRODUCED)
+
+    method, url, _ = service.stub.last
+    assert method == "POST"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/properties/{CREATED_QUOTED}/rename/{PRODUCED_QUOTED}"

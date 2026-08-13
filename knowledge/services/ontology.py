@@ -864,6 +864,114 @@ class OntologyService(WacomServiceAPIClient):
             return cast(Dict[str, Any], response.json())
         raise handle_error("Failed to create data property", response, payload=payload)
 
+    def update_property(
+        self,
+        context: str,
+        reference: OntologyPropertyReference,
+        icon: Optional[str] = None,
+        labels: Optional[List[OntologyLabel]] = None,
+        comments: Optional[List[Comment]] = None,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> None:
+        """Update the labels, comments and icon of a property.
+
+        **Remark:**
+        Only works for users with the role 'TenantAdmin'.
+
+        Domains and ranges are not changed by this call; use `add_property_domains`,
+        `remove_property_domains`, `add_property_ranges` and `remove_property_ranges`.
+
+        Parameters
+        ----------
+        context: str
+            Context of ontology
+        reference: OntologyPropertyReference
+            Reference of the property to update
+        icon: Optional[str] (default:= None)
+            Icon representing the property
+        labels: Optional[List[OntologyLabel]] (default:= None)
+            Labels for the property
+        comments: Optional[List[Comment]] (default:= None)
+            Comments for the property
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        payload: Dict[str, Any] = {
+            LABELS_TAG: [{TEXT_TAG: la.content, LANGUAGE_CODE: la.language_code} for la in labels or []],
+            COMMENTS_TAG: [{TEXT_TAG: co.content, LANGUAGE_CODE: co.language_code} for co in comments or []],
+            ICON_TAG: icon,
+        }
+        context_url: str = urllib.parse.quote_plus(context)
+        property_url: str = urllib.parse.quote_plus(reference.iri)
+        url: str = (
+            f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/"
+            f"{OntologyService.PROPERTIES_ENDPOINT}/{property_url}"
+        )
+        response: Response = self.request_session.patch(
+            url,
+            overwrite_auth_token=auth_key,
+            json=payload,
+            verify=self.verify_calls,
+            timeout=timeout,
+        )
+        if not response.ok:
+            raise handle_error("Failed to update property", response, payload=payload)
+
+    def rename_property(
+        self,
+        context: str,
+        reference: OntologyPropertyReference,
+        new_reference: OntologyPropertyReference,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> None:
+        """Rename a property.
+
+        **Remark:**
+        Only works for users with the role 'TenantAdmin'.
+
+        Parameters
+        ----------
+        context: str
+            Context of ontology
+        reference: OntologyPropertyReference
+            Current reference of the property
+        new_reference: OntologyPropertyReference
+            New reference of the property
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        context_url: str = urllib.parse.quote_plus(context)
+        property_url: str = urllib.parse.quote_plus(reference.iri)
+        new_property_url: str = urllib.parse.quote_plus(new_reference.iri)
+        url: str = (
+            f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/"
+            f"{OntologyService.PROPERTIES_ENDPOINT}/{property_url}/rename/{new_property_url}"
+        )
+        response: Response = self.request_session.post(
+            url,
+            overwrite_auth_token=auth_key,
+            verify=self.verify_calls,
+            timeout=timeout,
+        )
+        if not response.ok:
+            raise handle_error("Failed to rename property", response)
+
     def delete_property(
         self,
         context: str,
