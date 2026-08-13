@@ -1,4 +1,4 @@
-2026/08/13 - RELEASE 4.4.0
+2026/08/13 - RELEASE 4.4.1
 ==========================
 - Align `OntologyService` with the Wacom OntologyManager API v1 OpenAPI specification. Twelve operations that had no client method are now available.
 - **BREAKING** — `OntologyService.update_concept` now issues `PATCH /context/{context}/concepts/{uri}` instead of `PUT` against the collection URL, which the service does not implement. The signature changed accordingly: the `name: str` and `subclass_of: Optional[str]` parameters are replaced by a single `reference: OntologyClassReference`, and the method returns `None` rather than a dict. The API accepts only labels, comments and the icon; a concept's superclass cannot be changed through it.
