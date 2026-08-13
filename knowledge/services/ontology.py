@@ -20,6 +20,7 @@ from knowledge.base.ontology import (
     PropertyType,
     THING_CLASS,
     DataPropertyType,
+    ImportResponse,
     InflectionLevel,
     InflectionSetting,
     Comment,
@@ -1688,3 +1689,54 @@ class OntologyService(WacomServiceAPIClient):
         if response.ok:
             return str(response.text)
         raise handle_error("RDF export failed", response)
+
+    def rdf_import(
+        self,
+        context: str,
+        rdf_content: Union[str, bytes],
+        file_name: str = "ontology.rdf",
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> ImportResponse:
+        """Import an RDF ontology file into a context.
+
+        **Remark:**
+        Only works for users with the role 'TenantAdmin'.
+
+        Parameters
+        ----------
+        context: str
+            Name of the context.
+        rdf_content: Union[str, bytes]
+            RDFS / OWL ontology content. Strings are encoded as UTF-8.
+        file_name: str (default:= 'ontology.rdf')
+            File name transmitted with the multipart upload.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Returns
+        -------
+        result: ImportResponse
+            Import outcome for concepts and properties.
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        content: bytes = rdf_content.encode("utf-8") if isinstance(rdf_content, str) else rdf_content
+        context_url: str = urllib.parse.quote_plus(context)
+        url: str = f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/versions/rdf"
+        response: Response = self.request_session.post(
+            url,
+            files={"file": (file_name, content)},
+            ignore_content_type=True,
+            verify=self.verify_calls,
+            timeout=timeout,
+            overwrite_auth_token=auth_key,
+        )
+        if response.ok:
+            return ImportResponse.from_dict(response.json())
+        raise handle_error("RDF import failed", response)

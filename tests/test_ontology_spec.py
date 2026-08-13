@@ -341,3 +341,37 @@ def test_pending_version_raises_on_error_response() -> None:
 
     with pytest.raises(WacomServiceException):
         service.pending_version(CONTEXT)
+
+
+def test_rdf_import_posts_multipart_and_parses_response() -> None:
+    payload = {
+        "concepts": {"imported": [{"name": "demo:creative#Artist", "type": "Class"}], "failed": []},
+        "properties": {"imported": [], "failed": []},
+    }
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=payload))
+
+    result = service.rdf_import(CONTEXT, "<rdf:RDF/>", file_name="demo.rdf")
+
+    method, url, kwargs = service.stub.last
+    assert method == "POST"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/versions/rdf"
+    assert kwargs["ignore_content_type"] is True
+    assert kwargs["files"] == {"file": ("demo.rdf", b"<rdf:RDF/>")}
+    assert result.concepts.imported[0].name == "demo:creative#Artist"
+    assert result.properties.imported == []
+
+
+def test_rdf_import_accepts_bytes_unchanged() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload={}))
+
+    service.rdf_import(CONTEXT, b"\x00binary")
+
+    _, _, kwargs = service.stub.last
+    assert kwargs["files"] == {"file": ("ontology.rdf", b"\x00binary")}
+
+
+def test_rdf_import_raises_on_error_response() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=400, text="bad rdf"))
+
+    with pytest.raises(WacomServiceException):
+        service.rdf_import(CONTEXT, "<rdf:RDF/>")
