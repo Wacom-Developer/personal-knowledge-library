@@ -10,7 +10,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 
-from knowledge.base.ontology import Comment, OntologyClassReference, OntologyLabel
+from knowledge.base.ontology import (
+    Comment,
+    InflectionLevel,
+    OntologyClassReference,
+    OntologyLabel,
+)
 from knowledge.services.base import WacomServiceException
 from knowledge.services.ontology import OntologyService
 
@@ -118,3 +123,38 @@ def test_update_concept_raises_on_error_response() -> None:
 
     with pytest.raises(WacomServiceException):
         service.update_concept(CONTEXT, ARTIST)
+
+
+def test_set_concept_metadata_puts_nel_metadata() -> None:
+    service = _StubOntologyService()
+
+    service.set_concept_metadata(CONTEXT, ARTIST, InflectionLevel.HIGH, case_sensitive=True)
+
+    method, url, kwargs = service.stub.last
+    assert method == "PUT"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/concepts/{ARTIST_QUOTED}/metadata"
+    assert kwargs["json"] == {
+        "concept": "demo:creative#Artist",
+        "inflection": "HIGH",
+        "caseSensitive": True,
+    }
+
+
+def test_context_metadata_omits_version_when_not_given() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=[]))
+
+    service.context_metadata(CONTEXT)
+
+    method, url, kwargs = service.stub.last
+    assert method == "GET"
+    assert url == f"{BASE_URL}/context/{CONTEXT}/metadata"
+    assert kwargs.get("params") in (None, {})
+
+
+def test_context_metadata_sends_version_when_given() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=[]))
+
+    service.context_metadata(CONTEXT, version=3)
+
+    _, _, kwargs = service.stub.last
+    assert kwargs["params"] == {"version": 3}

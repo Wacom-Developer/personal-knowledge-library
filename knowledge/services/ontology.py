@@ -6,7 +6,12 @@ from typing import Any, Optional, Dict, Tuple, List, cast
 
 from requests import Response
 
-from knowledge.base.entity import FORCE_TAG
+from knowledge.base.entity import (
+    FORCE_TAG,
+    INFLECTION_CASE_SENSITIVE,
+    INFLECTION_CONCEPT_CLASS,
+    INFLECTION_SETTING,
+)
 from knowledge.base.ontology import (
     OntologyClassReference,
     OntologyPropertyReference,
@@ -15,6 +20,7 @@ from knowledge.base.ontology import (
     PropertyType,
     THING_CLASS,
     DataPropertyType,
+    InflectionLevel,
     InflectionSetting,
     Comment,
     OntologyContext,
@@ -42,6 +48,7 @@ RANGE_TAG: str = "ranges"
 SUB_CLASS_OF_TAG: str = "subClassOf"
 SUB_PROPERTY_OF_TAG: str = "subPropertyOf"
 LISTING_MODE_PARAM: str = "listingMode"
+VERSION_PARAM: str = "version"
 TEXT_TAG: str = "value"
 DEFAULT_TIMEOUT: int = 30
 
@@ -147,6 +154,7 @@ class OntologyService(WacomServiceAPIClient):
     def context_metadata(
         self,
         context: str,
+        version: Optional[int] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> List[InflectionSetting]:
@@ -157,6 +165,8 @@ class OntologyService(WacomServiceAPIClient):
         ----------
         context: str
             Name of the context.
+        version: Optional[int] [default:= None]
+            Version of the context. If None, the latest version is used.
         auth_key: Optional[str] [default:= None]
             If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
@@ -167,8 +177,11 @@ class OntologyService(WacomServiceAPIClient):
         list_inflection_settings: List[InflectionSetting]
             List of inflection settings.
         """
+        params: Dict[str, int] = {} if version is None else {VERSION_PARAM: version}
+        context_url: str = urllib.parse.quote_plus(context)
         response: Response = self.request_session.get(
-            f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context}" "/metadata",
+            f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/metadata",
+            params=params,
             timeout=timeout,
             verify=self.verify_calls,
             overwrite_auth_token=auth_key,
@@ -586,6 +599,61 @@ class OntologyService(WacomServiceAPIClient):
         )
         if not response.ok:
             raise handle_error("Failed to update concept", response, payload=payload)
+
+    def set_concept_metadata(
+        self,
+        context: str,
+        reference: OntologyClassReference,
+        inflection: InflectionLevel,
+        case_sensitive: bool = False,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> None:
+        """Set the Named Entity Linking metadata of a concept class.
+
+        **Remark:**
+        Only works for users with the role 'TenantAdmin'.
+
+        Parameters
+        ----------
+        context: str
+            Context of ontology
+        reference: OntologyClassReference
+            Reference of the concept
+        inflection: InflectionLevel
+            Level of inflection handling applied to entity labels of the class
+        case_sensitive: bool (default:= False)
+            Treat entity labels of the class as case-sensitive
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 30 seconds)
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown.
+        """
+        payload: Dict[str, Any] = {
+            INFLECTION_CONCEPT_CLASS: reference.iri,
+            INFLECTION_SETTING: inflection.value,
+            INFLECTION_CASE_SENSITIVE: case_sensitive,
+        }
+        context_url: str = urllib.parse.quote_plus(context)
+        concept_url: str = urllib.parse.quote_plus(reference.iri)
+        url: str = (
+            f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/"
+            f"{OntologyService.CONCEPTS_ENDPOINT}/{concept_url}/metadata"
+        )
+        response: Response = self.request_session.put(
+            url,
+            overwrite_auth_token=auth_key,
+            json=payload,
+            verify=self.verify_calls,
+            timeout=timeout,
+        )
+        if not response.ok:
+            raise handle_error("Failed to set concept metadata", response, payload=payload)
 
     def delete_concept(
         self,
