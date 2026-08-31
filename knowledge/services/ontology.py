@@ -25,7 +25,9 @@ from knowledge.base.ontology import (
     InflectionSetting,
     Comment,
     OntologyContext,
+    OntologyDiff,
     OntologyLabel,
+    PendingOntologyVersion,
     RESOURCE,
 )
 from knowledge.services import DEFAULT_MAX_RETRIES, DEFAULT_BACKOFF_FACTOR
@@ -1440,10 +1442,21 @@ class OntologyService(WacomServiceAPIClient):
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> None:
-        """Reset a context, discarding its uncommitted changes.
+        """Reset a context to the base ontology.
+
+        Removes **all** tenant customizations: tenant concepts, tenant properties,
+        base-property extensions, Named Entity Linking settings and the version history.
+        Version numbering restarts. Use `context_diff` beforehand to see what is destroyed.
 
         **Remark:**
         Only works for users with the role 'TenantAdmin'.
+
+        The reset auto-commits a fresh version, so no `commit` is needed afterwards - but
+        the tenant is left locked at ontology version 0, which blocks every graph write
+        (entities, groups, content) and blocks deleting the tenant. The reset is only
+        finished once `WacomKnowledgeService.ontology_update` has been called **and** the
+        background work completed; poll `WacomKnowledgeService.ontology_update_status`
+        until it reports `is_idle`.
 
         Parameters
         ----------
@@ -1458,6 +1471,12 @@ class OntologyService(WacomServiceAPIClient):
         ------
         WacomServiceException
             If the ontology service returns an error code, an exception is thrown.
+            A 404 means the context does not exist. A 409 means the reset is blocked; the
+            message names the blocker - another reset already running, a pending or failed
+            ontology update, a running import job, vector search settings referencing the
+            tenant's properties, or entities / relations / values in the knowledge graph
+            that still use the tenant's concepts or properties. Delete the offending data
+            and retry.
         """
         context_url: str = urllib.parse.quote_plus(name)
         url: str = f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/reset"
@@ -1475,12 +1494,12 @@ class OntologyService(WacomServiceAPIClient):
         name: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ) -> Dict[str, Any]:
-        """Retrieve the difference between the committed and the working state of a context.
+    ) -> OntologyDiff:
+        """Retrieve what the tenant added or changed on top of the base ontology.
 
         **Remark:**
-        The OpenAPI specification of the ontology service does not define a response schema
-        for this operation, so the parsed JSON payload is returned unmodified.
+        Works for users with the role 'User' and 'TenantAdmin'. Everything the diff reports
+        is what `reset_context` would destroy, so it is worth calling first.
 
         Parameters
         ----------
@@ -1493,13 +1512,15 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        diff: Dict[str, Any]
-            Difference report as returned by the service.
+        diff: OntologyDiff
+            Concepts and properties the tenant added, and base properties it extended.
+            `OntologyDiff.is_empty` is True if the tenant ontology matches the base ontology.
 
         Raises
         ------
         WacomServiceException
             If the ontology service returns an error code, an exception is thrown.
+            A 404 means the context does not exist.
         """
         context_url: str = urllib.parse.quote_plus(name)
         url: str = f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/diff"
@@ -1510,7 +1531,7 @@ class OntologyService(WacomServiceAPIClient):
             overwrite_auth_token=auth_key,
         )
         if response.ok:
-            return cast(Dict[str, Any], response.json())
+            return OntologyDiff.from_dict(response.json())
         raise handle_error("Retrieving the context diff failed.", response)
 
     def remove_context(
@@ -1559,16 +1580,28 @@ class OntologyService(WacomServiceAPIClient):
         """
         Commit the ontology.
 
+        A commit only persists the schema change. Call
+        `WacomKnowledgeService.ontology_update` afterwards to make the graph side respect
+        the new version.
+
         Parameters
         ----------
         context: str
             Name of the context.
         force: bool (default:= False)
-            Force commit of the ontology.
+            Commit even when there are no pending changes, or when the latest version is
+            already committed. Without it, both cases are rejected with a 409.
         auth_key: Optional[str] [default:= None]
             If the auth key is set, the logged-in user (if any) will be ignored and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
+
+        Raises
+        ------
+        WacomServiceException
+            If the ontology service returns an error code, an exception is thrown. Without
+            `force`, a 409 means there was nothing to commit or the latest version was
+            already committed; a 409 also means the context is currently being reset.
         """
         context_url: str = urllib.parse.quote_plus(context)
         url: str = f"{self.service_base_url}context/{context_url}/commit"
@@ -1643,12 +1676,14 @@ class OntologyService(WacomServiceAPIClient):
         context: str,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
-    ) -> Dict[str, Any]:
+    ) -> PendingOntologyVersion:
         """Retrieve the pending, uncommitted version of a context.
 
         **Remark:**
         The OpenAPI specification of the ontology service does not define a response schema
-        for this operation, so the parsed JSON payload is returned unmodified.
+        for this operation. The service answers with the change log of the uncommitted
+        version: one entry per created, modified or deleted concept and property, each
+        carrying the affected element as a JSON string in its body.
 
         Parameters
         ----------
@@ -1661,13 +1696,20 @@ class OntologyService(WacomServiceAPIClient):
 
         Returns
         -------
-        pending: Dict[str, Any]
-            Pending version as returned by the service.
+        pending: PendingOntologyVersion
+            Pending version of the context. `PendingOntologyVersion.is_empty` is True if the
+            context has no uncommitted changes.
 
         Raises
         ------
         WacomServiceException
             If the ontology service returns an error code, an exception is thrown.
+
+        Examples
+        --------
+        >>> pending = client.pending_version("core")
+        >>> for change in pending.changes:
+        ...     print(f"{change.operation} {change.element_kind}: {change.element_uri}")
         """
         context_url: str = urllib.parse.quote_plus(context)
         url: str = f"{self.service_base_url}{OntologyService.CONTEXT_ENDPOINT}/{context_url}/versions/pending"
@@ -1677,9 +1719,12 @@ class OntologyService(WacomServiceAPIClient):
             timeout=timeout,
             overwrite_auth_token=auth_key,
         )
-        if response.ok:
-            return cast(Dict[str, Any], response.json())
-        raise handle_error("Failed to retrieve the pending version", response)
+        if not response.ok:
+            raise handle_error("Failed to retrieve the pending version", response)
+        payload: Any = response.json()
+        # The service returns the change log as a list; tolerate a single entry as well.
+        changes: List[Dict[str, Any]] = payload if isinstance(payload, list) else [payload]
+        return PendingOntologyVersion.from_list(changes)
 
     def rdf_export(
         self,
