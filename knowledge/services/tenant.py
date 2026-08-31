@@ -265,4 +265,4 @@ class TenantManagementServiceAPI(WacomServiceAPIClient):
             overwrite_auth_token=self.__tenant_management_token,
         )
         if not response.ok:
-            raise handle_error("Creation of tenant failed.", response)
+            raise handle_error("Deletion of tenant failed.", response)
