@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2026-present Wacom. All rights reserved.
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 __all__ = [
     "ContentObject",
