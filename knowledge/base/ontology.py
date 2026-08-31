@@ -3,7 +3,7 @@
 import abc
 import enum
 from datetime import datetime
-from json import JSONEncoder
+from json import JSONDecodeError, JSONEncoder, loads
 from typing import Union, Optional, Any, List, Dict, Tuple, Set
 
 import loguru
@@ -1336,6 +1336,48 @@ class ObjectProperty(EntityProperty):
     def outgoing_relations(self) -> List[Union[str, "ThingObject"]]:
         """Outgoing relation"""
         return self.__outgoing
+
+    @property
+    def incoming_uris(self) -> List[str]:
+        """URIs of the incoming relations.
+
+        `incoming_relations` holds whichever form the service sent - a bare URI string or a
+        full entity - so comparing it against a URI is unreliable. This always yields URIs.
+        Entities without a URI are skipped.
+        """
+        return ObjectProperty._uris(self.__incoming)
+
+    @property
+    def outgoing_uris(self) -> List[str]:
+        """URIs of the outgoing relations.
+
+        `outgoing_relations` holds whichever form the service sent - a bare URI string or a
+        full entity - so comparing it against a URI is unreliable. This always yields URIs.
+        Entities without a URI are skipped.
+        """
+        return ObjectProperty._uris(self.__outgoing)
+
+    @staticmethod
+    def _uris(relations: List[Union[str, "ThingObject"]]) -> List[str]:
+        """Reduce a relation list to the URIs of its targets.
+
+        Parameters
+        ----------
+        relations: List[Union[str, ThingObject]]
+            Relation targets as URIs, entities, or a mix of both.
+
+        Returns
+        -------
+        uris: List[str]
+            URIs of the targets, in order. Entities without a URI are skipped.
+        """
+        uris: List[str] = []
+        for relation in relations:
+            if isinstance(relation, str):
+                uris.append(relation)
+            elif relation.uri is not None:
+                uris.append(relation.uri)
+        return uris
 
     @staticmethod
     def create_from_dict(
@@ -3062,6 +3104,879 @@ class ImportResponse:
         return f"<ImportResponse> - [concepts:={self.concepts}, properties:={self.properties}]"
 
 
+# ------------------------------------ Pending ontology version constants ----------------------------------------------
+BODY_TAG: str = "body"
+KIND_TAG: str = "kind"
+TIME_STAMP_TAG: str = "timeStamp"
+VERSION_TAG: str = "version"
+ELEMENT_URI_TAG: str = "ElementUri"
+CHANGE_DATA_TAG: str = "Data"
+CHANGE_NAME_TAG: str = "Name"
+ICON_TAG: str = "icon"
+DOMAINS_TAG: str = "domains"
+RANGES_TAG: str = "ranges"
+MAX_FRACTIONAL_DIGITS: int = 6
+"""``datetime.fromisoformat`` accepts at most six fractional digits on Python 3.10."""
+
+NUMERIC_PROPERTY_TYPE: Dict[int, PropertyType] = {
+    0: PropertyType.OBJECT_PROPERTY,
+    1: PropertyType.DATA_PROPERTY,
+}
+"""The change log encodes the property kind numerically, unlike the REST property models."""
+
+
+class OntologyChangeOperation(str, enum.Enum):
+    """
+    OntologyChangeOperation
+    -----------------------
+    What a change log entry did to the ontology element it refers to.
+    """
+
+    INSERT = "INSERT"
+    """The element was added to the context."""
+    CHANGE = "CHANGE"
+    """The element was modified."""
+    DELETE = "DELETE"
+    """The element was removed from the context."""
+
+
+class OntologyElementKind(str, enum.Enum):
+    """
+    OntologyElementKind
+    -------------------
+    Which flavour of ontology element a change log entry refers to.
+    """
+
+    CONCEPT = "CONCEPT"
+    """A concept class."""
+    LITERAL = "LITERAL"
+    """A data property."""
+    RELATION = "RELATION"
+    """An object property."""
+
+
+CHANGE_OPERATIONS: Dict[str, OntologyChangeOperation] = {op.value: op for op in OntologyChangeOperation}
+ELEMENT_KINDS: Dict[str, OntologyElementKind] = {kind.value: kind for kind in OntologyElementKind}
+
+
+def parse_service_timestamp(value: Optional[str]) -> Optional[datetime]:
+    """Parse a timestamp as emitted by the ontology service.
+
+    The service is .NET-based, so timestamps may end in ``Z`` and may carry up to seven
+    fractional digits - neither of which ``datetime.fromisoformat`` accepts on Python 3.10.
+
+    Parameters
+    ----------
+    value: Optional[str]
+        Timestamp string, e.g. ``'2026-08-31T10:29:42.1946908+00:00'``.
+
+    Returns
+    -------
+    time_stamp: Optional[datetime]
+        Parsed timestamp, or None if the value is missing or not parsable.
+    """
+    if not value:
+        return None
+    text: str = f"{value[:-1]}+00:00" if value.endswith("Z") else value
+    if "." in text:
+        head, _, tail = text.partition(".")
+        index: int = 0
+        while index < len(tail) and tail[index].isdigit():
+            index += 1
+        fraction: str = tail[:index][:MAX_FRACTIONAL_DIGITS].ljust(MAX_FRACTIONAL_DIGITS, "0")
+        text = f"{head}.{fraction}{tail[index:]}"
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        logger.warning(f"Unparsable ontology service timestamp: {value}")
+        return None
+
+
+def _camel_case_keys(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Lower the first character of every key.
+
+    The change log serialises elements with PascalCase keys, while the ontology models
+    parse the camelCase shape used by the rest of the REST API.
+
+    Parameters
+    ----------
+    payload: Dict[str, Any]
+        Dictionary with PascalCase keys.
+
+    Returns
+    -------
+    converted: Dict[str, Any]
+        Dictionary with camelCase keys.
+    """
+    return {f"{key[:1].lower()}{key[1:]}": value for key, value in payload.items()}
+
+
+def _change_element(
+    element_kind: Optional[OntologyElementKind], data: Any
+) -> Optional[Union[OntologyClass, OntologyProperty]]:
+    """Parse the element a change log entry carries in its body.
+
+    Parameters
+    ----------
+    element_kind: Optional[OntologyElementKind]
+        Kind of element the entry refers to. None if the entry's kind was not recognised.
+    data: Any
+        Value of the body's 'Data' member. Only dictionaries carry an element.
+
+    Returns
+    -------
+    element: Optional[Union[OntologyClass, OntologyProperty]]
+        Parsed element, or None if the entry carries none or could not be parsed.
+    """
+    if element_kind is None or not isinstance(data, dict):
+        return None
+    normalized: Dict[str, Any] = _camel_case_keys(data)
+    normalized[LABELS_TAG] = [_camel_case_keys(la) for la in normalized.get(LABELS_TAG) or []]
+    normalized[COMMENTS_TAG] = [_camel_case_keys(co) for co in normalized.get(COMMENTS_TAG) or []]
+    normalized.setdefault(ICON_TAG, None)
+    try:
+        if element_kind is OntologyElementKind.CONCEPT:
+            if normalized.get(SUB_CLASS_OF_TAG) is None:
+                # OntologyClass.from_dict parses the value whenever the key is present.
+                normalized.pop(SUB_CLASS_OF_TAG, None)
+            return OntologyClass.from_dict(normalized)
+        normalized.setdefault(DOMAINS_TAG, [])
+        normalized.setdefault(RANGES_TAG, [])
+        normalized[KIND_TAG] = _property_type(normalized.get(KIND_TAG), element_kind).value
+        return OntologyProperty.from_dict(normalized)
+    except (KeyError, TypeError, ValueError) as parse_error:
+        # The change log covers operations that are not part of the documented schema; an
+        # unexpected shape must not break the listing of the ones that are understood.
+        logger.warning(f"Failed to parse the {element_kind.value} of an ontology change: {parse_error}")
+        return None
+
+
+def _property_type(kind: Any, element_kind: OntologyElementKind) -> PropertyType:
+    """Resolve the property type of a change log element.
+
+    Parameters
+    ----------
+    kind: Any
+        Value of the element's 'Kind' member: numeric in the change log, a string elsewhere.
+    element_kind: OntologyElementKind
+        Kind of element the entry refers to, used as the fallback.
+
+    Returns
+    -------
+    property_type: PropertyType
+        Resolved property type.
+    """
+    if isinstance(kind, str) and kind in INVERSE_PROPERTY_TYPE:
+        return INVERSE_PROPERTY_TYPE[kind]
+    if isinstance(kind, int) and not isinstance(kind, bool) and kind in NUMERIC_PROPERTY_TYPE:
+        return NUMERIC_PROPERTY_TYPE[kind]
+    return PropertyType.DATA_PROPERTY if element_kind is OntologyElementKind.LITERAL else PropertyType.OBJECT_PROPERTY
+
+
+class OntologyChangeRecord:
+    """
+    OntologyChangeRecord
+    --------------------
+    A single entry of a context's change log, as returned for its pending version.
+
+    The service reports the changed element as a JSON string in the entry's body, using
+    PascalCase keys and a numeric property kind. This class decodes it and exposes the
+    element through the regular `OntologyClass` / `OntologyProperty` models.
+
+    Parameters
+    ----------
+    kind: str
+        Kind of change verbatim, e.g. ``'INSERT_CONCEPT'``.
+    context: Optional[str]
+        Name of the context the change belongs to.
+    tenant_id: Optional[str]
+        Tenant id.
+    version: Optional[int]
+        Version the change belongs to.
+    time_stamp: Optional[datetime]
+        Point in time the change was recorded.
+    element_uri: Optional[str]
+        IRI of the changed element.
+    element: Optional[Union[OntologyClass, OntologyProperty]]
+        Changed element, if the entry carries one.
+    body: Dict[str, Any]
+        Decoded body of the entry, verbatim.
+    """
+
+    def __init__(
+        self,
+        kind: str,
+        context: Optional[str] = None,
+        tenant_id: Optional[str] = None,
+        version: Optional[int] = None,
+        time_stamp: Optional[datetime] = None,
+        element_uri: Optional[str] = None,
+        element: Optional[Union[OntologyClass, OntologyProperty]] = None,
+        body: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self.__kind: str = kind
+        self.__context: Optional[str] = context
+        self.__tenant_id: Optional[str] = tenant_id
+        self.__version: Optional[int] = version
+        self.__time_stamp: Optional[datetime] = time_stamp
+        self.__element_uri: Optional[str] = element_uri
+        self.__element: Optional[Union[OntologyClass, OntologyProperty]] = element
+        self.__body: Dict[str, Any] = body if body is not None else {}
+
+    @property
+    def kind(self) -> str:
+        """Kind of change verbatim, e.g. 'INSERT_CONCEPT'."""
+        return self.__kind
+
+    @property
+    def operation(self) -> Optional[OntologyChangeOperation]:
+        """What the change did. None if the service reported an unknown kind."""
+        return CHANGE_OPERATIONS.get(self.__kind.partition("_")[0])
+
+    @property
+    def element_kind(self) -> Optional[OntologyElementKind]:
+        """Flavour of the changed element. None if the service reported an unknown kind."""
+        return ELEMENT_KINDS.get(self.__kind.partition("_")[2])
+
+    @property
+    def context(self) -> Optional[str]:
+        """Name of the context the change belongs to."""
+        return self.__context
+
+    @property
+    def tenant_id(self) -> Optional[str]:
+        """Tenant id."""
+        return self.__tenant_id
+
+    @property
+    def version(self) -> Optional[int]:
+        """Version the change belongs to."""
+        return self.__version
+
+    @property
+    def time_stamp(self) -> Optional[datetime]:
+        """Point in time the change was recorded."""
+        return self.__time_stamp
+
+    @property
+    def element_uri(self) -> Optional[str]:
+        """IRI of the changed element."""
+        return self.__element_uri
+
+    @property
+    def element(self) -> Optional[Union[OntologyClass, OntologyProperty]]:
+        """Changed element. None for entries that carry none, such as deletions."""
+        return self.__element
+
+    @property
+    def concept(self) -> Optional[OntologyClass]:
+        """Changed element if it is a concept class, None otherwise."""
+        return self.__element if isinstance(self.__element, OntologyClass) else None
+
+    @property
+    def ontology_property(self) -> Optional[OntologyProperty]:
+        """Changed element if it is a data or object property, None otherwise."""
+        return self.__element if isinstance(self.__element, OntologyProperty) else None
+
+    @property
+    def body(self) -> Dict[str, Any]:
+        """Decoded body of the entry, verbatim. Empty if the entry carries none."""
+        return self.__body
+
+    @staticmethod
+    def from_dict(record: Dict[str, Any]) -> "OntologyChangeRecord":
+        """
+        Create an ontology change record from a dictionary.
+
+        Parameters
+        ----------
+        record: Dict[str, Any]
+            Change log entry as returned by the service.
+
+        Returns
+        -------
+        instance: OntologyChangeRecord
+            Instance of the change record.
+        """
+        body: Dict[str, Any] = {}
+        raw_body: Any = record.get(BODY_TAG)
+        if isinstance(raw_body, dict):
+            body = raw_body
+        elif isinstance(raw_body, str) and raw_body:
+            try:
+                decoded: Any = loads(raw_body)
+                body = decoded if isinstance(decoded, dict) else {}
+            except JSONDecodeError as decode_error:
+                logger.warning(f"Failed to decode the body of an ontology change: {decode_error}")
+        kind: str = record.get(KIND_TAG) or ""
+        element_kind: Optional[OntologyElementKind] = ELEMENT_KINDS.get(kind.partition("_")[2])
+        data: Any = body.get(CHANGE_DATA_TAG)
+        element_uri: Optional[str] = body.get(ELEMENT_URI_TAG)
+        if element_uri is None and isinstance(data, dict):
+            element_uri = data.get(CHANGE_NAME_TAG)
+        return OntologyChangeRecord(
+            kind=kind,
+            context=record.get(CONTEXT_TAG),
+            tenant_id=record.get(TENANT_ID),
+            version=record.get(VERSION_TAG),
+            time_stamp=parse_service_timestamp(record.get(TIME_STAMP_TAG)),
+            element_uri=element_uri,
+            element=_change_element(element_kind, data),
+            body=body,
+        )
+
+    def __repr__(self) -> str:
+        return f"<OntologyChangeRecord> - [kind:={self.kind}, element:={self.element_uri}, version:={self.version}]"
+
+
+class PendingOntologyVersion:
+    """
+    PendingOntologyVersion
+    ----------------------
+    The uncommitted version of an ontology context: the change log that a
+    `OntologyService.commit` would turn into the next committed version.
+
+    Parameters
+    ----------
+    changes: List[OntologyChangeRecord]
+        Changes of the pending version, in the order the service reported them.
+    """
+
+    def __init__(self, changes: List[OntologyChangeRecord]) -> None:
+        self.__changes: List[OntologyChangeRecord] = changes
+
+    @property
+    def changes(self) -> List[OntologyChangeRecord]:
+        """Changes of the pending version, in the order the service reported them."""
+        return self.__changes
+
+    @property
+    def version(self) -> Optional[int]:
+        """Version the pending changes would become. None if there are no pending changes."""
+        for change in self.__changes:
+            if change.version is not None:
+                return change.version
+        return None
+
+    @property
+    def is_empty(self) -> bool:
+        """Has the context no uncommitted changes?"""
+        return len(self.__changes) == 0
+
+    @property
+    def concepts(self) -> List[OntologyClass]:
+        """Concept classes touched by the pending changes, one entry per change."""
+        return [change.concept for change in self.__changes if change.concept is not None]
+
+    @property
+    def data_properties(self) -> List[OntologyProperty]:
+        """Data properties touched by the pending changes, one entry per change."""
+        return self.__properties_of_kind(OntologyElementKind.LITERAL)
+
+    @property
+    def object_properties(self) -> List[OntologyProperty]:
+        """Object properties touched by the pending changes, one entry per change."""
+        return self.__properties_of_kind(OntologyElementKind.RELATION)
+
+    def __properties_of_kind(self, element_kind: OntologyElementKind) -> List[OntologyProperty]:
+        """Collect the properties of the pending changes that have the given element kind."""
+        return [
+            change.ontology_property
+            for change in self.__changes
+            if change.element_kind is element_kind and change.ontology_property is not None
+        ]
+
+    @staticmethod
+    def from_list(changes: Optional[List[Dict[str, Any]]]) -> "PendingOntologyVersion":
+        """
+        Create a pending ontology version from the list of change log entries.
+
+        Parameters
+        ----------
+        changes: Optional[List[Dict[str, Any]]]
+            Change log entries as returned by the service.
+
+        Returns
+        -------
+        instance: PendingOntologyVersion
+            Instance of the pending version.
+        """
+        return PendingOntologyVersion([OntologyChangeRecord.from_dict(change) for change in changes or []])
+
+    def __repr__(self) -> str:
+        return f"<PendingOntologyVersion> - [version:={self.version}, changes:={len(self.changes)}]"
+
+
+# --------------------------------------- Ontology update status -------------------------------------------------------
+STATUS_TAG: str = "status"
+ONTOLOGY_NAME_TAG: str = "ontologyName"
+PREVIOUS_VERSION_TAG: str = "previousOntologyVersion"
+APPLIED_VERSION_TAG: str = "appliedOntologyVersion"
+DATE_ADDED_TAG: str = "dateAdded"
+DATE_MODIFIED_TAG: str = "dateModified"
+
+
+class OntologyUpdateState(str, enum.Enum):
+    """
+    OntologyUpdateState
+    -------------------
+    State of the tenant's ontology update on the graph side.
+    """
+
+    NO_UPDATE_IN_PROGRESS = "NoUpdateInProgress"
+    """No update is in flight. Reported both before the first and after a completed apply."""
+    PENDING = "Pending"
+    """An apply was accepted and is still being processed in the background."""
+    FAILED = "Failed"
+    """The last apply failed. Call `ontology_update(fix=True)` to resume it."""
+
+
+UPDATE_STATES: Dict[str, OntologyUpdateState] = {state.value: state for state in OntologyUpdateState}
+
+
+class OntologyUpdateStatus:
+    """
+    OntologyUpdateStatus
+    --------------------
+    Status of the tenant's ontology update, as reported by the graph service.
+
+    `WacomKnowledgeService.ontology_update` only *accepts* an apply; the work continues in
+    the background and the tenant stays locked while it runs. This status is how a caller
+    finds out that the apply finished, and whether it failed.
+
+    Parameters
+    ----------
+    status: str
+        State verbatim, e.g. ``'NoUpdateInProgress'``.
+    ontology_name: Optional[str]
+        Name of the ontology being applied.
+    previous_ontology_version: Optional[int]
+        Version that was applied before this update.
+    applied_ontology_version: Optional[int]
+        Version this update applies.
+    date_added: Optional[datetime]
+        Point in time the update was recorded.
+    date_modified: Optional[datetime]
+        Point in time the update was last touched.
+    """
+
+    def __init__(
+        self,
+        status: str,
+        ontology_name: Optional[str] = None,
+        previous_ontology_version: Optional[int] = None,
+        applied_ontology_version: Optional[int] = None,
+        date_added: Optional[datetime] = None,
+        date_modified: Optional[datetime] = None,
+    ) -> None:
+        self.__status: str = status
+        self.__ontology_name: Optional[str] = ontology_name
+        self.__previous_ontology_version: Optional[int] = previous_ontology_version
+        self.__applied_ontology_version: Optional[int] = applied_ontology_version
+        self.__date_added: Optional[datetime] = date_added
+        self.__date_modified: Optional[datetime] = date_modified
+
+    @property
+    def status(self) -> str:
+        """State verbatim, e.g. 'NoUpdateInProgress'."""
+        return self.__status
+
+    @property
+    def state(self) -> Optional[OntologyUpdateState]:
+        """Parsed state. None if the service reported a state the SDK does not know."""
+        return UPDATE_STATES.get(self.__status)
+
+    @property
+    def is_idle(self) -> bool:
+        """Is no update in flight? True once an apply has completed."""
+        return self.state is OntologyUpdateState.NO_UPDATE_IN_PROGRESS
+
+    @property
+    def is_pending(self) -> bool:
+        """Is an apply still being processed in the background?"""
+        return self.state is OntologyUpdateState.PENDING
+
+    @property
+    def has_failed(self) -> bool:
+        """Did the last apply fail? Resume it with `ontology_update(fix=True)`."""
+        return self.state is OntologyUpdateState.FAILED
+
+    @property
+    def ontology_name(self) -> Optional[str]:
+        """Name of the ontology being applied."""
+        return self.__ontology_name
+
+    @property
+    def previous_ontology_version(self) -> Optional[int]:
+        """Version that was applied before this update."""
+        return self.__previous_ontology_version
+
+    @property
+    def applied_ontology_version(self) -> Optional[int]:
+        """Version this update applies."""
+        return self.__applied_ontology_version
+
+    @property
+    def date_added(self) -> Optional[datetime]:
+        """Point in time the update was recorded."""
+        return self.__date_added
+
+    @property
+    def date_modified(self) -> Optional[datetime]:
+        """Point in time the update was last touched."""
+        return self.__date_modified
+
+    @staticmethod
+    def from_dict(entity: Dict[str, Any]) -> "OntologyUpdateStatus":
+        """
+        Create an ontology update status from a dictionary.
+
+        Parameters
+        ----------
+        entity: Dict[str, Any]
+            Status as returned by the service.
+
+        Returns
+        -------
+        instance: OntologyUpdateStatus
+            Instance of the status.
+        """
+        return OntologyUpdateStatus(
+            status=entity.get(STATUS_TAG) or "",
+            ontology_name=entity.get(ONTOLOGY_NAME_TAG),
+            previous_ontology_version=entity.get(PREVIOUS_VERSION_TAG),
+            applied_ontology_version=entity.get(APPLIED_VERSION_TAG),
+            date_added=parse_service_timestamp(entity.get(DATE_ADDED_TAG)),
+            date_modified=parse_service_timestamp(entity.get(DATE_MODIFIED_TAG)),
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"<OntologyUpdateStatus> - [status:={self.status}, ontology:={self.ontology_name}, "
+            f"applied:={self.applied_ontology_version}]"
+        )
+
+
+# ------------------------------------------- Ontology diff ------------------------------------------------------------
+ADDED_CONCEPTS_TAG: str = "addedConcepts"
+ADDED_PROPERTIES_TAG: str = "addedProperties"
+MODIFIED_BASE_PROPERTIES_TAG: str = "modifiedBaseProperties"
+ADDED_DOMAINS_TAG: str = "addedDomains"
+ADDED_RANGES_TAG: str = "addedRanges"
+
+
+def _class_references(iris: Any) -> List[OntologyClassReference]:
+    """Parse a list of IRIs into class references.
+
+    **Remark:**
+    Data-property ranges are XSD data types rather than classes. They are parsed into
+    references as well - consistent with `OntologyProperty.ranges` - so their `iri`
+    round-trips to the original value and can be compared to `DataPropertyType`.
+
+    Parameters
+    ----------
+    iris: Any
+        List of IRIs. Anything that is not a list yields an empty result.
+
+    Returns
+    -------
+    references: List[OntologyClassReference]
+        Parsed references.
+    """
+    if not isinstance(iris, list):
+        return []
+    return [OntologyClassReference.parse(iri) for iri in iris]
+
+
+class AddedConcept:
+    """
+    AddedConcept
+    ------------
+    A concept class the tenant added on top of the base ontology.
+
+    Parameters
+    ----------
+    reference: OntologyClassReference
+        Reference of the added class.
+    subclass_of: Optional[OntologyClassReference]
+        Superclass of the added class.
+    """
+
+    def __init__(self, reference: OntologyClassReference, subclass_of: Optional[OntologyClassReference] = None) -> None:
+        self.__reference: OntologyClassReference = reference
+        self.__subclass_of: Optional[OntologyClassReference] = subclass_of
+
+    @property
+    def reference(self) -> OntologyClassReference:
+        """Reference of the added class."""
+        return self.__reference
+
+    @property
+    def subclass_of(self) -> Optional[OntologyClassReference]:
+        """Superclass of the added class."""
+        return self.__subclass_of
+
+    @staticmethod
+    def from_dict(entity: Dict[str, Any]) -> "AddedConcept":
+        """
+        Create an added concept from a dictionary.
+
+        Parameters
+        ----------
+        entity: Dict[str, Any]
+            Entry of the diff's 'addedConcepts' list.
+
+        Returns
+        -------
+        instance: AddedConcept
+            Instance of the added concept.
+        """
+        superclass: Any = entity.get(SUB_CLASS_OF_TAG)
+        return AddedConcept(
+            reference=OntologyClassReference.parse(entity[NAME_TAG]),
+            subclass_of=OntologyClassReference.parse(superclass) if superclass else None,
+        )
+
+    def __repr__(self) -> str:
+        return f"<AddedConcept> - [reference:={self.reference}, subclass_of:={self.subclass_of}]"
+
+
+class AddedProperty:
+    """
+    AddedProperty
+    -------------
+    A property the tenant added on top of the base ontology.
+
+    Parameters
+    ----------
+    reference: OntologyPropertyReference
+        Reference of the added property.
+    kind: PropertyType
+        Whether the property is a data or an object property.
+    domains: List[OntologyClassReference]
+        Domain of the added property.
+    ranges: List[OntologyClassReference]
+        Range of the added property. Data-property ranges are XSD data types.
+    """
+
+    def __init__(
+        self,
+        reference: OntologyPropertyReference,
+        kind: PropertyType,
+        domains: Optional[List[OntologyClassReference]] = None,
+        ranges: Optional[List[OntologyClassReference]] = None,
+    ) -> None:
+        self.__reference: OntologyPropertyReference = reference
+        self.__kind: PropertyType = kind
+        self.__domains: List[OntologyClassReference] = domains or []
+        self.__ranges: List[OntologyClassReference] = ranges or []
+
+    @property
+    def reference(self) -> OntologyPropertyReference:
+        """Reference of the added property."""
+        return self.__reference
+
+    @property
+    def kind(self) -> PropertyType:
+        """Whether the property is a data or an object property."""
+        return self.__kind
+
+    @property
+    def is_data_property(self) -> bool:
+        """Is the added property a data property?"""
+        return self.__kind is PropertyType.DATA_PROPERTY
+
+    @property
+    def domains(self) -> List[OntologyClassReference]:
+        """Domain of the added property."""
+        return self.__domains
+
+    @property
+    def ranges(self) -> List[OntologyClassReference]:
+        """Range of the added property. Data-property ranges are XSD data types."""
+        return self.__ranges
+
+    @staticmethod
+    def from_dict(entity: Dict[str, Any]) -> "AddedProperty":
+        """
+        Create an added property from a dictionary.
+
+        Parameters
+        ----------
+        entity: Dict[str, Any]
+            Entry of the diff's 'addedProperties' list.
+
+        Returns
+        -------
+        instance: AddedProperty
+            Instance of the added property.
+        """
+        return AddedProperty(
+            reference=OntologyPropertyReference.parse(entity[NAME_TAG]),
+            kind=INVERSE_PROPERTY_TYPE.get(entity.get("kind") or "", PropertyType.OBJECT_PROPERTY),
+            domains=_class_references(entity.get(DOMAINS_TAG)),
+            ranges=_class_references(entity.get(RANGES_TAG)),
+        )
+
+    def __repr__(self) -> str:
+        return f"<AddedProperty> - [reference:={self.reference}, kind:={self.kind}]"
+
+
+class ModifiedBaseProperty:
+    """
+    ModifiedBaseProperty
+    --------------------
+    A base-ontology property the tenant extended. The base property itself is never
+    touched; only the domains and ranges the tenant added are reported here, and only
+    those can be removed again.
+
+    Parameters
+    ----------
+    reference: OntologyPropertyReference
+        Reference of the base property.
+    kind: PropertyType
+        Whether the property is a data or an object property.
+    added_domains: List[OntologyClassReference]
+        Domains the tenant added.
+    added_ranges: List[OntologyClassReference]
+        Ranges the tenant added.
+    """
+
+    def __init__(
+        self,
+        reference: OntologyPropertyReference,
+        kind: PropertyType,
+        added_domains: Optional[List[OntologyClassReference]] = None,
+        added_ranges: Optional[List[OntologyClassReference]] = None,
+    ) -> None:
+        self.__reference: OntologyPropertyReference = reference
+        self.__kind: PropertyType = kind
+        self.__added_domains: List[OntologyClassReference] = added_domains or []
+        self.__added_ranges: List[OntologyClassReference] = added_ranges or []
+
+    @property
+    def reference(self) -> OntologyPropertyReference:
+        """Reference of the base property."""
+        return self.__reference
+
+    @property
+    def kind(self) -> PropertyType:
+        """Whether the property is a data or an object property."""
+        return self.__kind
+
+    @property
+    def added_domains(self) -> List[OntologyClassReference]:
+        """Domains the tenant added to the base property."""
+        return self.__added_domains
+
+    @property
+    def added_ranges(self) -> List[OntologyClassReference]:
+        """Ranges the tenant added to the base property."""
+        return self.__added_ranges
+
+    @staticmethod
+    def from_dict(entity: Dict[str, Any]) -> "ModifiedBaseProperty":
+        """
+        Create a modified base property from a dictionary.
+
+        Parameters
+        ----------
+        entity: Dict[str, Any]
+            Entry of the diff's 'modifiedBaseProperties' list.
+
+        Returns
+        -------
+        instance: ModifiedBaseProperty
+            Instance of the modified base property.
+        """
+        return ModifiedBaseProperty(
+            reference=OntologyPropertyReference.parse(entity[NAME_TAG]),
+            kind=INVERSE_PROPERTY_TYPE.get(entity.get("kind") or "", PropertyType.OBJECT_PROPERTY),
+            added_domains=_class_references(entity.get(ADDED_DOMAINS_TAG)),
+            added_ranges=_class_references(entity.get(ADDED_RANGES_TAG)),
+        )
+
+    def __repr__(self) -> str:
+        return f"<ModifiedBaseProperty> - [reference:={self.reference}, kind:={self.kind}]"
+
+
+class OntologyDiff:
+    """
+    OntologyDiff
+    ------------
+    What a tenant added or changed on top of the base ontology. Everything reported here
+    is what `OntologyService.reset_context` would destroy.
+
+    Parameters
+    ----------
+    added_concepts: List[AddedConcept]
+        Concept classes the tenant added.
+    added_properties: List[AddedProperty]
+        Properties the tenant added.
+    modified_base_properties: List[ModifiedBaseProperty]
+        Base properties the tenant extended.
+    """
+
+    def __init__(
+        self,
+        added_concepts: Optional[List[AddedConcept]] = None,
+        added_properties: Optional[List[AddedProperty]] = None,
+        modified_base_properties: Optional[List[ModifiedBaseProperty]] = None,
+    ) -> None:
+        self.__added_concepts: List[AddedConcept] = added_concepts or []
+        self.__added_properties: List[AddedProperty] = added_properties or []
+        self.__modified_base_properties: List[ModifiedBaseProperty] = modified_base_properties or []
+
+    @property
+    def added_concepts(self) -> List[AddedConcept]:
+        """Concept classes the tenant added."""
+        return self.__added_concepts
+
+    @property
+    def added_properties(self) -> List[AddedProperty]:
+        """Properties the tenant added."""
+        return self.__added_properties
+
+    @property
+    def modified_base_properties(self) -> List[ModifiedBaseProperty]:
+        """Base properties the tenant extended."""
+        return self.__modified_base_properties
+
+    @property
+    def is_empty(self) -> bool:
+        """Does the tenant ontology match the base ontology?"""
+        return not (self.__added_concepts or self.__added_properties or self.__modified_base_properties)
+
+    @staticmethod
+    def from_dict(entity: Dict[str, Any]) -> "OntologyDiff":
+        """
+        Create an ontology diff from a dictionary.
+
+        Parameters
+        ----------
+        entity: Dict[str, Any]
+            Diff as returned by the service.
+
+        Returns
+        -------
+        instance: OntologyDiff
+            Instance of the diff.
+        """
+        return OntologyDiff(
+            added_concepts=[AddedConcept.from_dict(c) for c in entity.get(ADDED_CONCEPTS_TAG) or []],
+            added_properties=[AddedProperty.from_dict(p) for p in entity.get(ADDED_PROPERTIES_TAG) or []],
+            modified_base_properties=[
+                ModifiedBaseProperty.from_dict(p) for p in entity.get(MODIFIED_BASE_PROPERTIES_TAG) or []
+            ],
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"<OntologyDiff> - [concepts:={len(self.added_concepts)}, properties:={len(self.added_properties)}, "
+            f"modified base properties:={len(self.modified_base_properties)}]"
+        )
+
+
 # -------------------------------------------------- Encoder -----------------------------------------------------------
 class ThingEncoder(JSONEncoder):
     """
@@ -3205,6 +4120,16 @@ __all__ = [
     "OntologyClass",
     "OntologyProperty",
     "OntologyContext",
+    "OntologyChangeOperation",
+    "OntologyChangeRecord",
+    "OntologyElementKind",
+    "PendingOntologyVersion",
+    "OntologyUpdateState",
+    "OntologyUpdateStatus",
+    "AddedConcept",
+    "AddedProperty",
+    "ModifiedBaseProperty",
+    "OntologyDiff",
     "PropertyType",
     "ThingObject",
     "ThingEncoder",
