@@ -35,6 +35,7 @@ from knowledge.base.ontology import (
     ThingObject,
     OntologyClassReference,
     ObjectProperty,
+    OntologyUpdateStatus,
 )
 from knowledge.base.response import JobStatus, ErrorLogResponse, NewEntityUrisResponse
 from knowledge.nel.base import (
@@ -1144,6 +1145,13 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         """
         Creates a relation for an entity to a source entity.
 
+        **Remark:**
+        If the ontology declares an `inverseOf` partner for the relation, the service
+        materializes the reciprocal edge as well. One call therefore yields all four views
+        of the edge - the relation outgoing on the source and incoming on the target, and
+        its inverse outgoing on the target and incoming on the source. Creating the
+        reciprocal explicitly is rejected with `409 The relation already exists`.
+
         Parameters
         ----------
         source: str
@@ -1158,7 +1166,10 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         Raises
         ------
         WacomServiceException
-            If the graph service returns an error code
+            If the graph service returns an error code. A 409 means the relation already
+            exists - including when it was created implicitly as the inverse of another.
+            A 4xx also follows when the source or the target violates the property's
+            declared domain or range.
         """
         url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ENTITY_ENDPOINT}/{source}/relation"
         params: Dict[str, str] = {RELATION_TAG: relation.iri, TARGET: target}
@@ -1484,22 +1495,32 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
 
     async def ontology_update(self, fix: bool = False, auth_key: Optional[str] = None) -> None:
         """
-        Update the ontology.
+        Apply the committed ontology to the graph.
 
         **Remark: **
         Works for users with the role 'TenantAdmin'.
 
+        The call only **accepts** the apply; the work continues in the background while the
+        tenant is locked, and graph writes (entities, groups, content) are rejected until it
+        completes. Poll `ontology_update_status` until it reports `is_idle` before writing.
+        A `Failed` status is resumed - not redone - by calling this method with `fix=True`,
+        which is permitted even while the tenant is locked.
+
         Parameters
         ----------
         fix: bool [default:=False]
-            Fix the ontology if the tenant is in an inconsistent state.
+            Resume a failed or pending ontology update instead of applying a new version.
         auth_key: Optional[str] [default:=None]
             Auth key from user if not set, the client auth key will be used
 
         Raises
         ------
         WacomServiceException
-            If the graph service returns an error code and the commit failed.
+            If the graph service returns an error code and the apply was not accepted. A 400
+            means no committed version exists, or a failed / pending update must be fixed
+            first. A 409 means the committed version is already applied, the committed
+            version is older than the applied one, an import job is running, or the apply
+            failed mid-flight and has to be resumed with `fix=True`.
         """
         url: str = (
             f"{self.service_base_url}{AsyncWacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}" f"{'/fix' if fix else ''}"
@@ -1513,6 +1534,45 @@ class AsyncWacomKnowledgeService(AsyncServiceAPIClient):
         )
         if not response.ok:
             raise await handle_error("Ontology update failed. ", response)
+
+    async def ontology_update_status(self, auth_key: Optional[str] = None) -> OntologyUpdateStatus:
+        """
+        Retrieve the status of the tenant's ontology update.
+
+        **Remark: **
+        Works for users with the role 'TenantAdmin'.
+
+        `ontology_update` returns as soon as the apply is accepted, so this is how a caller
+        learns that the background work finished (`is_idle`) or failed (`has_failed`).
+        Status reads are never blocked by a locked tenant.
+
+        Parameters
+        ----------
+        auth_key: Optional[str] [default:=None]
+            Auth key from user if not set, the client auth key will be used
+
+        Returns
+        -------
+        status: OntologyUpdateStatus
+            Status of the ontology update. `is_idle` is reported both before the first apply
+            and after a completed one.
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code.
+        """
+        url: str = f"{self.service_base_url}{AsyncWacomKnowledgeService.ONTOLOGY_UPDATE_ENDPOINT}/status"
+        session: AsyncSession = await self.asyncio_session()
+        response: ResponseData = await session.get(
+            url,
+            timeout=DEFAULT_TIMEOUT,
+            verify_ssl=self.verify_calls,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise await handle_error("Retrieving the ontology update status failed. ", response)
+        return OntologyUpdateStatus.from_dict(cast(Dict[str, Any], response.content))
 
     async def search_all(
         self,
