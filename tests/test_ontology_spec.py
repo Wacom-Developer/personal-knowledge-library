@@ -16,8 +16,11 @@ from knowledge.base.ontology import (
     InflectionLevel,
     OntologyClassReference,
     OntologyContext,
+    OntologyDiff,
     OntologyLabel,
     OntologyPropertyReference,
+    PendingOntologyVersion,
+    PropertyType,
 )
 from knowledge.services.base import WacomServiceException
 from knowledge.services.ontology import OntologyService
@@ -289,8 +292,26 @@ def test_reset_context_posts_to_reset() -> None:
     assert url == f"{BASE_URL}/context/{CONTEXT}/reset"
 
 
-def test_context_diff_returns_payload() -> None:
-    payload = {"added": ["demo:creative#Artist"], "removed": []}
+def test_context_diff_parses_the_tenant_customizations() -> None:
+    payload = {
+        "addedConcepts": [{"name": ARTIST.iri, "subClassOf": "wacom:core#Person"}],
+        "addedProperties": [
+            {
+                "name": CREATED.iri,
+                "kind": "Relation",
+                "domains": [ARTIST.iri],
+                "ranges": ["demo:creative#Artwork"],
+            }
+        ],
+        "modifiedBaseProperties": [
+            {
+                "name": "wacom:core#isRelated",
+                "kind": "Relation",
+                "addedDomains": [ARTIST.iri],
+                "addedRanges": [],
+            }
+        ],
+    }
     service = _StubOntologyService(_FakeResponse(status_code=200, payload=payload))
 
     result = service.context_diff(CONTEXT)
@@ -298,7 +319,20 @@ def test_context_diff_returns_payload() -> None:
     method, url, _ = service.stub.last
     assert method == "GET"
     assert url == f"{BASE_URL}/context/{CONTEXT}/diff"
-    assert result == payload
+    assert isinstance(result, OntologyDiff)
+    assert result.is_empty is False
+    assert [concept.reference for concept in result.added_concepts] == [ARTIST]
+    assert [prop.reference for prop in result.added_properties] == [CREATED]
+    assert result.added_properties[0].kind is PropertyType.OBJECT_PROPERTY
+    assert [prop.reference.iri for prop in result.modified_base_properties] == ["wacom:core#isRelated"]
+    assert result.modified_base_properties[0].added_domains == [ARTIST]
+
+
+def test_context_diff_of_a_pristine_tenant_is_empty() -> None:
+    payload = {"addedConcepts": [], "addedProperties": [], "modifiedBaseProperties": []}
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=payload))
+
+    assert service.context_diff(CONTEXT).is_empty is True
 
 
 def test_context_diff_raises_on_error_response() -> None:
@@ -409,16 +443,57 @@ def test_versions_sends_start_and_end() -> None:
     assert result == payload
 
 
-def test_pending_version_returns_payload() -> None:
-    payload = {"version": 7, "pending": True}
-    service = _StubOntologyService(_FakeResponse(status_code=200, payload=payload))
+PENDING_CHANGE_LOG: List[Dict[str, Any]] = [
+    {
+        "body": '{"Data":{"SubClassOf":"wacom:core#Thing","Id":"6a955796cc125f3279246fa8",'
+        '"TenantId":"6a95578d750b9cb0283eddb4","Labels":[{"Value":"Artist","Lang":"en"}],"Comments":[],'
+        '"Name":"demo:creative#Artist","Icon":null,"DateAdded":"2026-08-31T10:29:42.1946908+00:00",'
+        '"DateModified":"0001-01-01T00:00:00","Context":"demo","Orphaned":false}}',
+        "context": "demo",
+        "kind": "INSERT_CONCEPT",
+        "tenantId": "6a95578d750b9cb0283eddb4",
+        "timeStamp": "2026-08-31T10:29:42.298Z",
+        "version": 7,
+    },
+    {
+        "body": '{"Data":{"Kind":0,"SubPropertyOf":null,"InverseOf":null,"Domains":["demo:creative#Artist"],'
+        '"Ranges":["demo:creative#Artwork"],"Id":"6a955798cc125f3279246faf",'
+        '"TenantId":"6a95578d750b9cb0283eddb4","Labels":[{"Value":"created","Lang":"en"}],"Comments":[],'
+        '"Name":"demo:creative#created","Icon":null,"DateAdded":"2026-08-31T10:29:44.5894164+00:00",'
+        '"DateModified":"0001-01-01T00:00:00","Context":"demo","Orphaned":false}}',
+        "context": "demo",
+        "kind": "INSERT_RELATION",
+        "tenantId": "6a95578d750b9cb0283eddb4",
+        "timeStamp": "2026-08-31T10:29:44.613Z",
+        "version": 7,
+    },
+]
+"""The pending endpoint returns the change log of the uncommitted version, not a version object."""
+
+
+def test_pending_version_parses_the_change_log() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=PENDING_CHANGE_LOG))
 
     result = service.pending_version(CONTEXT)
 
     method, url, _ = service.stub.last
     assert method == "GET"
     assert url == f"{BASE_URL}/context/{CONTEXT}/versions/pending"
-    assert result == payload
+    assert isinstance(result, PendingOntologyVersion)
+    assert result.version == 7
+    assert [change.kind for change in result.changes] == ["INSERT_CONCEPT", "INSERT_RELATION"]
+    assert [concept.reference for concept in result.concepts] == [ARTIST]
+    assert [prop.reference for prop in result.object_properties] == [CREATED]
+
+
+def test_pending_version_of_a_context_without_changes_is_empty() -> None:
+    service = _StubOntologyService(_FakeResponse(status_code=200, payload=[]))
+
+    result = service.pending_version(CONTEXT)
+
+    assert result.is_empty is True
+    assert result.version is None
+    assert result.changes == []
 
 
 def test_pending_version_raises_on_error_response() -> None:

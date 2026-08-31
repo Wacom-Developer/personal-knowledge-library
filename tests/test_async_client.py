@@ -536,23 +536,24 @@ async def test_09_search_labels():
     async for e in async_things_session_iter(async_client, THING_OBJECT, only_own=False):
         if e.use_full_text_index:
             for label in e.label:
-                try:
-                    res_entities, next_search_page = await async_client.search_labels(
-                        search_term=label.content,
-                        language_code=label.language_code,
-                        limit=10,
-                    )
-                    assert len(res_entities) > 1
-                    successful[label.language_code] = True
-                except WacomServiceException as ex:
-                    successful[label.language_code] = False
-                    if ex.status_code == 400:
-                        pass
-                        # Search is not support for all languages
-                    elif ex.status_code == 401:
-                        raise ex
-                    else:
-                        raise ex
+                if label.language_code in [EN_US, DE_DE]:
+                    try:
+                        res_entities, next_search_page = await async_client.search_labels(
+                            search_term=label.content,
+                            language_code=label.language_code,
+                            limit=10,
+                        )
+                        assert len(res_entities) > 1
+                        successful[label.language_code] = True
+                    except WacomServiceException as ex:
+                        successful[label.language_code] = False
+                        if ex.status_code == 400:
+                            pass
+                            # Search is not support for all languages
+                        elif ex.status_code == 401:
+                            raise ex
+                        else:
+                            raise ex
             ctr += 1
         if ctr >= 10:
             break

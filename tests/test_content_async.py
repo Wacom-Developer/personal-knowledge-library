@@ -25,6 +25,7 @@ Requires environment variables:
     - INSTANCE: URL of the service instance
     - TENANT_API_KEY: Tenant API key for authentication
 """
+
 import hashlib
 import logging
 import os
@@ -206,6 +207,7 @@ async def test_05_update_metadata():
         metadata={"source": "integration-test", "client": "async"},
     )
 
+
 async def test_06_verify_content_info():
     """Retrieve content info and assert tags and metadata are present."""
     if not _content_id:
@@ -247,8 +249,10 @@ async def test_08_update_content_file():
             file_content=updated_bytes,
             filename="updated.bin",
         )
-        raise AssertionError("Expected update_content_file to raise an exception due to unsupported operation."
-                             "An image cannot be updated with plain text.")
+        raise AssertionError(
+            "Expected update_content_file to raise an exception due to unsupported operation."
+            "An image cannot be updated with plain text."
+        )
     except Exception as e:
         logger.info(f"Expected exception caught for unsupported file update: {e}")
     if not DUMMY_PNG.exists():
@@ -273,10 +277,7 @@ async def test_09_verify_updated_file():
     updated_bytes: bytes = UPDATE_IMAGE_PNG.read_bytes()
     sha_org = hashlib.sha256(updated_bytes).hexdigest()
     sha_updated = hashlib.sha256(updated_bytes).hexdigest()
-    assert sha_org == sha_updated, (
-        f"SHA256: expected={sha_org}, "
-        f"got={sha_updated}"
-    )
+    assert sha_org == sha_updated, f"SHA256: expected={sha_org}, " f"got={sha_updated}"
     print("")
 
 

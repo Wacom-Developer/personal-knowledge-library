@@ -20,6 +20,7 @@ Requires environment variables:
     - INSTANCE: URL of the service instance
     - TENANT_API_KEY: Tenant API key for authentication
 """
+
 import logging
 import os
 import uuid

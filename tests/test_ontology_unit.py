@@ -308,6 +308,42 @@ class TestObjectProperty:
         assert len(op.outgoing_relations) == 2
         assert "wacom:entity:3" in op.outgoing_relations
 
+    def test_outgoing_uris_from_string_relations(self):
+        """Target URIs are reported for relations the service sent as plain strings."""
+        rel_ref = OntologyPropertyReference.parse("wacom:core#relatedTo")
+        op = ObjectProperty(relation=rel_ref, outgoing=["wacom:entity:3", "wacom:entity:4"])
+
+        assert op.outgoing_uris == ["wacom:entity:3", "wacom:entity:4"]
+
+    def test_outgoing_uris_from_thing_object_relations(self):
+        """Target URIs are reported for relations the service sent as full entities."""
+        rel_ref = OntologyPropertyReference.parse("wacom:core#relatedTo")
+        target = ThingObject(uri="wacom:entity:5")
+        op = ObjectProperty(relation=rel_ref, outgoing=[target])
+
+        # The service answers /relation with entity objects rather than bare URIs, so a
+        # caller comparing against a URI needs this rather than outgoing_relations.
+        assert op.outgoing_uris == ["wacom:entity:5"]
+
+    def test_relation_uris_mix_strings_and_thing_objects(self):
+        """Both forms may appear in the same list."""
+        rel_ref = OntologyPropertyReference.parse("wacom:core#relatedTo")
+        op = ObjectProperty(
+            relation=rel_ref,
+            incoming=["wacom:entity:in", ThingObject(uri="wacom:entity:in2")],
+            outgoing=[ThingObject(uri="wacom:entity:out"), "wacom:entity:out2"],
+        )
+
+        assert op.incoming_uris == ["wacom:entity:in", "wacom:entity:in2"]
+        assert op.outgoing_uris == ["wacom:entity:out", "wacom:entity:out2"]
+
+    def test_relation_uris_skip_entities_without_a_uri(self):
+        """An entity that carries no URI contributes nothing."""
+        rel_ref = OntologyPropertyReference.parse("wacom:core#relatedTo")
+        op = ObjectProperty(relation=rel_ref, outgoing=[ThingObject()])
+
+        assert op.outgoing_uris == []
+
     def test_as_dict_with_string_relations(self):
         """Test converting object property with string relations to dict."""
         rel_ref = OntologyPropertyReference.parse("wacom:core#relatedTo")
