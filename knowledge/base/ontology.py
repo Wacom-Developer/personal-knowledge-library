@@ -1646,6 +1646,35 @@ class Ontology:
         return f"<Ontology> : classes:= {self.classes}"
 
 
+def matches_locale(locale: str, requested: Union[LocaleCode, LanguageCode]) -> bool:
+    """
+    Does a localized value's locale satisfy the requested locale or language code?
+
+    The locale lookups on `ThingObject` accept either form. An exact locale (``'en_US'``)
+    matches only itself; a bare language code (``'en'``) matches every locale of that
+    language, so `label_lang(EN)` resolves an ``en_US`` label instead of silently
+    finding nothing.
+
+    Parameters
+    ----------
+    locale: str
+        Locale of the stored value, in the format ``'<language>_<COUNTRY>'``.
+    requested: Union[LocaleCode, LanguageCode]
+        Requested locale (``'en_US'``) or bare language code (``'en'``).
+
+    Returns
+    -------
+    matches: bool
+        True if the stored locale satisfies the request.
+    """
+    if locale == requested:
+        return True
+    # A bare language code carries no country part.
+    if "_" not in requested:
+        return locale.split("_", 1)[0] == requested
+    return False
+
+
 class ThingObject:
     """
     ThingObject
@@ -1898,7 +1927,7 @@ class ThingObject:
             Returns the label for a specific language code
         """
         for label in self.label:
-            if label.language_code == language_code:
+            if matches_locale(label.language_code, language_code):
                 return label
         return None
 
@@ -2109,7 +2138,7 @@ class ThingObject:
             Returns the description for a specific language_code code if it exists, otherwise None.
         """
         for desc in self.description:
-            if desc.language_code == language_code:
+            if matches_locale(desc.language_code, language_code):
                 return desc
         return None
 
@@ -2217,7 +2246,7 @@ class ThingObject:
         """
         aliases: List[Label] = []
         for alias in self.alias:
-            if alias.language_code == language_code:
+            if matches_locale(alias.language_code, language_code):
                 aliases.append(alias)
         return aliases
 
@@ -2723,7 +2752,11 @@ class ThingObject:
             self.tenant_access_right = TenantAccessRight()
 
     def __hash__(self) -> int:
-        return 0
+        # Must agree with __eq__, which requires equal URIs before it compares anything
+        # else, so hashing the URI is consistent. A constant hash would put every entity in
+        # one bucket and turn any set or dict of them into a linear scan of deep __eq__
+        # comparisons.
+        return hash(self.uri)
 
     def __eq__(self, other: Any) -> bool:
         # another object is equal to self, iff
@@ -3494,14 +3527,16 @@ class PendingOntologyVersion:
         Parameters
         ----------
         changes: Optional[List[Dict[str, Any]]]
-            Change log entries as returned by the service.
+            Change log entries as returned by the service. A context without pending
+            changes may be reported as ``None``, an empty list, or a list of empty
+            entries; all three mean the same thing and yield an empty version.
 
         Returns
         -------
         instance: PendingOntologyVersion
             Instance of the pending version.
         """
-        return PendingOntologyVersion([OntologyChangeRecord.from_dict(change) for change in changes or []])
+        return PendingOntologyVersion([OntologyChangeRecord.from_dict(change) for change in changes or [] if change])
 
     def __repr__(self) -> str:
         return f"<PendingOntologyVersion> - [version:={self.version}, changes:={len(self.changes)}]"
@@ -4109,6 +4144,7 @@ def ontology_import(rdf_content: str, tenant_id: str = "", context: str = "") ->
 
 __all__ = [
     "EN_US",
+    "matches_locale",
     "DataPropertyType",
     "InflectionSetting",
     "OntologyPropertyReference",
