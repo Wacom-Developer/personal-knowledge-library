@@ -64,6 +64,10 @@ class WikidataCache:
         self.property_cache: OrderedDict = OrderedDict()  # Cache for properties
         self.subclass_cache: OrderedDict = OrderedDict()  # Cache for subclasses
         self.superclass_cache: OrderedDict = OrderedDict()  # Cache for superclasses
+        # Wikidata resolves redirects silently, so an entity can arrive under an id other
+        # than the one asked for. Without this map the requested id is never a cache hit
+        # and every reference to it re-fetches, run after run.
+        self.redirect_cache: OrderedDict = OrderedDict()  # Requested QID -> canonical QID
 
     def cache_property(self, prop: WikidataProperty) -> None:
         """Adds a property to the property cache with LRU eviction.
@@ -112,6 +116,39 @@ class WikidataCache:
 
         self.cache[wikidata_object.qid] = wikidata_object
 
+    def cache_redirect(self, requested_qid: str, canonical_qid: str) -> None:
+        """Records that a requested QID resolves to a different one.
+
+        Parameters
+        ----------
+        requested_qid: str
+            The QID that was asked for.
+        canonical_qid: str
+            The QID Wikidata answered with.
+        """
+        if requested_qid == canonical_qid:
+            return
+        if requested_qid in self.redirect_cache:
+            self.redirect_cache.move_to_end(requested_qid)
+        elif len(self.redirect_cache) >= self.max_size:
+            self.redirect_cache.popitem(last=False)
+        self.redirect_cache[requested_qid] = canonical_qid
+
+    def resolve_redirect(self, qid: str) -> str:
+        """Resolves a QID through the known redirects.
+
+        Parameters
+        ----------
+        qid: str
+            The QID to resolve.
+
+        Returns
+        -------
+        qid: str
+            The canonical QID, or the input when no redirect is known.
+        """
+        return self.redirect_cache.get(qid, qid)
+
     def get_wikidata_object(self, qid: str) -> WikidataThing:
         """Retrieves a Wikidata object from the cache.
 
@@ -125,9 +162,10 @@ class WikidataCache:
         WikidataThing
             The Wikidata object associated with the given QID.
         """
-        if qid in self.cache:
-            self.cache.move_to_end(qid)  # Mark as most recently used
-            return self.cache[qid]
+        resolved: str = self.resolve_redirect(qid)
+        if resolved in self.cache:
+            self.cache.move_to_end(resolved)  # Mark as most recently used
+            return self.cache[resolved]
         raise KeyError(f"Wikidata object {qid} not found in cache.")
 
     def cache_subclass(self, subclass: WikidataClass) -> None:
@@ -255,6 +293,22 @@ class WikidataCache:
         """
         return path / "superclass_cache.ndjson"
 
+    @staticmethod
+    def __path__redirects__(path: Path) -> Path:
+        """Caches the QID redirects from a path.
+
+        Parameters
+        ----------
+        path: Path
+            The path to the directory containing the cache files.
+
+        Returns
+        -------
+        Path
+            The path to the file containing the redirects.
+        """
+        return path / "redirect_cache.ndjson"
+
     def save_cache(self, cache_path: Path) -> None:
         """Saves the cache to a file.
 
@@ -289,6 +343,10 @@ class WikidataCache:
             for superclass in self.superclass_cache.values():
                 superclass: WikidataClass
                 file.write(orjson.dumps(superclass.as_dict()).decode("utf-8") + "\n")
+        # Save the redirects to a file
+        with WikidataCache.__path__redirects__(cache_path).open("w", encoding="utf-8") as file:
+            for requested_qid, canonical_qid in self.redirect_cache.items():
+                file.write(orjson.dumps({"qid": requested_qid, "redirect": canonical_qid}).decode("utf-8") + "\n")
 
     def load_cache(self, cache_path: Path) -> None:
         """Loads the cache from a path.
@@ -346,6 +404,25 @@ class WikidataCache:
                     except Exception as e:
                         logger.error(f"Error loading superclass cache: {e}. Line: {line}")
 
+    def __load_redirects__(self, cache_path: Path) -> None:
+        """Loads the QID redirects, when the file is present.
+
+        Parameters
+        ----------
+        cache_path: Path
+            The path to the directory containing the cache files.
+        """
+        redirect_path: Path = WikidataCache.__path__redirects__(cache_path)
+        if not redirect_path.exists():
+            return
+        with redirect_path.open("r", encoding="utf-8") as file:
+            for line in file:
+                try:
+                    redirect_data = orjson.loads(line)
+                    self.cache_redirect(redirect_data["qid"], redirect_data["redirect"])
+                except Exception as e:
+                    logger.error(f"Error loading redirect cache: {e}. Line: {line}")
+
     def qid_in_cache(self, qid: str) -> bool:
         """Checks if a QID is in the cache.
 
@@ -359,7 +436,7 @@ class WikidataCache:
         bool
             True if the QID is in the cache, False otherwise.
         """
-        return qid in self.cache
+        return self.resolve_redirect(qid) in self.cache
 
     def property_in_cache(self, pid: str) -> bool:
         """Checks if a property is in the cache.

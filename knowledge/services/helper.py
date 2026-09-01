@@ -7,6 +7,7 @@ import loguru
 
 from knowledge.base.entity import (
     DATA_PROPERTIES_TAG,
+    Description,
     DATA_PROPERTY_TAG,
     VALUE_TAG,
     DESCRIPTION_TAG,
@@ -28,6 +29,7 @@ from knowledge.services import TENANT_RIGHTS_TAG
 
 __all__ = [
     "split_updates",
+    "descriptions_payload",
     "entity_payload",
     "RELATIONS_BULK_LIMIT",
 ]
@@ -37,6 +39,35 @@ RELATIONS_BULK_LIMIT: int = 30
 In one request only 30 relations can be created, otherwise the database operations are too many.
 """
 logger = loguru.logger
+
+
+def descriptions_payload(descriptions: List[Description]) -> List[Dict[str, Any]]:
+    """
+    Serialize localized descriptions into the service's `DescriptionApiModel` shape.
+
+    Used both by `entity_payload` and by the dedicated
+    `PATCH /entity/{uri}/descriptions` endpoint, so the wire format is defined once.
+    Descriptions without content are dropped: the service rejects a blank description, and
+    an entity that simply has none for a locale should not send one.
+
+    Parameters
+    ----------
+    descriptions: List[Description]
+        Localized descriptions of an entity.
+
+    Returns
+    -------
+    payload: List[Dict[str, Any]]
+        One `{"description": ..., "locale": ...}` entry per description with content.
+    """
+    payload: List[Dict[str, Any]] = []
+    for desc in descriptions:
+        if desc is None or desc.content is None:
+            logger.warning("Description is None")
+            continue
+        if len(desc.content) > 0 and desc.content != " ":
+            payload.append({DESCRIPTION_TAG: desc.content, LOCALE_TAG: desc.language_code})
+    return payload
 
 
 def split_updates(
@@ -94,16 +125,9 @@ def entity_payload(entity: ThingObject) -> Dict[str, Any]:
     """
     # Different localized content
     labels: List[Dict[str, Any]] = []
-    descriptions: List[Dict[str, Any]] = []
     literals: List[Dict[str, Any]] = []
     # Add description in different languages
-    for desc in entity.description:
-        if desc is None or desc.content is None:
-            logger.warning("Description is None")
-            continue
-
-        if len(desc.content) > 0 and not desc.content == " ":
-            descriptions.append({DESCRIPTION_TAG: desc.content, LOCALE_TAG: desc.language_code})
+    descriptions: List[Dict[str, Any]] = descriptions_payload(entity.description)
 
     # Labels are tagged as the main label
     for label in entity.label:
@@ -143,8 +167,10 @@ def entity_payload(entity: ThingObject) -> Dict[str, Any]:
         LABELS_TAG: labels,
         DATA_PROPERTIES_TAG: literals,
     }
-    if len(descriptions) > 0:
-        payload[DESCRIPTIONS_TAG] = descriptions
+    # Always send the key, including as an empty list. Per PKA-589 the service reads the
+    # three states as: key absent -> no-op, non-empty -> upsert, empty list -> delete all.
+    # Sending it unconditionally is what lets an update clear an entity's descriptions.
+    payload[DESCRIPTIONS_TAG] = descriptions
     targets: List[str] = []
     if entity.use_vector_index:
         targets.append(INDEXING_VECTOR_SEARCH_TARGET)
