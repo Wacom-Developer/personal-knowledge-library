@@ -17,7 +17,7 @@ __credits__ = ["Markus Weber"]
 __license__ = "Wacom"
 __maintainer__ = ["Markus Weber"]
 __email__ = "markus.weber@wacom.com"
-__version__ = "4.4.1"
+__version__ = "5.0.0"
 
 import loguru
 
