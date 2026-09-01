@@ -5,14 +5,18 @@ import gzip
 import json
 import os
 import urllib
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Optional, List, Dict, Tuple, Literal, Union, cast
 from urllib.parse import urlparse
 
 from requests import Response
 
+from knowledge import logger
 from knowledge.base.entity import (
     DATA_PROPERTIES_TAG,
+    DESCRIPTIONS_TAG,
+    Description,
     TYPE_TAG,
     LABELS_TAG,
     RELATIONS_TAG,
@@ -49,7 +53,6 @@ from knowledge.services import (
     LISTING,
     TOTAL_COUNT,
     SEARCH_TERM,
-    LANGUAGE_PARAMETER,
     TYPES_PARAMETER,
     LIMIT,
     VALUE,
@@ -71,12 +74,19 @@ from knowledge.services import (
 from knowledge.services.base import (
     WacomServiceAPIClient,
     WacomServiceException,
+    format_exception,
     handle_error,
 )
-from knowledge.services.helper import split_updates, entity_payload
+from knowledge.services.helper import descriptions_payload, split_updates, entity_payload
 from knowledge.services.users import UserRole
 
+# Number of entity URIs sent per request by `entities`. They are query parameters, so a
+# long list has to be split to stay inside the URL length limit of the gateway. Shared
+# with the async client's AsyncWacomKnowledgeService.MAX_NUMBER_URIS so both agree.
+ENTITY_URI_BATCH_SIZE: int = 40
+
 __all__ = [
+    "ENTITY_URI_BATCH_SIZE",
     "SearchPattern",
     "Visibility",
     "WacomKnowledgeService",
@@ -263,6 +273,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         locale: Optional[LocaleCode] = None,
         auth_key: Optional[str] = None,
         timeout: int = DEFAULT_TIMEOUT,
+        batch_size: int = ENTITY_URI_BATCH_SIZE,
     ) -> List[ThingObject]:
         """
         Retrieve entity information from personal knowledge, using the URI as identifier.
@@ -279,11 +290,15 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
         timeout: int
             Timeout for the request (default: 60 seconds)
+        batch_size: int
+            Number of URIs per request. The URIs are sent as query parameters, so a long
+            list is split across several requests to stay inside the URL length limit.
 
         Returns
         -------
         things: List[ThingObject]
             Entities with is type URI, description, an image/icon, and tags (labels).
+            In the order of the requested URIs, as far as the service returns them.
 
         Raises
         ------
@@ -291,25 +306,29 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the graph service returns an error code or the entity is not found in the knowledge graph
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/"
-        params: Dict[str, Any] = {URIS_TAG: uris}
-        if locale is not None:
-            params[LOCALE_TAG] = locale
+        things: List[ThingObject] = []
+        # The URIs travel in the query string, so a long list has to be split: a few hundred
+        # of them overrun the URL limit of a typical gateway, which answers 414 instead of
+        # returning entities.
+        for chunk_idx in range(0, len(uris), batch_size):
+            chunk: List[str] = uris[chunk_idx : chunk_idx + batch_size]
+            params: Dict[str, Any] = {URIS_TAG: chunk}
+            if locale is not None:
+                params[LOCALE_TAG] = locale
 
-        response: Response = self.request_session.get(
-            url,
-            params=params,
-            timeout=timeout,
-            verify=self.verify_calls,
-            overwrite_auth_token=auth_key,
-        )
-        if response.ok:
-            things: List[ThingObject] = []
+            response: Response = self.request_session.get(
+                url,
+                params=params,
+                timeout=timeout,
+                verify=self.verify_calls,
+                overwrite_auth_token=auth_key,
+            )
+            if not response.ok:
+                raise handle_error(f"Retrieving of entity content failed. URIs:={chunk}.", response)
             entities: List[Dict[str, Any]] = response.json()
             for e in entities:
-                thing: ThingObject = ThingObject.from_dict(e)
-                things.append(thing)
-            return things
-        raise handle_error(f"Retrieving of entity content failed. URIs:={uris}.", response)
+                things.append(ThingObject.from_dict(e))
+        return things
 
     def delete_entities(
         self,
@@ -480,27 +499,34 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             If the graph service returns an error code
         """
         url: str = f"{self.service_base_url}{WacomKnowledgeService.ENTITY_BULK_ENDPOINT}"
-        # Header info
-        payload: List[Dict[str, Any]] = [WacomKnowledgeService._entity_(e) for e in entities]
         for bulk_idx in range(0, len(entities), batch_size):
-            bulk = payload[bulk_idx : bulk_idx + batch_size]
+            batch: List[ThingObject] = entities[bulk_idx : bulk_idx + batch_size]
+            # Serialise per batch rather than up front: a large import would otherwise hold
+            # the payload of every entity in memory before the first request goes out.
+            payload: List[Dict[str, Any]] = [WacomKnowledgeService._entity_(e) for e in batch]
             response: Response = self.request_session.post(
                 url,
-                json=bulk,
+                json=payload,
                 timeout=timeout,
                 verify=self.verify_calls,
                 overwrite_auth_token=auth_key,
             )
-            if response.ok:
-                response_dict: Dict[str, Any] = response.json()
-
-                for idx, uri in enumerate(response_dict[URIS_TAG]):
-                    entity_image = entities[bulk_idx + idx].image
-                    if entity_image is not None and entity_image != "" and not ignore_images:
-                        self.set_entity_image_url(uri, entity_image, auth_key=auth_key)
-                    entities[bulk_idx + idx].uri = response_dict[URIS_TAG][idx]
-            else:
+            if not response.ok:
                 raise handle_error("Pushing entity failed.", response)
+            response_dict: Dict[str, Any] = response.json()
+            for idx, uri in enumerate(response_dict[URIS_TAG]):
+                # Assign the URI before anything that can fail: the entity already exists
+                # server-side, and dropping its URI would leave the caller unable to
+                # reference it and prone to creating a duplicate on retry.
+                entity: ThingObject = entities[bulk_idx + idx]
+                entity.uri = uri
+                entity_image: Optional[str] = entity.image
+                if entity_image is not None and entity_image != "" and not ignore_images:
+                    try:
+                        self.set_entity_image_url(uri, entity_image, auth_key=auth_key)
+                    except WacomServiceException as we:
+                        if logger:
+                            logger.error(f"Failed to upload image for entity {uri}. {format_exception(we)}")
         return entities
 
     def create_entity(
@@ -556,7 +582,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                     self.set_entity_image_local(entity_uri, Path(entity.image), auth_key=auth_key)
                 elif entity.image is not None and entity.image != "":
                     self.set_entity_image_url(entity_uri, entity.image, auth_key=auth_key)
-            except WacomServiceException as _:
+            except WacomServiceException:
                 pass
         if response.ok:
             result_uri: str = response.json()[URI_TAG]
@@ -779,6 +805,151 @@ class WacomKnowledgeService(WacomServiceAPIClient):
                 return [Label.create_from_dict(label) for label in response_dict[LABELS_TAG]]
             return []
         raise handle_error("Retrieving labels failed.", response)
+
+    def descriptions(
+        self,
+        uri: str,
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> List[Description]:
+        """
+        Retrieve the localized descriptions of an entity.
+
+        **Remark:**
+        This reads the descriptions independently of the entity itself, so it does not pull
+        labels, literals or relations along with them. `entity` returns the descriptions of
+        the requested locale as part of the entity.
+
+        Parameters
+        ----------
+        uri: str
+            URI of the entity.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+
+        Returns
+        -------
+        descriptions: List[Description]
+            Descriptions of the entity, one per locale. Empty if it has none.
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code. A 404 means the entity does not exist.
+        """
+        url: str = (
+            f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{urllib.parse.quote(uri)}/descriptions"
+        )
+        response: Response = self.request_session.get(
+            url,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Retrieving the descriptions failed.", response)
+        return WacomKnowledgeService._descriptions_(response)
+
+    def update_descriptions(
+        self,
+        uri: str,
+        descriptions: Optional[List[Description]],
+        auth_key: Optional[str] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> List[Description]:
+        """
+        Update the localized descriptions of an entity.
+
+        `descriptions` carries three distinct meanings:
+
+        ===================  ==================================================================
+        `descriptions`       Effect
+        ===================  ==================================================================
+        `None`               No-op. The key is omitted, existing descriptions are untouched
+                             and the service answers 204 with no body.
+        Non-empty list       **Replace.** The entity ends up with exactly these descriptions;
+                             any locale not present in the list is deleted.
+        `[]` (empty list)    Delete all. Every description of the entity is removed.
+        ===================  ==================================================================
+
+        **The non-empty case replaces the whole set — it does not merge.** Verified against
+        the service: an entity holding `en_US` and `de_DE`, patched with only `en_US`, is
+        left with `en_US` alone. Always pass the complete set the entity should end up with;
+        to change one locale, read the current descriptions first and send them back
+        together with the change.
+
+        `None` and `[]` are also **not** interchangeable — passing an empty list where
+        `None` was meant deletes the entity's descriptions.
+
+        Parameters
+        ----------
+        uri: str
+            URI of the entity.
+        descriptions: Optional[List[Description]]
+            The complete set of descriptions the entity should end up with, an empty list to
+            delete all of them, or None for a no-op. Entries without content are dropped.
+        auth_key: Optional[str] [default:= None]
+            If the auth key is set, the logged-in user (if any) will be ignored, and the auth key will be used.
+        timeout: int
+            Timeout for the request (default: 60 seconds)
+
+        Returns
+        -------
+        descriptions: List[Description]
+            Descriptions the entity carries after the update. Empty for a no-op, which
+            returns 204 and therefore no body.
+
+        Raises
+        ------
+        WacomServiceException
+            If the graph service returns an error code. A 404 means the entity does not exist.
+
+        Examples
+        --------
+        >>> # replaces the whole set: any other locale the entity had is dropped
+        >>> client.update_descriptions(uri, [Description("A digital pen.", EN_US)])
+        >>> # to change one locale without losing the others, send them all back
+        >>> current = client.descriptions(uri)
+        >>> client.update_descriptions(uri, current + [Description("Ein Stift.", DE_DE)])
+        >>> client.update_descriptions(uri, [])      # removes every description
+        >>> client.update_descriptions(uri, None)    # changes nothing
+        """
+        url: str = (
+            f"{self.service_base_url}{WacomKnowledgeService.ENTITY_ENDPOINT}/{urllib.parse.quote(uri)}/descriptions"
+        )
+        payload: Dict[str, Any] = {} if descriptions is None else {DESCRIPTIONS_TAG: descriptions_payload(descriptions)}
+        response: Response = self.request_session.patch(
+            url,
+            json=payload,
+            timeout=timeout,
+            verify=self.verify_calls,
+            overwrite_auth_token=auth_key,
+        )
+        if not response.ok:
+            raise handle_error("Updating the descriptions failed.", response)
+        return WacomKnowledgeService._descriptions_(response)
+
+    @staticmethod
+    def _descriptions_(response: Response) -> List[Description]:
+        """
+        Parse a `DescriptionsResponseModel` body.
+
+        Parameters
+        ----------
+        response: Response
+            Response of a descriptions request. A 204 carries no body.
+
+        Returns
+        -------
+        descriptions: List[Description]
+            Parsed descriptions, empty when the response carries none.
+        """
+        if response.status_code == HTTPStatus.NO_CONTENT:
+            return []
+        response_dict: Dict[str, Any] = response.json()
+        return [Description.create_from_dict(desc) for desc in response_dict.get(DESCRIPTIONS_TAG) or []]
 
     def literals(
         self,
@@ -1209,7 +1380,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         url: str = f"{self.service_base_url}{WacomKnowledgeService.SEARCH_TYPES_ENDPOINT}"
         parameters: Dict[str, Any] = {
             SEARCH_TERM: search_term,
-            LANGUAGE_PARAMETER: language_code,
+            LOCALE_TAG: language_code,
             TYPES_PARAMETER: [ot.iri for ot in types],
             LIMIT: limit,
             NEXT_PAGE_ID_TAG: next_page_id,
@@ -1336,7 +1507,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
         parameters: Dict[str, Any] = {
             VALUE: search_term,
             LITERAL_PARAMETER: literal.iri,
-            LANGUAGE_PARAMETER: language_code,
+            LOCALE_TAG: language_code,
             LIMIT_PARAMETER: limit,
             SEARCH_PATTERN_PARAMETER: pattern.value,
             NEXT_PAGE_ID_TAG: next_page_id,
@@ -1402,7 +1573,7 @@ class WacomKnowledgeService(WacomServiceAPIClient):
             SUBJECT_URI: subject_uri,
             RELATION_URI: relation.iri,
             OBJECT_URI: object_uri,
-            LANGUAGE_PARAMETER: language_code,
+            LOCALE_TAG: language_code,
             LIMIT: limit,
             NEXT_PAGE_ID_TAG: next_page_id,
         }
