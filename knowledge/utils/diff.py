@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2025-present Wacom. All rights reserved.
-from typing import Optional, Any, List, Dict, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from knowledge.base.entity import Label, Description
 from knowledge.base.ontology import ThingObject
@@ -13,6 +13,31 @@ __all__ = [
     "is_different",
     "is_different_async",
 ]
+
+
+def target_uri(target: Union[str, "ThingObject"]) -> Optional[str]:
+    """
+    Reduce a relation target to its URI.
+
+    `ObjectProperty.incoming_relations` / `outgoing_relations` hold whichever form produced
+    them: the NDJSON import format carries bare URI strings, while
+    `GET /entity/{uri}/relations` answers with full entity objects. Callers that look a
+    target up by URI have to normalise first, or an entity-shaped target misses the lookup
+    and is misreported as missing.
+
+    Parameters
+    ----------
+    target: Union[str, ThingObject]
+        Relation target, as a URI or as an entity.
+
+    Returns
+    -------
+    uri: Optional[str]
+        URI of the target, or None if it is an entity that carries none.
+    """
+    if isinstance(target, ThingObject):
+        return target.uri
+    return target
 
 
 def diff_entities(
@@ -230,12 +255,12 @@ def diff_entities(
                 )
             else:
                 # Check if the target entity is different (incoming relations)
+                # Hoisted out of the loop: the target set does not depend on `file_target`,
+                # and a set turns the membership test below from a scan into a lookup.
+                uris_kg: Set[str] = set(kg_thing.object_properties[rel_type].incoming_uris)
                 for file_target in file_thing.object_properties[rel_type].incoming_relations:
-                    ref_obj: Optional[ThingObject] = kg_things.get(file_target)
-                    uris_kg: List[str] = [
-                        t.uri if isinstance(t, ThingObject) else t
-                        for t in kg_thing.object_properties[rel_type].incoming_relations
-                    ]
+                    file_target_uri: Optional[str] = target_uri(file_target)
+                    ref_obj: Optional[ThingObject] = kg_things.get(file_target_uri) if file_target_uri else None
                     if ref_obj is None:
                         difference_object_properties.append(
                             {
@@ -244,7 +269,7 @@ def diff_entities(
                                 "resource_id": kg_thing.default_source_reference_id(),
                                 "uri": kg_thing.uri,
                                 "kg": "",
-                                "file": file_target,
+                                "file": file_target_uri,
                             }
                         )
                     elif ref_obj.uri not in uris_kg:
@@ -259,12 +284,10 @@ def diff_entities(
                             }
                         )
                 # Check if the target entity is different (outgoing relations)
+                uris_kg = set(kg_thing.object_properties[rel_type].outgoing_uris)
                 for file_target in file_thing.object_properties[rel_type].outgoing_relations:
-                    ref_obj: Optional[ThingObject] = kg_things.get(file_target)
-                    uris_kg: List[str] = [
-                        t.uri if isinstance(t, ThingObject) else t
-                        for t in kg_thing.object_properties[rel_type].outgoing_relations
-                    ]
+                    file_target_uri = target_uri(file_target)
+                    ref_obj = kg_things.get(file_target_uri) if file_target_uri else None
                     if ref_obj is None:
                         difference_object_properties.append(
                             {
@@ -273,7 +296,7 @@ def diff_entities(
                                 "resource_id": kg_thing.default_source_reference_id(),
                                 "uri": kg_thing.uri,
                                 "kg": "",
-                                "file": file_target,
+                                "file": file_target_uri,
                             }
                         )
                     elif ref_obj.uri not in uris_kg:
@@ -505,12 +528,12 @@ async def diff_entities_async(
                 )
             else:
                 # Check if the target entity is different (incoming relations)
+                # Hoisted out of the loop: the target set does not depend on `file_target`,
+                # and a set turns the membership test below from a scan into a lookup.
+                uris_kg: Set[str] = set(kg_thing.object_properties[rel_type].incoming_uris)
                 for file_target in file_thing.object_properties[rel_type].incoming_relations:
-                    ref_obj: Optional[ThingObject] = kg_things.get(file_target)
-                    uris_kg: List[str] = [
-                        t.uri if isinstance(t, ThingObject) else t
-                        for t in kg_thing.object_properties[rel_type].incoming_relations
-                    ]
+                    file_target_uri: Optional[str] = target_uri(file_target)
+                    ref_obj: Optional[ThingObject] = kg_things.get(file_target_uri) if file_target_uri else None
                     if ref_obj is None:
                         difference_object_properties.append(
                             {
@@ -519,7 +542,7 @@ async def diff_entities_async(
                                 "resource_id": kg_thing.default_source_reference_id(),
                                 "uri": kg_thing.uri,
                                 "kg": "",
-                                "file": file_target,
+                                "file": file_target_uri,
                             }
                         )
                     elif ref_obj.uri not in uris_kg:
@@ -534,12 +557,10 @@ async def diff_entities_async(
                             }
                         )
                 # Check if the target entity is different (outgoing relations)
+                uris_kg = set(kg_thing.object_properties[rel_type].outgoing_uris)
                 for file_target in file_thing.object_properties[rel_type].outgoing_relations:
-                    ref_obj: Optional[ThingObject] = kg_things.get(file_target)
-                    uris_kg: List[str] = [
-                        t.uri if isinstance(t, ThingObject) else t
-                        for t in kg_thing.object_properties[rel_type].outgoing_relations
-                    ]
+                    file_target_uri = target_uri(file_target)
+                    ref_obj = kg_things.get(file_target_uri) if file_target_uri else None
                     if ref_obj is None:
                         difference_object_properties.append(
                             {
@@ -548,7 +569,7 @@ async def diff_entities_async(
                                 "resource_id": kg_thing.default_source_reference_id(),
                                 "uri": kg_thing.uri,
                                 "kg": "",
-                                "file": file_target,
+                                "file": file_target_uri,
                             }
                         )
                     elif ref_obj.uri not in uris_kg:
