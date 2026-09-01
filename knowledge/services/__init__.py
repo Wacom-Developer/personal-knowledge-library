@@ -17,7 +17,6 @@ ACCESS_TOKEN_TAG: str = "accessToken"
 ACTIVATION_TAG: str = "activation"
 SEARCH_TERM: str = "searchTerm"
 EXACT_MATCH: str = "exactMatch"
-LANGUAGE_PARAMETER: str = "language"
 TYPES_PARAMETER: str = "types"
 LIMIT_PARAMETER: str = "limit"
 LITERAL_PARAMETER: str = "Literal"
@@ -85,7 +84,6 @@ __all__ = [
     "ACCESS_TOKEN_TAG",
     "ACTIVATION_TAG",
     "SEARCH_TERM",
-    "LANGUAGE_PARAMETER",
     "TYPES_PARAMETER",
     "LIMIT_PARAMETER",
     "LITERAL_PARAMETER",
