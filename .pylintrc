@@ -40,9 +40,6 @@ load-plugins=
 # number of processors available to use.
 jobs=0
 
-# When enabled, pylint would attempt to guess common misconfiguration and emit
-# user-friendly hints instead of false-positive error messages.
-suggestion-mode=yes
 
 # Allow loading of arbitrary C extensions. Extensions are imported into the
 # active Python interpreter and may run arbitrary code.
@@ -108,7 +105,7 @@ disable=
     cyclic-import,
     import-error,
     logging-fstring-interpolation,
-    missing-module-docstring
+    missing-module-docstring,
     not-an-iterable
 
 
@@ -456,8 +453,6 @@ max-bool-expr=5
 # List of regular expressions of class ancestor names to
 # ignore when counting public methods (see R0903).
 exclude-too-few-public-methods=
-
-max-complexity=10
 
 [CLASSES]
 

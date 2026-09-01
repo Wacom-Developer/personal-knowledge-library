@@ -28,4 +28,7 @@ jobs:
         poetry install --extras dev
     - name: Lint with pylint
       run: |
-        poetry run pylint --rcfile=.pylintrc $(git ls-files '*.py') --fail-under=9.5
+        # --fail-on=E gates on error-level messages regardless of the score: a score
+        # threshold alone let real errors (a redefined method, an uncallable object)
+        # through because a few errors barely move a 9.9 rating.
+        poetry run pylint --rcfile=.pylintrc $(git ls-files '*.py') --fail-under=9.5 --fail-on=E
