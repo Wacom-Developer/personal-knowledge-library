@@ -125,7 +125,7 @@ class EntityFlow(TestCase):
         found_ctr: int = 0
         for ent in entities:
             if ent.use_for_nel and ent.label_lang(ja_jp) is not None:
-                text: str = f"{fake.text()}{ent.label_lang(ja_jp).content}"
+                text: str = f"{ent.label_lang(ja_jp).content}。{fake.text()}"
                 self.assertTrue(self.nel_client.is_language_supported(ja_jp))
                 linked_entities: List[KnowledgeGraphEntity] = self.nel_client.link_personal_entities(
                     text=text, language_code=ja_jp, auth_key=self.cache.token
