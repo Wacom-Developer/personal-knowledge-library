@@ -3,7 +3,7 @@
 import threading
 from abc import ABC
 from datetime import datetime
-from typing import Any, Tuple, Dict, Optional, Union, List, cast
+from typing import Any, FrozenSet, Tuple, Dict, Optional, Union, List, cast
 
 import requests
 from requests import Response
@@ -37,11 +37,15 @@ __all__ = [
     "format_exception",
     "handle_error",
     "STATUS_FORCE_LIST",
+    "IDEMPOTENT_RETRY_METHODS",
     "DEFAULT_BACKOFF_FACTOR",
     "DEFAULT_MAX_RETRIES",
 ]
 
 STATUS_FORCE_LIST: List[int] = [502, 503, 504]
+# HTTP methods the sync transport may replay after a transient gateway error. POST and
+# PATCH are excluded on purpose - see the comment in RequestsSession._create_session.
+IDEMPOTENT_RETRY_METHODS: FrozenSet[str] = frozenset(["GET", "HEAD", "OPTIONS", "PUT", "DELETE"])
 DEFAULT_BACKOFF_FACTOR: float = 0.1
 DEFAULT_MAX_RETRIES: int = 3
 
@@ -232,7 +236,12 @@ class RequestsSession:
                     status_forcelist=STATUS_FORCE_LIST,
                     raise_on_status=False,
                     respect_retry_after_header=True,
-                    allowed_methods=frozenset(["GET", "POST", "PUT", "PATCH", "DELETE"]),
+                    # Idempotent methods only. A 502/503/504 can reach the client after the
+                    # backend already committed, so replaying a POST (create_entity,
+                    # create_entity_bulk, import_entities) would silently create a
+                    # duplicate. Callers that want to recover from a failed create should
+                    # check for the source reference id and retry deliberately.
+                    allowed_methods=IDEMPOTENT_RETRY_METHODS,
                 )
 
                 # Configure connection pooling
@@ -574,6 +583,8 @@ class WacomServiceAPIClient(RESTAPIClient):
         self.__max_retries: int = max_retries
         self.__backoff_factor: float = backoff_factor
         self.__session_lock: threading.Lock = threading.Lock()
+        # Serialises token refresh across threads sharing this client — see handle_token.
+        self.__token_refresh_lock: threading.Lock = threading.Lock()
         super().__init__(service_url, verify_calls)
 
     @property
@@ -704,7 +715,7 @@ class WacomServiceAPIClient(RESTAPIClient):
                 try:
                     timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
                     date_object: datetime = datetime.fromisoformat(timestamp_str_truncated)
-                except (TypeError, ValueError) as _:
+                except (TypeError, ValueError):
                     date_object = datetime.now()
                     if logger:
                         logger.warning(
@@ -829,7 +840,7 @@ class WacomServiceAPIClient(RESTAPIClient):
             response_token: Dict[str, str] = response.json()
             try:
                 date_object: datetime = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
-            except (TypeError, ValueError) as _:
+            except (TypeError, ValueError):
                 date_object = datetime.now()
                 if logger:
                     logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
@@ -856,38 +867,51 @@ class WacomServiceAPIClient(RESTAPIClient):
             The user token
         refresh_token: str
             The refresh token
+
+        Notes
+        -----
+        The refresh is serialised per client. A client shared across threads - a thread
+        pool driving a bulk import, or a WSGI worker pool - would otherwise have every
+        thread notice the same nearly-expired token and post to ``/user/refresh`` at once.
+        Where the service rotates refresh tokens, all but one of those requests invalidate
+        the token the others are about to use. This mirrors the async client, which
+        serialises the same way through ``asyncio.Lock``.
         """
-        session = self.current_session
-        # The session is not set
-        if session is None:
-            raise WacomServiceException("Authentication key is not set. Please login first.")
-        expires_in: float = session.expires_in
+        with self.__token_refresh_lock:
+            # Re-read the session state after acquiring the lock: another thread may have
+            # refreshed it while this one was waiting.
+            session = self.current_session
+            if session is None:
+                raise WacomServiceException("Authentication key is not set. Please login first.")
+            expires_in: float = session.expires_in
 
-        # The token expired and is not refreshable
-        if not session.refreshable and session.expired:
-            raise WacomServiceException("Authentication key is expired and cannot be refreshed. Please login again.")
+            # The token expired and is not refreshable
+            if not session.refreshable and session.expired:
+                raise WacomServiceException(
+                    "Authentication key is expired and cannot be refreshed. Please login again."
+                )
 
-        # The token is not refreshable and the force refresh flag is set
-        if not session.refreshable and force_refresh:
-            raise WacomServiceException("Authentication key is not refreshable. Please login again.")
+            # The token is not refreshable and the force refresh flag is set
+            if not session.refreshable and force_refresh:
+                raise WacomServiceException("Authentication key is not refreshable. Please login again.")
 
-        # Refresh token if needed
-        if session.refreshable and (expires_in < force_refresh_timeout or force_refresh):
-            try:
-                if session.refresh_token is None:
-                    raise WacomServiceException("Refresh token is not set.")
-                auth_key, refresh_token, _ = self.refresh_token(session.refresh_token)
-            except WacomServiceException as e:
-                if isinstance(session, PermanentSession):
-                    permanent_session: PermanentSession = session
-                    auth_key, refresh_token, _ = self.request_user_token(
-                        permanent_session.tenant_api_key,
-                        permanent_session.external_user_id,
-                    )
-                else:
-                    if logger:
-                        logger.error(f"Error refreshing token: {e}")
-                    raise e
-            session.update_session(auth_key, refresh_token)
-            return auth_key, refresh_token
-        return session.auth_token, session.refresh_token or ""
+            # Refresh token if needed
+            if session.refreshable and (expires_in < force_refresh_timeout or force_refresh):
+                try:
+                    if session.refresh_token is None:
+                        raise WacomServiceException("Refresh token is not set.")
+                    auth_key, refresh_token, _ = self.refresh_token(session.refresh_token)
+                except WacomServiceException as e:
+                    if isinstance(session, PermanentSession):
+                        permanent_session: PermanentSession = session
+                        auth_key, refresh_token, _ = self.request_user_token(
+                            permanent_session.tenant_api_key,
+                            permanent_session.external_user_id,
+                        )
+                    else:
+                        if logger:
+                            logger.error(f"Error refreshing token: {e}")
+                        raise e
+                session.update_session(auth_key, refresh_token)
+                return auth_key, refresh_token
+            return session.auth_token, session.refresh_token or ""
