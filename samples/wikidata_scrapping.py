@@ -59,9 +59,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
+import loguru
 from tqdm import tqdm
 
-from knowledge import logger
 from knowledge.base.language import LANGUAGE_LOCALE_MAPPING, LanguageCode, LocaleCode
 from knowledge.base.ontology import ThingObject
 from knowledge.ontomapping import (
@@ -78,12 +78,13 @@ from knowledge.public.relations import wikidata_relations_extractor
 from knowledge.public.wikidata import Claim, WikidataThing
 from knowledge.utils.import_format import save_import_format
 
+logger = loguru.logger
+
 # --------------------------------------------------- Structures -------------------------------------------------------
 SPARQL_QUERY_MODE: str = "query"
 ENTITY_LIST_MODE: str = "entity-list"
 NAME_TAG: str = "name"
 WIKIBASE_ITEM_TYPE: str = "wikibase-item"
-WIKI_SITE: str = "wiki"
 
 DEFAULT_CACHE_PATH: Path = Path(__file__).parent.parent / "pkl-cache"
 DEFAULT_MAPPING_PATH: Path = DEFAULT_CACHE_PATH / "ontology_mapping.json"
@@ -352,16 +353,22 @@ def crawl_wikidata(
         Pulled entities, keyed by QID.
     """
     collected: Dict[str, WikidataThing] = {}
+    # Requested QIDs, not just collected ones: Wikidata resolves redirects silently, so a
+    # QID can be asked for and come back under a different id. Tracking only what landed
+    # in `collected` would re-queue such a QID on every round and never terminate.
+    seen: Set[str] = set()
     frontier: Set[str] = set(seeds)
     depth: int = 0
     while frontier:
+        seen.update(frontier)
         entities: List[WikidataThing] = WikiDataAPIClient.retrieve_entities(frontier)
         for entity in entities:
             collected[entity.qid] = entity
+            seen.add(entity.qid)
         if max_depth != -1 and depth >= max_depth:
             frontier = set()
         else:
-            frontier = check_missing_qids(entities, set(collected.keys()))
+            frontier = check_missing_qids(entities, seen)
         logger.info(f"Depth {depth}: {len(collected)} entities pulled, {len(frontier)} queued.")
         if progress:
             progress(len(collected), len(collected) + len(frontier))

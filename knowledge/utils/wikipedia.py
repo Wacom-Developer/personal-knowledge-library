@@ -7,18 +7,61 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
+from knowledge import __version__
+
 __all__ = [
     "ExtractionException",
+    "USER_AGENT",
     "get_wikipedia_summary",
     "get_wikipedia_summary_image",
     "get_wikipedia_summary_url",
 ]
+
+# Wikimedia's User-Agent policy asks every client to identify itself with a tool name, a
+# version and a way to make contact, and answers HTTP 403 to the default
+# ``python-requests/x.y`` agent. Because the helpers below turn a failed request into an
+# empty summary, an unidentified client fails silently — every article simply looks like
+# it has no abstract. See https://meta.wikimedia.org/wiki/User-Agent_policy.
+USER_AGENT: str = (
+    f"personal-knowledge-library/{__version__} (https://github.com/Wacom-Developer/personal-knowledge-library)"
+)
 
 
 class ExtractionException(Exception):
     """
     Exception for extraction errors.
     """
+
+
+def __wikimedia_session__(max_retries: int = 5, backoff_factor: float = 0.5) -> requests.Session:
+    """A session that identifies this client to Wikimedia and retries transient failures.
+
+    Every Wikimedia request goes through here so that no call site can forget the
+    ``User-Agent`` — omitting it is answered with HTTP 403, which the callers below turn
+    into an empty result rather than an error.
+
+    Parameters
+    ----------
+    max_retries: int
+        Maximum number of retries.
+    backoff_factor: float
+        A backoff factor to apply between attempts after the second try (most errors are resolved immediately by a
+        second try without a delay)
+
+    Returns
+    -------
+    session: requests.Session
+        Configured session.
+    """
+    session: requests.Session = requests.Session()
+    retries: Retry = Retry(
+        total=max_retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=[502, 503, 504],
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retries))
+    session.headers.update({"User-Agent": USER_AGENT})
+    return session
 
 
 def __extract_abstract__(title: str, language: str = "en", max_retries: int = 5, backoff_factor: float = 0.5) -> str:
@@ -52,14 +95,7 @@ def __extract_abstract__(title: str, language: str = "en", max_retries: int = 5,
     }
 
     url: str = f"https://{language}.wikipedia.org/w/api.php"
-    mount_point: str = "https://"
-    with requests.Session() as session:
-        retries: Retry = Retry(
-            total=max_retries,
-            backoff_factor=backoff_factor,
-            status_forcelist=[502, 503, 504],
-        )
-        session.mount(mount_point, HTTPAdapter(max_retries=retries))
+    with __wikimedia_session__(max_retries, backoff_factor) as session:
         response: Response = session.get(url, params=params)
         if response.ok:
             result: Dict[str, Any] = response.json()
@@ -101,14 +137,7 @@ def __extract_thumb__(title: str, language: str = "en", max_retries: int = 5, ba
     }
 
     url: str = f"https://{language}.wikipedia.org/w/api.php"
-    mount_point: str = "https://"
-    with requests.Session() as session:
-        retries: Retry = Retry(
-            total=max_retries,
-            backoff_factor=backoff_factor,
-            status_forcelist=[502, 503, 504],
-        )
-        session.mount(mount_point, HTTPAdapter(max_retries=retries))
+    with __wikimedia_session__(max_retries, backoff_factor) as session:
         response: Response = session.get(url, params=params)
         if response.ok:
             result: Dict[str, Any] = response.json()

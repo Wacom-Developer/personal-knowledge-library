@@ -243,14 +243,16 @@ def wikidata_to_thing(
                 locale: LocaleCode = LANGUAGE_LOCALE_MAPPING.get(LanguageCode(lang), EN_US)
                 if locale in supported_locales:
                     try:
-                        descriptions.append(
-                            Description(
-                                description=get_wikipedia_summary(title, lang),
-                                language_code=LocaleCode(locale),
-                            )
-                        )
+                        summary: str = get_wikipedia_summary(title, lang)
                     except Exception as e:
                         logger.error(f"Failed to get Wikipedia summary for {title} ({lang}): {e}")
+                        continue
+                    # A blank summary means Wikipedia gave us nothing — most often because the
+                    # request was refused, which get_wikipedia_summary reports as "". Appending it
+                    # would satisfy the emptiness check below and suppress the Wikidata
+                    # descriptions, leaving the entity with nothing but empty strings.
+                    if summary.strip():
+                        descriptions.append(Description(description=summary, language_code=LocaleCode(locale)))
     if len(descriptions) == 0:
         descriptions = list(wikidata_thing.description.values())
     t3: float = time.perf_counter()
