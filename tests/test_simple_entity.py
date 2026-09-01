@@ -19,10 +19,10 @@ from knowledge.base.ontology import (
     DataProperty,
     ObjectProperty,
 )
-from knowledge.services.graph import WacomKnowledgeService, Visibility, IndexType
+from knowledge.services.base import WacomServiceException
+from knowledge.services.graph import WacomKnowledgeService, IndexType
 from knowledge.services.ontology import OntologyService
 from knowledge.services.users import UserManagementServiceAPI, User, UserRole
-from knowledge.utils.graph import count_things
 
 THING_OBJECT: OntologyClassReference = OntologyClassReference("wacom", "core", "Thing")
 
@@ -280,16 +280,25 @@ class EntityFlow(TestCase):
         self.assertFalse(thing.use_for_nel)
 
     def test_9_delete_entity(self):
-        """Delete the entity."""
+        """Delete the entity.
+
+        **Remark:** this asserts on the entity itself, not on a tenant-wide count.
+        `count_things` asks the service for an *estimate* (`estimateCount=true`) across the
+        whole tenant. That estimate lags while the suite is creating and deleting thousands
+        of entities, which made the previous `assertLess(after, before)` pass when this file
+        ran alone and fail with `0 not less than 0` inside the full suite. Whether the
+        entity is gone is the thing this test is actually about, and it is exact.
+        """
         self.knowledge_client.login(self.tenant_api_key, self.cache.external_id)
-        before_entities = count_things(
-            self.knowledge_client, self.cache.token, THING_OBJECT, visibility=Visibility.PRIVATE
+        self.assertIsNotNone(
+            self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token),
+            "the entity should still exist before it is deleted",
         )
+
         self.knowledge_client.delete_entity(self.cache.thing_uri, force=True)
-        after_entities = count_things(
-            self.knowledge_client, self.cache.token, THING_OBJECT, visibility=Visibility.PRIVATE
-        )
-        self.assertLess(after_entities, before_entities)
+
+        with self.assertRaises(WacomServiceException):
+            self.knowledge_client.entity(self.cache.thing_uri, auth_key=self.cache.token)
 
     def teardown_class(self):
         """Clean up the test environment."""

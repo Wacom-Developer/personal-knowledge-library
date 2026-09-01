@@ -26,6 +26,7 @@ MONA_LISA: str = "Mona Lisa"
 FIRST_NAME: str = "Leonardo"
 LAST_NAME: str = "da Vinci"
 HAS_ART_STYLE: OntologyPropertyReference = OntologyPropertyReference.parse("wacom:creative#hasArtstyle")
+ART_STYLE: OntologyClassReference = OntologyClassReference.parse("wacom:creative#ArtStyle")
 
 
 @pytest.fixture(scope="class")
@@ -108,11 +109,14 @@ class SearchFlow(TestCase):
         self.assertGreaterEqual(len(res_entities), 1)
 
     def test_4_search_relations(self):
-        art_style: Optional[ThingObject] = None
-        results, _ = self.knowledge_client.search_labels("portrait", EN_US, limit=1, auth_key=self.cache.token)
-        for entity in results:
-            art_style = entity
-        self.assertIsNotNone(art_style)
+        # `hasArtstyle` declares ArtStyle as its range, so the object of the relation has to
+        # be an ArtStyle. Label search does not rank by concept type - "portrait" also matches
+        # a wacom:core#Webpage and a VisualArtwork - so select by type, not by rank.
+        results, _ = self.knowledge_client.search_labels("portrait", EN_US, limit=10, auth_key=self.cache.token)
+        art_style: Optional[ThingObject] = next(
+            (entity for entity in results if entity.concept_type == ART_STYLE), None
+        )
+        self.assertIsNotNone(art_style, "no wacom:creative#ArtStyle labelled 'portrait' was found")
         res_entities, next_search_page = self.knowledge_client.search_relation(
             relation=HAS_ART_STYLE, object_uri=art_style.uri, language_code=EN_US, auth_key=self.cache.token
         )

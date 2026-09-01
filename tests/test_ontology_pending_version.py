@@ -324,3 +324,26 @@ def test_record_tolerates_a_missing_body() -> None:
     assert record.element_uri is None
     assert record.time_stamp is None
     assert record.tenant_id is None
+
+
+# ------------------------------------- empty / absent payloads --------------------------------------------------------
+def test_pending_version_of_a_null_payload_is_empty() -> None:
+    """A context with no pending changes may answer with a JSON ``null``.
+
+    ``OntologyService.pending_version`` normalises that shape, so the model must accept it
+    rather than tripping over a ``None`` entry.
+    """
+    pending = PendingOntologyVersion.from_list(None)
+
+    assert pending.is_empty
+    assert pending.version is None
+
+
+def test_pending_version_skips_entries_that_carry_nothing() -> None:
+    """A ``null`` or empty entry in the change log is not a change."""
+    entries: List[Any] = [None, {}]
+
+    pending = PendingOntologyVersion.from_list(entries)
+
+    assert pending.is_empty
+    assert pending.changes == []

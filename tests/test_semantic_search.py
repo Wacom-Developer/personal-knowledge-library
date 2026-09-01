@@ -105,9 +105,13 @@ class VectorSearchTest(TestCase):
                 self.assertGreaterEqual(len(labels), 1)
         self.assertLessEqual(sum(timings) / len(timings), 0.5, "Average fuzzy matching time should be less than 0.5 s")
 
-    def test_5_search_document_en(self):
+    def test_5_search_document_de_again(self):
         """
         Test search document.
+
+        **Remark:** this exercises DE_DE, as `test_6_search_document_de` does. It was named
+        `..._en` but counted and searched German throughout; renamed so the name matches the
+        body rather than silently leaving English document search uncovered.
         """
         docs_de: int = self.semantic_search_client.count_documents(DE_DE)
         self.assertGreaterEqual(docs_de, 1)
