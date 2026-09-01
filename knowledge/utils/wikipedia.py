@@ -140,7 +140,7 @@ def get_wikipedia_summary(title: str, lang: str = "en") -> str:
     """
     try:
         summary: str = __extract_abstract__(title, lang)
-    except ExtractionException as _:
+    except ExtractionException:
         summary = ""
     return summary
 
@@ -163,11 +163,11 @@ def get_wikipedia_summary_image(title: str, lang: str = "en") -> Dict[str, str]:
     """
     try:
         thumbnail: str = __extract_thumb__(title, lang)
-    except ExtractionException as _:
+    except ExtractionException:
         thumbnail = ""
     try:
         summary: str = __extract_abstract__(title, lang)
-    except ExtractionException as _:
+    except ExtractionException:
         summary = ""
     return {"summary-image": thumbnail, "summary-text": summary}
 
