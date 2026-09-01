@@ -120,7 +120,11 @@ def test_a_cyclic_hierarchy_round_trips_without_recursing_forever() -> None:
     restored: WikidataClass = WikidataClass.create_from_dict(first.as_dict())
 
     assert [node.qid for node in restored.subclasses] == ["Q2"]
-    assert restored.subclasses[0].subclasses == []
+    # The visited guard lets the cycle close exactly once, and the repeat is a leaf, so the
+    # restore terminates rather than recursing until the stack runs out.
+    revisited: List[WikidataClass] = restored.subclasses[0].subclasses
+    assert [node.qid for node in revisited] == ["Q1"]
+    assert revisited[0].subclasses == []
 
 
 def test_subclass_cache_survives_save_and_load(tmp_path: Path) -> None:
