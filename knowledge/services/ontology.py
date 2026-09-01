@@ -1722,8 +1722,14 @@ class OntologyService(WacomServiceAPIClient):
         if not response.ok:
             raise handle_error("Failed to retrieve the pending version", response)
         payload: Any = response.json()
-        # The service returns the change log as a list; tolerate a single entry as well.
-        changes: List[Dict[str, Any]] = payload if isinstance(payload, list) else [payload]
+        # The service returns the change log as a list; tolerate a single entry as well, and
+        # a context without pending changes that answers with a JSON null or an empty body.
+        if payload is None:
+            changes: List[Dict[str, Any]] = []
+        elif isinstance(payload, list):
+            changes = payload
+        else:
+            changes = [payload]
         return PendingOntologyVersion.from_list(changes)
 
     def rdf_export(
