@@ -47,18 +47,24 @@ __all__ = [
 ]
 
 # A cache for storing DNS resolutions
-dns_cache: TTLCache = TTLCache(maxsize=100, ttl=300)  # Adjust size and ttl as needed
+dns_cache: TTLCache[Tuple[str, int], Any] = TTLCache(maxsize=100, ttl=300)  # Adjust size and ttl as needed
 HTTPMethodFunction = Literal["GET", "POST", "PUT", "DELETE", "PATCH"]
 
 
-async def cached_getaddrinfo(host: str, *args: Any, **kwargs: Any) -> Any:
+async def cached_getaddrinfo(host: str, family: int = 0, *args: Any, **kwargs: Any) -> Any:
     """
     Cached address information.
+
+    The address family is part of the cache key: an IPv4-only lookup must not be answered
+    from an entry resolved for IPv6, or the caller would try to connect to an address of
+    the wrong family.
 
     Parameters
     ----------
     host: str
         Hostname
+    family: int (Default:= 0)
+        Address family to resolve for, `0` (``AF_UNSPEC``) for any.
     args: Any
         Additional arguments
     kwargs: Any
@@ -69,11 +75,12 @@ async def cached_getaddrinfo(host: str, *args: Any, **kwargs: Any) -> Any:
     addr_info: Any
         Address information
     """
-    if host in dns_cache:
-        return dns_cache[host]
+    cache_key: Tuple[str, int] = (host, family)
+    if cache_key in dns_cache:
+        return dns_cache[cache_key]
     try:
-        addr_info = await asyncio.get_running_loop().getaddrinfo(host, None, *args, **kwargs)
-        dns_cache[host] = addr_info
+        addr_info = await asyncio.get_running_loop().getaddrinfo(host, None, *args, family=family, **kwargs)
+        dns_cache[cache_key] = addr_info
         return addr_info
     except (OSError, socket.gaierror) as e:
         if logger:
@@ -113,7 +120,7 @@ class ResponseData:
     method: str
 
 
-class CachedResolver(aiohttp.resolver.AbstractResolver):  # type: ignore[misc]
+class CachedResolver(aiohttp.resolver.AbstractResolver):  # type: ignore[misc, name-defined]
     """
     CachedResolver
     ==============
@@ -150,7 +157,7 @@ class CachedResolver(aiohttp.resolver.AbstractResolver):  # type: ignore[misc]
             - `proto`: Protocol number, set to 0.
             - `flags`: Address information flags, set to socket.AI_NUMERICHOST.
         """
-        infos = await cached_getaddrinfo(host)
+        infos = await cached_getaddrinfo(host, family)
         return [
             {
                 "hostname": host,
@@ -330,7 +337,7 @@ class AsyncSession:
         ValueError
             If the specified HTTP method is unsupported.
         """
-        request_timeout: int = kwargs.pop("timeout", self._timeout)
+        request_timeout: Union[int, ClientTimeout] = kwargs.pop("timeout", self._timeout)
         raw_content: bool = kwargs.pop("raw_content", False)
         request_headers = await self._prepare_headers(
             headers,
@@ -338,11 +345,21 @@ class AsyncSession:
             ignore_auth=kwargs.pop("ignore_auth", False),
             ignore_content_type=kwargs.pop("ignore_content_type", False),
         )
+        # aiohttp deprecated a bare number for `timeout` and removes it in 4.x, so the
+        # conversion happens here once instead of at every call site.
+        timeout: ClientTimeout = (
+            request_timeout if isinstance(request_timeout, ClientTimeout) else ClientTimeout(total=request_timeout)
+        )
+        # Likewise `verify_ssl` is deprecated in favour of `ssl`. The two are equivalent for
+        # the boolean case the SDK uses: `True` keeps the connector's certifi context,
+        # `False` disables verification. An explicit `ssl` from the caller wins.
+        verify_ssl: Optional[bool] = kwargs.pop("verify_ssl", None)
+        if verify_ssl is not None and "ssl" not in kwargs:
+            kwargs["ssl"] = verify_ssl
         session: aiohttp.ClientSession = await self._create_session()
-        # Use the provided timeout or fall back to session default
 
         if method == "GET":
-            async with session.get(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
+            async with session.get(url=url, headers=request_headers, timeout=timeout, **kwargs) as response:
                 return ResponseData(
                     ok=response.ok,
                     content=await AsyncSession._request_content(response, raw=raw_content),
@@ -351,7 +368,7 @@ class AsyncSession:
                     method=response.method,
                 )
         elif method == "POST":
-            async with session.post(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
+            async with session.post(url=url, headers=request_headers, timeout=timeout, **kwargs) as response:
                 return ResponseData(
                     ok=response.ok,
                     content=await AsyncSession._request_content(response, raw=raw_content),
@@ -360,7 +377,7 @@ class AsyncSession:
                     method=response.method,
                 )
         elif method == "PUT":
-            async with session.put(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
+            async with session.put(url=url, headers=request_headers, timeout=timeout, **kwargs) as response:
                 return ResponseData(
                     ok=response.ok,
                     content=await AsyncSession._request_content(response, raw=raw_content),
@@ -369,7 +386,7 @@ class AsyncSession:
                     method=response.method,
                 )
         elif method == "DELETE":
-            async with session.delete(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
+            async with session.delete(url=url, headers=request_headers, timeout=timeout, **kwargs) as response:
                 return ResponseData(
                     ok=response.ok,
                     content=await AsyncSession._request_content(response, raw=raw_content),
@@ -378,7 +395,7 @@ class AsyncSession:
                     method=response.method,
                 )
         elif method == "PATCH":
-            async with session.patch(url=url, headers=request_headers, timeout=request_timeout, **kwargs) as response:
+            async with session.patch(url=url, headers=request_headers, timeout=timeout, **kwargs) as response:
                 return ResponseData(
                     ok=response.ok,
                     content=await AsyncSession._request_content(response, raw=raw_content),
@@ -531,8 +548,9 @@ class AsyncSession:
             if self._session:
                 await self._session.close()
                 self._session = None
-        # Clear DNS cache to prevent memory leaks
-        dns_cache.clear()
+        # The DNS cache is deliberately left alone: it is process-global and shared with
+        # every other live client, so clearing it here would throw away resolutions they
+        # are still using. Its TTL already bounds how long an entry lives.
 
     @staticmethod
     async def _request_content(
@@ -907,7 +925,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
             date_object: datetime
             try:
                 date_object = datetime.fromisoformat(response_token[EXPIRATION_DATE_TAG])
-            except (TypeError, ValueError) as _:
+            except (TypeError, ValueError):
                 date_object = datetime.now()
                 if logger:
                     logger.warning(f"Parsing of expiration date failed. {response_token[EXPIRATION_DATE_TAG]}")
@@ -966,7 +984,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
             try:
                 timestamp_str_truncated = response_token[EXPIRATION_DATE_TAG]
                 date_object = datetime.fromisoformat(timestamp_str_truncated)
-            except (TypeError, ValueError) as _:
+            except (TypeError, ValueError):
                 date_object = datetime.now()
                 if logger:
                     logger.warning(f"Parsing of expiration date failed. {timestamp_str_truncated}")
