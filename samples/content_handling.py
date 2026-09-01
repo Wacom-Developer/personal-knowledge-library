@@ -35,6 +35,7 @@ Usage
         --file   /path/to/file.png \\
         --instance https://private-knowledge.wacom.com
 """
+
 import argparse
 from pathlib import Path
 from typing import Dict, List
@@ -104,8 +105,9 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--user", required=True, help="External user ID within the knowledge service.")
     parser.add_argument("-t", "--tenant", required=True, help="Tenant API key.")
     parser.add_argument("-f", "--file", required=True, help="Path to a file to upload as content.")
-    parser.add_argument("-s", "--update-file", required=True,
-                        help="Path to a file to replace the original content (PUT).")
+    parser.add_argument(
+        "-s", "--update-file", required=True, help="Path to a file to replace the original content (PUT)."
+    )
     parser.add_argument("-i", "--instance", default="https://private-knowledge.wacom.com", help="Service instance URL.")
     args = parser.parse_args()
 
