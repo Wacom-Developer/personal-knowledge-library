@@ -1724,7 +1724,7 @@ class ThingObject:
         description: Optional[List[Description]] = None,
         uri: Optional[str] = None,
         icon: Optional[str] = None,
-        tenant_rights: TenantAccessRight = TenantAccessRight(),
+        tenant_rights: Optional[TenantAccessRight] = None,
         owner: bool = True,
         use_for_nel: bool = True,
         use_vector_index: bool = False,
@@ -1739,7 +1739,10 @@ class ThingObject:
         self.__concept_type: OntologyClassReference = concept_type
         self.__data_properties: Dict[OntologyPropertyReference, List[DataProperty]] = {}
         self.__object_properties: Dict[OntologyPropertyReference, ObjectProperty] = {}
-        self.__tenants_rights: TenantAccessRight = tenant_rights
+        # Never default to a shared TenantAccessRight instance: a mutable default argument is
+        # evaluated once at import time, so every entity would hand out the same rights object
+        # and an in-place `entity.tenant_access_right.read = True` would leak into all others.
+        self.__tenants_rights: TenantAccessRight = tenant_rights if tenant_rights is not None else TenantAccessRight()
         self.__status_flag: EntityStatus = EntityStatus.UNKNOWN
         self.__ontology_types: Optional[Set[str]] = None
         self.__owner: bool = owner

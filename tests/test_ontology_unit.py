@@ -17,10 +17,16 @@ from knowledge.base.entity import (
     LOCALE_TAG,
     DATA_PROPERTY_TAG,
     DATA_TYPE_TAG,
+    DESCRIPTIONS_TAG,
+    IMAGE_TAG,
+    LABELS_TAG,
+    TENANT_RIGHTS_TAG,
+    TYPE_TAG,
     RELATION_TAG,
     INCOMING_TAG,
     OUTGOING_TAG,
 )
+from knowledge.base.access import TenantAccessRight
 from knowledge.base.language import EN_US, LocaleCode
 from knowledge.base.ontology import (
     # Enums
@@ -662,6 +668,49 @@ class TestThingObject:
 
         thing.image = None
         assert thing.image is None
+
+    def test_tenant_rights_are_not_shared_between_instances(self):
+        """Each ThingObject must own its tenant rights, not a shared default instance."""
+        first = ThingObject()
+        second = ThingObject()
+
+        assert first.tenant_access_right is not second.tenant_access_right
+
+        first.tenant_access_right.read = True
+        first.tenant_access_right.write = True
+
+        assert second.tenant_access_right.read is False
+        assert second.tenant_access_right.write is False
+        assert ThingObject().tenant_access_right.to_list() == []
+
+    def test_tenant_rights_default_survives_in_place_mutation_of_parsed_entity(self):
+        """An entity parsed without tenant rights must not hand out the constructor default.
+
+        The service omits or empties ``tenantRights`` for entities that have none. Mutating
+        such an entity in place used to poison the default for every later ThingObject, so
+        unrelated entities were created tenant-readable and -writable.
+        """
+        parsed = ThingObject.from_dict(
+            {
+                TYPE_TAG: THING_CLASS.iri,
+                LABELS_TAG: [],
+                DESCRIPTIONS_TAG: [],
+                IMAGE_TAG: None,
+                TENANT_RIGHTS_TAG: [],
+            }
+        )
+        parsed.tenant_access_right.read = True
+        parsed.tenant_access_right.write = True
+
+        assert ThingObject().tenant_access_right.to_list() == []
+
+    def test_tenant_rights_argument_is_honoured(self):
+        """An explicitly passed TenantAccessRight is kept, not copied away."""
+        rights = TenantAccessRight(read=True)
+        thing = ThingObject(tenant_rights=rights)
+
+        assert thing.tenant_access_right is rights
+        assert thing.tenant_access_right.to_list() == [TenantAccessRight.READ]
 
 
 class TestInflectionSetting:
