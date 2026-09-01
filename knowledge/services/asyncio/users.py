@@ -159,7 +159,7 @@ class AsyncUserManagementService(AsyncServiceAPIClient):
             date_object: datetime
             try:
                 date_object = datetime.fromisoformat(results["token"][EXPIRATION_DATE_TAG])
-            except (TypeError, ValueError) as _:
+            except (TypeError, ValueError):
                 date_object = datetime.now()
                 if logger:
                     logger.warning(f"Parsing of expiration date failed. {results['token'][EXPIRATION_DATE_TAG]}")
