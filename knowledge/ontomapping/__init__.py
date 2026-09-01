@@ -152,7 +152,7 @@ def is_iso_date(date_string: str) -> bool:
     try:
         datetime.fromisoformat(date_string)
         return True
-    except ValueError as _:
+    except ValueError:
         return False
 
 
@@ -431,26 +431,31 @@ class MappingConfiguration:
         number_of_classes: int = len(class_configuration.wikidata_classes)
         if number_of_classes > 0:
             logger.debug(f"Adding {number_of_classes} classes for {class_configuration.concept_type.iri}")
-        for _, c in enumerate(class_configuration.wikidata_classes):
+        for c in class_configuration.wikidata_classes:
+            # Both paths index the *flattened* hierarchy keyed by QID string. Indexing the
+            # WikidataClass objects instead would make every later lookup in `guess_classed`
+            # miss, so the mapping would work on a cold cache and silently stop working once
+            # the subclass cache had been populated or loaded from disk.
             if wikidata_cache.subclass_in_cache(c):
-                for subclass in wikidata_cache.get_subclass(c).subclasses:
-                    if subclass in self.__index:
-                        logger.warning(f"Class {subclass} already exists in the index.")
-                        class_config: ClassConfiguration = self.__classes[self.__index[subclass]]
-                        logger.warning(
-                            f"Class {class_config.concept_type} "
-                            f"is conflicting with {class_configuration.concept_type}."
-                        )
-                    self.__index[subclass] = class_idx
-                self.__direct_index[c] = class_idx
+                hierarchies: List[WikidataClass] = [wikidata_cache.get_subclass(c)]
             else:
-                w_classes: Dict[str, WikidataClass] = WikiDataAPIClient.subclasses(c)
-                for subclass in w_classes.values():
-                    wikidata_cache.cache_subclass(subclass)
-                    for cls in flatten(subclass):
-                        self.__index[cls] = class_idx
+                hierarchies = list(WikiDataAPIClient.subclasses(c).values())
+                for hierarchy in hierarchies:
+                    wikidata_cache.cache_subclass(hierarchy)
+            for hierarchy in hierarchies:
+                for subclass_qid in flatten(hierarchy):
+                    conflicting_idx: Optional[int] = self.__index.get(subclass_qid)
+                    if conflicting_idx is not None and conflicting_idx != class_idx:
+                        class_config: ClassConfiguration = self.__classes[conflicting_idx]
+                        logger.warning(
+                            f"Wikidata class {subclass_qid} is already mapped to "
+                            f"{class_config.concept_type}, which conflicts with "
+                            f"{class_configuration.concept_type}."
+                        )
+                    self.__index[subclass_qid] = class_idx
+            self.__direct_index[c] = class_idx
         for c in class_configuration.dbpedia_classes:
-            self.__index[c] = len(self.__classes) - 1
+            self.__index[c] = class_idx
 
     def add_property(self, property_configuration: PropertyConfiguration) -> None:
         """

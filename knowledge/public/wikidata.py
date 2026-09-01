@@ -318,6 +318,11 @@ class WikidataClass:
         wiki_cls: WikidataClass = cls(class_dict[QID_TAG], class_dict.get(LABEL_TAG))
         for superclass in class_dict.get(SUPERCLASSES_TAG, []):
             wiki_cls.__superclasses.append(WikidataClass.create_from_dict(superclass))
+        # __superclasses_hierarchy__ serializes both directions, so both must be restored.
+        # Reading only the superclasses turned every persisted class into a leaf, which
+        # silently shrank the ontology mapping's class index whenever a cache was reused.
+        for subclass in class_dict.get(SUBCLASSES_TAG, []):
+            wiki_cls.__subclasses.append(WikidataClass.create_from_dict(subclass))
         return wiki_cls
 
     def __superclasses_hierarchy__(self, visited: Optional[set] = None):
@@ -1016,7 +1021,9 @@ class WikidataThing:
         self.__claims[pid] = claim
 
     def __hash__(self) -> int:
-        return 0
+        # Must agree with __eq__, which compares the QID. A constant hash would put every
+        # thing in one bucket and turn any set or dict of things into a linear scan.
+        return hash(self.qid)
 
     def __eq__(self, other: Any) -> bool:
         # another object is equal to self, iff
@@ -1027,7 +1034,9 @@ class WikidataThing:
         return f"<WikidataThing [QID:={self.qid}]>"
 
     def __getstate__(self) -> Dict[str, Any]:
-        return self.__dict__().copy()
+        # `__dict__` is overridden as a serialisation method on this class, so it is
+        # callable here despite what static analysis assumes of the standard attribute.
+        return self.__dict__().copy()  # pylint: disable=not-callable
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
         labels: Dict[str, Label] = {}

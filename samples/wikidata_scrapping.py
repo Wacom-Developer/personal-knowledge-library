@@ -549,10 +549,13 @@ def scrap_wikidata(
     seeds: Set[str] = seed_qids(scrapping_config)
     logger.info(f"Scrapping '{name}' from {len(seeds)} seed entities (max depth: {options.max_depth}).")
     wikidata_things: Dict[str, WikidataThing] = crawl_wikidata(seeds, options.max_depth, progress_wikidata)
-    cache.save_cache(cache_path)
 
     relations: Dict[str, List[Dict[str, Any]]] = wikidata_relations_extractor(wikidata_things, progress_relations)
     things, warnings = map_to_things(wikidata_things, relations, options, progress_mapping)
+    # After mapping, not before: resolving wikibase-item data properties pulls further
+    # entities through the same cache, and saving ahead of that threw every one of them
+    # away, so the next run re-fetched them.
+    cache.save_cache(cache_path)
 
     thing_path: Path = output_path / f"{name}_{options.max_depth}.ndjson"
     save_import_format(thing_path, things)
@@ -582,8 +585,11 @@ class TqdmProgress:
         self.__desc: str = desc
         self.__unit: str = unit
         self.__bar: Optional[tqdm] = None
+        self.__finished: bool = False
 
     def __call__(self, completed: int, total: int) -> None:
+        if self.__finished:
+            return
         if self.__bar is None:
             self.__bar = tqdm(total=total, desc=self.__desc, unit=self.__unit)
         if total != self.__bar.total:
@@ -592,6 +598,13 @@ class TqdmProgress:
         delta: int = completed - self.__bar.n
         if delta > 0:
             self.__bar.update(delta)
+        # Close as soon as the phase is done rather than at process exit. Every phase
+        # reports completed == total exactly once, at its end — the crawl only reaches it
+        # with an empty frontier — and a bar left open keeps accruing elapsed time, which
+        # made a one-second crawl read as seven minutes in the log.
+        if 0 < total <= completed:
+            self.close()
+            self.__finished = True
 
     def close(self) -> None:
         """Close the bar, if it was ever created."""

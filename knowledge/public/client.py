@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2023-present Wacom. All rights reserved.
-import multiprocessing
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
-from multiprocessing import Pool
 from typing import Union, Any, Dict, List, Tuple, Set, Optional, Callable
 
 import requests
@@ -43,6 +42,20 @@ __all__ = [
 # Constants
 QUALIFIERS_TAG: str = "QUALIFIERS"
 LITERALS_TAG: str = "LITERALS"
+# One edge of a class hierarchy: (class_qid, related_qid, class_label, related_label).
+HierarchyEdge = Tuple[str, str, str, str]
+# Failures a class-hierarchy lookup degrades over instead of propagating to the caller. The
+# cached SPARQL helpers deliberately raise these so a transient outage is not cached.
+HIERARCHY_LOOKUP_ERRORS: Tuple[type, ...] = (
+    ValueError,
+    KeyError,
+    OSError,
+    requests.RequestException,
+    WikiDataAPIException,
+)
+# Upper bound on concurrent Wikidata requests. The endpoint is rate limited, so this is
+# deliberately modest rather than scaled to the machine.
+MAX_PARALLEL_WIKIDATA_REQUESTS: int = 8
 # Cache for wikidata objects
 wikidata_cache: WikidataCache = WikidataCache()
 
@@ -50,7 +63,11 @@ wikidata_cache: WikidataCache = WikidataCache()
 # Increased retries and added connection errors for Wikidata endpoint resilience
 _retry_policy: Retry = Retry(
     total=5,
-    backoff_factor=2,
+    backoff_factor=1,
+    # Cap a single wait. Wikidata answers 429 readily and can send a long `Retry-After`;
+    # without a ceiling one call can block a bulk import for minutes with no progress
+    # signal, well past the caller's own timeout.
+    backoff_max=20,
     status_forcelist=[429, 500, 502, 503, 504],
     respect_retry_after_header=True,
     raise_on_status=False,
@@ -165,67 +182,6 @@ class WikiDataAPIClient:
             raise
 
     @staticmethod
-    def superclasses(qid: str) -> Dict[str, WikidataClass]:
-        """
-        Returns the Wikidata class with all its superclasses for the given QID.
-
-        Parameters
-        ----------
-        qid: str
-            Wikidata QID (e.g., 'Q146' for house cat).
-
-        Returns
-        -------
-        classes: Dict[str, WikidataClass]
-            A dictionary of WikidataClass objects, where the keys are QIDs and the values are the corresponding
-        """
-        # Fetch superclasses
-        query = f"""
-        SELECT DISTINCT ?class ?classLabel ?superclass ?superclassLabel
-        WHERE
-        {{
-            wd:{qid} wdt:P279* ?class.
-            ?class wdt:P279 ?superclass.
-            SERVICE wikibase:label {{bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
-        }}
-        """
-        try:
-            reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
-            wikidata_classes: Dict[str, WikidataClass] = {}
-            cycle_detector: Set[Tuple[str, str]] = set()
-            adjacency_list: Dict[str, Set[str]] = {}
-
-            if "results" in reply:
-                for b in reply["results"]["bindings"]:
-                    superclass_qid = b["superclass"]["value"].rsplit("/", 1)[-1]
-                    class_qid = b["class"]["value"].rsplit("/", 1)[-1]
-                    superclass_label = b["superclassLabel"]["value"]
-                    class_label = b["classLabel"]["value"]
-                    wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
-                    wikidata_classes.setdefault(superclass_qid, WikidataClass(superclass_qid, superclass_label))
-                    adjacency_list.setdefault(class_qid, set()).add(superclass_qid)
-        except (ValueError, KeyError, HTTPError) as e:
-            logger.exception(e)
-            return {qid: WikidataClass(qid, f"Class {qid}")}
-        queue = deque([qid])
-        visited = set()
-
-        while queue:
-            current_qid = queue.popleft()
-            if current_qid in visited:
-                continue
-            visited.add(current_qid)
-
-            if current_qid in adjacency_list:
-                for superclass_qid in adjacency_list[current_qid]:
-                    if (current_qid, superclass_qid) not in cycle_detector:
-                        wikidata_classes[current_qid].superclasses.append(wikidata_classes[superclass_qid])
-                        queue.append(superclass_qid)
-                        cycle_detector.add((current_qid, superclass_qid))
-
-        return wikidata_classes
-
-    @staticmethod
     def subclasses(qid: str) -> Dict[str, WikidataClass]:
         """
         Returns the Wikidata class with all its subclasses for the given QID.
@@ -251,8 +207,8 @@ class WikiDataAPIClient:
                 wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
                 wikidata_classes.setdefault(subclass_qid, WikidataClass(subclass_qid, subclass_label))
                 adjacency_list.setdefault(class_qid, set()).add(subclass_qid)
-        except (ValueError, KeyError, HTTPError) as e:
-            logger.exception(e)
+        except HIERARCHY_LOOKUP_ERRORS as e:
+            logger.warning(f"Failed to fetch the class hierarchy of {qid}: {e}")
             return {qid: WikidataClass(qid, f"Class {qid}")}
 
         queue = deque([qid])
@@ -279,66 +235,65 @@ class WikiDataAPIClient:
 
     @staticmethod
     @lru_cache(maxsize=256)
-    def _superclasses_cached(qid: str) -> Tuple[Tuple[str, str], ...]:
+    def _superclasses_cached(qid: str) -> Tuple[HierarchyEdge, ...]:
         """
         Cached helper for superclasses — returns tuple of (class_qid, superclass_qid, class_label, superclass_label).
-        Returns empty tuple on error to avoid caching failures.
+
+        **Remark:**
+        Failures propagate on purpose. ``lru_cache`` stores whatever is returned, so
+        swallowing the error here would cache the empty result and keep a single transient
+        SPARQL outage from ever being retried for the lifetime of the process. The caller
+        turns the exception into the fallback hierarchy.
         """
-        try:
-            query = f"""
-            SELECT DISTINCT ?class ?classLabel ?superclass ?superclassLabel
-            WHERE
-            {{
-                wd:{qid} wdt:P279* ?class.
-                ?class wdt:P279 ?superclass.
-                SERVICE wikibase:label {{bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
-            }}
-            """
-            reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
-            results: List[Tuple[str, str]] = []
-            if "results" in reply:
-                for b in reply["results"]["bindings"]:
-                    superclass_qid = b["superclass"]["value"].rsplit("/", 1)[-1]
-                    class_qid = b["class"]["value"].rsplit("/", 1)[-1]
-                    superclass_label = b["superclassLabel"]["value"]
-                    class_label = b["classLabel"]["value"]
-                    results.append((class_qid, superclass_qid, class_label, superclass_label))
-            return tuple(results)
-        except Exception as e:
-            logger.warning(f"Failed to fetch superclasses for {qid}: {e}")
-            return ()
+        query = f"""
+        SELECT DISTINCT ?class ?classLabel ?superclass ?superclassLabel
+        WHERE
+        {{
+            wd:{qid} wdt:P279* ?class.
+            ?class wdt:P279 ?superclass.
+            SERVICE wikibase:label {{bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
+        }}
+        """
+        reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
+        results: List[HierarchyEdge] = []
+        if "results" in reply:
+            for b in reply["results"]["bindings"]:
+                superclass_qid = b["superclass"]["value"].rsplit("/", 1)[-1]
+                class_qid = b["class"]["value"].rsplit("/", 1)[-1]
+                superclass_label = b["superclassLabel"]["value"]
+                class_label = b["classLabel"]["value"]
+                results.append((class_qid, superclass_qid, class_label, superclass_label))
+        return tuple(results)
 
     @staticmethod
     @lru_cache(maxsize=256)
-    def _subclasses_cached(qid: str) -> Tuple[Tuple[str, str], ...]:
+    def _subclasses_cached(qid: str) -> Tuple[HierarchyEdge, ...]:
         """
         Cached helper for subclasses — returns tuple of (class_qid, subclass_qid, class_label, subclass_label).
-        Returns empty tuple on error to avoid caching failures.
+
+        **Remark:**
+        Failures propagate on purpose, for the same reason as in `_superclasses_cached`.
         """
-        try:
-            query: str = f"""
-                SELECT DISTINCT ?class ?classLabel ?subclass ?subclassLabel
-                WHERE
-                {{
-                    ?subclass wdt:P279 wd:{qid}.
-                    ?subclass wdt:P279 ?class.
-                    SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
-                }}
-                LIMIT 1000
-                """
-            reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
-            results: List[Tuple[str, str]] = []
-            if "results" in reply:
-                for b in reply["results"]["bindings"]:
-                    subclass_qid = b["subclass"]["value"].rsplit("/", 1)[-1]
-                    class_qid = b["class"]["value"].rsplit("/", 1)[-1]
-                    subclass_label = b["subclassLabel"]["value"]
-                    class_label = b["classLabel"]["value"]
-                    results.append((class_qid, subclass_qid, class_label, subclass_label))
-            return tuple(results)
-        except Exception as e:
-            logger.warning(f"Failed to fetch subclasses for {qid}: {e}")
-            return ()
+        query: str = f"""
+            SELECT DISTINCT ?class ?classLabel ?subclass ?subclassLabel
+            WHERE
+            {{
+                ?subclass wdt:P279 wd:{qid}.
+                ?subclass wdt:P279 ?class.
+                SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
+            }}
+            LIMIT 1000
+            """
+        reply: Dict[str, Any] = WikiDataAPIClient.sparql_query(query)
+        results: List[HierarchyEdge] = []
+        if "results" in reply:
+            for b in reply["results"]["bindings"]:
+                subclass_qid = b["subclass"]["value"].rsplit("/", 1)[-1]
+                class_qid = b["class"]["value"].rsplit("/", 1)[-1]
+                subclass_label = b["subclassLabel"]["value"]
+                class_label = b["classLabel"]["value"]
+                results.append((class_qid, subclass_qid, class_label, subclass_label))
+        return tuple(results)
 
     @staticmethod
     def superclasses(qid: str) -> Dict[str, WikidataClass]:
@@ -365,8 +320,8 @@ class WikiDataAPIClient:
                 wikidata_classes.setdefault(class_qid, WikidataClass(class_qid, class_label))
                 wikidata_classes.setdefault(superclass_qid, WikidataClass(superclass_qid, superclass_label))
                 adjacency_list.setdefault(class_qid, set()).add(superclass_qid)
-        except (ValueError, KeyError, HTTPError) as e:
-            logger.exception(e)
+        except HIERARCHY_LOOKUP_ERRORS as e:
+            logger.warning(f"Failed to fetch the class hierarchy of {qid}: {e}")
             return {qid: WikidataClass(qid, f"Class {qid}")}
         queue = deque([qid])
         visited = set()
@@ -428,9 +383,9 @@ class WikiDataAPIClient:
                 f"Search request failed with status code : {response.status_code}. " f"URL:= {url}"
             )
         search_result_dict_full: Dict[str, Any] = response.json()
-        for search_result_dict in search_result_dict_full["search"]:
+        for search_result_dict in search_result_dict_full.get("search", []):
             search_results_dict.append(WikidataSearchResult.from_dict(search_result_dict))
-            return search_results_dict
+        return search_results_dict
 
     @staticmethod
     def __wikidata_task__(qid: str) -> WikidataThing:
@@ -452,6 +407,10 @@ class WikiDataAPIClient:
             w_thing = WikidataThing.from_wikidata(__waiting_request__(qid))
             # Add the thing to the cache
             wikidata_cache.cache_wikidata_object(w_thing)
+            # Wikidata follows redirects silently, so the entity may come back under a
+            # different QID. Record the alias, otherwise the requested QID never hits the
+            # cache and every reference to it goes back to the network.
+            wikidata_cache.cache_redirect(qid, w_thing.qid)
             return w_thing
         except (ValueError, KeyError, HTTPError) as e:
             logger.exception(e)
@@ -520,7 +479,7 @@ class WikiDataAPIClient:
         """
         pulled: List[WikidataThing] = []
         task_size: int = len(qids)
-        if len(qids) == 0:
+        if task_size == 0:
             return []
         missing_qids: List[str] = []
         for qid in qids:
@@ -531,28 +490,23 @@ class WikiDataAPIClient:
                 pulled.append(wikidata_cache.get_wikidata_object(qid))
         ctr: int = len(pulled)
         if progress:
-            progress(len(pulled), task_size)
-        jobs: List[List[str]] = list(chunks(list(missing_qids), API_LIMIT))
-        num_processes: int = min(len(jobs), multiprocessing.cpu_count())
-        if num_processes > 1:
-            with Pool(processes=num_processes) as pool:
-                # Wikidata thing is not support in multiprocessing
-                for lst in pool.imap_unordered(__waiting_multi_request__, jobs):
-                    for w_dict in lst:
-                        w_thing = WikidataThing.from_wikidata(w_dict)
-                        wikidata_cache.cache_wikidata_object(w_thing)
-                        pulled.append(w_thing)
-                        ctr += 1
-                        if progress:
-                            progress(ctr, task_size)
-        else:
-            results = WikiDataAPIClient.__wikidata_multiple_task__(jobs[0])
-            for w_thing in results:
-                wikidata_cache.cache_wikidata_object(w_thing)
-                ctr += 1
-                if progress:
-                    progress(ctr, task_size)
-            pulled.extend(results)
+            progress(ctr, task_size)
+        jobs: List[List[str]] = list(chunks(missing_qids, API_LIMIT))
+        # Everything requested was already cached, or filtered out as a malformed QID.
+        if not jobs:
+            return pulled
+        # The work is HTTP-bound, so threads beat processes here: no interpreter re-import
+        # per worker, no pickling of the payload across a process boundary, and the degree
+        # of parallelism is set by what the endpoint tolerates rather than by the core count.
+        num_workers: int = min(len(jobs), MAX_PARALLEL_WIKIDATA_REQUESTS)
+        with ThreadPoolExecutor(max_workers=num_workers, thread_name_prefix="wikidata") as executor:
+            for things in executor.map(WikiDataAPIClient.__wikidata_multiple_task__, jobs):
+                for w_thing in things:
+                    wikidata_cache.cache_wikidata_object(w_thing)
+                    pulled.append(w_thing)
+                    ctr += 1
+                    if progress:
+                        progress(ctr, task_size)
         return pulled
 
     @staticmethod

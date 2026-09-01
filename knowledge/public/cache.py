@@ -403,6 +403,7 @@ class WikidataCache:
                         self.superclass_cache[superclass.qid] = superclass
                     except Exception as e:
                         logger.error(f"Error loading superclass cache: {e}. Line: {line}")
+        self.__load_redirects__(cache_path)
 
     def __load_redirects__(self, cache_path: Path) -> None:
         """Loads the QID redirects, when the file is present.
