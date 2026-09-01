@@ -1,0 +1,20 @@
+[flake8]
+# Matches the line length black and pylint are configured with. Without this file flake8
+# falls back to its 79-character default, which made every run a wall of E501 noise and
+# hid the findings that matter.
+max-line-length = 120
+# E203 (whitespace before ':') conflicts with how black formats slices.
+extend-ignore = E203
+exclude =
+    .git,
+    .venv,
+    __pycache__,
+    build,
+    dist,
+    htmlcov
+per-file-ignores =
+    # The package __init__ modules configure logging before re-exporting the public API,
+    # so their imports deliberately do not all sit at the top of the file.
+    knowledge/__init__.py:E402
+    knowledge/public/__init__.py:E402
+    knowledge/services/__init__.py:E402
