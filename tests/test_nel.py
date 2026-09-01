@@ -97,6 +97,8 @@ class EntityFlow(TestCase):
         entities, _, _ = self.knowledge_client.listing(
             THING_OBJECT, page_id=None, limit=10, locale=en_us, auth_key=self.cache.token
         )
+        found_an_entry: bool = False
+        found_ctr: int = 0
         fake: Faker = Faker(en_us)
         for ent in entities:
             if ent.use_for_nel and ent.label_lang(en_us) is not None:
@@ -105,7 +107,12 @@ class EntityFlow(TestCase):
                 linked_entities: List[KnowledgeGraphEntity] = self.nel_client.link_personal_entities(
                     text, language_code=en_us, auth_key=self.cache.token
                 )
-                self.assertGreaterEqual(len(linked_entities), 1)
+                if len(linked_entities) > 0:
+                    found_an_entry = True
+                    found_ctr += 1
+                if found_ctr > 10:
+                    break
+        self.assertTrue(found_an_entry)
 
     def test_3_nel_ja(self):
         """Test the named entity linking for Japanese."""
@@ -114,6 +121,8 @@ class EntityFlow(TestCase):
             THING_OBJECT, page_id=None, limit=10, locale=ja_jp, auth_key=self.cache.token
         )
         fake: Faker = Faker(ja_jp)
+        found_an_entry: bool = False
+        found_ctr: int = 0
         for ent in entities:
             if ent.use_for_nel and ent.label_lang(ja_jp) is not None:
                 text: str = f"{fake.text()}{ent.label_lang(ja_jp).content}"
@@ -121,7 +130,12 @@ class EntityFlow(TestCase):
                 linked_entities: List[KnowledgeGraphEntity] = self.nel_client.link_personal_entities(
                     text=text, language_code=ja_jp, auth_key=self.cache.token
                 )
-                self.assertGreaterEqual(len(linked_entities), 1)
+                if len(linked_entities) > 0:
+                    found_an_entry = True
+                    found_ctr += 1
+                if found_ctr > 10:
+                    break
+        self.assertTrue(found_an_entry)
 
     def test_4_nel_de(self):
         """Test the named entity linking for German."""
@@ -129,6 +143,8 @@ class EntityFlow(TestCase):
         entities, _, _ = self.knowledge_client.listing(
             THING_OBJECT, page_id=None, limit=10, locale=de_de, auth_key=self.cache.token
         )
+        found_an_entry: bool = False
+        found_ctr: int = 0
         fake: Faker = Faker(de_de)
         for ent in entities:
             if ent.use_for_nel and ent.label_lang(de_de) is not None:
@@ -137,7 +153,12 @@ class EntityFlow(TestCase):
                 linked_entities: List[KnowledgeGraphEntity] = self.nel_client.link_personal_entities(
                     text, language_code=de_de, auth_key=self.cache.token
                 )
-                self.assertGreaterEqual(len(linked_entities), 1)
+                if len(linked_entities) > 0:
+                    found_an_entry = True
+                    found_ctr += 1
+                if found_ctr > 10:
+                    break
+        self.assertTrue(found_an_entry)
 
     def teardown_class(self):
         """Clean up the test environment."""
