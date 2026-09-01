@@ -6,7 +6,7 @@ import re
 import uuid
 from json import JSONDecodeError
 from pathlib import Path
-from typing import List, Dict, Any, Iterable
+from typing import Any, Dict, Iterable, List, TextIO, cast
 
 import loguru
 
@@ -105,6 +105,41 @@ def __import_format_to_thing__(line: str, raise_on_error: bool = False) -> Thing
     return entity
 
 
+def __open_import_file__(file_path: Path, mode: str) -> TextIO:
+    """
+    Open an import-format file, transparently handling gzip compression.
+
+    Both readers and the writer go through here so that the set of supported suffixes, the
+    compression handling and the encoding are defined in exactly one place. A file written
+    by `save_import_format` is therefore always readable by `load_import_format` and by
+    `iterate_large_import_format`.
+
+    Parameters
+    ----------
+    file_path: Path
+        Path to the file. The suffix selects the format: `.gz` for a gzip-compressed
+        NDJSON stream, `.ndjson` for a plain one. Matched case-insensitively.
+    mode: str
+        Base file mode, one of `'r'`, `'w'` or `'a'`. Always opened as text, UTF-8.
+
+    Returns
+    -------
+    handle: TextIO
+        Open text handle for the file.
+
+    Raises
+    ------
+    ValueError
+        If the suffix does not name a supported import format.
+    """
+    suffix: str = file_path.suffix.lower()
+    if suffix == ".gz":
+        return cast(TextIO, gzip.open(file_path, f"{mode}t", encoding="utf-8"))
+    if suffix == ".ndjson":
+        return cast(TextIO, file_path.open(mode, encoding="utf-8"))
+    raise ValueError(f"Unsupported file format: {file_path.suffix}. Expected '.ndjson' or '.gz'.")
+
+
 def iterate_large_import_format(file_path: Path, raise_on_error: bool = False) -> Iterable[ThingObject]:
     """
     Iterates over a gzip‑compressed file containing ThingObject JSON lines, yielding parsed ThingObject instances.
@@ -135,16 +170,11 @@ def iterate_large_import_format(file_path: Path, raise_on_error: bool = False) -
     """
     if not file_path.exists():
         raise FileNotFoundError(f"File {file_path} does not exist.")
-    if file_path.suffix.lower() == ".gz":
-        with gzip.open(file_path, "rt", encoding="utf-8") as f_gz:
-            for line in f_gz:
-                yield __import_format_to_thing__(line, raise_on_error=raise_on_error)
-    elif file_path.suffix.lower() == ".ndjson":
-        with file_path.open("r", encoding="utf-8") as f:
-            for line in f:
-                yield __import_format_to_thing__(line, raise_on_error=raise_on_error)
-    else:
-        raise ValueError(f"Unsupported file format: {file_path.suffix}")
+    with __open_import_file__(file_path, "r") as fp_import:
+        for line in fp_import:
+            if not line.strip():
+                continue  # Skip empty lines
+            yield __import_format_to_thing__(line, raise_on_error=raise_on_error)
 
 
 def load_import_format(file_path: Path, raise_on_error: bool = True) -> List[ThingObject]:
@@ -179,31 +209,16 @@ def load_import_format(file_path: Path, raise_on_error: bool = True) -> List[Thi
         logger.error(f"Path {file_path} is not a file.")
         raise FileNotFoundError(f"Path {file_path} is not a file.")
     cached_entities: List[ThingObject] = []
-    if file_path.suffix.lower() == ".gz":
-        with gzip.open(file_path, "rt", encoding="utf-8") as f_gz:
-            for line_number, line in enumerate(f_gz):
-                stripped_line: str = line.strip()
-                if not stripped_line:
-                    continue  # Skip empty lines
-                if line_number == 0:
-                    # Skip the first line (header)
-                    continue
-                try:
-                    cached_entities.append(__import_format_to_thing__(line, raise_on_error=raise_on_error))
-                except JSONDecodeError as e:
-                    logger.error(f"[line:={line_number}] Error decoding JSON: {e}.")
-                except Exception as e:
-                    logger.error(f"[line:={line_number}] Error loading entity: {e}.")
-
-    else:
-        with file_path.open(encoding="utf8") as f:
-            for line_number, line in enumerate(f):
-                try:
-                    cached_entities.append(__import_format_to_thing__(line, raise_on_error=raise_on_error))
-                except JSONDecodeError as e:
-                    logger.error(f"[line:={line_number}] Error decoding JSON: {e}.")
-                except Exception as e:
-                    logger.error(f"[line:={line_number}] - Error parsing import format {e}.")
+    with __open_import_file__(file_path, "r") as fp_import:
+        for line_number, line in enumerate(fp_import, start=1):
+            if not line.strip():
+                continue  # Skip empty lines
+            try:
+                cached_entities.append(__import_format_to_thing__(line, raise_on_error=raise_on_error))
+            except JSONDecodeError as e:
+                logger.error(f"[line:={line_number}] Error decoding JSON: {e}.")
+            except Exception as e:
+                logger.error(f"[line:={line_number}] Error loading entity: {e}.")
     return cached_entities
 
 
@@ -228,24 +243,12 @@ def save_import_format(
     """
     # Create the directory if it does not exist
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    if file_path.suffix.lower() == ".gz":
-        with gzip.open(file_path, "wt", encoding="utf-8") as fp_thing:
-            for entity in entities:
-                if generate_missing_ref_ids and entity.default_source_reference_id() is None:
-                    entity.reference_id = str(uuid.uuid4())
-                if save_groups:
-                    fp_thing.write(f"{json.dumps(entity.__import_format_dict__(), ensure_ascii=False)}\n")
-                else:
-                    fp_thing.write(f"{json.dumps(entity.__import_format_dict__(group_ids=[]), ensure_ascii=False)}\n")
-    elif file_path.suffix == ".ndjson":
-        with file_path.open("w", encoding="utf-8") as fp_thing:
-            for entity in entities:
-                if generate_missing_ref_ids and entity.default_source_reference_id() is None:
-                    entity.reference_id = str(uuid.uuid4())
-                if save_groups:
-                    fp_thing.write(f"{json.dumps(entity.__import_format_dict__(), ensure_ascii=False)}\n")
-                else:
-                    fp_thing.write(f"{json.dumps(entity.__import_format_dict__(group_ids=[]), ensure_ascii=False)}\n")
+    with __open_import_file__(file_path, "w") as fp_thing:
+        for entity in entities:
+            if generate_missing_ref_ids and entity.default_source_reference_id() is None:
+                entity.reference_id = str(uuid.uuid4())
+            group_ids: Dict[str, Any] = {} if save_groups else {"group_ids": []}
+            fp_thing.write(f"{json.dumps(entity.__import_format_dict__(**group_ids), ensure_ascii=False)}\n")
 
 
 def append_import_format(file_path: Path, entity: ThingObject) -> None:
@@ -258,5 +261,5 @@ def append_import_format(file_path: Path, entity: ThingObject) -> None:
     entity: ThingObject
         The entity to append.
     """
-    with file_path.open("a", encoding="utf-8") as fp_thing:
+    with __open_import_file__(file_path, "a") as fp_thing:
         fp_thing.write(f"{json.dumps(entity.__import_format_dict__(), ensure_ascii=False)}\n")
