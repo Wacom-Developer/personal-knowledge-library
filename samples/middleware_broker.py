@@ -1,0 +1,246 @@
+# -*- coding: utf-8 -*-
+# Copyright © 2026-present Wacom Authors. All Rights Reserved.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language_code governing permissions and
+#  limitations under the License.
+"""Serving tens of thousands of PKS users from one backend process.
+
+The pattern this sample shows
+-----------------------------
+A middleware serving many end users must not log in once per request, and must not create a service client per user.
+:class:`AsyncTokenBroker` hands out a bare access token for an external user id, cached and refreshed behind the
+scenes. The token is passed to any service method through the per-method ``auth_key=`` override, so a *single*
+:class:`AsyncWacomKnowledgeService` is created once and shared by the whole process: no ``login()``, no
+``use_session()``, and nothing mutable per request.
+
+When to use the broker, and when not to
+---------------------------------------
+* Per-user work (reads and writes on behalf of an end user): use the broker. Entity ownership follows the token that
+  created the entity, so writes need per-user tokens.
+* A read-only sweep over all entities: do not use the broker at all. A ``TenantAdmin`` token bypasses the per-user
+  visibility filter in the PKS backend, so one token replaces tens of thousands. If you do sweep per user, pass
+  ``paced=True`` together with ``--rate-limit``: every user in a sweep is a cold miss by definition, and only the
+  limiter can flatten that burst of logins.
+
+ASGI lifespan wiring (documentation, not executed)
+--------------------------------------------------
+The library has no web-framework dependency, and the pattern is the same under FastAPI, Starlette or any other ASGI
+framework. Build the broker at startup and close it at shutdown: it owns a Redis pool and an aiohttp session that are
+bound to the event loop, which is exactly why the lifespan hook is the right place.
+
+.. code-block:: python
+
+    from contextlib import asynccontextmanager
+
+    from fastapi import FastAPI, Request
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # --- startup: one broker per process, built from configuration -----------------------------------------
+        redis_client = redis.asyncio.Redis.from_url(settings.redis_url, decode_responses=False)  # binary client!
+        app.state.broker = AsyncTokenBroker(
+            settings.pks_instance,
+            settings.tenant_api_key,
+            store=AsyncTieredTokenStore(l1=AsyncInMemoryTokenStore(), l2=AsyncRedisTokenStore(redis_client)),
+            lock=AsyncRedisLock(redis_client),
+            cipher=AesGcmCipher("2026-01", settings.token_cache_key),  # 32 bytes, from your secret store
+            rate_limit=settings.sweep_logins_per_second,
+        )
+        yield
+        # --- shutdown: release the Redis pool and the aiohttp session ------------------------------------------
+        await app.state.broker.aclose()
+
+    app = FastAPI(lifespan=lifespan)
+
+    @app.get("/things")
+    async def things(request: Request, user: str):
+        token = await get_token(request.app.state.broker, user)  # defined below
+        found, _, _ = await knowledge_client.listing(THING_OBJECT, limit=10, auth_key=token)
+        return [thing.uri for thing in found]
+
+Run the driver below with::
+
+    python samples/middleware_broker.py --tenant-api-key <key> --users 200 --concurrency 20
+    python samples/middleware_broker.py --tenant-api-key <key> --redis-url redis://localhost:6379/0
+"""
+
+import argparse
+import asyncio
+import os
+import time
+from typing import List, Optional
+
+import aiohttp
+
+from knowledge import logger
+from knowledge.base.ontology import OntologyClassReference
+from knowledge.services.asyncio.broker import AsyncTokenBroker
+from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
+from knowledge.services.base import WacomServiceException
+from knowledge.services.cache.base import BrokerStats
+from knowledge.services.cache.memory import AsyncInMemoryTokenStore
+
+THING_OBJECT: OntologyClassReference = OntologyClassReference("wacom", "core", "Thing")
+DEFAULT_INSTANCE: str = "https://private-knowledge.wacom.com"
+
+# One service client for the whole process, created once. It holds no per-user state: every call below names its user
+# by passing a token as ``auth_key=``, so concurrent requests for different users cannot interfere with each other.
+INSTANCE: str = os.environ.get("INSTANCE", DEFAULT_INSTANCE)
+knowledge_client: AsyncWacomKnowledgeService = AsyncWacomKnowledgeService(INSTANCE, "middleware-broker-sample")
+
+
+async def get_token(broker: AsyncTokenBroker, external_user_id: str, *, paced: bool = False) -> str:
+    """Return a PKS access token for a user: the integration seam a request handler calls.
+
+    Served from the cache in steady state; a login or refresh happens at most once per user per token lifetime.
+
+    Parameters
+    ----------
+    broker: AsyncTokenBroker
+        The process-wide broker, built once at startup.
+    external_user_id: str
+        External user id of the end user the request is made for.
+    paced: bool
+        Queue behind the broker's rate limiter. Use for sweeps and other bulk work, not for interactive requests.
+
+    Returns
+    -------
+    token: str
+        Access token, to be passed to a service method as ``auth_key``.
+    """
+    return await broker.token_for(external_user_id, paced=paced)
+
+
+def build_broker(
+    instance: str, tenant_api_key: str, redis_url: Optional[str], rate_limit: Optional[float]
+) -> AsyncTokenBroker:
+    """Build the broker, with a Redis-backed shared store if a URL is given, else a process-local one."""
+    if redis_url is None:
+        print("No --redis-url: using the in-memory store. Tokens are cached per process only.")
+        return AsyncTokenBroker(instance, tenant_api_key, store=AsyncInMemoryTokenStore(), rate_limit=rate_limit)
+    # Imported here and not at module scope: ``redis`` and ``cryptography`` belong to the optional ``cache`` extra,
+    # and ``--help`` and the in-memory path must work without them.
+    # pylint: disable=import-outside-toplevel
+    import redis.asyncio
+
+    from knowledge.services.cache.crypto import AesGcmCipher
+    from knowledge.services.cache.redis import AsyncRedisLock, AsyncRedisTokenStore
+    from knowledge.services.cache.tiered import AsyncTieredTokenStore
+
+    # pylint: enable=import-outside-toplevel
+
+    # The store handles raw bytes (``bytes(value)``), so the client must NOT decode responses to str.
+    redis_client = redis.asyncio.Redis.from_url(redis_url, decode_responses=False)
+    # A shared store requires a real cipher. This key is generated for the demo only and is not printed.
+    cipher = AesGcmCipher("sample", os.urandom(32))
+    print(
+        "Generated a throwaway AES-256 key for the demo. A real deployment supplies its own 32-byte key from a "
+        "secret store and rotates it by moving the old one to retired_keys."
+    )
+    return AsyncTokenBroker(
+        instance,
+        tenant_api_key,
+        # Process-local L1 in front of Redis: a Redis outage degrades to per-pod caching, not a login per request.
+        store=AsyncTieredTokenStore(l1=AsyncInMemoryTokenStore(), l2=AsyncRedisTokenStore(redis_client)),
+        # A shared store needs a shared lock; a process-local lock would let every pod believe it holds the lock.
+        lock=AsyncRedisLock(redis_client),
+        cipher=cipher,
+        rate_limit=rate_limit,
+    )
+
+
+async def simulate_user(broker: AsyncTokenBroker, external_user_id: str, paced: bool) -> bool:
+    """Make one cheap authenticated read on behalf of a user; returns whether it succeeded."""
+    try:
+        token = await get_token(broker, external_user_id, paced=paced)
+        await knowledge_client.listing(THING_OBJECT, limit=1, auth_key=token)
+        return True
+    except (WacomServiceException, aiohttp.ClientError) as exc:
+        if logger:
+            logger.warning(f"Request for {external_user_id} failed: {exc}")
+        return False
+
+
+async def worker(broker: AsyncTokenBroker, queue: "asyncio.Queue[str]", paced: bool, results: List[bool]) -> None:
+    """Take users off the queue until it is empty."""
+    while True:
+        try:
+            external_user_id = queue.get_nowait()
+        except asyncio.QueueEmpty:
+            return
+        results.append(await simulate_user(broker, external_user_id, paced))
+
+
+def print_stats(stats: BrokerStats, calls: int, failures: int, elapsed: float) -> None:
+    """Print the broker counters as a table."""
+    served = stats.hits + stats.misses
+    rows = [
+        ("calls", calls),
+        ("failed calls", failures),
+        ("elapsed seconds", f"{elapsed:.2f}"),
+        ("hit rate", f"{stats.hits / served:.1%}" if served else "n/a"),
+        ("logins", stats.logins),
+        ("refreshes", stats.refreshes),
+        ("refresh failures", stats.refresh_failures),
+        ("lock contention", stats.lock_contentions),
+    ]
+    print(f"\n{'metric':<20}{'value':>12}")
+    print("-" * 32)
+    for name, value in rows:
+        print(f"{name:<20}{value!s:>12}")
+
+
+async def run(args: argparse.Namespace) -> None:
+    """Fan the simulated users across the workers, twice: a cold pass, then a warm pass served from the cache."""
+    paced: bool = args.rate_limit is not None
+    users: List[str] = [f"middleware-sample-user-{i}" for i in range(args.users)]
+    async with build_broker(args.instance, args.tenant_api_key, args.redis_url, args.rate_limit) as broker:
+        for label in ("cold pass (every user is a miss)", "warm pass (served from the cache)"):
+            queue: "asyncio.Queue[str]" = asyncio.Queue()
+            for user in users:
+                queue.put_nowait(user)
+            results: List[bool] = []
+            started = time.monotonic()
+            await asyncio.gather(*(worker(broker, queue, paced, results) for _ in range(args.concurrency)))
+            print(f"\n== {label} ==")
+            print_stats(broker.stats(), len(results), results.count(False), time.monotonic() - started)
+    await knowledge_client.close()
+
+
+def main() -> None:
+    """Parse the arguments and run the driver."""
+    global knowledge_client  # pylint: disable=global-statement
+    parser = argparse.ArgumentParser(description="Serve many PKS users from one process with an AsyncTokenBroker.")
+    parser.add_argument("--instance", default=INSTANCE, help="URL of the PKS instance.")
+    parser.add_argument("--tenant-api-key", required=True, help="Tenant API key used for every user login.")
+    parser.add_argument(
+        "--redis-url",
+        default=None,
+        help="Redis URL, e.g. redis://localhost:6379/0. Enables the shared, encrypted store; "
+        "omitted, the in-memory store is used and no infrastructure is needed.",
+    )
+    parser.add_argument("--users", type=int, default=200, help="Number of simulated users (default: 200).")
+    parser.add_argument("--concurrency", type=int, default=20, help="Number of concurrent workers (default: 20).")
+    parser.add_argument(
+        "--rate-limit",
+        type=float,
+        default=None,
+        help="Logins and refreshes per second. Given, the driver calls the broker with paced=True, as a sweep would.",
+    )
+    args = parser.parse_args()
+    if args.instance != INSTANCE:  # the module-level client was built before the command line was read
+        knowledge_client = AsyncWacomKnowledgeService(args.instance, "middleware-broker-sample")
+    asyncio.run(run(args))
+
+
+if __name__ == "__main__":
+    main()
