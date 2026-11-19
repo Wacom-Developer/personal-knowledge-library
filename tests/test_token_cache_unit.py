@@ -7,6 +7,8 @@ import pytest
 from knowledge.services.cache.crypto import AesGcmCipher, NullCipher
 from knowledge.services.cache.memory import InMemoryTokenStore, InProcessLock
 
+InvalidTag = pytest.importorskip("cryptography.exceptions").InvalidTag
+
 KEY_1 = bytes(range(32))
 KEY_2 = bytes(range(32, 64))
 
@@ -35,7 +37,7 @@ def test_ciphertext_differs_across_calls():
 def test_aad_mismatch_rejects():
     cipher = AesGcmCipher("v1", KEY_1)
     blob = cipher.encrypt(b"secret-token", b"tok:a")
-    with pytest.raises(Exception):
+    with pytest.raises(InvalidTag):
         cipher.decrypt(blob, b"tok:b")
 
 
@@ -47,13 +49,13 @@ def test_decrypts_with_retired_key():
     # new writes use the active key and are not readable by the old cipher
     new_blob = rotated.encrypt(b"x", b"aad")
     assert new_blob.startswith(b"v2:")
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError, match="unknown key id"):
         old.decrypt(new_blob, b"aad")
 
 
 def test_unknown_key_id_rejects():
     blob = AesGcmCipher("v1", KEY_1).encrypt(b"payload", b"aad")
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError, match="unknown key id"):
         AesGcmCipher("v2", KEY_2).decrypt(blob, b"aad")
 
 
