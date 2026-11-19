@@ -236,9 +236,11 @@ default `NullCipher` raises `ValueError` in the constructor.
 ### Ownership and shutdown
 
 **You own the Redis client.** No store and no lock in `knowledge.services.cache` exposes `close` or `aclose`, so
-`AsyncTokenBroker.aclose()` closes only the aiohttp client it created itself, and `TokenBroker.close()` — whose
-components, with the shipped classes, expose no `close` at all — releases nothing. Close the Redis client and your
-shared service client yourself, at shutdown.
+with the shipped classes the only thing `aclose()` / `close()` has to release is the service client — and **only
+when the broker constructed it itself**. Pass `client=` and it stays yours, together with its `verify_calls`,
+`base_auth_url`, timeouts and retry configuration. Close the Redis client, and any service client you injected,
+yourself at shutdown. A component whose `close` raises is logged and stepped over, so one failing teardown cannot
+strand the rest.
 
 ### Key naming
 
