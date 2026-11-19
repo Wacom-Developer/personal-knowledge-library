@@ -11,6 +11,7 @@ Build first with::
     uv build
 """
 
+import os
 import re
 import tarfile
 import zipfile
@@ -44,9 +45,16 @@ EXPECTED_PYTHON_RANGE: SpecifierSet = SpecifierSet(">=3.10,<4.0")
 
 
 def _sole_artifact(pattern: str) -> Path:
-    """Return the one artifact matching ``pattern``, or skip if none was built."""
+    """Return the one artifact matching ``pattern``.
+
+    Skips locally when nothing has been built, so the unit suite stays green for anyone who
+    has not run ``uv build``. Under CI it fails instead: this is the gate that stands between
+    a mis-pinned sdist and PyPI, and a gate that can pass by skipping is not a gate.
+    """
     hits: List[Path] = sorted(DIST.glob(pattern))
     if not hits:
+        if os.environ.get("CI"):
+            pytest.fail(f"no {pattern} in dist/ — the distribution must be built before it is verified")
         pytest.skip(f"no {pattern} in dist/ — run `uv build` first")
     assert len(hits) == 1, f"expected exactly one {pattern} in dist/, found {[h.name for h in hits]}"
     return hits[0]
@@ -149,3 +157,31 @@ def test_lock_resolves_for_every_supported_python() -> None:
 def test_lock_contains_the_project_itself() -> None:
     """The lock describes this package, so `uv sync` installs it rather than only its dependencies."""
     assert 'name = "personal-knowledge-library"' in (REPO_ROOT / "uv.lock").read_text(encoding="utf-8")
+
+
+def _declared_version(text: str) -> str:
+    """The first ``version = "..."`` following the project's own package entry."""
+    after_project = text.split('name = "personal-knowledge-library"', 1)[-1]
+    match = re.search(r'^version = "([^"]+)"', after_project, re.MULTILINE)
+    assert match is not None, "uv.lock has no version for the project"
+    return match.group(1)
+
+
+def test_lock_is_in_step_with_pyproject() -> None:
+    """A stale lock must fail here, not in a release.
+
+    ``uv sync --frozen`` does not check this — it skips the up-to-dateness check entirely —
+    so a lock left behind by a version bump or a dependency change ships silently. This is
+    the guard that caught exactly that.
+    """
+    pyproject_version = re.search(
+        r'^version = "([^"]+)"', (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"), re.MULTILINE
+    )
+    assert pyproject_version is not None
+
+    assert _declared_version((REPO_ROOT / "uv.lock").read_text(encoding="utf-8")) == pyproject_version.group(1)
+
+
+def test_lock_does_not_carry_retired_dev_tools() -> None:
+    """tox left the dev extra; a lock still pinning it means the lock was never regenerated."""
+    assert '\nname = "tox"\n' not in (REPO_ROOT / "uv.lock").read_text(encoding="utf-8")

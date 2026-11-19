@@ -26,8 +26,9 @@ jobs:
       with:
         enable-cache: true
     - name: Install dependencies
-      # --frozen fails on a stale uv.lock rather than quietly resolving something else.
-      run: uv sync --frozen --extra dev --python ${{ matrix.python-version }}
+      # --locked asserts uv.lock is in step with pyproject.toml. NOT --frozen, which
+      # only skips updating the lock and would let a stale one through.
+      run: uv sync --locked --extra dev --python ${{ matrix.python-version }}
     - name: Lint with pylint
       run: |
         # --fail-on=E gates on error-level messages regardless of the score: a score

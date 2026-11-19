@@ -32,12 +32,20 @@ jobs:
 
       # Install dependencies
       - name: "Installs dependencies"
-        # --frozen fails on a stale uv.lock rather than quietly resolving something else.
-        run: uv sync --frozen
+        # --locked asserts uv.lock is in step with pyproject.toml. NOT --frozen, which
+        # only skips updating the lock and would let a stale one through.
+        # The dev extra is needed for the verification step below.
+        run: uv sync --locked --extra dev
 
       # Build and upload to PyPI
       - name: "Builds the distribution"
         run: uv build
+
+      # The last gate before the artefacts leave the building. Hatchling's default sdist
+      # is "every file VCS does not ignore", which in this repository would include
+      # pytest.ini and its live credentials; these tests fail if the pin ever regresses.
+      - name: "Verifies the distribution"
+        run: uv run --no-sync pytest tests/test_packaging_unit.py --no-cov -p no:cacheprovider -q
 
       - name: "Uploads to PyPI"
         run: uv publish

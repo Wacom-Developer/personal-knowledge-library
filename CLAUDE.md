@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Python SDK (`personal_knowledge_library`, currently v4.3.0) for Wacom's **Private Knowledge System (PKS)** — a multi-tenant cloud knowledge-graph service. Wraps PKS REST APIs for ontology management, entity CRUD, semantic search, Named Entity Linking, group/user/access management, ink processing, and content APIs. Also ships a Wikidata connector for importing public-graph entities.
+Python SDK (`personal_knowledge_library`, currently v5.1.2) for Wacom's **Private Knowledge System (PKS)** — a multi-tenant cloud knowledge-graph service. Wraps PKS REST APIs for ontology management, entity CRUD, semantic search, Named Entity Linking, group/user/access management, ink processing, and content APIs. Also ships a Wikidata connector for importing public-graph entities.
 
 Library only — no application code, no server. Consumers are partner companies with a Wacom-issued tenant API key.
 
@@ -18,15 +18,19 @@ uv run pytest                        # full test suite (uses pytest.ini env; --c
 uv run pytest tests/test_async_client.py::test_name -v   # single test
 uv run black .                       # format (line length 120)
 uv run mypy knowledge                # strict type-check (3.11)
-uv run pylint --rcfile=.pylintrc $(git ls-files '*.py') --fail-under=9.5
+uv run pylint --rcfile=.pylintrc $(git ls-files '*.py') --fail-under=9.5 --fail-on=E
 uv run flake8                        # max-line-length=120, ignore E203
 uv build                             # build wheel + sdist into dist/
 uv run --python 3.10 pytest          # run the suite against another supported interpreter
 ```
 
-`uv run` re-syncs before it runs, which drops extras it was not asked for; pass the same
-`--extra` flags, or `--no-sync` to use the environment exactly as `uv sync` left it.
-`uv.lock` is committed — regenerate it with `uv lock` whenever a dependency range changes.
+`uv run` syncs before it runs. It does not prune, so extras from an earlier `uv sync`
+survive — but it is free to *update* a stale `uv.lock`, which is why CI uses
+`uv run --no-sync` after an explicit `uv sync --locked`.
+
+`uv.lock` is committed. Regenerate it with `uv lock` after **any** change to
+`pyproject.toml`, including a version bump: `--frozen` does not check the lock is current
+(only `--locked` does), so a stale lock otherwise reaches a release silently.
 
 **Tests hit the live PKS stage server.** `pytest.ini` hard-codes `TENANT_API_KEY`, `INSTANCE=https://stage-private-knowledge.wacom.com`, and `EXTERNAL_USER_ID` as `pytest-env` vars. Failing tests can mean stage is down, not a code bug — check connectivity before debugging logic. There is no `conftest.py`; some tests provision and tear down users/entities directly.
 

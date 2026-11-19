@@ -8,6 +8,8 @@ test/
 .idea/
 # C extensions
 *.so
+pytest.ini
+poetry.lock
 
 # Distribution / packaging
 .Python
