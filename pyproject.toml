@@ -47,6 +47,7 @@ dev = [
     "pdoc3",
     "universal-ink-library"
 ]
+cache = ["redis>=5.0.0,<7.0.0", "cryptography>=43.0.0"]
 
 [tool.poetry]
 packages = [
