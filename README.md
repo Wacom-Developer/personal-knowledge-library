@@ -1282,6 +1282,78 @@ if __name__ == "__main__":
         print(f"The service materialized the inverse: {leo.uri} --{INSPIRED.iri}--> {artist_student_uri}")
 ```
 
+### Ontology Export
+
+`samples/ontology_export.py` saves the ontology of a tenant to an RDFS / OWL file. Exporting
+is a read operation, so unlike importing or changing an ontology it needs no special role —
+any shadow user may export the ontology of its tenant.
+
+```bash
+# Write the latest version to '<context>_v<version>.rdf'.
+python samples/ontology_export.py -t <tenant-api-key> -u <external-user-id>
+```
+
+```bash
+# Inspect the version history, then export one specific version.
+python samples/ontology_export.py -t <tenant-api-key> -u <external-user-id> --list-versions
+python samples/ontology_export.py -t <tenant-api-key> -u <external-user-id> -v 3 -o ontology-v3.rdf
+```
+
+| Option | Effect |
+| ------ | ------ |
+| `-c`, `--context` | Context to export. Defaults to the tenant's context. |
+| `-v`, `--version` | Version to export. Defaults to the latest committed one. |
+| `-o`, `--output` | File to write. Defaults to `<context>_v<version>.rdf`. |
+| `-l`, `--list-versions` | List the versions of the context and exit. |
+
+Passing `-o` counts as permission to overwrite; the generated default name does not, so a
+repeated export will not silently replace an earlier one.
+
+The file this produces is the input format of `samples/ontology_alignment.py`, so exporting
+one tenant and aligning another against the result copies an ontology between tenants.
+
+### Ontology Alignment
+
+`samples/ontology_alignment.py` brings a tenant ontology in line with an ontology held in an
+RDF file. It reads what the tenant currently has, compares it with the file, prints the
+resulting plan, and only then changes anything.
+
+```bash
+# Report what would change; nothing is written.
+python samples/ontology_alignment.py -t <tenant-api-key> -u <external-user-id> -r target.rdf
+```
+
+```bash
+# Snapshot the live ontology first, then align the tenant with the file.
+python samples/ontology_alignment.py -t <tenant-api-key> -u <external-user-id> \
+    -r target.rdf --export live.rdf --apply
+```
+
+Requires a shadow user with the **TenantAdmin** role. Without `--apply` the script is a dry
+run: it reports and exits.
+
+| Option | Effect |
+| ------ | ------ |
+| `-r`, `--rdf` | RDF file holding the target ontology. Any syntax rdflib reads is accepted. |
+| `-e`, `--export` | Write the live ontology to this file before changing it. |
+| `-a`, `--apply` | Apply the plan. Without it the script only reports. |
+
+The plan covers five kinds of change:
+
+| Reported as | What it does |
+| ----------- | ------------ |
+| `create concept` / `create data property` / `create object property` | Types the file declares and the tenant lacks. Created in dependency order, so a superclass exists before its subclasses and an inverse before the property pointing back at it. |
+| `update concept` / `update property` | Labels and comments that drifted from the file. |
+| `add domains` / `add ranges` | Domains and ranges the file declares for a property the tenant already has. |
+| `only in the tenant` | Types the tenant has and the file does not. **Reported only** — never deleted, because entities in the graph may still use them. |
+
+The file is the source of truth for labels and comments, so aligning can *remove* a value the
+tenant has. The plan marks every such value with `-` and prints a note, which is the reason
+the dry run is the default.
+
+Once changes are applied the script commits the ontology and triggers the graph service, then
+waits for both to finish — a committed version does nothing until it has been applied.
+
 ### Asynchronous Client 
 
 The sample shows how to use the asynchronous client. 

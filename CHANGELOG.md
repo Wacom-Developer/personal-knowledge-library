@@ -1,7 +1,5 @@
 2026/09/01 - RELEASE 5.0.0
 ==========================
-The 4.4.2 and 4.4.3 entries were never published; everything since 4.4.1 ships here.
-
 A correctness and alignment release. Several defects were live crashes or silent data loss on
 documented paths; the service's OpenAPI specification and source were used to find a class of
 bug the SDK's own tests cannot catch, where a request is well-formed but the service ignores it.
