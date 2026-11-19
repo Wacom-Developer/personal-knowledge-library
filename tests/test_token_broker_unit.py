@@ -16,7 +16,7 @@ import pytest
 
 from knowledge.services.base import WacomServiceException
 from knowledge.services.broker import TokenBroker
-from knowledge.services.cache.base import BrokerStats
+from knowledge.services.cache.base import BrokerStats, TokenStoreUnavailable
 from knowledge.services.cache.crypto import AesGcmCipher, NullCipher
 from knowledge.services.cache.limiter import TokenBucketLimiter
 from knowledge.services.cache.memory import InMemoryTokenStore, InProcessLock
@@ -84,6 +84,7 @@ class FakeClient:
         self.login_delay: float = login_delay
         self.logins: int = 0
         self.refreshes: int = 0
+        self.login_error: Optional[Exception] = None
         self.refresh_error: Optional[Exception] = None
         self.closed: bool = False
         self.subjects: Dict[str, str] = {}
@@ -103,6 +104,8 @@ class FakeClient:
         time.sleep(self.login_delay)  # outside the guard, so concurrent callers really do overlap
         with self._guard:
             self.logins += 1
+            if self.login_error is not None:
+                raise self.login_error
             return self._issue(external_id)
 
     def refresh_token(self, refresh_token: str) -> Tuple[str, str, datetime]:
@@ -136,6 +139,30 @@ class ClosingStore(InMemoryTokenStore):
         self.closed = True
 
 
+class RaisingStore(InMemoryTokenStore):
+    """Store whose selected operations report an unreachable backend."""
+
+    def __init__(self, failing: Tuple[str, ...] = ("get", "set", "delete")) -> None:
+        super().__init__()
+        self.failing: Tuple[str, ...] = failing
+
+    def _check(self, operation: str) -> None:
+        if operation in self.failing:
+            raise TokenStoreUnavailable(f"backend down on {operation}")
+
+    def get(self, key: str) -> Optional[bytes]:
+        self._check("get")
+        return super().get(key)
+
+    def set(self, key: str, value: bytes, ttl: float) -> None:
+        self._check("set")
+        super().set(key, value, ttl)
+
+    def delete(self, key: str) -> None:
+        self._check("delete")
+        super().delete(key)
+
+
 class RecordingLock:
     """Lock that counts every request and either always grants or never does."""
 
@@ -152,6 +179,42 @@ class RecordingLock:
     def release(self, key: str) -> None:
         """Release."""
         self.release_calls += 1
+
+
+class RaisingLock(RecordingLock):
+    """Lock whose selected operations report an unreachable backend."""
+
+    def __init__(self, failing: Tuple[str, ...] = ("acquire", "release"), grants: bool = True) -> None:
+        super().__init__(grants=grants)
+        self.failing: Tuple[str, ...] = failing
+
+    def acquire(self, key: str, ttl: float) -> bool:
+        """Refuse to answer, or answer as configured."""
+        self.acquire_calls += 1
+        if "acquire" in self.failing:
+            raise TokenStoreUnavailable("lock backend down on acquire")
+        return self.grants
+
+    def release(self, key: str) -> None:
+        """Refuse to answer, or record the release."""
+        self.release_calls += 1
+        if "release" in self.failing:
+            raise TokenStoreUnavailable("lock backend down on release")
+
+
+class HolderWritesLock(RecordingLock):
+    """A lock somebody else holds, who finishes their write before we re-read the cache."""
+
+    def __init__(self, store: InMemoryTokenStore, key: str, value: bytes) -> None:
+        super().__init__(grants=False)
+        self._store = store
+        self._key = key
+        self._value = value
+
+    def acquire(self, key: str, ttl: float) -> bool:
+        """Refuse the lock, having written what the holder would have written."""
+        self._store.set(self._key, self._value, 3600.0)
+        return super().acquire(key, ttl)
 
 
 class SpyLimiter:
@@ -287,6 +350,28 @@ def test_refresh_rejection_drops_the_refresh_key():
     assert kept != rejected, "the rejected refresh token must not survive in the cache"
 
 
+def test_rejected_refresh_token_is_dropped_even_when_the_fallback_login_fails():
+    """The drop has to happen at the rejection, not as a side effect of the login that usually follows it.
+
+    When the fallback login succeeds it overwrites ``:r`` anyway; only a failing login shows whether the rejected
+    token was really dropped, which is also the case that matters - it must not be left for the next request to
+    retry.
+    """
+    store = InMemoryTokenStore()
+    client = FakeClient(lifetime=310.0)
+    broker, _ = make_broker(client=client, store=store, early_refresh_seconds=600.0)
+    broker.token_for(USER)
+    _, key_r, _ = keys_for(USER)
+    assert store.get(key_r) is not None
+    client.refresh_error = WacomServiceException("Refresh token is invalid.")
+    client.login_error = WacomServiceException("Login failed.")
+
+    with pytest.raises(WacomServiceException, match="Login failed."):
+        broker.token_for(USER)
+
+    assert store.get(key_r) is None, "a rejected refresh token must not survive a failed fallback login"
+
+
 def test_expired_cache_entry_is_a_miss():
     """Review focus: a cached token whose expiry has already passed is never handed out.
 
@@ -397,6 +482,27 @@ def test_lost_lock_falls_back_to_login_without_blocking():
     assert broker.stats().lock_contentions == 1
 
 
+def test_lock_loser_is_served_by_the_holders_write():
+    """The branch that justifies ``lock_wait_seconds``: a contended renewal costs zero extra PKS calls."""
+    store = InMemoryTokenStore()
+    key_a, _, _ = keys_for(USER)
+    planted = mint(USER, ttl=3600.0)
+    lock = HolderWritesLock(store, key_a, forge(planted, time.time() + 3600.0))
+    broker, client = make_broker(store=store, lock=lock, lock_wait_seconds=0.05)
+    broker.token_for(USER)  # bootstrap; the lock is not used here
+    broker.invalidate(USER)  # so the next call misses, contends, and waits for the holder
+    before = broker.stats()
+
+    token = broker.token_for(USER)
+
+    assert token == planted, "the holder's write must be used rather than a token of our own"
+    assert client.logins == 1
+    assert client.refreshes == 0
+    assert broker.stats().hits == before.hits, "the call already counted a miss; it must not also count a hit"
+    assert broker.stats().misses == before.misses + 1
+    assert broker.stats().lock_contentions == before.lock_contentions + 1
+
+
 def test_renewal_releases_the_lock_it_took():
     lock = RecordingLock()
     broker, _ = make_broker(lock=lock)
@@ -420,6 +526,52 @@ def test_renewal_that_outlived_the_lock_ttl_does_not_release_it():
 
     assert lock.acquire_calls == 1
     assert lock.release_calls == 0
+
+
+def test_an_unreachable_store_degrades_to_a_login_per_call():
+    """Every store call - get, set and delete - is unreachable, and no request fails because of it."""
+    store = RaisingStore(failing=("get", "set", "delete"))
+    broker, client = make_broker(store=store)
+
+    first = broker.token_for(USER)
+    broker.invalidate(USER, drop_refresh=True)
+    second = broker.token_for(USER)
+
+    assert claims_of(first)["ext-sub"] == USER
+    assert claims_of(second)["ext-sub"] == USER
+    assert client.logins == 2, "nothing can be cached, so every call logs in"
+    assert broker.stats().misses == 2
+
+
+def test_an_unreachable_lock_backend_renews_without_waiting_for_a_holder():
+    """A lock nobody can reach has no holder, so waiting ``lock_wait_seconds`` for one would be pure latency."""
+    lock = RaisingLock(failing=("acquire", "release"))
+    client = FakeClient(lifetime=310.0)
+    broker, _ = make_broker(client=client, lock=lock, early_refresh_seconds=600.0, lock_wait_seconds=30.0)
+    broker.token_for(USER)
+
+    started = time.monotonic()
+    token = broker.token_for(USER)
+    elapsed = time.monotonic() - started
+
+    assert claims_of(token)["ext-sub"] == USER
+    assert elapsed < 1.0, f"waited {elapsed:.2f}s for a holder that cannot exist"
+    assert broker.stats().lock_contentions == 0, "an outage must not be reported as contention"
+    assert client.refreshes == 1, "the renewal still takes the refresh path, it just skips the lock"
+    assert client.logins == 1
+
+
+def test_a_failing_lock_release_does_not_fail_the_request():
+    lock = RaisingLock(failing=("release",), grants=True)
+    broker, client = make_broker(lock=lock)
+    broker.token_for(USER)
+    broker.invalidate(USER, drop_refresh=True)
+
+    token = broker.token_for(USER)
+
+    assert claims_of(token)["ext-sub"] == USER
+    assert lock.release_calls == 1, "the release was attempted and its failure swallowed"
+    assert client.logins == 2
 
 
 def test_invalidate_drops_access_key_only_by_default():
@@ -497,19 +649,51 @@ def test_shared_store_with_a_real_cipher_is_accepted():
     assert client.logins == 1
 
 
-def test_jitter_widens_the_early_refresh_window(monkeypatch):
-    broker, client = make_broker(
-        client=FakeClient(lifetime=350.0), early_refresh_seconds=300.0, early_refresh_jitter_seconds=120.0
+def test_the_jitter_offset_is_stable_per_user_and_spread_across_users():
+    """The offset must not be redrawn per read, or a user read many times a second renews at the band's edge."""
+    jitter = 120.0
+    broker, _ = make_broker(early_refresh_jitter_seconds=jitter)
+    key_a, _, _ = keys_for(USER)
+
+    assert broker._jitter_for(key_a) == broker._jitter_for(key_a), "the offset must be constant across reads"
+
+    offsets = [broker._jitter_for(f"pks:{index:064x}:a") for index in range(200)]
+    assert all(0.0 <= offset < jitter for offset in offsets)
+    assert len(set(offsets)) > 190, "near-distinct offsets, not one shared value"
+    assert min(offsets) < jitter * 0.2 and max(offsets) > jitter * 0.8, "the whole band is used"
+
+
+def test_zero_jitter_means_no_offset():
+    broker, _ = make_broker(early_refresh_jitter_seconds=0.0)
+
+    assert broker._jitter_for(keys_for(USER)[0]) == 0.0
+
+
+def test_the_jitter_offset_widens_the_early_refresh_window():
+    jitter = 120.0
+    probe, _ = make_broker(early_refresh_jitter_seconds=jitter)
+    offset = probe._jitter_for(keys_for(USER)[0])
+    assert offset > 1.0, f"this user's offset ({offset:.1f}s) is too small to tell the two cases apart"
+
+    outside, outside_client = make_broker(
+        client=FakeClient(lifetime=300.0 + offset + 30.0),
+        early_refresh_seconds=300.0,
+        early_refresh_jitter_seconds=jitter,
     )
-    monkeypatch.setattr("knowledge.services.broker.random.uniform", lambda low, high: low)
-    first = broker.token_for(USER)
+    first = outside.token_for(USER)
 
-    assert broker.token_for(USER) == first, "without jitter 350s of life clears the 300s threshold"
+    assert outside.token_for(USER) == first, "life beyond the offset threshold is still a hit"
+    assert outside_client.refreshes == 0
 
-    monkeypatch.setattr("knowledge.services.broker.random.uniform", lambda low, high: high)
-    broker.token_for(USER)
+    inside, inside_client = make_broker(
+        client=FakeClient(lifetime=300.0 + offset - 30.0),
+        early_refresh_seconds=300.0,
+        early_refresh_jitter_seconds=jitter,
+    )
+    inside.token_for(USER)
+    inside.token_for(USER)
 
-    assert client.refreshes == 1, "with full jitter the same token falls inside the 420s threshold"
+    assert inside_client.refreshes == 1, "life inside the offset threshold is renewed, so the offset is applied"
 
 
 def test_stats_counts_hits_misses_logins_refreshes():

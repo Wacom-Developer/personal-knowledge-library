@@ -13,10 +13,11 @@ approaching expiry is rotated through ``/user/refresh`` rather than re-logged in
 per user on the service instead of one per renewal.
 """
 
-import random
+import hashlib
 import threading
 import time
 from dataclasses import dataclass
+from enum import Enum, auto
 from typing import Any, Dict, Optional, Tuple
 
 import orjson
@@ -60,6 +61,18 @@ class _Keys:
     lock: str
 
 
+class _LockOutcome(Enum):
+    """What came of asking for the renewal lock.
+
+    ``CONTENDED`` and ``UNAVAILABLE`` both mean "not holding it", but they call for opposite responses: there is a
+    holder worth waiting for in the first case and provably none in the second.
+    """
+
+    HELD = auto()
+    CONTENDED = auto()
+    UNAVAILABLE = auto()
+
+
 class TokenBroker:  # pylint: disable=too-many-instance-attributes
     """Caches PKS access tokens for many users behind one service client.
 
@@ -87,12 +100,14 @@ class TokenBroker:  # pylint: disable=too-many-instance-attributes
     early_refresh_seconds: float
         Renew a token this long before it expires.
     early_refresh_jitter_seconds: float
-        Upper bound of a random addition to ``early_refresh_seconds``, drawn per read, so that pods holding tokens
-        minted together do not renew them together.
+        Width of the band each user's renewal is spread over. Every user gets a fixed offset inside it, derived
+        from its cache key, so that a cohort of tokens minted together - a fleet restarted after a deploy, say -
+        is renewed across the band instead of all at once. See :meth:`_jitter_for`.
     lock_ttl_seconds: float
         How long a renewal may hold the lock before another caller may take it.
     lock_wait_seconds: float
-        How long a caller that lost the lock waits for the holder's result before logging in itself.
+        How long a caller that lost the lock waits for the holder's result before logging in itself. A caller that
+        could not reach the lock backend at all does not wait: there is no holder to wait for.
 
     Raises
     ------
@@ -170,7 +185,7 @@ class TokenBroker:  # pylint: disable=too-many-instance-attributes
                 return bootstrapped
         keys = self._keys(realm, external_user_id)
         cached = self._read_access(keys.access)
-        if cached is not None and self._is_fresh(cached):
+        if cached is not None and self._is_fresh(keys.access, cached):
             self._count("hits")
             return cached.access_token
         self._count("misses")
@@ -279,9 +294,24 @@ class TokenBroker:  # pylint: disable=too-many-instance-attributes
 
     # ------------------------------------------------ read path ------------------------------------------------
 
-    def _is_fresh(self, cached: CachedToken) -> bool:
+    def _jitter_for(self, key: str) -> float:
+        """Return this entry's renewal offset: a stable value in ``[0, early_refresh_jitter_seconds)``.
+
+        Derived from a SHA-256 of the cache key - not :func:`hash`, whose seed differs per process - so every pod
+        computes the same offset for a given user and a different one for the next user. That is what spreads a
+        cohort of tokens minted together; drawing a fresh random offset per read would not, because a user read
+        many times a second renews on the first draw that clears the remaining life, which is the earliest edge of
+        the band and the same instant for every pod.
+        """
+        if self._early_refresh_jitter_seconds <= 0:
+            return 0.0
+        digest = hashlib.sha256(key.encode("utf-8")).digest()
+        fraction = int.from_bytes(digest[:8], "big") / 2**64
+        return fraction * self._early_refresh_jitter_seconds
+
+    def _is_fresh(self, key: str, cached: CachedToken) -> bool:
         """Whether a cached token has enough life left to be handed out."""
-        margin = self._early_refresh_seconds + random.uniform(0.0, self._early_refresh_jitter_seconds)
+        margin = self._early_refresh_seconds + self._jitter_for(key)
         return cached.expires_at - time.time() > margin
 
     def _read_access(self, key: str) -> Optional[CachedToken]:
@@ -320,16 +350,22 @@ class TokenBroker:  # pylint: disable=too-many-instance-attributes
         The lock exists to spare the service a pile of parallel refresh chains, not to make the result correct: a
         caller that loses it waits briefly for the holder's write and otherwise just logs in. It never retries.
         """
-        if self._acquire(keys.lock):
+        outcome = self._acquire(keys.lock)
+        if outcome is _LockOutcome.HELD:
             acquired_at = time.monotonic()
             try:
                 return self._renew_as_holder(external_user_id, keys, paced)
             finally:
                 self._release(keys.lock, acquired_at)
+        if outcome is _LockOutcome.UNAVAILABLE:
+            # Nobody can be holding a lock whose backend is unreachable, so there is no holder whose write is worth
+            # waiting for. Renewing straight away keeps the latency of a degraded backend off the caller, and the
+            # outage is already counted where it belongs rather than as contention.
+            return self._renew_as_holder(external_user_id, keys, paced)
         self._count("lock_contentions")
         time.sleep(self._lock_wait_seconds)
         cached = self._read_access(keys.access)
-        if cached is not None and self._is_fresh(cached):
+        if cached is not None and self._is_fresh(keys.access, cached):
             # Deliberately not counted as a hit: the call already counted a miss, and every call should move
             # exactly one of the two counters, or the hit ratio stops meaning anything.
             return cached.access_token
@@ -420,14 +456,14 @@ class TokenBroker:  # pylint: disable=too-many-instance-attributes
             if logger:
                 logger.warning(f"Token store unavailable on delete, entry left in place: {exc}")
 
-    def _acquire(self, key: str) -> bool:
-        """Try to take the renewal lock; an unavailable backend counts as not holding it."""
+    def _acquire(self, key: str) -> _LockOutcome:
+        """Try to take the renewal lock, distinguishing a held lock from an unreachable backend."""
         try:
-            return self._lock.acquire(key, self._lock_ttl_seconds)
+            return _LockOutcome.HELD if self._lock.acquire(key, self._lock_ttl_seconds) else _LockOutcome.CONTENDED
         except TokenStoreUnavailable as exc:
             if logger:
-                logger.warning(f"Lock backend unavailable, proceeding without the lock: {exc}")
-            return False
+                logger.warning(f"Lock backend unavailable, renewing without the lock: {exc}")
+            return _LockOutcome.UNAVAILABLE
 
     def _release(self, key: str, acquired_at: float) -> None:
         """Release the renewal lock. Best effort: a failed release must never fail the caller's request.
