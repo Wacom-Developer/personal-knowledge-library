@@ -1,3 +1,30 @@
+2026/11/19 - RELEASE 5.1.1
+==========================
+Three fixes, no API changes. The one that can cost you data is in the RDF ontology importer:
+object properties came back from `ontology_import` with their labels and comments silently
+dropped, so a round trip through the importer lost the multilingual naming of every relation
+in the ontology.
+
+Ontology
+--------
+- **FIXED** — `ontology_import` now keeps the `labels` and `comments` of object properties
+  (`knowledge/base/ontology.py`). They were parsed out of the RDF and then left off the
+  `OntologyProperty` that was constructed, so every object property arrived unlabelled and
+  uncommented regardless of what the source RDF said. Classes and data properties were
+  unaffected — they already passed both through — which is why this was easy to miss.
+  Covered by `TestOntologyImport` in `tests/test_ontology_unit.py`.
+
+Samples
+-------
+- **FIXED** — `samples/nel_text.py` referenced two names that do not exist in `print_entity`
+  (`knowledge_client` and `user_token`) instead of its own `client` and `auth_key` parameters,
+  so the sample raised `NameError` on the first linked entity it tried to print.
+
+Build
+-----
+- CI publishing now runs on Python 3.11 instead of 3.9, which is below the project's
+  `requires-python = ">=3.10"` floor.
+
 2026/11/19 - RELEASE 5.1.0
 ==========================
 One feature and one fix, both about the same thing: authenticating a lot of users from one backend

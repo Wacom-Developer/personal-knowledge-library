@@ -51,6 +51,8 @@ from knowledge.base.ontology import (
     # Constants
     SYSTEM_SOURCE_REFERENCE_ID,
     SYSTEM_SOURCE_SYSTEM,
+    # RDF import
+    ontology_import,
 )
 
 
@@ -805,3 +807,40 @@ class TestThingEncoder:
 
         assert parsed["key"] == "value"
         assert parsed["number"] == 42
+
+
+class TestOntologyImport:
+    """Tests for ontology_import, the RDF/XML parser behind the ontology samples."""
+
+    RDF_CONTENT: str = """<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xmlns:wacom="wacom:core#">
+  <owl:Class rdf:about="wacom:core#Person"/>
+  <owl:Class rdf:about="wacom:core#Artwork"/>
+  <owl:ObjectProperty rdf:about="wacom:core#created">
+    <rdfs:domain rdf:resource="wacom:core#Person"/>
+    <rdfs:range rdf:resource="wacom:core#Artwork"/>
+    <wacom:prefLabel xml:lang="en">created</wacom:prefLabel>
+    <wacom:prefLabel xml:lang="de">erschuf</wacom:prefLabel>
+    <rdfs:comment xml:lang="en">Links a person to the artwork they created.</rdfs:comment>
+  </owl:ObjectProperty>
+</rdf:RDF>
+"""
+
+    def test_object_property_keeps_labels(self):
+        """The labels of an object property survive the RDF import."""
+        ontology = ontology_import(self.RDF_CONTENT)
+
+        created = ontology.get_object_properties(OntologyPropertyReference.parse("wacom:core#created"))
+
+        assert {(la.content, la.language_code) for la in created.labels} == {("created", "en"), ("erschuf", "de")}
+
+    def test_object_property_keeps_comments(self):
+        """The comments of an object property survive the RDF import."""
+        ontology = ontology_import(self.RDF_CONTENT)
+
+        created = ontology.get_object_properties(OntologyPropertyReference.parse("wacom:core#created"))
+
+        assert [co.content for co in created.comments] == ["Links a person to the artwork they created."]

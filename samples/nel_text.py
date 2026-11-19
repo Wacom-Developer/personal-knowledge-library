@@ -44,7 +44,7 @@ def print_entity(entity: KnowledgeGraphEntity, list_idx: int, auth_key: str, cli
     client: WacomKnowledgeService
         Knowledge graph client
     """
-    thing: ThingObject = knowledge_client.entity(auth_key=user_token, uri=entity.entity_source.uri)
+    thing: ThingObject = client.entity(auth_key=auth_key, uri=entity.entity_source.uri)
     print(
         f"[{list_idx}] - {entity.ref_text} [{entity.start_idx}-{entity.end_idx}] : {thing.uri}"
         f" <{thing.concept_type.iri}>"

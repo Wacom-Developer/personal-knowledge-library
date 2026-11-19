@@ -4140,6 +4140,8 @@ def ontology_import(rdf_content: str, tenant_id: str = "", context: str = "") ->
                 property_domain=domain_prop,
                 sub_property_of=subproperty_of,
                 inverse_property_of=inverse_prop,
+                labels=labels,
+                comments=comments,
             )
         )
     return ontology
