@@ -680,7 +680,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
 
     USER_ENDPOINT: str = "user"
     USER_LOGIN_ENDPOINT: str = f"graph/v1/{USER_ENDPOINT}/login"
-    USER_REFRESH_ENDPOINT: str = f"{USER_ENDPOINT}/refresh"
+    USER_REFRESH_ENDPOINT: str = f"graph/v1/{USER_ENDPOINT}/refresh"
 
     def __init__(
         self,
@@ -962,7 +962,7 @@ class AsyncServiceAPIClient(RESTAPIClient):
         WacomServiceException
             Exception if the service returns HTTP error code.
         """
-        url: str = f"{self.service_base_url}{AsyncServiceAPIClient.USER_REFRESH_ENDPOINT}/"
+        url: str = f"{self.refresh_endpoint}/"
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: "application/json",
@@ -1079,3 +1079,8 @@ class AsyncServiceAPIClient(RESTAPIClient):
         """Authentication endpoint."""
         # This is in the graph service REST API
         return f"{self.base_auth_url}/{self.USER_LOGIN_ENDPOINT}"
+
+    @property
+    def refresh_endpoint(self) -> str:
+        """Token refresh endpoint (always in the graph service REST API, like login)."""
+        return f"{self.base_auth_url}/{self.USER_REFRESH_ENDPOINT}"
