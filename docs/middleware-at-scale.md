@@ -143,6 +143,12 @@ the cohort peak down to ~47/s. The cost is that a wider band shortens the averag
 average becomes `3600 - 300 - 450 = 2850 s`, so the ceiling of §1 rises from ~13/s to ~15/s. Widen the band to
 flatten peaks, not to reduce total load.
 
+**Tuning `early_refresh_seconds` spends a clock-skew budget.** `_is_fresh` compares the token's `exp` claim against
+the pod's own `time.time()`, so the 300 s default doubles as the margin absorbing pod-to-PKS clock skew, and
+lowering it to buy a longer effective token life tightens that budget by exactly the same amount — enough drift and
+the broker starts handing out tokens PKS considers expired, which is the "clock problem" behind a `refresh_failures`
+spike in §9.
+
 ---
 
 ## 3. What you configure
@@ -191,13 +197,16 @@ pip install personal-knowledge-library[cache]
 
 ### Three foot-guns, in order of how much they cost
 
-**1. A Redis store paired with the default process-local lock.** This is accepted silently today and it is the
-expensive mistake. `InProcessLock` / `AsyncInProcessLock` is exclusive *within one process only*, so every pod
-believes it holds the lock for every user, every pod renews, and you get precisely the duplicate-document blow-up of
-§1 — the one the lock exists to prevent. **If you pass a shared store, pass `RedisLock` / `AsyncRedisLock` too.**
+**1. A Redis store paired with the default process-local lock.** This is the expensive mistake.
+`InProcessLock` / `AsyncInProcessLock` is exclusive *within one process only*, so every pod believes it holds the
+lock for every user, every pod renews, and you get precisely the duplicate-document blow-up of §1 — the one the lock
+exists to prevent. **If you pass a shared store, pass `RedisLock` / `AsyncRedisLock` too.**
 
-Nothing in the library will tell you, and **no counter will reveal it either** — see §9 — so assert it yourself at
-startup, where it is one line:
+The constructor logs a `warning` when it sees a shared store with one of the process-local lock classes — including
+the one it defaults to when you pass no `lock=` at all. It is a warning rather than a `ValueError` because a lock
+shared by some other means is legitimate; it will not stop you, and it is only as visible as your log pipeline makes
+warnings at startup. **No counter will reveal the mistake either** — see §9 — so still assert it yourself at startup,
+where it is one line:
 
 ```python
 if store.shared and not isinstance(lock, AsyncRedisLock):
@@ -413,7 +422,8 @@ fault. If it rises in step with traffic *past* the ceiling, something is authent
 - [ ] One broker per process, built at startup, closed at shutdown.
 - [ ] Shared store? Then a shared lock (`RedisLock` / `AsyncRedisLock`) **and** an `AesGcmCipher`.
 - [ ] A startup assertion that a shared store is paired with `RedisLock` / `AsyncRedisLock`, or at least a log line
-      naming the lock class — no counter will tell you.
+      naming the lock class. The constructor warns about the process-local default, but no counter will tell you,
+      and a warning is easy to miss in a startup log.
 - [ ] Tiered store (`l1=` in-memory, `l2=` Redis), so a Redis outage degrades to per-pod caching.
 - [ ] **Every** in-memory store, L1 tier included, sized at `max_entries ≥ 2 × distinct users served per pod`
       (two keys per user). An undersized L1 thrashes during a Redis outage and gives you back a login per request.

@@ -39,6 +39,16 @@ Token broker
   sum is the number of calls served and the ratio is meaningful as a hit rate.
 - `invalidate(external_user_id, drop_refresh=False)` drops a user's cached access token; the refresh
   chain is kept unless the chain itself is suspect.
+- `close()` / `aclose()` closes **only a client the broker constructed itself**. An injected
+  `WacomServiceAPIClient` / `AsyncServiceAPIClient` stays the caller's, together with its timeouts and
+  retry configuration. Store, lock and client are each released independently, so a component whose
+  `close` raises cannot strand the ones after it or fail an ASGI lifespan shutdown.
+- A shared store paired with the process-local `InProcessLock` / `AsyncInProcessLock` — including the
+  default used when no `lock=` is passed — now logs a `warning`. It is deliberately not an error: a lock
+  shared by other means is legitimate. Assert the lock class at startup as well; no counter reveals the
+  mistake.
+- `TokenBucketLimiter` / `AsyncTokenBucketLimiter` reject a `nan` or infinite `rate` or `capacity` with
+  `ValueError`. `nan` previously passed validation and then waited `nan` seconds, i.e. hung.
 
 Token cache building blocks (`knowledge.services.cache`)
 --------------------------------------------------------
