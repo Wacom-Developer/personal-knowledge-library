@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Copyright © 2026-present Wacom. All rights reserved.
-"""Process-local token store and lock."""
+"""Process-local token store and lock, plus the awaitable adapters the async broker defaults to."""
 
 import threading
 import time
@@ -95,3 +95,70 @@ class InProcessLock:
         """Release the lock."""
         with self._guard:
             self._held.pop(key, None)
+
+
+class AsyncInMemoryTokenStore:
+    """Awaitable adapter over a process-local :class:`InMemoryTokenStore`.
+
+    The async broker is typed against ``AsyncTokenStore``, and the in-memory store is the default it falls back to
+    when no shared backend is configured. Its operations are a dictionary lookup under a short-lived mutex - no
+    I/O, nothing that can wait - so presenting them as coroutines costs an await and never yields to the loop or
+    stalls it. There is deliberately no second storage implementation here: this delegates to the one above.
+
+    The adapted type is :class:`InMemoryTokenStore` rather than the ``TokenStore`` protocol at large, because an
+    adapter accepting any synchronous store would invite wrapping a blocking network backend, which is exactly
+    what an event loop must not do. A shared backend needs a natively asynchronous client instead.
+
+    Parameters
+    ----------
+    store: Optional[InMemoryTokenStore]
+        Store to adapt, for callers that need to size or clock it. Defaults to a fresh one.
+    """
+
+    def __init__(self, store: Optional["InMemoryTokenStore"] = None) -> None:
+        self._store: InMemoryTokenStore = store if store is not None else InMemoryTokenStore()
+
+    @property
+    def shared(self) -> bool:
+        """``True`` when other processes can read the adapted store."""
+        return self._store.shared
+
+    async def get(self, key: str) -> Optional[bytes]:
+        """Return the value, or ``None`` if absent or expired."""
+        return self._store.get(key)
+
+    async def set(self, key: str, value: bytes, ttl: float) -> None:
+        """Store ``value`` for ``ttl`` seconds."""
+        self._store.set(key, value, ttl)
+
+    async def delete(self, key: str) -> None:
+        """Remove ``key`` if present."""
+        self._store.delete(key)
+
+    async def ttl(self, key: str) -> Optional[float]:
+        """Remaining time-to-live in seconds, or ``None`` if the key is absent or expired."""
+        return self._store.ttl(key)
+
+
+class AsyncInProcessLock:
+    """Awaitable adapter over :class:`InProcessLock`; exclusive within one process only.
+
+    Like the store above, the adapted operations are pure in-memory bookkeeping, so they are never a reason to
+    yield. See :class:`AsyncInMemoryTokenStore` for why this adapts the concrete lock rather than the protocol.
+
+    Parameters
+    ----------
+    lock: Optional[InProcessLock]
+        Lock to adapt, for callers that need to clock it. Defaults to a fresh one.
+    """
+
+    def __init__(self, lock: Optional["InProcessLock"] = None) -> None:
+        self._lock: InProcessLock = lock if lock is not None else InProcessLock()
+
+    async def acquire(self, key: str, ttl: float) -> bool:
+        """Take the lock for at most ``ttl`` seconds; ``False`` if it is held and unexpired."""
+        return self._lock.acquire(key, ttl)
+
+    async def release(self, key: str) -> None:
+        """Release the lock."""
+        self._lock.release(key)

@@ -14,11 +14,18 @@ from knowledge.services.cache.base import (
 )
 from knowledge.services.cache.crypto import AesGcmCipher, NullCipher
 from knowledge.services.cache.limiter import AsyncTokenBucketLimiter, TokenBucketLimiter
-from knowledge.services.cache.memory import InMemoryTokenStore, InProcessLock
+from knowledge.services.cache.memory import (
+    AsyncInMemoryTokenStore,
+    AsyncInProcessLock,
+    InMemoryTokenStore,
+    InProcessLock,
+)
 from knowledge.services.cache.tiered import AsyncTieredTokenStore, TieredTokenStore
 
 __all__ = [
     "AesGcmCipher",
+    "AsyncInMemoryTokenStore",
+    "AsyncInProcessLock",
     "AsyncTieredTokenStore",
     "AsyncTokenBucketLimiter",
     "AsyncTokenLock",
