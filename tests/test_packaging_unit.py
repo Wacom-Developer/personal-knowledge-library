@@ -10,6 +10,7 @@ Build first with::
 
     uv build
 """
+import re
 import tarfile
 import zipfile
 from email.message import Message
@@ -125,3 +126,25 @@ def test_wheel_metadata_declares_both_extras(wheel_metadata: Message) -> None:
 def test_wheel_declares_the_supported_python_range(wheel_metadata: Message) -> None:
     """Requires-Python survives the backend swap; compared parsed, since backends reorder clauses."""
     assert SpecifierSet(wheel_metadata["Requires-Python"]) == EXPECTED_PYTHON_RANGE
+
+
+def test_lock_resolves_for_every_supported_python() -> None:
+    """uv.lock covers the whole requires-python range, not just the interpreter that wrote it.
+
+    CI runs the matrix down to 3.10 while the lock is usually generated on a newer
+    interpreter, so a lock pinned narrower than the project would fail only in CI.
+    """
+    lock = REPO_ROOT / "uv.lock"
+    assert lock.exists(), "uv.lock is missing — run `uv lock`"
+
+    # Read the first top-level requires-python; it precedes every [[package]] table.
+    # Parsed by regex rather than tomllib, which does not exist on Python 3.10.
+    declared = re.search(r'^requires-python = "([^"]+)"', lock.read_text(encoding="utf-8"), re.MULTILINE)
+
+    assert declared is not None, "uv.lock declares no requires-python"
+    assert SpecifierSet(declared.group(1)) == EXPECTED_PYTHON_RANGE
+
+
+def test_lock_contains_the_project_itself() -> None:
+    """The lock describes this package, so `uv sync` installs it rather than only its dependencies."""
+    assert 'name = "personal-knowledge-library"' in (REPO_ROOT / "uv.lock").read_text(encoding="utf-8")
