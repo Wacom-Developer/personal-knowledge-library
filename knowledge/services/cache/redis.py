@@ -10,6 +10,7 @@ when Redis is down.
 This module is never imported by ``knowledge.services.cache`` itself.
 """
 
+import asyncio
 import secrets
 import threading
 from typing import Any, Dict, Optional, Tuple, Type
@@ -27,7 +28,15 @@ _LOCK_TOKEN_BYTES: int = 16
 
 
 def _backend_errors() -> Tuple[Type[BaseException], ...]:
-    """Import ``redis`` lazily and return the exception types that mean the backend is unavailable."""
+    """Import ``redis`` lazily and return the exception types that mean the backend is unavailable.
+
+    ``asyncio.TimeoutError`` is listed explicitly because it is not an ``OSError`` on Python 3.10, which this
+    package still supports: a timeout that redis-py did not wrap would otherwise escape the store boundary, pass
+    straight through a tiered store's fallback and the broker's ``_get``, and fail the caller's request - exactly
+    what mapping every backend failure onto :class:`TokenStoreUnavailable` exists to prevent. From 3.11 it is an
+    alias of the built-in ``TimeoutError`` and therefore already covered by ``OSError``; naming it costs nothing
+    and keeps the contract the same on every supported version.
+    """
     try:
         from redis.exceptions import RedisError  # pylint: disable=import-outside-toplevel
     except ImportError as exc:
@@ -35,7 +44,7 @@ def _backend_errors() -> Tuple[Type[BaseException], ...]:
             "The Redis token cache requires the 'redis' package. Install it with the 'cache' extra: "
             "pip install personal-knowledge-library[cache]"
         ) from exc
-    return RedisError, OSError
+    return RedisError, OSError, asyncio.TimeoutError
 
 
 def _unavailable(operation: str, exc: BaseException) -> TokenStoreUnavailable:

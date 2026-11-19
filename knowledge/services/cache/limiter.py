@@ -9,6 +9,7 @@ equally never bounded by it.
 """
 
 import asyncio
+import math
 import threading
 import time
 from typing import Awaitable, Callable, Optional
@@ -22,13 +23,18 @@ def _validate(rate: float, capacity: Optional[float]) -> float:
     ``capacity`` defaults to ``max(rate, 1)``: a burst of ``rate`` tokens, but never less than one whole token, since a
     bucket that cannot hold one token could never grant an acquire. An explicit ``capacity`` below 1 is rejected for
     the same reason.
+
+    The checks are written as ``not (x > 0)`` rather than ``x <= 0`` so that ``nan`` is rejected: every comparison
+    with ``nan`` is false, so ``nan <= 0`` would pass validation and the bucket would then compute a ``nan`` wait
+    and sleep forever. ``inf`` is rejected for the same family of reasons - an infinite rate or capacity makes the
+    refill arithmetic produce ``nan`` - and a hang is a far worse failure than a ``ValueError``.
     """
-    if rate <= 0:
-        raise ValueError("rate must be positive.")
+    if not (rate > 0) or not math.isfinite(rate):
+        raise ValueError("rate must be positive and finite.")
     if capacity is None:
         return max(rate, 1.0)
-    if capacity < 1:
-        raise ValueError("capacity must be at least 1.")
+    if not (capacity >= 1) or not math.isfinite(capacity):
+        raise ValueError("capacity must be at least 1 and finite.")
     return float(capacity)
 
 
@@ -96,7 +102,7 @@ class TokenBucketLimiter:
                 wait = (1.0 - self._tokens) / self.rate
             if deadline is not None and self._clock() + wait > deadline:
                 if logger:
-                    logger.debug("Token bucket acquire timed out after {}s.", timeout)
+                    logger.debug(f"Token bucket acquire timed out after {timeout}s.")
                 return False
             self._sleep(wait)  # lock released: other callers proceed while this one waits
 
@@ -156,7 +162,7 @@ class AsyncTokenBucketLimiter:
                 wait = (1.0 - self._tokens) / self.rate
             if deadline is not None and self._clock() + wait > deadline:
                 if logger:
-                    logger.debug("Token bucket acquire timed out after {}s.", timeout)
+                    logger.debug(f"Token bucket acquire timed out after {timeout}s.")
                 return False
             await self._sleep(wait)  # lock released: other tasks proceed while this one waits
 

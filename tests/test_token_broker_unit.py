@@ -14,6 +14,7 @@ import jwt
 import orjson
 import pytest
 
+from knowledge.services import broker as broker_module
 from knowledge.services.base import WacomServiceException
 from knowledge.services.broker import TokenBroker
 from knowledge.services.cache.base import BrokerStats, TokenStoreUnavailable
@@ -125,6 +126,34 @@ class SharedStore(InMemoryTokenStore):
     """In-memory store that claims to be visible to other processes."""
 
     shared = True
+
+
+class RecordingLogger:
+    """Stand-in for the module's loguru logger, keeping the formatted messages for assertions."""
+
+    def __init__(self, warnings: List[str]) -> None:
+        self.warnings: List[str] = warnings
+
+    def warning(self, message: str, *args) -> None:
+        """Record a warning."""
+        self.warnings.append(message.format(*args))
+
+    def info(self, message: str, *args) -> None:
+        """Ignore the informational messages the broker also emits."""
+
+
+class ExplodingCloseStore(InMemoryTokenStore):
+    """In-memory store whose duck-typed ``close`` raises something other than ``TokenStoreUnavailable``."""
+
+    def __init__(self, error: Exception) -> None:
+        super().__init__()
+        self.error: Exception = error
+        self.close_calls: int = 0
+
+    def close(self) -> None:
+        """Fail the way a caller-supplied component with its own pool might."""
+        self.close_calls += 1
+        raise self.error
 
 
 class ClosingStore(InMemoryTokenStore):
@@ -556,6 +585,7 @@ def test_an_unreachable_lock_backend_renews_without_waiting_for_a_holder():
 
     assert claims_of(token)["ext-sub"] == USER
     assert elapsed < 1.0, f"waited {elapsed:.2f}s for a holder that cannot exist"
+    assert lock.release_calls == 0, "a lock that was never taken must not be released"
     assert broker.stats().lock_contentions == 0, "an outage must not be reported as contention"
     assert client.refreshes == 1, "the renewal still takes the refresh path, it just skips the lock"
     assert client.logins == 1
@@ -725,4 +755,101 @@ def test_context_manager_closes_the_store():
         assert broker.token_for(USER)
 
     assert store.closed
-    assert client.closed
+    assert not client.closed, "an injected client belongs to the caller, not to the broker"
+
+
+def test_close_leaves_an_injected_client_alone():
+    """The spec gives the caller ownership of an injected client: its timeouts, its retries, its lifetime."""
+    broker, client = make_broker()
+    broker.token_for(USER)
+
+    broker.close()
+
+    assert not client.closed, "closing an injected client would release a session the caller may still be using"
+
+
+def test_close_closes_a_client_the_broker_built_itself(monkeypatch):
+    """The other half of the rule: nobody else can release a client the broker constructed, so the broker must."""
+    built = FakeClient()
+    monkeypatch.setattr(broker_module, "WacomServiceAPIClient", lambda service_url: built)
+    broker = TokenBroker(SERVICE_URL, TENANT_API_KEY, store=InMemoryTokenStore())
+    assert broker._client is built  # pylint: disable=protected-access
+
+    broker.close()
+
+    assert built.closed
+
+
+def test_close_releases_every_component_even_when_one_raises(monkeypatch):
+    """A caller-supplied component whose close raises must not strand the ones after it, nor reach the caller."""
+    warnings: List[str] = []
+    monkeypatch.setattr(broker_module, "logger", RecordingLogger(warnings))
+    store = ExplodingCloseStore(RuntimeError("the store's own pool is already gone"))
+    built = FakeClient()
+    monkeypatch.setattr(broker_module, "WacomServiceAPIClient", lambda service_url: built)
+    broker = TokenBroker(SERVICE_URL, TENANT_API_KEY, store=store)
+
+    broker.close()  # must not raise: an ASGI lifespan shutdown would fail with it
+
+    assert store.close_calls == 1
+    assert built.closed, "the client after the failing component must still be released"
+    assert any("ExplodingCloseStore" in message and "already gone" in message for message in warnings), warnings
+
+
+def test_a_shared_store_with_the_default_lock_warns(monkeypatch):
+    """Foot-gun 1: every process then believes it holds the renewal lock for every user."""
+    warnings: List[str] = []
+    monkeypatch.setattr(broker_module, "logger", RecordingLogger(warnings))
+
+    TokenBroker(
+        SERVICE_URL, TENANT_API_KEY, store=SharedStore(), cipher=AesGcmCipher("k1", b"\x04" * 32), client=FakeClient()
+    )
+
+    assert len(warnings) == 1, warnings
+    assert "process-local lock" in warnings[0]
+    assert "InProcessLock" in warnings[0]
+
+
+def test_a_shared_store_with_an_explicit_process_local_lock_warns(monkeypatch):
+    """Passing the process-local lock by hand is the same mistake as letting it default."""
+    warnings: List[str] = []
+    monkeypatch.setattr(broker_module, "logger", RecordingLogger(warnings))
+
+    TokenBroker(
+        SERVICE_URL,
+        TENANT_API_KEY,
+        store=SharedStore(),
+        cipher=AesGcmCipher("k1", b"\x04" * 32),
+        lock=InProcessLock(),
+        client=FakeClient(),
+    )
+
+    assert len(warnings) == 1, warnings
+    assert "process-local lock" in warnings[0]
+
+
+def test_a_shared_store_with_a_custom_lock_is_not_warned_about(monkeypatch):
+    """A shared lock of the caller's own is legitimate, so this must stay a warning about *process-local* locks."""
+    warnings: List[str] = []
+    monkeypatch.setattr(broker_module, "logger", RecordingLogger(warnings))
+
+    TokenBroker(
+        SERVICE_URL,
+        TENANT_API_KEY,
+        store=SharedStore(),
+        cipher=AesGcmCipher("k1", b"\x04" * 32),
+        lock=RecordingLock(),
+        client=FakeClient(),
+    )
+
+    assert warnings == []
+
+
+def test_a_process_local_store_with_the_default_lock_is_not_warned_about(monkeypatch):
+    """The defaults are right for a single process; warning about them would train operators to ignore the log."""
+    warnings: List[str] = []
+    monkeypatch.setattr(broker_module, "logger", RecordingLogger(warnings))
+
+    make_broker()
+
+    assert warnings == []

@@ -9,12 +9,13 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import jwt
 import orjson
 import pytest
 
+from knowledge.services.asyncio import broker as broker_module
 from knowledge.services.asyncio.broker import AsyncTokenBroker
 from knowledge.services.base import WacomServiceException
 from knowledge.services.cache.base import BrokerStats, TokenStoreUnavailable
@@ -133,6 +134,34 @@ class SharedStore(AsyncInMemoryTokenStore):
 
     def __init__(self) -> None:
         super().__init__(_SharedInner())
+
+
+class RecordingLogger:
+    """Stand-in for the module's loguru logger, keeping the formatted messages for assertions."""
+
+    def __init__(self, warnings: List[str]) -> None:
+        self.warnings: List[str] = warnings
+
+    def warning(self, message: str, *args) -> None:
+        """Record a warning."""
+        self.warnings.append(message.format(*args))
+
+    def info(self, message: str, *args) -> None:
+        """Ignore the informational messages the broker also emits."""
+
+
+class ExplodingCloseStore(AsyncInMemoryTokenStore):
+    """Async store whose duck-typed ``aclose`` raises something other than ``TokenStoreUnavailable``."""
+
+    def __init__(self, error: Exception) -> None:
+        super().__init__()
+        self.error: Exception = error
+        self.close_calls: int = 0
+
+    async def aclose(self) -> None:
+        """Fail the way a caller-supplied component with its own pool might."""
+        self.close_calls += 1
+        raise self.error
 
 
 class ClosingStore(AsyncInMemoryTokenStore):
@@ -596,6 +625,7 @@ async def test_an_unreachable_lock_backend_renews_without_waiting_for_a_holder()
 
     assert claims_of(token)["ext-sub"] == USER
     assert elapsed < 1.0, f"waited {elapsed:.2f}s for a holder that cannot exist"
+    assert lock.release_calls == 0, "a lock that was never taken must not be released"
     assert broker.stats().lock_contentions == 0, "an outage must not be reported as contention"
     assert client.refreshes == 1, "the renewal still takes the refresh path, it just skips the lock"
     assert client.logins == 1
@@ -806,18 +836,18 @@ async def test_async_context_manager_closes_the_store():
         assert await broker.token_for(USER)
 
     assert store.closed
-    assert client.closed
+    assert not client.closed, "an injected client belongs to the caller, not to the broker"
 
 
-async def test_aclose_closes_the_client_session():
-    """The ASGI middleware's shutdown hook: the client's aiohttp session must actually be released."""
+async def test_aclose_leaves_an_injected_client_alone():
+    """The spec gives the caller ownership of an injected client: its timeouts, its retries, its lifetime."""
     broker, client = make_broker()
     await broker.token_for(USER)
     assert not client.closed
 
     await broker.aclose()
 
-    assert client.closed, "aclose must await the client's close, or the aiohttp session leaks"
+    assert not client.closed, "closing an injected client would release a session the caller may still be using"
 
 
 async def test_aclose_accepts_a_component_whose_close_is_synchronous():
@@ -829,4 +859,91 @@ async def test_aclose_accepts_a_component_whose_close_is_synchronous():
     await broker.aclose()
 
     assert store.closed
-    assert client.closed
+    assert not client.closed
+
+
+async def test_aclose_closes_a_client_the_broker_built_itself(monkeypatch):
+    """The other half of the rule: nobody else can release the aiohttp session of a client the broker built."""
+    built = FakeClient()
+    monkeypatch.setattr(broker_module, "AsyncServiceAPIClient", lambda service_url: built)
+    broker = AsyncTokenBroker(SERVICE_URL, TENANT_API_KEY, store=AsyncInMemoryTokenStore())
+    assert broker._client is built  # pylint: disable=protected-access
+
+    await broker.aclose()
+
+    assert built.closed, "aclose must await the close of the client it created, or the aiohttp session leaks"
+
+
+async def test_aclose_releases_every_component_even_when_one_raises(monkeypatch):
+    """A caller-supplied component whose close raises must not strand the aiohttp session behind it."""
+    warnings: List[str] = []
+    monkeypatch.setattr(broker_module, "logger", RecordingLogger(warnings))
+    store = ExplodingCloseStore(RuntimeError("the store's own pool is already gone"))
+    built = FakeClient()
+    monkeypatch.setattr(broker_module, "AsyncServiceAPIClient", lambda service_url: built)
+    broker = AsyncTokenBroker(SERVICE_URL, TENANT_API_KEY, store=store)
+
+    await broker.aclose()  # must not raise: an ASGI lifespan shutdown would fail with it
+
+    assert store.close_calls == 1
+    assert built.closed, "the client after the failing component must still be released"
+    assert any("ExplodingCloseStore" in message and "already gone" in message for message in warnings), warnings
+
+
+async def test_a_shared_store_with_the_default_lock_warns(monkeypatch):
+    """Foot-gun 1: every process then believes it holds the renewal lock for every user."""
+    warnings: List[str] = []
+    monkeypatch.setattr(broker_module, "logger", RecordingLogger(warnings))
+
+    AsyncTokenBroker(
+        SERVICE_URL, TENANT_API_KEY, store=SharedStore(), cipher=AesGcmCipher("k1", b"\x04" * 32), client=FakeClient()
+    )
+
+    assert len(warnings) == 1, warnings
+    assert "process-local lock" in warnings[0]
+    assert "AsyncInProcessLock" in warnings[0]
+
+
+async def test_a_shared_store_with_an_explicit_process_local_lock_warns(monkeypatch):
+    """Passing the process-local lock by hand is the same mistake as letting it default."""
+    warnings: List[str] = []
+    monkeypatch.setattr(broker_module, "logger", RecordingLogger(warnings))
+
+    AsyncTokenBroker(
+        SERVICE_URL,
+        TENANT_API_KEY,
+        store=SharedStore(),
+        cipher=AesGcmCipher("k1", b"\x04" * 32),
+        lock=AsyncInProcessLock(),
+        client=FakeClient(),
+    )
+
+    assert len(warnings) == 1, warnings
+    assert "process-local lock" in warnings[0]
+
+
+async def test_a_shared_store_with_a_custom_lock_is_not_warned_about(monkeypatch):
+    """A shared lock of the caller's own is legitimate, so this must stay a warning about *process-local* locks."""
+    warnings: List[str] = []
+    monkeypatch.setattr(broker_module, "logger", RecordingLogger(warnings))
+
+    AsyncTokenBroker(
+        SERVICE_URL,
+        TENANT_API_KEY,
+        store=SharedStore(),
+        cipher=AesGcmCipher("k1", b"\x04" * 32),
+        lock=RecordingLock(),
+        client=FakeClient(),
+    )
+
+    assert warnings == []
+
+
+async def test_a_process_local_store_with_the_default_lock_is_not_warned_about(monkeypatch):
+    """The defaults are right for a single process; warning about them would train operators to ignore the log."""
+    warnings: List[str] = []
+    monkeypatch.setattr(broker_module, "logger", RecordingLogger(warnings))
+
+    make_broker()
+
+    assert warnings == []

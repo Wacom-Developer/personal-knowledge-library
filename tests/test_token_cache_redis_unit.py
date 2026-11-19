@@ -2,13 +2,23 @@
 # Copyright © 2026-present Wacom. All rights reserved.
 """Unit tests for the Redis token store and lock, driven by hand-written fakes (no Redis, no network)."""
 
+import asyncio
 from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
-from redis.exceptions import ConnectionError as RedisConnectionError
 
-from knowledge.services.cache import TokenStoreUnavailable
-from knowledge.services.cache.redis import AsyncRedisLock, AsyncRedisTokenStore, RedisLock, RedisTokenStore
+# The Redis backend lives behind the optional 'cache' extra, so a dev install without it must skip this module
+# rather than error at collection - which would take `pytest -k unit` down with it.
+RedisConnectionError = pytest.importorskip("redis.exceptions").ConnectionError
+
+from knowledge.services.cache import TokenStoreUnavailable  # noqa: E402  pylint: disable=wrong-import-position
+from knowledge.services.cache.redis import (  # noqa: E402  pylint: disable=wrong-import-position
+    AsyncRedisLock,
+    AsyncRedisTokenStore,
+    RedisLock,
+    RedisTokenStore,
+    _backend_errors,
+)
 
 # pylint: disable=missing-function-docstring,missing-class-docstring,unused-argument
 
@@ -167,6 +177,30 @@ def test_os_error_is_also_mapped():
 
     with pytest.raises(TokenStoreUnavailable, match="socket closed"):
         RedisTokenStore(Broken()).get("k")
+
+
+def test_asyncio_timeout_error_is_also_mapped():
+    """An unwrapped await timeout must become ``TokenStoreUnavailable``, not escape and fail the user's request.
+
+    Behavioural half of the pin. On Python 3.11+ ``asyncio.TimeoutError`` is the built-in ``TimeoutError``, an
+    ``OSError`` subclass, so this alone would pass even unmapped; the structural test below is what holds on 3.10,
+    where it is not an ``OSError`` and the mapping has to name it.
+    """
+
+    class TimingOut(FakeRedis):
+        def get(self, name: str) -> Any:
+            raise asyncio.TimeoutError("await timed out")
+
+    with pytest.raises(TokenStoreUnavailable, match="await timed out"):
+        RedisTokenStore(TimingOut()).get("k")
+
+
+def test_asyncio_timeout_error_is_named_in_the_mapped_types():
+    """``requires-python`` is >=3.10, where ``asyncio.TimeoutError`` is not an ``OSError`` and must be listed."""
+    assert asyncio.TimeoutError in _backend_errors(), (
+        "asyncio.TimeoutError must be mapped explicitly: on Python 3.10 it is not an OSError, so a timeout "
+        "redis-py did not wrap would escape the store boundary and fail the caller's request"
+    )
 
 
 def test_unrelated_exceptions_are_not_swallowed():

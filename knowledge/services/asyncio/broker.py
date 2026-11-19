@@ -42,7 +42,7 @@ from knowledge.services.cache.base import (
 )
 from knowledge.services.cache.crypto import NullCipher
 from knowledge.services.cache.limiter import AsyncTokenBucketLimiter
-from knowledge.services.cache.memory import AsyncInMemoryTokenStore, AsyncInProcessLock
+from knowledge.services.cache.memory import AsyncInMemoryTokenStore, AsyncInProcessLock, InProcessLock
 from knowledge.services.session import TimedSession, _decode_and_validate_token
 
 KEY_PREFIX: str = "pks"
@@ -155,6 +155,14 @@ class AsyncTokenBroker:  # pylint: disable=too-many-instance-attributes
                 "to the backend. Pass an AesGcmCipher."
             )
         self._lock: AsyncTokenLock = lock if lock is not None else AsyncInProcessLock()
+        if self._store.shared and isinstance(self._lock, (InProcessLock, AsyncInProcessLock)) and logger:
+            logger.warning(
+                f"A shared token store is paired with a process-local lock ({type(self._lock).__name__}): every "
+                "process believes it holds the renewal lock for every user, so renewals are no longer "
+                "single-flighted across the fleet and the service sees one refresh chain per process. Pass a lock "
+                "backed by the shared store, such as AsyncRedisLock, unless this one is shared by other means."
+            )
+        self._owns_client: bool = client is None
         self._client: AsyncServiceAPIClient = client if client is not None else AsyncServiceAPIClient(service_url)
         self._tenant_api_key: str = tenant_api_key
         self._limiter: Optional[AsyncTokenBucketLimiter] = (
@@ -247,13 +255,23 @@ class AsyncTokenBroker:  # pylint: disable=too-many-instance-attributes
         return BrokerStats(**self._counters)
 
     async def aclose(self) -> None:
-        """Release the store, the lock and the client, where each exposes a close.
+        """Release the store, the lock and the client the broker built, where each exposes a close.
 
         None of the protocols declares one, so this is deliberately duck-typed rather than required. ``aclose`` is
         preferred over ``close`` and the result is awaited when it is awaitable, so a component with an ordinary
         synchronous ``close`` - the in-memory adapters, say - is released just as well as an awaitable one.
+
+        An *injected* client is left alone: the caller that built it owns its timeouts, retry configuration and
+        lifetime, and may well be sharing it. Only a client the broker constructed itself is closed here.
+
+        Every component is released independently, in its own ``try``, so one whose close raises - for any reason,
+        not only an unavailable backend - cannot strand the aiohttp session behind it nor propagate out of an ASGI
+        lifespan shutdown.
         """
-        for component in (self._store, self._lock, self._client):
+        components: Tuple[Any, ...] = (self._store, self._lock)
+        if self._owns_client:
+            components += (self._client,)
+        for component in components:
             closer = getattr(component, "aclose", None) or getattr(component, "close", None)
             if not callable(closer):
                 continue
@@ -261,7 +279,7 @@ class AsyncTokenBroker:  # pylint: disable=too-many-instance-attributes
                 result = closer()
                 if inspect.isawaitable(result):
                     await result
-            except TokenStoreUnavailable as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 if logger:
                     logger.warning(f"Closing {type(component).__name__} failed: {exc}")
 

@@ -34,7 +34,7 @@ from knowledge.services.cache.base import (
 )
 from knowledge.services.cache.crypto import NullCipher
 from knowledge.services.cache.limiter import TokenBucketLimiter
-from knowledge.services.cache.memory import InMemoryTokenStore, InProcessLock
+from knowledge.services.cache.memory import AsyncInProcessLock, InMemoryTokenStore, InProcessLock
 from knowledge.services.session import TimedSession, _decode_and_validate_token
 
 KEY_PREFIX: str = "pks"
@@ -113,6 +113,15 @@ class TokenBroker:  # pylint: disable=too-many-instance-attributes
     ------
     ValueError
         If ``store`` is shared but no real cipher was supplied.
+
+    Notes
+    -----
+    While the lock backend is unreachable, concurrent callers for one user each renew unsynchronised, so an outage
+    can produce parallel refresh chains. That is a deliberate limitation: the lock exists to spare the service
+    duplicated work, not to make the result correct, and stalling every caller for ``lock_wait_seconds`` on a
+    holder that cannot exist would be strictly worse. Note that ``rate_limit`` is no answer to it either: the
+    limiter is taken only by calls made with ``paced=True``, so it bounds sweeps and other bulk work while
+    interactive renewals bypass it and stay unbounded by this library.
     """
 
     def __init__(  # pylint: disable=too-many-arguments
@@ -138,6 +147,14 @@ class TokenBroker:  # pylint: disable=too-many-instance-attributes
                 "to the backend. Pass an AesGcmCipher."
             )
         self._lock: TokenLock = lock if lock is not None else InProcessLock()
+        if self._store.shared and isinstance(self._lock, (InProcessLock, AsyncInProcessLock)) and logger:
+            logger.warning(
+                f"A shared token store is paired with a process-local lock ({type(self._lock).__name__}): every "
+                "process believes it holds the renewal lock for every user, so renewals are no longer "
+                "single-flighted across the fleet and the service sees one refresh chain per process. Pass a lock "
+                "backed by the shared store, such as RedisLock, unless this one is shared by other means."
+            )
+        self._owns_client: bool = client is None
         self._client: WacomServiceAPIClient = client if client is not None else WacomServiceAPIClient(service_url)
         self._tenant_api_key: str = tenant_api_key
         self._limiter: Optional[TokenBucketLimiter] = None if rate_limit is None else TokenBucketLimiter(rate_limit)
@@ -227,17 +244,26 @@ class TokenBroker:  # pylint: disable=too-many-instance-attributes
             return BrokerStats(**self._counters)
 
     def close(self) -> None:
-        """Release the store, the lock and the client, where each exposes a ``close``.
+        """Release the store, the lock and the client the broker built, where each exposes a ``close``.
 
-        None of the protocols declares one, so this is deliberately duck-typed rather than required.
+        None of the protocols declares one, so this is deliberately duck-typed rather than required. An *injected*
+        client is left alone: the caller that built it owns its timeouts, retry configuration and lifetime, and may
+        well be sharing it. Only a client the broker constructed itself is closed here.
+
+        Every component is released independently, in its own ``try``, so one whose ``close`` raises - for any
+        reason, not only an unavailable backend - cannot strand the components after it nor propagate out of an
+        ASGI lifespan shutdown.
         """
-        for component in (self._store, self._lock, self._client):
+        components: Tuple[Any, ...] = (self._store, self._lock)
+        if self._owns_client:
+            components += (self._client,)
+        for component in components:
             closer = getattr(component, "close", None)
             if not callable(closer):
                 continue
             try:
                 closer()
-            except TokenStoreUnavailable as exc:
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 if logger:
                     logger.warning(f"Closing {type(component).__name__} failed: {exc}")
 

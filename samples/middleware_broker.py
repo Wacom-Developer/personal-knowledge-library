@@ -324,6 +324,10 @@ def main() -> None:
         help="Logins and refreshes per second. Given, the driver calls the broker with paced=True, as a sweep would.",
     )
     args = parser.parse_args()
+    if args.users < 1:
+        # L1 is sized 2 * users, and InMemoryTokenStore rejects max_entries below 1, so a zero would otherwise
+        # surface as a ValueError from deep inside the store rather than as a usage error.
+        parser.error("--users must be at least 1; there is nothing to drive with none.")
     sys.exit(asyncio.run(run(args)))
 
 
