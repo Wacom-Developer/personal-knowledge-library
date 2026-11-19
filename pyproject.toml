@@ -1,6 +1,6 @@
 [project]
 name = "personal_knowledge_library"
-version = "5.0.0"
+version = "5.1.0"
 description = "Library to access Wacom's Personal Knowledge graph."
 authors = [{ name = "Markus Weber", email = "markus.weber@wacom.com" }]
 license = "Apache-2.0"
@@ -47,7 +47,7 @@ dev = [
     "pdoc3",
     "universal-ink-library"
 ]
-cache = ["redis>=5.0.0,<7.0.0", "cryptography>=43.0.0"]
+cache = ["redis>=5.0.1,<7.0.0", "cryptography>=43.0.0"]
 
 [tool.poetry]
 packages = [
