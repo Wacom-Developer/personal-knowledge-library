@@ -43,7 +43,6 @@ dev = [
     "pylint>=2.17.0",       # Code analysis
     "mypy>=1.8.0",          # Type checking
     "black>=24.2.0",        # Formatting
-    "tox>=4.0.0",
     "pdoc3",
     "universal-ink-library"
 ]

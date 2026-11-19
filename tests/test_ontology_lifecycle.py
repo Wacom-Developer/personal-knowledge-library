@@ -33,7 +33,7 @@ Creating and deleting tenants needs the Wacom-only *Tenant Management API Key*, 
 deliberately **not** baked into ``pytest.ini`` -- it is far more powerful than the tenant
 key used by the rest of the suite. Supply it through the environment:
 
->>> TENANT_MANAGEMENT_API_KEY=<key> poetry run pytest tests/test_ontology_lifecycle.py
+>>> TENANT_MANAGEMENT_API_KEY=<key> uv run pytest tests/test_ontology_lifecycle.py
 
 Without the variable the whole module is skipped.
 
