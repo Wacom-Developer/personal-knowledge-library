@@ -611,6 +611,11 @@ class WacomServiceAPIClient(RESTAPIClient):
         return f"{self.base_auth_url}/{self.USER_LOGIN_ENDPOINT}"
 
     @property
+    def refresh_endpoint(self) -> str:
+        """Token refresh endpoint (always in the graph service REST API, like login)."""
+        return f"{self.base_auth_url}/{self.USER_REFRESH_ENDPOINT}"
+
+    @property
     def current_session(
         self,
     ) -> Union[RefreshableSession, TimedSession, PermanentSession, None]:
@@ -822,7 +827,7 @@ class WacomServiceAPIClient(RESTAPIClient):
         WacomServiceException
             Exception if the service returns HTTP error code.
         """
-        url: str = f"{self.service_base_url}{WacomServiceAPIClient.USER_REFRESH_ENDPOINT}/"
+        url: str = f"{self.refresh_endpoint}/"
         headers: Dict[str, str] = {
             USER_AGENT_HEADER_FLAG: self.user_agent,
             CONTENT_TYPE_HEADER_FLAG: APPLICATION_JSON_HEADER,

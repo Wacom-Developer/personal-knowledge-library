@@ -37,6 +37,7 @@ Please contact your Wacom representative for more information.
     - [Resetting a context](#resetting-a-context)
   - [Entity API](#entity-api)
 - [Choosing Between Sync and Async Clients](#choosing-between-sync-and-async-clients)
+- [Middleware at Scale](#middleware-at-scale)
 - [Samples](#samples)
   - [Entity Handling](#entity-handling)
   - [Named Entity Linking](#named-entity-linking)
@@ -493,6 +494,54 @@ try:
 finally:
     await async_client.close_all_sessions()
 ```
+
+---
+
+## Middleware at Scale
+
+A backend serving tens of thousands of PKS end users must not call `/user/login` per request, and cannot share a *logged-in* client either — a client binds to one session at a time.
+`TokenBroker` (sync) and `AsyncTokenBroker` (async) solve both: they hand out a bare access token for an external user id, cached and renewed behind the scenes, which is passed to any service method through the per-method `auth_key=` override.
+One stateless service client is then shared by the whole process.
+
+```python
+import redis.asyncio
+
+from knowledge.services.asyncio.broker import AsyncTokenBroker
+from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
+from knowledge.services.cache.crypto import AesGcmCipher
+from knowledge.services.cache.memory import AsyncInMemoryTokenStore, InMemoryTokenStore
+from knowledge.services.cache.redis import AsyncRedisLock, AsyncRedisTokenStore
+from knowledge.services.cache.tiered import AsyncTieredTokenStore
+
+# Built once per process, at startup. The Redis client must not decode responses.
+redis_client = redis.asyncio.Redis.from_url(redis_url, decode_responses=False)
+knowledge_client = AsyncWacomKnowledgeService(instance, "my-middleware")   # never logged in
+# Two keys per user, so size L1 for the users one pod serves: it carries the load on its own if Redis goes away.
+l1 = AsyncInMemoryTokenStore(InMemoryTokenStore(max_entries=2 * users_per_pod))
+broker = AsyncTokenBroker(
+    instance,
+    tenant_api_key,
+    store=AsyncTieredTokenStore(l1=l1, l2=AsyncRedisTokenStore(redis_client)),
+    lock=AsyncRedisLock(redis_client),                      # a shared store needs a shared lock
+    cipher=AesGcmCipher("2026-01", token_cache_key),        # 32 bytes, from your secret store
+    rate_limit=10.0,                                        # paces calls made with paced=True, i.e. sweeps
+)
+
+# In a request handler: one call, served from the cache in steady state.
+token = await broker.token_for(external_user_id)
+things, _, _ = await knowledge_client.listing(THING_OBJECT, limit=10, auth_key=token)
+```
+
+The shared store and the cipher come from the optional `cache` extra:
+
+```bash
+pip install personal-knowledge-library[cache]
+```
+
+> :pushpin: Renewal is lazy, so authentication costs **at most one round trip per user per token lifetime**, however many requests that user makes — a ceiling a busy population converges on and never exceeds. A near-expiry token is rotated through `/user/refresh`, which overwrites one document per user on the service, where a login inserts a new one.
+
+Before deploying this, read **[Middleware at scale](docs/middleware-at-scale.md)** — the sizing arithmetic, the three synchronisation hazards, Redis-outage behaviour, key rotation, sweeps versus interactive traffic, and the six `stats()` counters to put on a dashboard.
+A runnable end-to-end example, including the ASGI lifespan wiring, is in [`samples/middleware_broker.py`](samples/middleware_broker.py).
 
 ---
 

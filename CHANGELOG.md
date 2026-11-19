@@ -1,3 +1,120 @@
+2026/11/19 - RELEASE 5.1.0
+==========================
+One feature and one fix, both about the same thing: authenticating a lot of users from one backend
+process. The feature is a token broker that makes authentication load proportional to your user
+population instead of your request rate. The fix is the reason the feature could not have worked
+properly before it — `/user/refresh` was addressed at the wrong URL in every sync client and in
+every non-graph async client, and a login fallback hid that from everybody.
+
+Token broker
+------------
+- **NEW** — `knowledge.services.broker.TokenBroker` and `knowledge.services.asyncio.broker.AsyncTokenBroker`.
+  They cache PKS access tokens for many users behind **one** service client and hand out a bare
+  token string, which is passed to any service method through the existing per-method `auth_key=`
+  override. The client is never logged in and never rebound, so a single
+  `AsyncWacomKnowledgeService` can be shared by a whole process.
+
+  ```python
+  broker = AsyncTokenBroker(instance, tenant_api_key)          # process-local defaults
+  token = await broker.token_for(external_user_id)             # cached in steady state
+  things, _, _ = await knowledge_client.listing(THING_OBJECT, limit=10, auth_key=token)
+  ```
+  Renewal is lazy, so the cost is **at most one round trip per user per token lifetime**, however many
+  requests that user makes: a ceiling that a busy population converges on and never exceeds.
+  A token nearing expiry is rotated through `/user/refresh` rather than re-logged in, which keeps
+  one refresh document per user on the service instead of one per renewal — a ~24× difference in
+  the service's refresh-token collection at 42k users.
+- The access entry's TTL comes from the JWT `exp` claim, never from an assumed lifetime: the
+  service's token validity is deployment configuration. The refresh entry is cached for 23 hours,
+  deliberately just inside the service's sliding 1-day idle window, so the cache can never hand out
+  a refresh token the service has already reaped.
+- Each entry's early-renewal offset is derived from a SHA-256 of its cache key, so it is stable per
+  user, different across users and **identical across processes**. That is what spreads a cohort of
+  tokens minted together — a fleet restarted after a deploy — across the jitter band instead of
+  renewing them all at one instant.
+- Renewals are serialised by a best-effort lock. Losing it costs one duplicate login, never a wrong
+  token: the lock protects the service's storage, not correctness.
+- `stats()` returns a `BrokerStats` with `hits`, `misses`, `logins`, `refreshes`, `refresh_failures`
+  and `lock_contentions`. Every `token_for` call moves exactly one of `hits` / `misses`, so their
+  sum is the number of calls served and the ratio is meaningful as a hit rate.
+- `invalidate(external_user_id, drop_refresh=False)` drops a user's cached access token; the refresh
+  chain is kept unless the chain itself is suspect.
+- `close()` / `aclose()` closes **only a client the broker constructed itself**. An injected
+  `WacomServiceAPIClient` / `AsyncServiceAPIClient` stays the caller's, together with its timeouts and
+  retry configuration. Store, lock and client are each released independently, so a component whose
+  `close` raises cannot strand the ones after it or fail an ASGI lifespan shutdown.
+- A shared store paired with the process-local `InProcessLock` / `AsyncInProcessLock` — including the
+  default used when no `lock=` is passed — now logs a `warning`. It is deliberately not an error: a lock
+  shared by other means is legitimate. Assert the lock class at startup as well; no counter reveals the
+  mistake.
+- `TokenBucketLimiter` / `AsyncTokenBucketLimiter` reject a `nan` or infinite `rate` or `capacity` with
+  `ValueError`. `nan` previously passed validation and then waited `nan` seconds, i.e. hung.
+
+Token cache building blocks (`knowledge.services.cache`)
+--------------------------------------------------------
+- **NEW** — `InMemoryTokenStore` / `AsyncInMemoryTokenStore` (bounded, per-entry TTL, process-local),
+  `RedisTokenStore` / `AsyncRedisTokenStore` (shared), and `TieredTokenStore` / `AsyncTieredTokenStore`,
+  which puts a process-local L1 in front of a shared L2. **A Redis outage degrades to per-pod caching**,
+  not to a failure and not to a login per request — provided L1 is sized for the users one pod serves.
+  `InMemoryTokenStore` defaults to `max_entries=10_000` and each user occupies two keys, so the default
+  holds ~5,000 users; an L1 below `2 × distinct users per pod` thrashes during an outage and gives back
+  very nearly a login per request.
+- **NEW** — `InProcessLock` / `AsyncInProcessLock` and `RedisLock` / `AsyncRedisLock`. The Redis lock is
+  `SET NX PX` with a compare-and-delete release (a Lua script), so a holder whose TTL lapsed cannot free
+  the next holder's lock.
+- **NEW** — `AesGcmCipher`: AES-256-GCM with key rotation. The cache key is the associated data, so a
+  ciphertext moved from one user's key to another's fails to decrypt instead of silently authenticating
+  the wrong user. **A shared store without a real cipher raises `ValueError`** in the broker's
+  constructor.
+- **NEW** — `TokenBucketLimiter` / `AsyncTokenBucketLimiter`, behind the broker's `rate_limit=`. It paces
+  calls made with `paced=True`, which is what a sweep uses: every user in a sweep is a cold miss by
+  definition, and the cache cannot flatten that.
+- **NEW optional extra** — `pip install personal-knowledge-library[cache]` pulls `redis>=5.0.1,<7.0.0`
+  and `cryptography>=43.0.0`. **The base install gains no dependency**: `knowledge.services.cache` never
+  imports the Redis backend, and both `redis` and `cryptography` are imported lazily, at the point of
+  use, with an error message naming the extra.
+
+Fixed
+-----
+- **FIXED** — `refresh_token()` posted to the wrong URL. The refresh URL was built from
+  `service_base_url`, which already carries the client's own service endpoint, instead of from
+  `base_auth_url` like login. The consequences differed per family and neither was visible:
+
+  | Client family | URL before | Worked |
+  |---|---|:--:|
+  | sync, graph family | `…/graph/v1/graph/v1/user/refresh/` | ❌ |
+  | sync, other (e.g. semantic search) | `…/vector/api/v1/graph/v1/user/refresh/` | ❌ |
+  | async, graph family | `…/graph/v1/user/refresh/` | ✅ |
+  | async, other (e.g. semantic search) | `…/vector/api/v1/user/refresh/` | ❌ |
+
+  So **sync refresh never worked at all, and async refresh worked only for the graph-family clients.**
+  It went unnoticed because `handle_token` catches a failed refresh and, for a `PermanentSession` —
+  which is what `login()` returns — falls back to `request_user_token`, i.e. a login. Every sync
+  renewal was therefore silently a login: correct tokens, a wasted round trip each time, and a new
+  refresh document inserted on the service for every renewal rather than one rotated in place. If your
+  tenant's refresh-token collection is far larger than your user count, this is why.
+  `RefreshableSession` had no such fallback and surfaced the failure as an exception.
+- Both client bases now expose a `refresh_endpoint` property derived from `base_auth_url`, mirroring
+  `auth_endpoint`, and the async `USER_REFRESH_ENDPOINT` is graph-scoped like the sync one. A custom
+  `base_auth_url` is honoured on refresh as it already was on login.
+
+Documentation and samples
+-------------------------
+- **NEW** — `docs/middleware-at-scale.md`: the guideline to read before deploying this at scale. Covers
+  the arithmetic (the renewal ceiling, and why it is a ceiling rather than a constant), the three
+  synchronisation hazards and why a TTL addresses none of them, sizing (~130 MB for 42k users, on an
+  estimated 3 KB per token; eviction is harmless, so `noeviction` is not
+  required), Redis-outage behaviour in both halves — the store degrades to per-pod caching, while the
+  lock does not degrade at all, and `rate_limit` bounds only `paced=True` work, so interactive
+  renewals during such an outage are unbounded by the SDK — key rotation, interactive
+  traffic versus sweeps (including when a `TenantAdmin` token replaces the broker entirely), the
+  anti-patterns, and what each `stats()` counter means when it goes wrong.
+- **NEW** — `samples/middleware_broker.py`: ASGI lifespan wiring as documentation, plus a runnable load
+  driver that reports per-pass broker statistics for a cold and a warm pass.
+- New **Middleware at Scale** section in `README.md`.
+- 163 new offline unit tests across the broker, the cache backends, the limiter and the refresh
+  endpoint. None of them needs a PKS stage server.
+
 2026/09/01 - RELEASE 5.0.0
 ==========================
 A correctness and alignment release. Several defects were live crashes or silent data loss on
