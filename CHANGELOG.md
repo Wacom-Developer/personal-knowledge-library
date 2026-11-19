@@ -19,7 +19,8 @@ Token broker
   token = await broker.token_for(external_user_id)             # cached in steady state
   things, _, _ = await knowledge_client.listing(THING_OBJECT, limit=10, auth_key=token)
   ```
-  Steady state is **one round trip per user per token lifetime**, independent of the request rate.
+  Renewal is lazy, so the cost is **at most one round trip per user per token lifetime**, however many
+  requests that user makes: a ceiling that a busy population converges on and never exceeds.
   A token nearing expiry is rotated through `/user/refresh` rather than re-logged in, which keeps
   one refresh document per user on the service instead of one per renewal — a ~24× difference in
   the service's refresh-token collection at 42k users.
@@ -44,7 +45,10 @@ Token cache building blocks (`knowledge.services.cache`)
 - **NEW** — `InMemoryTokenStore` / `AsyncInMemoryTokenStore` (bounded, per-entry TTL, process-local),
   `RedisTokenStore` / `AsyncRedisTokenStore` (shared), and `TieredTokenStore` / `AsyncTieredTokenStore`,
   which puts a process-local L1 in front of a shared L2. **A Redis outage degrades to per-pod caching**,
-  not to a failure and not to a login per request.
+  not to a failure and not to a login per request — provided L1 is sized for the users one pod serves.
+  `InMemoryTokenStore` defaults to `max_entries=10_000` and each user occupies two keys, so the default
+  holds ~5,000 users; an L1 below `2 × distinct users per pod` thrashes during an outage and gives back
+  very nearly a login per request.
 - **NEW** — `InProcessLock` / `AsyncInProcessLock` and `RedisLock` / `AsyncRedisLock`. The Redis lock is
   `SET NX PX` with a compare-and-delete release (a Lua script), so a holder whose TTL lapsed cannot free
   the next holder's lock.
@@ -87,10 +91,12 @@ Fixed
 Documentation and samples
 -------------------------
 - **NEW** — `docs/middleware-at-scale.md`: the guideline to read before deploying this at scale. Covers
-  the arithmetic (load is per user per token lifetime), the three synchronisation hazards and why a TTL
-  addresses none of them, sizing (~130 MB for 42k users; eviction is harmless, so `noeviction` is not
-  required), Redis-outage behaviour in both halves — the store degrades to per-pod caching, the lock
-  does not degrade at all and leaves `rate_limit` as the only backstop — key rotation, interactive
+  the arithmetic (the renewal ceiling, and why it is a ceiling rather than a constant), the three
+  synchronisation hazards and why a TTL addresses none of them, sizing (~130 MB for 42k users, on an
+  estimated 3 KB per token; eviction is harmless, so `noeviction` is not
+  required), Redis-outage behaviour in both halves — the store degrades to per-pod caching, while the
+  lock does not degrade at all, and `rate_limit` bounds only `paced=True` work, so interactive
+  renewals during such an outage are unbounded by the SDK — key rotation, interactive
   traffic versus sweeps (including when a `TenantAdmin` token replaces the broker entirely), the
   anti-patterns, and what each `stats()` counter means when it goes wrong.
 - **NEW** — `samples/middleware_broker.py`: ASGI lifespan wiring as documentation, plus a runnable load

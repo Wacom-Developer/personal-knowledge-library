@@ -509,17 +509,19 @@ import redis.asyncio
 from knowledge.services.asyncio.broker import AsyncTokenBroker
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
 from knowledge.services.cache.crypto import AesGcmCipher
-from knowledge.services.cache.memory import AsyncInMemoryTokenStore
+from knowledge.services.cache.memory import AsyncInMemoryTokenStore, InMemoryTokenStore
 from knowledge.services.cache.redis import AsyncRedisLock, AsyncRedisTokenStore
 from knowledge.services.cache.tiered import AsyncTieredTokenStore
 
 # Built once per process, at startup. The Redis client must not decode responses.
 redis_client = redis.asyncio.Redis.from_url(redis_url, decode_responses=False)
 knowledge_client = AsyncWacomKnowledgeService(instance, "my-middleware")   # never logged in
+# Two keys per user, so size L1 for the users one pod serves: it carries the load on its own if Redis goes away.
+l1 = AsyncInMemoryTokenStore(InMemoryTokenStore(max_entries=2 * users_per_pod))
 broker = AsyncTokenBroker(
     instance,
     tenant_api_key,
-    store=AsyncTieredTokenStore(l1=AsyncInMemoryTokenStore(), l2=AsyncRedisTokenStore(redis_client)),
+    store=AsyncTieredTokenStore(l1=l1, l2=AsyncRedisTokenStore(redis_client)),
     lock=AsyncRedisLock(redis_client),                      # a shared store needs a shared lock
     cipher=AesGcmCipher("2026-01", token_cache_key),        # 32 bytes, from your secret store
     rate_limit=10.0,                                        # paces calls made with paced=True, i.e. sweeps
@@ -536,7 +538,7 @@ The shared store and the cipher come from the optional `cache` extra:
 pip install personal-knowledge-library[cache]
 ```
 
-> :pushpin: Steady-state authentication load is **one round trip per user per token lifetime**, independent of your request rate. A near-expiry token is rotated through `/user/refresh`, which overwrites one document per user on the service, where a login inserts a new one.
+> :pushpin: Renewal is lazy, so authentication costs **at most one round trip per user per token lifetime**, however many requests that user makes — a ceiling a busy population converges on and never exceeds. A near-expiry token is rotated through `/user/refresh`, which overwrites one document per user on the service, where a login inserts a new one.
 
 Before deploying this, read **[Middleware at scale](docs/middleware-at-scale.md)** — the sizing arithmetic, the three synchronisation hazards, Redis-outage behaviour, key rotation, sweeps versus interactive traffic, and the six `stats()` counters to put on a dashboard.
 A runnable end-to-end example, including the ASGI lifespan wiring, is in [`samples/middleware_broker.py`](samples/middleware_broker.py).

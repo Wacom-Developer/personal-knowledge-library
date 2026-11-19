@@ -54,7 +54,7 @@ the broker closes only what it created itself (its aiohttp client); the Redis cl
     from knowledge.services.asyncio.broker import AsyncTokenBroker
     from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
     from knowledge.services.cache.crypto import AesGcmCipher
-    from knowledge.services.cache.memory import AsyncInMemoryTokenStore
+    from knowledge.services.cache.memory import AsyncInMemoryTokenStore, InMemoryTokenStore
     from knowledge.services.cache.redis import AsyncRedisLock, AsyncRedisTokenStore
     from knowledge.services.cache.tiered import AsyncTieredTokenStore
 
@@ -65,10 +65,13 @@ the broker closes only what it created itself (its aiohttp client); the Redis cl
         # --- startup: one broker and one service client per process, built from your configuration ------------
         redis_client = redis.asyncio.Redis.from_url(settings.redis_url, decode_responses=False)  # binary client!
         app.state.knowledge_client = AsyncWacomKnowledgeService(settings.pks_instance, "my-middleware")
+        # Two keys per user, so size L1 for the users ONE pod serves: while Redis is down it carries them alone,
+        # and an undersized L1 thrashes straight back into a login per request.
+        l1 = AsyncInMemoryTokenStore(InMemoryTokenStore(max_entries=2 * settings.users_per_pod))
         app.state.broker = AsyncTokenBroker(
             settings.pks_instance,
             settings.tenant_api_key,
-            store=AsyncTieredTokenStore(l1=AsyncInMemoryTokenStore(), l2=AsyncRedisTokenStore(redis_client)),
+            store=AsyncTieredTokenStore(l1=l1, l2=AsyncRedisTokenStore(redis_client)),
             lock=AsyncRedisLock(redis_client),
             cipher=AesGcmCipher("2026-01", settings.token_cache_key),  # 32 bytes, from your secret store
             rate_limit=settings.sweep_logins_per_second,
@@ -112,7 +115,7 @@ from knowledge.services.asyncio.broker import AsyncTokenBroker
 from knowledge.services.asyncio.graph import AsyncWacomKnowledgeService
 from knowledge.services.base import WacomServiceException
 from knowledge.services.cache.base import BrokerStats
-from knowledge.services.cache.memory import AsyncInMemoryTokenStore
+from knowledge.services.cache.memory import AsyncInMemoryTokenStore, InMemoryTokenStore
 
 THING_OBJECT: OntologyClassReference = OntologyClassReference("wacom", "core", "Thing")
 DEFAULT_INSTANCE: str = "https://stage-private-knowledge.wacom.com"
@@ -131,7 +134,8 @@ async def get_token(broker: AsyncTokenBroker, external_user_id: str, *, paced: b
     external_user_id: str
         External user id of the end user the request is made for.
     paced: bool
-        Queue behind the broker's rate limiter. Use for sweeps and other bulk work, not for interactive requests.
+        Wait on the broker's rate limiter. Use for sweeps and other bulk work, not for interactive requests,
+        which bypass the limiter entirely.
 
     Returns
     -------
@@ -142,9 +146,14 @@ async def get_token(broker: AsyncTokenBroker, external_user_id: str, *, paced: b
 
 
 def build_broker(
-    instance: str, tenant_api_key: str, redis_url: Optional[str], rate_limit: Optional[float]
+    instance: str, tenant_api_key: str, redis_url: Optional[str], rate_limit: Optional[float], users: int
 ) -> Tuple[AsyncTokenBroker, Optional[Any]]:
     """Build the broker, with a Redis-backed shared store if a URL is given, else a process-local one.
+
+    Every user occupies two keys in the store, one for the access token and one for the refresh token, so the
+    in-memory store is sized at twice the user count. That matters for the L1 tier as much as for a lone
+    process-local store: L1 serves the whole working set on its own whenever Redis is unreachable, and one sized
+    below it evicts oldest-first and falls back to very nearly a login per request.
 
     Returns
     -------
@@ -153,9 +162,10 @@ def build_broker(
     redis_client: Optional[redis.asyncio.Redis]
         The Redis client the caller must close, or ``None`` for the in-memory store.
     """
+    l1 = AsyncInMemoryTokenStore(InMemoryTokenStore(max_entries=2 * users))
     if redis_url is None:
         print("No --redis-url: using the in-memory store. Tokens are cached per process only.")
-        broker = AsyncTokenBroker(instance, tenant_api_key, store=AsyncInMemoryTokenStore(), rate_limit=rate_limit)
+        broker = AsyncTokenBroker(instance, tenant_api_key, store=l1, rate_limit=rate_limit)
         return broker, None
     # Imported here and not at module scope: ``redis`` and ``cryptography`` belong to the optional ``cache`` extra,
     # and ``--help`` and the in-memory path must work without them.
@@ -179,8 +189,9 @@ def build_broker(
     broker = AsyncTokenBroker(
         instance,
         tenant_api_key,
-        # Process-local L1 in front of Redis: a Redis outage degrades to per-pod caching, not a login per request.
-        store=AsyncTieredTokenStore(l1=AsyncInMemoryTokenStore(), l2=AsyncRedisTokenStore(redis_client)),
+        # Process-local L1 in front of Redis: a Redis outage degrades to per-pod caching rather than to a login
+        # per request - but only while L1 is large enough to hold this pod's whole working set. See above.
+        store=AsyncTieredTokenStore(l1=l1, l2=AsyncRedisTokenStore(redis_client)),
         # A shared store needs a shared lock; a process-local lock would let every pod believe it holds the lock.
         lock=AsyncRedisLock(redis_client),
         cipher=cipher,
@@ -261,7 +272,7 @@ async def run(args: argparse.Namespace) -> int:
     exit_code = 0
     # The one shared service client, built from configuration and closed at shutdown, as in the lifespan block above.
     client = AsyncWacomKnowledgeService(args.instance, APPLICATION_NAME)
-    broker, redis_client = build_broker(args.instance, args.tenant_api_key, args.redis_url, args.rate_limit)
+    broker, redis_client = build_broker(args.instance, args.tenant_api_key, args.redis_url, args.rate_limit, args.users)
     try:
         async with broker:
             for label in ("first pass (cold unless Redis already holds tokens)", "second pass (served from the cache)"):

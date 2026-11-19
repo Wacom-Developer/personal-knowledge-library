@@ -166,7 +166,8 @@ class TokenBroker:  # pylint: disable=too-many-instance-attributes
             External user id of the shadow user the token is for.
         paced: bool
             Take a limiter token before any login or refresh. Use it for sweeps and other bulk work, where every
-            user is a cold miss, so that they queue behind the interactive traffic instead of in front of it.
+            user is a cold miss. Interactive calls bypass the limiter, so pacing the bulk work throttles it
+            without ever delaying them.
 
         Returns
         -------

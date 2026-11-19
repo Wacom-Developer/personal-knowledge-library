@@ -125,9 +125,11 @@ class AsyncTokenBroker:  # pylint: disable=too-many-instance-attributes
     Notes
     -----
     While the lock backend is unreachable, concurrent callers for one user each renew unsynchronised, so an outage
-    can produce parallel refresh chains with ``rate_limit`` as the only protection. That is a deliberate
-    limitation: the lock exists to spare the service duplicated work, not to make the result correct, and stalling
-    every caller for ``lock_wait_seconds`` on a holder that cannot exist would be strictly worse.
+    can produce parallel refresh chains. That is a deliberate limitation: the lock exists to spare the service
+    duplicated work, not to make the result correct, and stalling every caller for ``lock_wait_seconds`` on a
+    holder that cannot exist would be strictly worse. Note that ``rate_limit`` is no answer to it either: the
+    limiter is taken only by calls made with ``paced=True``, so it bounds sweeps and other bulk work while
+    interactive renewals bypass it and stay unbounded by this library.
     """
 
     def __init__(  # pylint: disable=too-many-arguments
@@ -182,7 +184,8 @@ class AsyncTokenBroker:  # pylint: disable=too-many-instance-attributes
             External user id of the shadow user the token is for.
         paced: bool
             Take a limiter token before any login or refresh. Use it for sweeps and other bulk work, where every
-            user is a cold miss, so that they queue behind the interactive traffic instead of in front of it.
+            user is a cold miss. Interactive calls bypass the limiter, so pacing the bulk work throttles it
+            without ever delaying them.
 
         Returns
         -------

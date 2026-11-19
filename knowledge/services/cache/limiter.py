@@ -3,7 +3,9 @@
 """Token-bucket rate limiters for paced PKS logins.
 
 The cache flattens interactive traffic but cannot flatten a sweep (every user is a cold miss) nor a degraded-Redis
-fallback to per-pod caching; the limiter is the only thing that protects the ``/user/login`` endpoint there.
+fallback to per-pod caching; the limiter is what keeps that work off the ``/user/login`` endpoint. It bounds only
+the calls a broker makes with ``paced=True``: interactive calls bypass it, so they are never delayed by it and are
+equally never bounded by it.
 """
 
 import asyncio

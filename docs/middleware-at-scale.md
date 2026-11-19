@@ -15,25 +15,24 @@ number is *deployment* configuration rather than a constant, that is said explic
 
 ## 1. The arithmetic
 
-The first thing to get right is that **authentication load is per user per token lifetime, not per request**.
+The first thing to get right is that **authentication load is bounded per user per token lifetime, rather than by
+your request count**.
 
 A PKS access token is a JWT whose validity is the service's `TokenValidityMinutes` — **60 in the shipped PKS
 configuration**, but it is deployment configuration and a deployment may change it. The broker never assumes it: it
 reads the `exp` claim of the token it was handed and uses that as the cache entry's TTL (`TokenBroker._write`).
 Nothing in the SDK hard-codes 60 minutes.
 
-So, for 42,000 active users and a 60-minute token:
+Renewal is **lazy**: it happens on a `token_for` call that finds the cached token past its freshness margin, never
+on a timer. Two consequences, and you need both of them to size anything correctly.
 
-| | per day |
-|---|---|
-| Logins if you authenticate per request, at 20 requests/user/day | 840,000, and it grows with your traffic |
-| Renewals with the broker, at the defaults below | ~1,120,000 — **≈ 13 per second, flat** |
+- Renewals can never exceed requests. There is no background refresher; a user nobody asks for costs nothing.
+- For a user who *is* asked for continuously, renewals are capped at one per effective token lifetime.
 
-The second row does not depend on your request rate at all. Double your traffic and it does not move. That is the
-entire point of the broker: it converts an unbounded, traffic-shaped load on `/user/login` into a bounded,
-population-shaped load that you can size for.
+So the authentication cost per user is `min(that user's requests, the ceiling)`. The ceiling is what you size for,
+because it is what a busy population converges on.
 
-The exact renewal rate follows from the two renewal parameters. A cached token is handed out while
+**The ceiling.** A cached token is handed out while
 
 ```
 expires_at - now > early_refresh_seconds + jitter_offset(key)
@@ -41,7 +40,24 @@ expires_at - now > early_refresh_seconds + jitter_offset(key)
 
 (`TokenBroker._is_fresh`), with `early_refresh_seconds = 300.0` and `jitter_offset` a fixed value in
 `[0, early_refresh_jitter_seconds)`, default `120.0`. A token is therefore used for, on average,
-`3600 - 300 - 60 = 3240 s`, giving `42,000 × 86,400 / 3,240 ≈ 1.12 M` renewals a day, or ~13/s.
+`3600 - 300 - 60 = 3240 s` — call it **54 minutes**, or ~26.7 renewals per user per day. For 42,000 users all read
+at least once in every such window, that is `42,000 × 86,400 / 3,240 ≈ 1.12 M` renewals a day, or **~13/s**.
+
+Against per-request authentication, at 200 requests/user/day:
+
+| | per day, 42,000 users |
+|---|---|
+| Logins, authenticating per request | 8,400,000 — and it doubles when your traffic doubles |
+| Renewals with the broker, at the defaults below | at most ~1,120,000 (~13/s) — and it does **not** move when your traffic doubles |
+
+That is the point of the broker: above the ceiling it converts an unbounded, traffic-shaped load on `/user/login`
+into a bounded, population-shaped load you can size for.
+
+**Below the ceiling it still helps, for a different reason.** A user read less often than once per 54 minutes misses
+the cache on most requests, so renewals track requests rather than the ceiling, and the "flat" property does not
+apply to them. What they still get is the *kind* of call: a renewal with a live refresh entry is a
+`POST /user/refresh`, which rotates one document, where authenticating per request is a `POST /user/login`, which
+inserts a new one. The storage arithmetic below is about exactly that difference, and it holds at any request rate.
 
 ### The refresh window is sliding, not absolute
 
@@ -124,7 +140,7 @@ the same user and the shared cache would stop agreeing with itself.
 **Tuning the band.** The default 120 s spreads a synchronised cohort of 42,000 users over 120 s, i.e. ~350
 renewals/s at the peak. If that is too steep for your deployment, widen `early_refresh_jitter_seconds`; 900 s brings
 the cohort peak down to ~47/s. The cost is that a wider band shortens the average effective token life — at 900 s the
-average becomes `3600 - 300 - 450 = 2850 s`, so the steady-state rate rises from ~13/s to ~15/s. Widen the band to
+average becomes `3600 - 300 - 450 = 2850 s`, so the ceiling of §1 rises from ~13/s to ~15/s. Widen the band to
 flatten peaks, not to reduce total load.
 
 ---
@@ -139,19 +155,22 @@ import redis.asyncio
 
 from knowledge.services.asyncio.broker import AsyncTokenBroker
 from knowledge.services.cache.crypto import AesGcmCipher
-from knowledge.services.cache.memory import AsyncInMemoryTokenStore
+from knowledge.services.cache.memory import AsyncInMemoryTokenStore, InMemoryTokenStore
 from knowledge.services.cache.redis import AsyncRedisLock, AsyncRedisTokenStore
 from knowledge.services.cache.tiered import AsyncTieredTokenStore
 
 redis_client = redis.asyncio.Redis.from_url(settings.redis_url, decode_responses=False)  # binary client!
 
+# Two keys per user, so size L1 for the users ONE pod serves - see foot-gun 2.
+l1 = AsyncInMemoryTokenStore(InMemoryTokenStore(max_entries=2 * settings.users_per_pod))
+
 broker = AsyncTokenBroker(
     settings.pks_instance,
     settings.tenant_api_key,
-    store=AsyncTieredTokenStore(l1=AsyncInMemoryTokenStore(), l2=AsyncRedisTokenStore(redis_client)),
+    store=AsyncTieredTokenStore(l1=l1, l2=AsyncRedisTokenStore(redis_client)),
     lock=AsyncRedisLock(redis_client),                          # a shared store needs a shared lock
     cipher=AesGcmCipher("2026-01", settings.token_cache_key),   # 32 bytes, from your secret store
-    rate_limit=settings.sweep_logins_per_second,
+    rate_limit=settings.sweep_logins_per_second,                # paces paced=True calls only
 )
 ```
 
@@ -175,14 +194,29 @@ pip install personal-knowledge-library[cache]
 **1. A Redis store paired with the default process-local lock.** This is accepted silently today and it is the
 expensive mistake. `InProcessLock` / `AsyncInProcessLock` is exclusive *within one process only*, so every pod
 believes it holds the lock for every user, every pod renews, and you get precisely the duplicate-document blow-up of
-§1 — the one the lock exists to prevent — while `lock_contentions` sits reassuringly at zero. **If you pass a shared
-store, pass `RedisLock` / `AsyncRedisLock` too.** Nothing will tell you otherwise.
+§1 — the one the lock exists to prevent. **If you pass a shared store, pass `RedisLock` / `AsyncRedisLock` too.**
 
-**2. The in-memory store at this scale.** `InMemoryTokenStore` defaults to `max_entries=10_000`, and each user
-consumes **two** keys (`…:a` for the access token, `…:r` for the refresh token). The default therefore holds roughly
-**5,000 users** before it starts evicting oldest-first — at 42,000 users it would thrash, turning almost every
-request into a login. Raise `max_entries` to at least `2 × users` if you run the in-memory store as anything but an
-L1 tier.
+Nothing in the library will tell you, and **no counter will reveal it either** — see §9 — so assert it yourself at
+startup, where it is one line:
+
+```python
+if store.shared and not isinstance(lock, AsyncRedisLock):
+    raise RuntimeError("A shared token store needs a shared lock, not a process-local one.")
+```
+
+At the very least, log which lock class the broker was built with, so the answer is in the logs of every pod rather
+than inferred from a dashboard during an incident.
+
+**2. An undersized in-memory store — including as an L1 tier.** `InMemoryTokenStore` defaults to
+`max_entries=10_000`, and each user consumes **two** keys (`…:a` for the access token, `…:r` for the refresh token).
+The default therefore holds roughly **5,000 users** before it starts evicting oldest-first.
+
+**The sizing rule is `max_entries ≥ 2 × distinct users served per pod`, and it applies to the L1 tier too.** It is
+tempting to leave L1 at the default because Redis is behind it, and that works right up to the moment it matters: if
+Redis goes away (§5) an undersized L1 thrashes, and the per-pod caching you were relying on turns back into
+something close to a login per request. Behind a round-robin load balancer, "distinct users per pod" is your whole
+population — 42,000 users means `max_entries=84_000`, not the default. Size it for the outage, not for the happy
+path.
 
 **3. A Redis client with `decode_responses=True`.** The store handles raw bytes, encrypted values included. Build the
 client with `decode_responses=False`.
@@ -207,9 +241,12 @@ shared backend**, and the `pks:` namespace lets the broker share a Redis with ot
 
 ## 4. Sizing
 
-A PKS access token is roughly 3 KB. At 42,000 users that is `42,000 × 3 KB ≈ 130 MB` of access entries; the refresh
-entries are a pair of GUIDs each and round to nothing beside that. Budget ~130 MB for the token cache in Redis, and
-the same per pod if you run an unbounded in-memory store instead of a tiered one.
+Take a PKS access token as **approximately 3 KB** — a working estimate, not a measured constant: a JWT's size
+depends on its claims, so measure one from your own tenant before you size anything tightly. On that estimate,
+42,000 users is `42,000 × 3 KB ≈ 130 MB` of access entries; the refresh entries are a pair of GUIDs each
+(`$"{Guid.NewGuid()}-{Guid.NewGuid()}"` in the service) and round to nothing beside that. The ~130 MB is therefore
+only as good as the 3 KB it comes from, and scales linearly with it. Budget it for the token cache in Redis, and
+the same again per pod for an L1 tier sized to hold a pod's whole working set.
 
 **Eviction is harmless, so `noeviction` is not required.** An evicted token is a miss, a miss is a login, and a login
 produces a correct token. Nothing breaks; you only pay for it. Run the cache under whatever eviction policy the rest
@@ -225,8 +262,13 @@ This section matters more than any other in an incident.
 **The store degrades cleanly.** `AsyncRedisTokenStore` raises `TokenStoreUnavailable` for every backend failure;
 `AsyncTieredTokenStore` catches it, logs a warning and carries on with L1. You fall back to **per-pod caching** — not
 to a failure, and not to a login per request. Each pod re-logs in each of its users once, then serves from memory.
-With N pods you pay N× the login rate of §1 until Redis comes back. This is why a tiered store is worth the extra
-class over a bare `AsyncRedisTokenStore`.
+With N pods you pay N× the ceiling of §1 until Redis comes back. This is why a tiered store is worth the extra class
+over a bare `AsyncRedisTokenStore`.
+
+**That fallback is only as good as L1's capacity**, and this is the moment foot-gun 2 cashes in. If `max_entries` is
+below `2 × distinct users served per pod`, L1 evicts oldest-first under the full working set, most requests miss,
+and you get close to a login per request anyway — precisely the outcome the tiered store exists to prevent, arriving
+precisely when you least want it. Size L1 for this scenario.
 
 **The lock does not degrade cleanly, and it cannot.** When the lock backend is unreachable, the broker's `_acquire`
 returns `UNAVAILABLE`, which is deliberately *not* treated as contention: there is provably no holder whose write is
@@ -235,14 +277,16 @@ that **concurrent callers for one user renew unsynchronised**, so an outage can 
 hot user. The alternative — blocking every caller on a holder that cannot exist — would be strictly worse, so this is
 a chosen limitation, stated in `AsyncTokenBroker`'s class docstring.
 
-**`rate_limit` is the only protection the SDK offers on that path, so configure it** — but know exactly what it
-covers. The limiter is taken only by calls made with `paced=True` (`TokenBroker._pace`). That is a deliberate split:
-bulk work queues behind interactive traffic rather than in front of it, and a user waiting on a request is never held
-behind a token bucket. During an outage it therefore bounds your *sweeps and batch jobs* — which is where the volume
-is, and precisely what you do not want piling onto an already-degraded login path — and it does **not** bound
-interactive renewals. A ceiling on those has to sit above the broker, in your own back-pressure layer.
+**`rate_limit` bounds only `paced=True` work; interactive renewals during an outage are unbounded by the SDK.** The
+limiter is taken in `_pace`, and only when the caller passed `paced=True`. Interactive calls do not wait for a
+token — they bypass the limiter entirely, which is deliberate (a user's request is never held behind a token
+bucket), but it means the SDK puts *nothing* between an interactive renewal and `/user/login`, outage or not.
 
-Without `rate_limit`, a Redis outage converts directly into load on `/user/login` with nothing in between.
+So configure `rate_limit` for what it does do: keep your sweeps and batch jobs — which is where the volume is, and
+where an outage would otherwise add a flood on top of an already-degraded login path — from making the incident
+worse. For interactive renewals, the ceiling has to come from your own back-pressure layer, above the broker. If you
+want the SDK's limiter to cover them too, you would have to pass `paced=True` on those calls as well, and accept
+that a user's request can then wait on the bucket.
 
 ---
 
@@ -279,8 +323,10 @@ sweep over 42,000 users is 42,000 logins however good your cache is.
 Two things follow.
 
 **Pace the sweep.** Pass `paced=True` to `token_for` and set `rate_limit=` on the constructor. The sweep's logins
-then queue behind interactive traffic instead of in front of it, which is the ordering you want — a user waiting on a
-request should not be stuck behind a batch job.
+then wait on the token bucket. Note what this is and is not: the limiter does not prioritise anything and there is
+no shared queue to be ahead of or behind — interactive calls simply bypass it. The effect is that the sweep is
+throttled while interactive traffic is not, which is the asymmetry you want from a batch job running beside live
+requests.
 
 **A read-only sweep should not use the broker at all.** In the PKS backend,
 `GraphDataService/Common/MongoDb/Adapters/MongoDbBaseGraphAdapter.cs` contains
@@ -306,8 +352,8 @@ reading; per-user tokens, paced, for writing. That is what the limiter is there 
 
 **Logging in per request.** `client.login(tenant_api_key, external_user_id)` in a request handler is the pattern the
 broker exists to replace. It costs a round trip on every request and, because login *inserts* a refresh document, it
-grows the service's refresh-token collection without bound. If you take nothing else from this document:
-authenticate per user per token lifetime, not per request.
+grows the service's refresh-token collection without bound. If you take nothing else from this document: let
+authentication be bounded per user per token lifetime, instead of growing with your traffic.
 
 **Sharing a *logged-in* client across users.** A client binds to one session at a time, so a shared, logged-in client
 is racy: user A's request can be served under user B's token. Note the distinction — sharing a **stateless** client,
@@ -336,9 +382,17 @@ absolutes.
 | `hits` | the overwhelming majority | — |
 | `misses` | `misses / (hits + misses)` small and stable | Rising: cold pods cycling, an undersized store evicting, or the shared tier not being reached. Equal to your request count means the cache is not working at all. |
 | `logins` | ≈ new users + restarts | Tracking `misses` means the refresh chain is not being used: entries are expiring past 23 h, or refreshes are failing (check `refresh_failures`). This is the counter that maps directly onto inserted PKS documents. |
-| `refreshes` | the bulk of renewals, ~13/s at 42 k users | Much lower than `logins` is the same symptom as above, seen from the other side. |
+| `refreshes` | the bulk of renewals; at most ~13/s at 42 k users, less if your users are not read continuously | Much lower than `logins` is the same symptom as above, seen from the other side. |
 | `refresh_failures` | ~0 | Each one is a rejected refresh token followed by a login fallback. A steady trickle is normal (chains that idled out). A spike means the service is rejecting chains — an auth-side change, a clock problem, or cache entries outliving the service's copy. |
-| `lock_contentions` | small and non-zero on a fleet | **Zero on a multi-pod deployment is a red flag, not a clean bill of health**: it almost certainly means a process-local lock is running against a shared store (foot-gun 1). Growing fast means renewals are slow, or `lock_ttl_seconds` is too long. |
+| `lock_contentions` | small; zero is also normal | Growing fast means renewals are slow, or `lock_ttl_seconds` is too long — every contention is a caller that waited `lock_wait_seconds`, so this is a latency signal. **A low or zero value proves nothing** (see below). |
+
+**`lock_contentions` does not detect foot-gun 1, in either direction — do not alert on it.** It is tempting to read
+a zero as "the shared lock is missing", and it is not: `InProcessLock` *is* exclusive within a process, so two
+concurrent requests for the same user in one pod record a contention even when the lock is the wrong class; and with
+a correct `RedisLock` zero is entirely plausible, because the jitter spreads renewals and two callers arriving at
+one user's renewal edge at the same instant is rare. An alert on this counter false-positives on healthy fleets and
+still misses the misconfiguration. Assert the lock class at startup instead (foot-gun 1). Treat a sustained zero as
+weak corroborating evidence at most, and only once you have already confirmed the wiring some other way.
 
 **The accounting quirk, so your dashboard is not confusing.** Every `token_for` call moves **exactly one** of `hits`
 and `misses`, so their sum is the number of calls served and `hits / (hits + misses)` is the hit ratio. The one case
@@ -346,9 +400,10 @@ that looks like an exception is deliberate: a caller that loses the lock, waits,
 the cache is **not** counted as a hit — it already counted a miss on the way in. Without that rule a single call
 could move both counters and the ratio would stop meaning anything.
 
-Also worth a graph: `logins + refreshes` against your user count. In steady state it should be flat, proportional to
-the population, and completely indifferent to your request rate. If it tracks traffic, something is authenticating
-per request.
+Also worth a graph: `logins + refreshes` against your user count. For a busy population it should sit at or below
+the ceiling of §1, proportional to the population rather than to traffic. If it rises in step with your request rate
+*while staying under the ceiling*, your users are simply read less often than once per 54 minutes — expected, not a
+fault. If it rises in step with traffic *past* the ceiling, something is authenticating per request.
 
 ---
 
@@ -357,10 +412,14 @@ per request.
 - [ ] One service client per process, never logged in, always called with `auth_key=`.
 - [ ] One broker per process, built at startup, closed at shutdown.
 - [ ] Shared store? Then a shared lock (`RedisLock` / `AsyncRedisLock`) **and** an `AesGcmCipher`.
+- [ ] A startup assertion that a shared store is paired with `RedisLock` / `AsyncRedisLock`, or at least a log line
+      naming the lock class — no counter will tell you.
 - [ ] Tiered store (`l1=` in-memory, `l2=` Redis), so a Redis outage degrades to per-pod caching.
+- [ ] **Every** in-memory store, L1 tier included, sized at `max_entries ≥ 2 × distinct users served per pod`
+      (two keys per user). An undersized L1 thrashes during a Redis outage and gives you back a login per request.
 - [ ] Redis client built with `decode_responses=False`, and closed by you.
-- [ ] `rate_limit=` configured, and sweeps calling `token_for(..., paced=True)`.
-- [ ] In-memory store sized at `2 × users` if it is anything other than an L1 tier.
+- [ ] `rate_limit=` configured, and sweeps calling `token_for(..., paced=True)`; interactive renewals bounded by
+      your own back-pressure layer, not by the SDK.
 - [ ] 32-byte cipher key from a secret store; key id without `:`; retired keys kept ≥ 23 h after a rotation.
 - [ ] Read-only sweeps using a `TenantAdmin` token instead of the broker; writes on behalf of users still per-user.
-- [ ] All six `BrokerStats` counters exported, with an alert on `lock_contentions == 0` across a multi-pod fleet.
+- [ ] All six `BrokerStats` counters exported. No alert on `lock_contentions`; it is not diagnostic.
