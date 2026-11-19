@@ -13,12 +13,14 @@ from knowledge.services.cache.base import (
     TokenStoreUnavailable,
 )
 from knowledge.services.cache.crypto import AesGcmCipher, NullCipher
+from knowledge.services.cache.limiter import AsyncTokenBucketLimiter, TokenBucketLimiter
 from knowledge.services.cache.memory import InMemoryTokenStore, InProcessLock
 from knowledge.services.cache.tiered import AsyncTieredTokenStore, TieredTokenStore
 
 __all__ = [
     "AesGcmCipher",
     "AsyncTieredTokenStore",
+    "AsyncTokenBucketLimiter",
     "AsyncTokenLock",
     "AsyncTokenStore",
     "BrokerStats",
@@ -27,6 +29,7 @@ __all__ = [
     "InProcessLock",
     "NullCipher",
     "TieredTokenStore",
+    "TokenBucketLimiter",
     "TokenCipher",
     "TokenLock",
     "TokenStore",
