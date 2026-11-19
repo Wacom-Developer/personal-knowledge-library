@@ -1,3 +1,41 @@
+2026/11/19 - RELEASE 5.1.2
+==========================
+Packaging only — no runtime change. Dependency management moves from Poetry to uv, and the
+build backend from `poetry-core` to `hatchling`. The distribution contents were verified
+against 5.1.1 rather than assumed: the wheel carries exactly the same 63 modules, and the
+sdist the same package plus `README.md`, `LICENSE` and `pyproject.toml`.
+
+Nothing changes for consumers. `pip install personal-knowledge-library`, `[dev]` and
+`[cache]` all behave exactly as before — the extras stay `[project.optional-dependencies]`
+rather than moving to `[dependency-groups]`, precisely so they keep being published.
+
+Packaging
+---------
+- **CHANGED** — `uv` replaces Poetry. `uv.lock` is committed and `uv sync --extra dev`
+  builds the development environment; `poetry.lock` and `poetry.toml` are gone. CI uses
+  `uv sync --frozen`, so a stale lock fails the build rather than silently resolving
+  something else.
+- **CHANGED** — the build backend is `hatchling`. Both distribution targets are pinned
+  explicitly: hatchling's default sdist is "every file VCS does not ignore", which in this
+  repository means `assets/`, `tests/`, `docs/` and `samples/` — about 12 MB that has never
+  been published. The include patterns are anchored (`/knowledge`), because unanchored
+  gitignore-style patterns also match `docs/knowledge/`.
+- **CHANGED** — publishing uses `uv build` + `uv publish` with `UV_PUBLISH_TOKEN`, in place
+  of `poetry publish --build`. The PyPI target and the release trigger are unchanged.
+- `tests/test_packaging_unit.py` is new and pins all of the above: the wheel must contain
+  exactly the source tree's modules, the sdist must carry nothing but the package and its
+  metadata, both extras must survive into the built metadata, and `uv.lock` must cover the
+  whole `requires-python` range.
+- The only intentional differences from the 5.1.1 distribution: the wheel's licence moves
+  to hatchling's PEP 639 path (`.dist-info/licenses/LICENSE`), and the sdist gains
+  `.gitignore`, which hatchling force-includes and will not let you exclude.
+
+Build
+-----
+- **CHANGED** — `tox.ini` is retired. It ran pytest across py310–py313 by installing Poetry
+  inside each environment; `uv run --python 3.10 pytest` is the local equivalent. Python
+  3.10 moves into both CI matrices, so version coverage increases rather than shrinking.
+
 2026/11/19 - RELEASE 5.1.1
 ==========================
 Three fixes, no API changes. The one that can cost you data is in the RDF ontology importer:

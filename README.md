@@ -2303,37 +2303,40 @@ git clone https://github.com/Wacom-Developer/personal-knowledge-library.git
 cd personal-knowledge-library
 ```
 
-2. **Create and activate a virtual environment:**
+2. **Install [uv](https://docs.astral.sh/uv/), if you do not have it:**
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+curl -LsSf https://astral.sh/uv/install.sh | sh  # On Windows: see the uv install docs
 ```
 
-3. **Install the package with development dependencies:**
+3. **Create the environment and install the development dependencies:**
 
 ```bash
-pip install -e ".[dev]"
+uv sync --extra dev --extra cache
 ```
+
+`uv sync` creates `.venv` itself and installs the project in editable mode from the
+committed `uv.lock`, so there is no separate venv or `pip install` step. Prefix the
+commands below with `uv run`, or activate `.venv` and use them directly.
 
 ## Running Tests
 
 Run the full test suite:
 
 ```bash
-pytest
+uv run pytest
 ```
 
 Run tests with coverage report:
 
 ```bash
-pytest --cov=knowledge --cov-report=term-missing
+uv run pytest --cov=knowledge --cov-report=term-missing
 ```
 
 Run specific test files:
 
 ```bash
-pytest tests/test_ontology_unit.py -v
+uv run pytest tests/test_ontology_unit.py -v
 ```
 
 ## Code Quality
@@ -2341,25 +2344,25 @@ pytest tests/test_ontology_unit.py -v
 ### Type Checking with mypy
 
 ```bash
-mypy knowledge --ignore-missing-imports
+uv run mypy knowledge --ignore-missing-imports
 ```
 
 ### Linting with pylint
 
 ```bash
-pylint knowledge
+uv run pylint knowledge
 ```
 
 ### Code Formatting with black
 
 ```bash
-black knowledge tests
+uv run black knowledge tests
 ```
 
 ### Linting with flake8
 
 ```bash
-flake8 knowledge
+uv run flake8 knowledge
 ```
 
 ---
