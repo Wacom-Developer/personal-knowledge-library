@@ -13,6 +13,22 @@ from knowledge.services.cache.redis import AsyncRedisLock, AsyncRedisTokenStore,
 # pylint: disable=missing-function-docstring,missing-class-docstring,unused-argument
 
 
+def assert_guarded_release(eval_calls: List[Tuple[str, int, Tuple[Any, ...]]], key: str, token: str) -> None:
+    """Pin the Lua compare-and-delete, which the fake cannot execute.
+
+    The fake compares tokens in Python, so only the recorded ``eval`` call proves the real script is guarded: one key,
+    ``(key, token)`` as arguments, and a ``get`` comparison against ARGV[1] occurring before the ``del``.
+    """
+    assert len(eval_calls) == 1
+    script, numkeys, args = eval_calls[0]
+    assert numkeys == 1
+    assert args == (key, token)
+    compare = "redis.call('get', KEYS[1]) == ARGV[1]"
+    assert compare in script
+    assert "redis.call('del', KEYS[1])" in script
+    assert script.index(compare) < script.index("redis.call('del', KEYS[1])")
+
+
 class FakeRedis:
     """Implements only the client surface the store and lock use. Expiry is recorded, never enforced."""
 
@@ -188,8 +204,10 @@ def test_lock_release_deletes_own_lock():
     fake = FakeRedis()
     lock = RedisLock(fake)
     assert lock.acquire("lock:u", 30)
+    token = fake.data["lock:u"]
     lock.release("lock:u")
     assert "lock:u" not in fake.data
+    assert_guarded_release(fake.eval_calls, "lock:u", token)
     assert lock.acquire("lock:u", 30) is True  # tracking cleared, can be taken again
 
 
@@ -197,17 +215,23 @@ def test_lock_release_only_deletes_own_token():
     fake = FakeRedis()
     first = RedisLock(fake)
     assert first.acquire("lock:u", 30)
+    first_token = fake.data["lock:u"]
     # first holder's TTL lapses; a second holder acquires the same key
     del fake.data["lock:u"]
     second = RedisLock(fake)
     assert second.acquire("lock:u", 30)
     holder = fake.data["lock:u"]
+    assert holder != first_token
 
     first.release("lock:u")
 
     assert fake.data["lock:u"] == holder  # second holder's lock survives
+    # the stale holder sent its own token, not the current holder's
+    assert_guarded_release(fake.eval_calls, "lock:u", first_token)
+    fake.eval_calls.clear()
     second.release("lock:u")
     assert "lock:u" not in fake.data
+    assert_guarded_release(fake.eval_calls, "lock:u", holder)
 
 
 def test_lock_release_without_acquire_is_noop():
@@ -265,20 +289,29 @@ async def test_async_lock_acquire_and_release():
     assert await lock.acquire("lock:u", 30) is True
     assert fake.inner.px["lock:u"] == 30000
     assert await AsyncRedisLock(fake).acquire("lock:u", 30) is False
+    token = fake.inner.data["lock:u"]
     await lock.release("lock:u")
     assert "lock:u" not in fake.inner.data
+    assert_guarded_release(fake.inner.eval_calls, "lock:u", token)
 
 
 async def test_async_lock_release_only_deletes_own_token():
     fake = AsyncFakeRedis()
     first = AsyncRedisLock(fake)
     assert await first.acquire("lock:u", 30)
+    first_token = fake.inner.data["lock:u"]
     del fake.inner.data["lock:u"]
     second = AsyncRedisLock(fake)
     assert await second.acquire("lock:u", 30)
     holder = fake.inner.data["lock:u"]
+    assert holder != first_token
     await first.release("lock:u")
     assert fake.inner.data["lock:u"] == holder
+    assert_guarded_release(fake.inner.eval_calls, "lock:u", first_token)
+    fake.inner.eval_calls.clear()
+    await second.release("lock:u")
+    assert "lock:u" not in fake.inner.data
+    assert_guarded_release(fake.inner.eval_calls, "lock:u", holder)
 
 
 async def test_async_lock_backend_failure_raises_token_store_unavailable():
